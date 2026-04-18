@@ -1,3 +1,5 @@
+[English Version](./NPS-4-NDP.md) | 中文版
+
 # NPS-4: Neural Discovery Protocol (NDP)
 
 **Spec Number**: NPS-4  
@@ -163,7 +165,7 @@ _nps-ca.mycompany.com.      IN TXT  "v=nps1 ca=https://ca.mycompany.com/.well-kn
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame 序号不连续 |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry 暂时不可用 |
 
-HTTP 模式下的状态码映射见 [status-codes.md](status-codes.md)。
+HTTP 模式下的状态码映射见 [status-codes.cn.md](status-codes.cn.md)。
 
 ---
 

@@ -1,3 +1,5 @@
+[English Version](./NPS-Roadmap.md) | 中文版
+
 # NPS 路线图
 
 **Version**: 0.2  
@@ -31,20 +33,20 @@
 
 **目标**：建立 NPS 完整规范骨架，统一帧空间和命名，输出可供社区评论的 v0.1-draft。
 
-- [x] NPS-0-Overview.md v0.2 完成
-- [x] NPS-1-NCP.md v0.3-draft 完成（传输双模、可配帧大小、ErrorFrame）
-- [x] NPS-2-NWP.md v0.2-draft 完成（AnchorFrame Node 发布、NPT）
-- [x] NPS-3-NIP.md v0.2-draft 完成（metadata 字段、NPS 状态码）
-- [x] NPS-4-NDP.md v0.2-draft 完成（统一端口、NPS 状态码）
-- [x] NPS-5-NOP.md v0.2-draft 完成（统一端口、NPS 状态码）
+- [x] NPS-0-Overview.cn.md v0.2 完成
+- [x] NPS-1-NCP.cn.md v0.3-draft 完成（传输双模、可配帧大小、ErrorFrame）
+- [x] NPS-2-NWP.cn.md v0.2-draft 完成（AnchorFrame Node 发布、NPT）
+- [x] NPS-3-NIP.cn.md v0.2-draft 完成（metadata 字段、NPS 状态码）
+- [x] NPS-4-NDP.cn.md v0.2-draft 完成（统一端口、NPS 状态码）
+- [x] NPS-5-NOP.cn.md v0.2-draft 完成（统一端口、NPS 状态码）
 - [x] frame-registry.yaml v0.2 完成（含 ErrorFrame 0xFE）
-- [x] error-codes.md v0.2 完成（含 NPS 状态码映射）
-- [x] status-codes.md v0.1 完成（NPS 原生状态码 + HTTP 映射）
-- [x] token-budget.md v0.1 完成（NPT 计量 + tokenizer 解析链）
+- [x] error-codes.cn.md v0.2 完成（含 NPS 状态码映射）
+- [x] status-codes.cn.md v0.1 完成（NPS 原生状态码 + HTTP 映射）
+- [x] token-budget.cn.md v0.1 完成（NPT 计量 + tokenizer 解析链）
 - [ ] LabAcacia 仓库公开，Discussions 开启
 - [ ] v0.2-draft GitHub Release 发布
 
-**完成标准**：所有子协议文档无空节，frame-registry.yaml 涵盖全部帧（含 ErrorFrame），status-codes.md 覆盖所有错误码映射，GitHub 仓库公开。
+**完成标准**：所有子协议文档无空节，frame-registry.yaml 涵盖全部帧（含 ErrorFrame），status-codes.cn.md 覆盖所有错误码映射，GitHub 仓库公开。
 
 ---
 

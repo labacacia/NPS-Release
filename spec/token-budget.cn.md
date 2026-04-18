@@ -1,3 +1,5 @@
+[English Version](./token-budget.md) | 中文版
+
 # NPS Token Budget 规范
 
 **Version**: 0.1  

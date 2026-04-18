@@ -1,4 +1,4 @@
-English | [中文版](./NPS-AaaS-Profile.md)
+English | [中文版](./NPS-AaaS-Profile.cn.md)
 
 # NPS-AaaS Profile: Agent-as-a-Service Compliance Specification
 
