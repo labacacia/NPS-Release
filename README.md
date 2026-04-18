@@ -61,28 +61,28 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 | Document | Description |
 |----------|-------------|
-| [NPS-0 Overview](./doc/protocols/NPS-0-Overview.md) | Suite overview — start here |
-| [NPS-1 NCP](./doc/protocols/NPS-1-NCP.md) | Wire format, frame header, encoding tiers |
-| [NPS-2 NWP (中)](./doc/protocols/NPS-2-NWP.md) / [EN](./doc/protocols/NPS-2-NWP.en.md) | Neural Web Protocol |
-| [NPS-3 NIP](./doc/protocols/NPS-3-NIP.md) | Neural Identity Protocol |
-| [NPS-4 NDP](./doc/protocols/NPS-4-NDP.md) | Neural Discovery Protocol |
-| [NPS-5 NOP (中)](./doc/protocols/NPS-5-NOP.md) / [EN](./doc/protocols/NPS-5-NOP.en.md) | Neural Orchestration Protocol |
+| [NPS-0 Overview](./spec/protocols/NPS-0-Overview.md) | Suite overview — start here |
+| [NPS-1 NCP](./spec/protocols/NPS-1-NCP.md) | Wire format, frame header, encoding tiers |
+| [NPS-2 NWP](./spec/protocols/NPS-2-NWP.md) | Neural Web Protocol |
+| [NPS-3 NIP](./spec/protocols/NPS-3-NIP.md) | Neural Identity Protocol |
+| [NPS-4 NDP](./spec/protocols/NPS-4-NDP.md) | Neural Discovery Protocol |
+| [NPS-5 NOP](./spec/protocols/NPS-5-NOP.md) | Neural Orchestration Protocol |
 
 ### Reference Documents
 
 | Document | Description |
 |----------|-------------|
-| [Frame Registry](./doc/frame-registry.yaml) | Machine-readable frame type registry |
-| [Error Codes](./doc/error-codes.md) | Unified protocol error code namespace |
-| [Status Codes](./doc/status-codes.md) | NPS native status codes + HTTP mapping |
-| [Token Budget](./doc/token-budget.md) | NPT token budget specification |
-| [Roadmap](./doc/NPS-Roadmap.md) | Phase 0–4 development roadmap |
+| [Frame Registry](./spec/frame-registry.yaml) | Machine-readable frame type registry |
+| [Error Codes](./spec/error-codes.md) | Unified protocol error code namespace |
+| [Status Codes](./spec/status-codes.md) | NPS native status codes + HTTP mapping |
+| [Token Budget](./spec/token-budget.md) | NPT token budget specification |
+| [Roadmap](./spec/NPS-Roadmap.md) | Phase 0–4 development roadmap |
 
 ### Service Specifications
 
 | Document | Description |
 |----------|-------------|
-| [AaaS Profile (中)](./doc/services/NPS-AaaS-Profile.md) / [EN](./doc/services/NPS-AaaS-Profile.en.md) | Agent-as-a-Service compliance profile (Gateway Node, Vector Proxy Layer, L1/L2/L3 compliance) |
+| [AaaS Profile](./spec/services/NPS-AaaS-Profile.md) | Agent-as-a-Service compliance profile (Gateway Node, Vector Proxy Layer, L1/L2/L3 compliance) |
 
 ---
 
@@ -115,7 +115,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 | `0x40–0x4F` | **NOP** | Task(0x40), Delegate(0x41), Sync(0x42), AlignStream(0x43) |
 | `0xFE`      | System   | ErrorFrame — unified error across all layers |
 
-See [`doc/frame-registry.yaml`](./doc/frame-registry.yaml) for the complete machine-readable registry.
+See [`spec/frame-registry.yaml`](./spec/frame-registry.yaml) for the complete machine-readable registry.
 
 ---
 

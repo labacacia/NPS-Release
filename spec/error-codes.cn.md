@@ -1,3 +1,5 @@
+[English Version](./error-codes.md) | 中文版
+
 # NPS 统一错误码命名空间
 
 **Version**: 0.4  
@@ -7,7 +9,7 @@
 
 NPS 采用两级错误体系：
 1. **协议错误码**（本文档）：具体错误标识，前缀标识所属协议
-2. **NPS 状态码**：传输层状态分类与 HTTP 映射，见 [status-codes.md](status-codes.md)
+2. **NPS 状态码**：传输层状态分类与 HTTP 映射，见 [status-codes.cn.md](status-codes.cn.md)
 
 ---
 

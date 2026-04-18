@@ -1,4 +1,4 @@
-English | [中文版](./NPS-5-NOP.md)
+English | [中文版](./NPS-5-NOP.cn.md)
 
 # NPS-5: Neural Orchestration Protocol (NOP)
 
@@ -11,7 +11,7 @@ English | [中文版](./NPS-5-NOP.md)
 **Depends-On**: NPS-1 (NCP v0.4), NPS-2 (NWP v0.4), NPS-3 (NIP v0.2)  
 **Supersedes**: NCP AlignFrame (0x05)  
 
-> This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.en.md](NPS-0-Overview.en.md).
+> This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
 ---
 

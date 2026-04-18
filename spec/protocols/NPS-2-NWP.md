@@ -1,4 +1,4 @@
-English | [中文版](./NPS-2-NWP.md)
+English | [中文版](./NPS-2-NWP.cn.md)
 
 # NPS-2: Neural Web Protocol (NWP)
 
@@ -10,7 +10,7 @@ English | [中文版](./NPS-2-NWP.md)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **Depends-On**: NPS-1 (NCP v0.4)  
 
-> This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.en.md](NPS-0-Overview.en.md).
+> This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
 ---
 
@@ -33,7 +33,7 @@ NWP defines how AI Agents access web data and services. Agents use `nwp://` addr
 | **Complex Node** | Mixed data and operations, with sub-node references | All of the above + sub-node references |
 | **Gateway Node** | Stateless service entry point, routes requests to NOP orchestration layer | AaaS platforms, multi-agent service gateways |
 
-> **Gateway Node** is an extended node type introduced by the AaaS Profile (see `spec/services/NPS-AaaS-Profile.en.md`).
+> **Gateway Node** is an extended node type introduced by the AaaS Profile (see `spec/services/NPS-AaaS-Profile.md`).
 > It executes no business logic itself; all Action invocations are translated into NOP TaskFrames dispatched to internal Workers.
 > Key distinction from Complex Node: Gateway Node is **stateless** and can scale horizontally without side-effect concerns.
 
@@ -46,7 +46,7 @@ Request contains X-NWP-Agent or HelloFrame  →  return application/nwp-*
 Regular browser request (no above markers)  →  return text/html (normal website)
 ```
 
-In Overlay mode, NWP uses HTTP transport with frames serialized in the HTTP body. See [NPS-1-NCP.en.md §2.2](NPS-1-NCP.en.md#22-transport-modes).
+In Overlay mode, NWP uses HTTP transport with frames serialized in the HTTP body. See [NPS-1-NCP.md §2.2](NPS-1-NCP.md#22-transport-modes).
 
 ---
 
