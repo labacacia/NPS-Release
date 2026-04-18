@@ -1,0 +1,8 @@
+{
+  "useSideMenu": true,
+  "lineBreaks": "gfm",
+  "additionalFooterText": "© 2026 INNO LOTUS PTY LTD — Apache 2.0 · Primary author: Ori Lynn",
+  "anchorCharacter": "#",
+  "title": "NPS — Neural Protocol Suite",
+  "tocAnchors": true
+}
