@@ -1,120 +1,120 @@
-[English Version](./token-budget.en.md) | 中文版
+English | [中文版](./token-budget.cn.md)
 
-# NPS Token Budget 规范
+# NPS Token Budget Specification
 
 **Version**: 0.1  
 **Date**: 2026-04-12  
 
 ---
 
-## 1. 概述
+## 1. Overview
 
-NPS Token Budget 机制允许 Agent 在请求中声明本次操作的最大 token 消耗上限。Node 据此裁剪响应字段、限制返回条数或拒绝超预算请求。
+The NPS Token Budget mechanism lets an agent declare a maximum token-consumption cap for a given request. A node uses this cap to trim response fields, limit the number of records returned, or reject over-budget requests.
 
-为解决不同 LLM 的 token 计算差异，NPS 引入 **NPS Token（NPT）** 作为标准化计量单位。
+To address the differences in how each LLM counts tokens, NPS introduces **NPS Token (NPT)** as a standardized unit of measure.
 
 ---
 
-## 2. NPS Token（NPT）
+## 2. NPS Token (NPT)
 
-### 2.1 定义
+### 2.1 Definition
 
-NPS Token（NPT）是 NPS 协议族内部的标准 token 计量单位。各 LLM 的原生 token 通过汇率转换为 NPT。
+NPT is the standard token-accounting unit inside the NPS protocol suite. Native tokens from each LLM are converted to NPT through exchange rates.
 
-### 2.2 默认计算方法（Fallback）
+### 2.2 Default Calculation (Fallback)
 
-当 tokenizer 无法确定时，使用以下公式作为默认估算：
+When the tokenizer cannot be determined, use the following formula as a default estimate:
 
 ```
 NPT = ceil(UTF-8_bytes / 4)
 ```
 
-此公式基于主流 LLM tokenizer 的平均行为（英文约 4 bytes/token，中文约 3 bytes/token），作为最保守的估算基线。
+This formula reflects the average behavior of mainstream LLM tokenizers (≈ 4 bytes/token for English, ≈ 3 bytes/token for Chinese) and acts as the most conservative baseline.
 
-### 2.3 汇率表（NPT Exchange Rates）
+### 2.3 Exchange Rate Table (NPT Exchange Rates)
 
-Node 实现 SHOULD 内置常见模型的 NPT 汇率：
+Node implementations SHOULD ship with built-in NPT exchange rates for common models:
 
-| 模型族 | Tokenizer | 1 原生 Token ≈ NPT | 说明 |
-|--------|-----------|---------------------|------|
-| OpenAI GPT-4 / GPT-4o | `cl100k_base` | 1.0 | 基准参照 |
-| Anthropic Claude | Claude tokenizer | 1.05 | 略高于 GPT-4 |
-| Google Gemini | SentencePiece | 0.95 | 略低于 GPT-4 |
-| Meta LLaMA 3 | `llama3-tokenizer` | 1.02 | 接近基准 |
-| Mistral | SentencePiece | 0.98 | 接近基准 |
-| Default（未知模型）| UTF-8 / 4 | 1.0 | Fallback |
+| Model family | Tokenizer | 1 native token ≈ NPT | Notes |
+|--------------|-----------|-----------------------|-------|
+| OpenAI GPT-4 / GPT-4o | `cl100k_base` | 1.0 | Reference baseline |
+| Anthropic Claude | Claude tokenizer | 1.05 | Slightly higher than GPT-4 |
+| Google Gemini | SentencePiece | 0.95 | Slightly lower than GPT-4 |
+| Meta LLaMA 3 | `llama3-tokenizer` | 1.02 | Near baseline |
+| Mistral | SentencePiece | 0.98 | Near baseline |
+| Default (unknown model) | UTF-8 / 4 | 1.0 | Fallback |
 
-汇率表随 NPS 版本更新维护。实现 MAY 通过配置覆盖内置汇率。
+The table is maintained with NPS version updates. Implementations MAY override the built-in rates via configuration.
 
 ---
 
-## 3. Tokenizer 解析链
+## 3. Tokenizer Resolution Chain
 
-Agent 发起请求时，Node 按以下优先级确定 tokenizer：
+When an agent issues a request, the node resolves the tokenizer in this order:
 
 ```
-1. Agent 显式声明（X-NWP-Tokenizer 头）
-   ↓ 未声明
-2. 从 Agent 配置/IdentFrame 自动匹配
-   ↓ 匹配失败
-3. 使用默认计算方法（UTF-8 bytes / 4）
+1. Explicit declaration by the agent (X-NWP-Tokenizer header)
+   ↓ not declared
+2. Auto-match from agent configuration / IdentFrame
+   ↓ match failed
+3. Default calculation (UTF-8 bytes / 4)
 ```
 
-### 3.1 显式声明（优先级最高）
+### 3.1 Explicit Declaration (highest priority)
 
-Agent 在请求头中声明 tokenizer：
+The agent declares its tokenizer in the request header:
 
 ```
 X-NWP-Tokenizer: cl100k_base
 ```
 
-Node MUST 识别声明的 tokenizer 并使用对应算法计算 token。若 Node 不支持该 tokenizer，SHOULD 回退到自动匹配。
+Node MUST recognize the declared tokenizer and use the corresponding algorithm to count tokens. If the node does not support that tokenizer, it SHOULD fall back to auto-match.
 
-### 3.2 自动匹配
+### 3.2 Auto-Match
 
-Node 根据 IdentFrame 中的元数据推断 Agent 使用的模型族：
+The node infers the agent's model family from IdentFrame metadata:
 
-- `IdentFrame.metadata.model_family`：如 `"openai/gpt-4o"`、`"anthropic/claude-4"`
-- `IdentFrame.metadata.tokenizer`：如 `"cl100k_base"`
+- `IdentFrame.metadata.model_family`: e.g. `"openai/gpt-4o"`, `"anthropic/claude-4"`
+- `IdentFrame.metadata.tokenizer`: e.g. `"cl100k_base"`
 
-若 IdentFrame 包含以上字段，Node 使用对应的 tokenizer。
+When either field is present in the IdentFrame, the node uses the matching tokenizer.
 
-### 3.3 默认 Fallback
+### 3.3 Default Fallback
 
-无法确定 tokenizer 时，使用 `ceil(UTF-8_bytes / 4)` 计算 NPT。
-
----
-
-## 4. 请求与响应
-
-### 4.1 请求头
-
-| 头 | 必填 | 描述 |
-|----|------|------|
-| `X-NWP-Budget` | 可选 | 最大 NPT 预算（uint32）|
-| `X-NWP-Tokenizer` | 可选 | Agent 使用的 tokenizer 标识 |
-
-### 4.2 响应头
-
-| 头 | 描述 |
-|----|------|
-| `X-NWP-Tokens` | 本响应实际 NPT 消耗 |
-| `X-NWP-Tokens-Native` | 本响应原生 token 消耗（若已知 tokenizer） |
-| `X-NWP-Tokenizer-Used` | Node 实际使用的 tokenizer 标识 |
-
-### 4.3 超预算处理
-
-当响应将超过 `X-NWP-Budget` 时：
-
-1. Node SHOULD 优先裁剪响应（减少返回字段或条数），使结果在预算内
-2. 若无法裁剪（如单条记录已超预算），Node MUST 返回 `NWP-BUDGET-EXCEEDED` 错误
-3. Node MUST NOT 静默截断结构化数据（截断可能导致 Agent 收到不完整结构）
+When the tokenizer cannot be determined, use `ceil(UTF-8_bytes / 4)` to compute NPT.
 
 ---
 
-## 5. CapsFrame 中的 token 估算
+## 4. Request & Response
 
-CapsFrame 的 `token_est` 字段值为 NPT：
+### 4.1 Request Headers
+
+| Header | Required | Description |
+|--------|----------|-------------|
+| `X-NWP-Budget` | optional | Maximum NPT budget (uint32) |
+| `X-NWP-Tokenizer` | optional | Tokenizer identifier used by the agent |
+
+### 4.2 Response Headers
+
+| Header | Description |
+|--------|-------------|
+| `X-NWP-Tokens` | Actual NPT consumed by this response |
+| `X-NWP-Tokens-Native` | Native token consumption for this response (when the tokenizer is known) |
+| `X-NWP-Tokenizer-Used` | Tokenizer identifier actually used by the node |
+
+### 4.3 Over-Budget Handling
+
+When the response would exceed `X-NWP-Budget`:
+
+1. Node SHOULD trim the response first (fewer fields or records) to fit within budget.
+2. If trimming is impossible (e.g. a single record already exceeds budget), node MUST return a `NWP-BUDGET-EXCEEDED` error.
+3. Node MUST NOT silently truncate structured data (truncation can produce incomplete structures on the agent side).
+
+---
+
+## 5. Token Estimate in CapsFrame
+
+The `token_est` field in a CapsFrame is in NPT:
 
 ```json
 {
@@ -129,13 +129,13 @@ CapsFrame 的 `token_est` 字段值为 NPT：
 
 ---
 
-## 6. 实现注意事项
+## 6. Implementation Notes
 
-- Node 实现 SHOULD 内置至少 `cl100k_base`（GPT-4 系列）tokenizer
-- 汇率表建议作为可热更新配置，不硬编码
-- 高频场景可对 token 估算做采样而非逐条计算
-- NPT 值始终为 uint32，最大 4,294,967,295
+- Node implementations SHOULD ship with at least the `cl100k_base` (GPT-4 family) tokenizer built in.
+- The exchange-rate table should be hot-reloadable configuration, not hard-coded.
+- For high-frequency scenarios, token estimation MAY be sampled rather than computed record-by-record.
+- NPT values are always uint32 — maximum 4,294,967,295.
 
 ---
 
-*归属：LabAcacia / INNO LOTUS PTY LTD · Apache 2.0*
+*Copyright: LabAcacia / INNO LOTUS PTY LTD · Apache 2.0*

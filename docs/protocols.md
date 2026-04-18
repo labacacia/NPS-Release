@@ -55,7 +55,7 @@ NWP defines how an agent queries or acts against a node, carrying the `anchor_re
 - **Gateway Node** — stateless router to NOP DAGs; the heart of the AaaS Profile
 - **Agent Node** — speaks NWP + NOP, often an LLM-driven executor
 
-Read the full spec: [NPS-2 NWP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-2-NWP.en.md).
+Read the full spec: [NPS-2 NWP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-2-NWP.md).
 
 ---
 
@@ -117,7 +117,7 @@ NOP takes a DAG — nodes execute actions, edges pass outputs — and provides d
 - Max timeout 3,600,000 ms (1 hour)
 - `callback_url` is SSRF-validated by the orchestrator
 
-Read the full spec: [NPS-5 NOP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-5-NOP.en.md).
+Read the full spec: [NPS-5 NOP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-5-NOP.md).
 
 ---
 
@@ -141,4 +141,4 @@ Machine-readable registry: [frame-registry.yaml](https://github.com/labacacia/NP
 - [Error codes](https://github.com/labacacia/NPS-Release/blob/main/spec/error-codes.md) — `{PROTOCOL}-{CATEGORY}-{DETAIL}` namespace
 - [Status codes](https://github.com/labacacia/NPS-Release/blob/main/spec/status-codes.md) — NPS native status codes + HTTP mapping
 - [Token Budget](https://github.com/labacacia/NPS-Release/blob/main/spec/token-budget.md) — NPT metering specification
-- [AaaS Profile](https://github.com/labacacia/NPS-Release/blob/main/spec/services/NPS-AaaS-Profile.en.md) — Agent-as-a-Service compliance levels (L1 / L2 / L3)
+- [AaaS Profile](https://github.com/labacacia/NPS-Release/blob/main/spec/services/NPS-AaaS-Profile.md) — Agent-as-a-Service compliance levels (L1 / L2 / L3)

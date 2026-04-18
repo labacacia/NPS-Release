@@ -63,10 +63,10 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 |----------|-------------|
 | [NPS-0 Overview](./spec/protocols/NPS-0-Overview.md) | Suite overview — start here |
 | [NPS-1 NCP](./spec/protocols/NPS-1-NCP.md) | Wire format, frame header, encoding tiers |
-| [NPS-2 NWP (中)](./spec/protocols/NPS-2-NWP.md) / [EN](./spec/protocols/NPS-2-NWP.en.md) | Neural Web Protocol |
+| [NPS-2 NWP](./spec/protocols/NPS-2-NWP.md) | Neural Web Protocol |
 | [NPS-3 NIP](./spec/protocols/NPS-3-NIP.md) | Neural Identity Protocol |
 | [NPS-4 NDP](./spec/protocols/NPS-4-NDP.md) | Neural Discovery Protocol |
-| [NPS-5 NOP (中)](./spec/protocols/NPS-5-NOP.md) / [EN](./spec/protocols/NPS-5-NOP.en.md) | Neural Orchestration Protocol |
+| [NPS-5 NOP](./spec/protocols/NPS-5-NOP.md) | Neural Orchestration Protocol |
 
 ### Reference Documents
 
@@ -82,7 +82,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 | Document | Description |
 |----------|-------------|
-| [AaaS Profile (中)](./spec/services/NPS-AaaS-Profile.md) / [EN](./spec/services/NPS-AaaS-Profile.en.md) | Agent-as-a-Service compliance profile (Gateway Node, Vector Proxy Layer, L1/L2/L3 compliance) |
+| [AaaS Profile](./spec/services/NPS-AaaS-Profile.md) | Agent-as-a-Service compliance profile (Gateway Node, Vector Proxy Layer, L1/L2/L3 compliance) |
 
 ---
 
