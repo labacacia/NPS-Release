@@ -1,3 +1,5 @@
+[English Version](./NPS-Roadmap.en.md) | 中文版
+
 # NPS 路线图
 
 **Version**: 0.2  

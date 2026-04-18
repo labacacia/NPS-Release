@@ -1,3 +1,5 @@
+[English Version](./status-codes.en.md) | 中文版
+
 # NPS 原生状态码与 HTTP 映射
 
 **Version**: 0.1  

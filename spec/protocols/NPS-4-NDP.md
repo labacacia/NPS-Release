@@ -1,3 +1,5 @@
+[English Version](./NPS-4-NDP.en.md) | 中文版
+
 # NPS-4: Neural Discovery Protocol (NDP)
 
 **Spec Number**: NPS-4  

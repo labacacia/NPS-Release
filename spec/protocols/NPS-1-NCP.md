@@ -1,3 +1,5 @@
+[English Version](./NPS-1-NCP.en.md) | 中文版
+
 # NPS-1: Neural Communication Protocol (NCP)
 
 **Spec Number**: NPS-1  
