@@ -1,5 +1,7 @@
 # Contributing to NPS
 
+> English | [中文版](CONTRIBUTING.cn.md)
+
 Thank you for your interest in contributing to the Neural Protocol Suite.
 
 ## Issue Prefixes
