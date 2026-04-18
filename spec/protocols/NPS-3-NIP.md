@@ -1,4 +1,4 @@
-[English Version](./NPS-3-NIP.en.md) | 中文版
+English | [中文版](./NPS-3-NIP.cn.md)
 
 # NPS-3: Neural Identity Protocol (NIP)
 
@@ -6,7 +6,7 @@
 **Status**: Draft  
 **Version**: 0.2  
 **Date**: 2026-04-12  
-**Port**: 17433（默认，共用）/ 17435（可选独立）  
+**Port**: 17433 (default, shared) / 17435 (optional dedicated)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **Depends-On**: NPS-1 (NCP v0.3)  
 
@@ -14,112 +14,112 @@
 
 ## 1. Terminology
 
-本文档中的关键字 "MUST"、"MUST NOT"、"SHOULD"、"MAY" 按照 RFC 2119 解释。
+The key words "MUST", "MUST NOT", "SHOULD", and "MAY" in this document are to be interpreted as described in RFC 2119.
 
 ---
 
-## 2. 协议概述
+## 2. Protocol Overview
 
-NIP 为每个 AI Agent、NWP 节点和人类操作员颁发可验证的神经身份（NID），携带能力声明和权限 scope，支持信任链传递和实时吊销。NIP 是 NPS 安全模型的核心。
+NIP issues a verifiable Neural Identity (NID) to every AI agent, NWP node, and human operator, carrying capability declarations and scope-bound permissions. It supports trust-chain propagation and real-time revocation. NIP is the heart of the NPS security model.
 
-### 2.1 参与方
+### 2.1 Actors
 
-| 角色 | 描述 |
-|------|------|
-| Root CA | 根证书颁发机构，离线保存 |
-| Org CA | 组织中间 CA，每组织一个 |
-| Agent | 持有 NID 证书的 AI Agent |
-| Node | 持有 NID 证书的 NWP 节点 |
-| Operator | 人类管理员，持有 Operator 证书 |
-| Verifier | 验证 NID 的一方（通常是 Node）|
+| Role | Description |
+|------|-------------|
+| Root CA | Root certificate authority; stored offline |
+| Org CA | Organization intermediate CA; one per organization |
+| Agent | AI agent holding an NID certificate |
+| Node | NWP node holding an NID certificate |
+| Operator | Human administrator holding an Operator certificate |
+| Verifier | The party verifying an NID (usually a Node) |
 
-### 2.2 CA 层级结构
+### 2.2 CA Hierarchy
 
 ```
-Root CA（离线保存，极少使用）
+Root CA (offline, rarely used)
     │
-    └── Org Intermediate CA（每组织一个，有效期 1 年）
-            ├── Agent Certificate    （有效期 30 天，支持自动续期）
-            ├── Node Certificate     （有效期 90 天）
-            └── Operator Certificate （有效期 1 年，绑定 MFA）
+    └── Org Intermediate CA (one per org, 1-year validity)
+            ├── Agent Certificate    (30-day validity, auto-renewal supported)
+            ├── Node Certificate     (90-day validity)
+            └── Operator Certificate (1-year validity, bound to MFA)
 ```
 
 ---
 
-## 3. NID 格式
+## 3. NID Format
 
 ```abnf
-nid         = "urn:nps:" entity-type ":" issuer-domain ":" identifier
-entity-type = "agent" / "node" / "org"
+nid           = "urn:nps:" entity-type ":" issuer-domain ":" identifier
+entity-type   = "agent" / "node" / "org"
 issuer-domain = <RFC 1034 domain>
-identifier  = 1*(ALPHA / DIGIT / "-" / "_" / ".")
+identifier    = 1*(ALPHA / DIGIT / "-" / "_" / ".")
 ```
 
-**示例**
+**Examples**
 
 ```
-urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4    ← AI Agent
-urn:nps:node:api.myapp.com:products                   ← NWP 节点
-urn:nps:org:mycompany.com                              ← 组织 CA
+urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4    ← AI agent
+urn:nps:node:api.myapp.com:products                   ← NWP node
+urn:nps:org:mycompany.com                              ← Organization CA
 ```
 
 ---
 
-## 4. 签名算法
+## 4. Signature Algorithms
 
-| 算法 | 用途 | 密钥长度 |
-|------|------|---------|
-| **Ed25519**（主算法）| Agent 高频验签 | 32 字节私钥 / 32 字节公钥 |
-| **ECDSA P-256**（备用）| 兼容性场景 | 32 字节私钥 / 64 字节公钥 |
+| Algorithm | Use | Key length |
+|-----------|-----|-----------|
+| **Ed25519** (primary) | High-frequency agent verification | 32-byte private key / 32-byte public key |
+| **ECDSA P-256** (fallback) | Compatibility scenarios | 32-byte private key / 64-byte public key |
 
-公钥编码格式：`{algorithm}:{base64url(DER)}`，例如：`ed25519:MCowBQYDK2VwAyEA...`
+Public-key encoding: `{algorithm}:{base64url(DER)}`, e.g. `ed25519:MCowBQYDK2VwAyEA...`.
 
 ---
 
-## 5. 帧类型
+## 5. Frame Types
 
 ### 5.1 IdentFrame (0x20)
 
-Agent 身份声明与证书携带。每次建立连接时作为握手帧发送。
+Agent identity declaration carrying the certificate. Sent as the handshake frame on every new connection.
 
-**字段定义**
+**Field definitions**
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `frame` | uint8 | 必填 | 固定值 `0x20` |
-| `nid` | string | 必填 | Agent NID |
-| `pub_key` | string | 必填 | 公钥，格式：`{alg}:{base64url}` |
-| `capabilities` | array | 必填 | Agent 持有的能力列表 |
-| `scope` | object | 必填 | 访问范围声明 |
-| `issued_by` | string | 必填 | 颁发者 NID（Org CA）|
-| `issued_at` | string | 必填 | 颁发时间（ISO 8601 UTC）|
-| `expires_at` | string | 必填 | 过期时间（ISO 8601 UTC）|
-| `serial` | string | 必填 | 证书序列号（Org CA 全局唯一，十六进制）|
-| `signature` | string | 必填 | CA 对本帧签名，格式：`{alg}:{base64url}` |
-| `metadata` | object | 可选 | Agent 元数据，见下 |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frame` | uint8 | required | Fixed value `0x20` |
+| `nid` | string | required | Agent NID |
+| `pub_key` | string | required | Public key; format `{alg}:{base64url}` |
+| `capabilities` | array | required | Capabilities held by the agent |
+| `scope` | object | required | Access-scope declaration |
+| `issued_by` | string | required | Issuer NID (Org CA) |
+| `issued_at` | string | required | Issue time (ISO 8601 UTC) |
+| `expires_at` | string | required | Expiration time (ISO 8601 UTC) |
+| `serial` | string | required | Certificate serial (globally unique per Org CA, hex) |
+| `signature` | string | required | CA's signature over this frame; format `{alg}:{base64url}` |
+| `metadata` | object | optional | Agent metadata — see below |
 
-**metadata 字段（可选）**
+**`metadata` fields (optional)**
 
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| `model_family` | string | Agent 使用的模型族标识，如 `"openai/gpt-4o"`、`"anthropic/claude-4"` |
-| `tokenizer` | string | Agent 使用的 tokenizer 标识，如 `"cl100k_base"` |
-| `runtime` | string | Agent 运行时标识，如 `"langchain/0.2"`、`"autogen/0.4"` |
+| Field | Type | Description |
+|-------|------|-------------|
+| `model_family` | string | Model-family identifier used by the agent, e.g. `"openai/gpt-4o"`, `"anthropic/claude-4"` |
+| `tokenizer` | string | Tokenizer identifier used by the agent, e.g. `"cl100k_base"` |
+| `runtime` | string | Agent runtime identifier, e.g. `"langchain/0.2"`, `"autogen/0.4"` |
 
-metadata 字段不参与签名计算，Agent 可在运行时动态设置。Node 使用 metadata 中的 tokenizer 信息实现 NPT 自动匹配（见 [token-budget.md](token-budget.md)）。
+The `metadata` field is not included in the signature computation; an agent MAY set it at runtime. Nodes use the `tokenizer` in `metadata` to perform NPT auto-matching (see [token-budget.md](../token-budget.md)).
 
-**capabilities 标准值**
+**Standard `capabilities` values**
 
-| 能力 | 描述 |
-|------|------|
-| `nwp:query` | 可查询 Memory Node |
-| `nwp:action` | 可调用 Action Node |
-| `nwp:stream` | 可接收 StreamFrame 响应 |
-| `ncp:stream` | 可发起 NCP 流式传输 |
-| `nop:delegate` | 可委托子任务给其他 Agent |
-| `nop:orchestrate` | 可作为 Orchestrator 发起 TaskFrame |
+| Capability | Description |
+|------------|-------------|
+| `nwp:query` | May query Memory Nodes |
+| `nwp:action` | May invoke Action Nodes |
+| `nwp:stream` | May receive StreamFrame responses |
+| `ncp:stream` | May initiate NCP streaming |
+| `nop:delegate` | May delegate subtasks to other agents |
+| `nop:orchestrate` | May act as an orchestrator and emit TaskFrames |
 
-**scope 字段**
+**`scope` field**
 
 ```json
 {
@@ -129,11 +129,11 @@ metadata 字段不参与签名计算，Agent 可在运行时动态设置。Node 
 }
 ```
 
-**签名计算**
+**Signature computation**
 
-签名对象为 IdentFrame 去掉 `signature` 字段后的规范化 JSON（字段字母序，无空白）。
+The signature is computed over the canonical JSON of the IdentFrame with the `signature` field removed (keys sorted alphabetically, no whitespace).
 
-**完整示例**
+**Full example**
 
 ```json
 {
@@ -158,7 +158,7 @@ metadata 字段不参与签名计算，Agent 可在运行时动态设置。Node 
 
 ### 5.2 TrustFrame (0x21)
 
-跨 CA 信任链传递与能力授权（商业功能，NPS Cloud）。
+Cross-CA trust-chain propagation and capability grant (commercial feature, NPS Cloud).
 
 ```json
 {
@@ -176,7 +176,7 @@ metadata 字段不参与签名计算，Agent 可在运行时动态设置。Node 
 
 ### 5.3 RevokeFrame (0x22)
 
-吊销 NID 或特定能力。
+Revokes an NID or a specific capability.
 
 ```json
 {
@@ -189,54 +189,56 @@ metadata 字段不参与签名计算，Agent 可在运行时动态设置。Node 
 }
 ```
 
-`reason` 取值：`key_compromise` / `ca_compromise` / `affiliation_changed` / `superseded` / `cessation_of_operation`
+`reason` values: `key_compromise` / `ca_compromise` / `affiliation_changed` / `superseded` / `cessation_of_operation`.
 
 ---
 
-## 6. 证书生命周期
+## 6. Certificate Lifecycle
 
 ```
-注册          自动续期          主动吊销        CA 轮换
-  │               │                 │              │
-  ↓               ↓                 ↓              ↓
-CA 颁发      到期前 7 天         RevokeFrame    新旧 CA 并行
-IdentFrame   Agent 自动触发      立即生效         30 天
-有效期 30 天  CA 颁发新证书      节点拒绝所有    平滑过渡
-             新旧并行 1 小时      该 NID 请求
+Registration     Auto-renewal           Revocation        CA rotation
+     │                 │                     │                │
+     ↓                 ↓                     ↓                ↓
+CA issues         7 days pre-expiry     RevokeFrame      Old + new CA
+IdentFrame        Agent triggers         takes effect     in parallel
+30-day validity   CA issues new cert     immediately       for 30 days
+                  Both valid 1 hour      Nodes reject      Smooth rollover
+                                         all requests
+                                         for that NID
 ```
 
 ---
 
-## 7. 验证流程
+## 7. Verification Flow
 
 ```
-Node 收到 IdentFrame
+Node receives IdentFrame
   │
-  ├─ 1. 检查 expires_at > now（过期→ NIP-CERT-EXPIRED）
-  ├─ 2. 检查 issued_by 在 NWM trusted_issuers 中（不信任→ NIP-CERT-UNTRUSTED-ISSUER）
-  ├─ 3. 用 issued_by CA 公钥验证 signature（失败→ NIP-CERT-SIGNATURE-INVALID）
-  ├─ 4. OCSP 查询（若 NWM 配置了 ocsp_url）或检查本地 CRL（已吊销→ NIP-CERT-REVOKED）
-  ├─ 5. 检查 capabilities 包含节点要求的能力（不足→ NIP-CERT-CAPABILITY-MISSING）
-  └─ 6. 检查 scope.nodes 覆盖目标节点路径（不覆盖→ NWP-AUTH-NID-SCOPE-VIOLATION）
-        全部通过 → 请求授权
+  ├─ 1. Check expires_at > now  (expired → NIP-CERT-EXPIRED)
+  ├─ 2. Check issued_by is in NWM trusted_issuers  (not trusted → NIP-CERT-UNTRUSTED-ISSUER)
+  ├─ 3. Verify signature with issued_by CA public key  (fail → NIP-CERT-SIGNATURE-INVALID)
+  ├─ 4. OCSP lookup (when NWM configures ocsp_url) or local CRL check  (revoked → NIP-CERT-REVOKED)
+  ├─ 5. Check capabilities contains what the node requires  (missing → NIP-CERT-CAPABILITY-MISSING)
+  └─ 6. Check scope.nodes covers the target node path  (not covered → NWP-AUTH-NID-SCOPE-VIOLATION)
+        All checks pass → authorize the request
 ```
 
 ---
 
 ## 8. NIP CA Server OSS API
 
-| 方法 | 路径 | 认证 | 描述 |
-|------|------|------|------|
-| POST | `/v1/agents/register` | Operator Cert | 注册 Agent，返回 NID + IdentFrame |
-| POST | `/v1/agents/{nid}/renew` | Agent Cert | 续期证书（到期前 7 天可续）|
-| POST | `/v1/agents/{nid}/revoke` | Operator Cert | 吊销 NID |
-| GET | `/v1/agents/{nid}/verify` | 无 | 验证 NID 有效性（OCSP 查询）|
-| POST | `/v1/nodes/register` | Operator Cert | 注册 NWP 节点，颁发 Node Certificate |
-| GET | `/v1/ca/cert` | 无 | CA 公钥证书 |
-| GET | `/v1/crl` | 无 | 证书吊销列表 |
-| GET | `/.well-known/nps-ca` | 无 | CA 发现端点 |
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/v1/agents/register` | Operator Cert | Register an agent; returns NID + IdentFrame |
+| POST | `/v1/agents/{nid}/renew` | Agent Cert | Renew a certificate (up to 7 days before expiry) |
+| POST | `/v1/agents/{nid}/revoke` | Operator Cert | Revoke an NID |
+| GET | `/v1/agents/{nid}/verify` | None | Verify NID validity (OCSP lookup) |
+| POST | `/v1/nodes/register` | Operator Cert | Register an NWP node; issues a Node Certificate |
+| GET | `/v1/ca/cert` | None | CA public-key certificate |
+| GET | `/v1/crl` | None | Certificate revocation list |
+| GET | `/.well-known/nps-ca` | None | CA discovery endpoint |
 
-**`/.well-known/nps-ca` 响应**
+**`/.well-known/nps-ca` response**
 
 ```json
 {
@@ -258,48 +260,48 @@ Node 收到 IdentFrame
 
 ---
 
-## 9. 错误码
+## 9. Error Codes
 
-| 错误码 | NPS 状态码 | 描述 |
-|--------|-----------|------|
-| `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | 证书已过期 |
-| `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | 证书已吊销 |
-| `NIP-CERT-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | 证书签名验证失败 |
-| `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | 颁发者不在信任列表 |
-| `NIP-CERT-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | 证书缺少所需能力 |
-| `NIP-CERT-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | 证书 scope 不覆盖目标路径 |
-| `NIP-CA-NID-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | NID 不存在 |
-| `NIP-CA-NID-ALREADY-EXISTS` | `NPS-CLIENT-CONFLICT` | NID 已存在（重复注册）|
-| `NIP-CA-SERIAL-DUPLICATE` | `NPS-CLIENT-CONFLICT` | 证书序列号已存在 |
-| `NIP-CA-RENEWAL-TOO-EARLY` | `NPS-CLIENT-BAD-PARAM` | 尚未到续期窗口 |
-| `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | 请求 scope 超出父级 scope |
-| `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP 服务暂不可用 |
-| `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame 签名或格式不合法 |
+| Error Code | NPS Status | Description |
+|------------|------------|-------------|
+| `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | Certificate has expired |
+| `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | Certificate has been revoked |
+| `NIP-CERT-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | Certificate signature verification failed |
+| `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | Issuer not in the trust list |
+| `NIP-CERT-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Certificate missing a required capability |
+| `NIP-CERT-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | Certificate scope does not cover the target path |
+| `NIP-CA-NID-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | NID does not exist |
+| `NIP-CA-NID-ALREADY-EXISTS` | `NPS-CLIENT-CONFLICT` | NID already exists (duplicate registration) |
+| `NIP-CA-SERIAL-DUPLICATE` | `NPS-CLIENT-CONFLICT` | Certificate serial already in use |
+| `NIP-CA-RENEWAL-TOO-EARLY` | `NPS-CLIENT-BAD-PARAM` | Renewal window not yet open |
+| `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | Requested scope exceeds the parent scope |
+| `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP service temporarily unavailable |
+| `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame signature or format is invalid |
 
-HTTP 模式下的状态码映射见 [status-codes.md](status-codes.md)。
-
----
-
-## 10. 安全考量
-
-### 10.1 密钥存储
-CA 私钥 MUST 存储于 HSM 或加密密钥文件（AES-256-GCM）。OSS 实现使用加密文件并预留 HSM 接口。
-
-### 10.2 时序攻击防御
-OCSP 响应时间 SHOULD 归一化（固定延迟至 200ms），防止通过响应时间推断证书状态。
-
-### 10.3 Scope 不可扩大原则
-委托链中任何环节的 scope MUST NOT 超过其父级 scope。CA MUST 在颁发证书时强制校验。
+HTTP-mode status mapping: see [status-codes.md](../status-codes.md).
 
 ---
 
-## 11. 变更历史
+## 10. Security Considerations
 
-| 版本 | 日期 | 变更 |
-|------|------|------|
-| 0.2 | 2026-04-12 | 统一端口 17433；IdentFrame 增加 metadata 字段（tokenizer 自动匹配）；错误码改用 NPS 状态码映射；完善错误码列表 |
-| 0.1 | 2026-04-10 | 初始规范：NID 格式、IdentFrame/TrustFrame/RevokeFrame、CA Server API、验证流程 |
+### 10.1 Key storage
+CA private keys MUST be stored in an HSM or in an encrypted key file (AES-256-GCM). The OSS reference implementation uses encrypted files and reserves an HSM interface.
+
+### 10.2 Timing-attack mitigation
+OCSP response times SHOULD be normalized (fixed 200 ms delay) to prevent certificate-status inference via response-time side channels.
+
+### 10.3 No-scope-expansion principle
+At every link in the delegation chain, scope MUST NOT exceed that of its parent. CAs MUST enforce this at issuance time.
 
 ---
 
-*归属：LabAcacia / INNO LOTUS PTY LTD · Apache 2.0*
+## 11. Change Log
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 0.2 | 2026-04-12 | Unified port 17433; added `metadata` field to IdentFrame (tokenizer auto-match); error codes switched to NPS-status-code mapping; error-code list completed |
+| 0.1 | 2026-04-10 | Initial spec: NID format, IdentFrame/TrustFrame/RevokeFrame, CA Server API, verification flow |
+
+---
+
+*Copyright: LabAcacia / INNO LOTUS PTY LTD · Apache 2.0*

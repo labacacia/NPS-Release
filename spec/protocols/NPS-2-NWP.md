@@ -1,4 +1,4 @@
-[English Version](./NPS-2-NWP.en.md) | 中文版
+English | [中文版](./NPS-2-NWP.cn.md)
 
 # NPS-2: Neural Web Protocol (NWP)
 
@@ -6,140 +6,140 @@
 **Status**: Draft  
 **Version**: 0.4  
 **Date**: 2026-04-14  
-**Port**: 17433（默认，共用）/ 17434（可选独立）  
+**Port**: 17433 (default, shared) / 17434 (optional dedicated)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **Depends-On**: NPS-1 (NCP v0.4)  
 
-> 本文档为 NWP 详细规范。套件总览见 [NPS-0-Overview.md](NPS-0-Overview.md)。
+> This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
 ---
 
 ## 1. Terminology
 
-本文档中的关键字 "MUST"、"MUST NOT"、"REQUIRED"、"SHOULD"、"MAY" 按照 RFC 2119 解释。
+Keywords "MUST", "MUST NOT", "REQUIRED", "SHOULD", "MAY" in this document are interpreted per RFC 2119.
 
 ---
 
-## 2. 协议概述
+## 2. Protocol Overview
 
-NWP 定义 AI Agent 访问 Web 数据和服务的方式。Agent 通过 `nwp://` 地址访问三类神经节点（Memory / Action / Complex），节点响应直接可被模型理解，无需任何语义解析层。
+NWP defines how AI Agents access web data and services. Agents use `nwp://` addresses to reach three types of Neural Nodes (Memory / Action / Complex). Node responses are directly machine-understandable, requiring no semantic parsing layer.
 
-### 2.1 节点类型
+### 2.1 Node Types
 
-| 类型 | 职责 | 典型数据源 |
-|------|------|-----------|
-| **Memory Node** | 数据存储与检索，不含计算逻辑 | RDS、NoSQL、文件系统、向量数据库 |
-| **Action Node** | 执行操作，返回结果或副作用 | 函数、外部 API、消息队列、Webhook |
-| **Complex Node** | 混合数据与操作，含子节点引用 | 以上所有类型 + 子节点引用 |
-| **Gateway Node** | 无状态服务入口，将请求路由到 NOP 编排层 | AaaS 平台、多 Agent 服务网关 |
+| Type | Responsibility | Typical Data Sources |
+|------|---------------|---------------------|
+| **Memory Node** | Data storage and retrieval, no compute logic | RDS, NoSQL, file systems, vector databases |
+| **Action Node** | Executes operations, returns results or side effects | Functions, external APIs, message queues, Webhooks |
+| **Complex Node** | Mixed data and operations, with sub-node references | All of the above + sub-node references |
+| **Gateway Node** | Stateless service entry point, routes requests to NOP orchestration layer | AaaS platforms, multi-agent service gateways |
 
-> **Gateway Node** 是 AaaS Profile 引入的扩展节点类型（见 `spec/services/NPS-AaaS-Profile.md`）。
-> 它本身不执行业务逻辑，所有 Action 调用均转换为 NOP TaskFrame 下发给内部 Worker。
-> 与 Complex Node 的关键区别：Gateway Node **无业务状态**，可无感知水平扩展。
+> **Gateway Node** is an extended node type introduced by the AaaS Profile (see `spec/services/NPS-AaaS-Profile.md`).
+> It executes no business logic itself; all Action invocations are translated into NOP TaskFrames dispatched to internal Workers.
+> Key distinction from Complex Node: Gateway Node is **stateless** and can scale horizontally without side-effect concerns.
 
-### 2.2 Overlay 模式
+### 2.2 Overlay Mode
 
-在现有 HTTP 服务上附加 NWP 接口，服务器根据请求头区分访问者：
+Attach a NWP interface to an existing HTTP service. The server distinguishes visitors by request headers:
 
 ```
-请求含 X-NWP-Agent 或 HelloFrame  →  返回 application/nwp-*
-普通浏览器请求（无以上标识）        →  返回 text/html（正常网站）
+Request contains X-NWP-Agent or HelloFrame  →  return application/nwp-*
+Regular browser request (no above markers)  →  return text/html (normal website)
 ```
 
-Overlay 模式下 NWP 使用 HTTP 传输，帧序列化在 HTTP Body 中。详见 [NPS-1-NCP.md §2.2](NPS-1-NCP.md#22-传输模式)。
+In Overlay mode, NWP uses HTTP transport with frames serialized in the HTTP body. See [NPS-1-NCP.md §2.2](NPS-1-NCP.md#22-transport-modes).
 
 ---
 
-## 3. 节点地址规范
+## 3. Node Address Specification
 
-### 3.1 nwp:// URL 语法（ABNF）
+### 3.1 nwp:// URL Syntax (ABNF)
 
 ```abnf
 nwp-url     = "nwp://" host [":" port] "/" node-path ["/" sub-path]
 host        = <RFC 3986 host>
-port        = 1*DIGIT               ; 默认 17433
+port        = 1*DIGIT               ; default 17433
 node-path   = segment *("/" segment)
 sub-path    = "query" / "stream" / "invoke" / "subscribe" / "actions"
             / ".schema" / ".nwm"
 segment     = 1*(ALPHA / DIGIT / "-" / "_")
 ```
 
-### 3.2 子路径约定
+### 3.2 Sub-Path Conventions
 
-| 子路径 | 方法 | 适用节点 | 描述 |
-|--------|------|---------|------|
-| `/query` | POST | Memory | 单次结构化查询（返回 CapsFrame）|
-| `/stream` | POST | Memory | 流式查询（返回 StreamFrame 序列）|
-| `/invoke` | POST | Action / Complex | 操作调用入口 |
-| `/subscribe` | POST | Memory | 变更订阅入口（HTTP 模式，SSE）|
-| `/actions` | GET | Action / Complex | 列举节点可调用操作（返回 NWM actions 子集 JSON）|
-| `/.schema` | GET | 所有 | Schema 定义（返回 AnchorFrame JSON）|
-| `/.nwm` | GET | 所有 | 完整节点清单（返回 NWM JSON）|
+| Sub-Path | Method | Node Types | Description |
+|----------|--------|-----------|-------------|
+| `/query` | POST | Memory | Single structured query (returns CapsFrame) |
+| `/stream` | POST | Memory | Streaming query (returns StreamFrame sequence) |
+| `/invoke` | POST | Action / Complex | Operation invocation endpoint |
+| `/subscribe` | POST | Memory | Change subscription endpoint (HTTP mode, SSE) |
+| `/actions` | GET | Action / Complex | List callable operations (returns NWM actions subset JSON) |
+| `/.schema` | GET | All | Schema definition (returns AnchorFrame JSON) |
+| `/.nwm` | GET | All | Full node manifest (returns NWM JSON) |
 
 ---
 
 ## 4. Neural Web Manifest (NWM)
 
-每个节点 MUST 在 `/.nwm` 路径暴露机器可读清单，MIME 类型：`application/nwp-manifest+json`。
+Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `application/nwp-manifest+json`.
 
-### 4.1 完整字段定义
+### 4.1 Complete Field Definitions
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `nwp` | string | 必填 | NWP 版本，当前为 `"0.4"` |
-| `node_id` | string | 必填 | 节点 NID，格式：`urn:nps:node:{host}:{path}` |
-| `node_type` | string | 必填 | `"memory"` / `"action"` / `"complex"` / `"gateway"` |
-| `display_name` | string | 可选 | 人类可读节点名称 |
-| `manifest_version` | string | 可选 | 清单版本标识（ETag），用于条件请求缓存控制 |
-| `min_agent_version` | string | 可选 | Agent 支持的最低 NPS 版本，格式 `"major.minor"`；低于此版本的 Agent MUST 被拒绝并返回 `NWP-MANIFEST-VERSION-UNSUPPORTED` |
-| `wire_formats` | array | 必填 | 支持的编码格式列表：`["ncp-capsule", "msgpack", "json"]` |
-| `preferred_format` | string | 必填 | 首选格式 |
-| `schema_anchors` | object | 可选 | 预声明的 Schema 锚点，`{name: anchor_id}` |
-| `capabilities` | object | 必填 | 节点能力声明，见 §4.2 |
-| `data_sources` | array | 可选 | 底层数据源标识列表 |
-| `auth` | object | 必填 | 认证要求，见 §4.3 |
-| `rate_limits` | object | 可选 | 频率限制声明，见 §4.4 |
-| `actions` | object | 条件必填 | Action/Complex/Gateway 节点 MUST 填写；操作注册表，见 §4.6 |
-| `endpoints` | object | 必填 | 各功能端点 URL |
-| `graph` | object | 可选 | 子节点引用（Complex Node 专用），见 §11 |
-| `tokenizer_support` | array | 可选 | 节点支持的 tokenizer 列表（见 [token-budget.md](token-budget.md)）|
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `nwp` | string | Required | NWP version, currently `"0.4"` |
+| `node_id` | string | Required | Node NID, format: `urn:nps:node:{host}:{path}` |
+| `node_type` | string | Required | `"memory"` / `"action"` / `"complex"` / `"gateway"` |
+| `display_name` | string | Optional | Human-readable node name |
+| `manifest_version` | string | Optional | Manifest version identifier (ETag), for conditional request cache control |
+| `min_agent_version` | string | Optional | Minimum NPS version the Agent must support, format `"major.minor"`; Agents below this version MUST be rejected with `NWP-MANIFEST-VERSION-UNSUPPORTED` |
+| `wire_formats` | array | Required | Supported encoding formats: `["ncp-capsule", "msgpack", "json"]` |
+| `preferred_format` | string | Required | Preferred format |
+| `schema_anchors` | object | Optional | Pre-declared schema anchors, `{name: anchor_id}` |
+| `capabilities` | object | Required | Node capability declarations, see §4.2 |
+| `data_sources` | array | Optional | Underlying data source identifier list |
+| `auth` | object | Required | Authentication requirements, see §4.3 |
+| `rate_limits` | object | Optional | Rate limit declarations, see §4.4 |
+| `actions` | object | Conditionally Required | MUST be populated for Action/Complex nodes; operation registry, see §4.6 |
+| `endpoints` | object | Required | URLs for each functional endpoint |
+| `graph` | object | Optional | Sub-node references (Complex Node only), see §11 |
+| `tokenizer_support` | array | Optional | List of tokenizers supported by the node (see [token-budget.md](token-budget.md)) |
 
-### 4.2 capabilities 字段
+### 4.2 capabilities Field
 
-| 能力键 | 类型 | 描述 |
-|--------|------|------|
-| `query` | bool | 支持 QueryFrame（单次查询）|
-| `stream_query` | bool | 支持流式查询（StreamFrame 响应）|
-| `aggregate` | bool | 支持聚合查询（QueryFrame.aggregate）|
-| `subscribe` | bool | 支持变更订阅（DiffFrame 推送）|
-| `subscribe_filter` | bool | 订阅时支持携带 filter 条件 |
-| `vector_search` | bool | 支持向量相似搜索 |
-| `token_budget_hint` | bool | 支持根据 NPT 预算裁剪响应 |
-| `ext_frame` | bool | 支持扩展帧头（大帧模式）|
-| `e2e_enc` | bool | 支持 NCP E2E 加密（ENC=1，见 NPS-1-NCP §7.4）|
-| `inline_anchor` | bool | 支持在响应中内联返回更新后的 AnchorFrame |
+| Capability Key | Type | Description |
+|---------------|------|-------------|
+| `query` | bool | Supports QueryFrame (single query) |
+| `stream_query` | bool | Supports streaming queries (StreamFrame response) |
+| `aggregate` | bool | Supports aggregation queries (QueryFrame.aggregate) |
+| `subscribe` | bool | Supports change subscriptions (DiffFrame push) |
+| `subscribe_filter` | bool | Supports subscriptions with filter conditions |
+| `vector_search` | bool | Supports vector similarity search |
+| `token_budget_hint` | bool | Supports trimming responses based on NPT budget |
+| `ext_frame` | bool | Supports extended frame header (large frame mode) |
+| `e2e_enc` | bool | Supports NCP E2E encryption (ENC=1, see NPS-1-NCP §7.4) |
+| `inline_anchor` | bool | Supports returning updated AnchorFrame inline in responses |
 
-### 4.3 auth 字段
+### 4.3 auth Field
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `required` | bool | 必填 | 是否要求身份认证 |
-| `identity_type` | string | 条件必填 | `"nip-cert"` / `"bearer"` / `"none"` |
-| `trusted_issuers` | array | 条件必填 | 受信任的 CA URL 列表（identity_type 为 nip-cert 时必填）|
-| `required_capabilities` | array | 可选 | Agent MUST 持有的能力列表，如 `["nwp:query"]` |
-| `scope_check` | string | 可选 | scope 校验模式：`"prefix"`（默认）/ `"exact"` |
-| `ocsp_url` | string | 可选 | OCSP 验证端点 |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `required` | bool | Required | Whether authentication is required |
+| `identity_type` | string | Conditionally Required | `"nip-cert"` / `"bearer"` / `"none"` |
+| `trusted_issuers` | array | Conditionally Required | List of trusted CA URLs (required when identity_type is nip-cert) |
+| `required_capabilities` | array | Optional | Capabilities the Agent MUST hold, e.g. `["nwp:query"]` |
+| `scope_check` | string | Optional | Scope validation mode: `"prefix"` (default) / `"exact"` |
+| `ocsp_url` | string | Optional | OCSP validation endpoint |
 
-### 4.4 rate_limits 字段
+### 4.4 rate_limits Field
 
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| `requests_per_minute` | uint32 | 每 Agent 每分钟最大请求数 |
-| `requests_per_day` | uint32 | 每 Agent 每日最大请求数 |
-| `max_concurrent_streams` | uint32 | 每 Agent 最大并发流数 |
-| `max_subscriptions` | uint32 | 每 Agent 最大并发订阅数 |
+| Field | Type | Description |
+|-------|------|-------------|
+| `requests_per_minute` | uint32 | Max requests per Agent per minute |
+| `requests_per_day` | uint32 | Max requests per Agent per day |
+| `max_concurrent_streams` | uint32 | Max concurrent streams per Agent |
+| `max_subscriptions` | uint32 | Max concurrent subscriptions per Agent |
 
-### 4.5 NWM 完整示例
+### 4.5 Complete NWM Example
 
 ```json
 {
@@ -215,30 +215,30 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 }
 ```
 
-**NWM 条件请求**
+**NWM Conditional Requests**
 
-Agent SHOULD 缓存 NWM 并利用 `manifest_version` 做条件请求：HTTP 模式通过 `If-None-Match: {manifest_version}` 请求头，服务端若清单未变更则返回 `304 Not Modified`。
+Agents SHOULD cache the NWM and use `manifest_version` for conditional requests: in HTTP mode via the `If-None-Match: {manifest_version}` header; if the manifest is unchanged the server returns `304 Not Modified`.
 
-### 4.6 NWM Action 注册表
+### 4.6 NWM Action Registry
 
-`actions` 字段为 `{action_id: ActionSpec}` 字典，Action/Complex Node MUST 在此声明所有可调用操作。
+The `actions` field is an `{action_id: ActionSpec}` dictionary. Action/Complex/Gateway Nodes MUST declare all callable operations here.
 
-**ActionSpec 字段定义**
+**ActionSpec Field Definitions**
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `description` | string | 可选 | 操作的人类可读说明 |
-| `params_anchor` | string | 可选 | 参数 Schema 的 anchor_id（Agent 用于验证 ActionFrame.params）|
-| `result_anchor` | string | 可选 | 结果 Schema 的 anchor_id（成功时 CapsFrame 使用此 anchor_ref）|
-| `async` | bool | 必填 | 是否支持异步执行（true 时可在 ActionFrame 中设 async=true）|
-| `idempotent` | bool | 可选 | 操作是否幂等（true 时 Agent 可安全重试）|
-| `timeout_ms_default` | uint32 | 可选 | 默认超时毫秒数 |
-| `timeout_ms_max` | uint32 | 可选 | 最大允许超时毫秒数 |
-| `required_capability` | string | 可选 | 调用此操作所需的 NIP 能力，如 `"nwp:invoke"` |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `description` | string | Optional | Human-readable description of the operation |
+| `params_anchor` | string | Optional | anchor_id of the parameter Schema (Agent uses this to validate ActionFrame.params) |
+| `result_anchor` | string | Optional | anchor_id of the result Schema (CapsFrame uses this anchor_ref on success) |
+| `async` | bool | Required | Whether async execution is supported (if true, ActionFrame may set async=true) |
+| `idempotent` | bool | Optional | Whether the operation is idempotent (Agents may safely retry if true) |
+| `timeout_ms_default` | uint32 | Optional | Default timeout in milliseconds |
+| `timeout_ms_max` | uint32 | Optional | Maximum allowed timeout in milliseconds |
+| `required_capability` | string | Optional | NIP capability required to invoke this operation, e.g. `"nwp:invoke"` |
 
-**`/actions` 端点**
+**`/actions` Endpoint**
 
-Agent 发起 `GET /actions`，节点返回 NWM `actions` 字段的完整 JSON（便于动态发现，无需下载整个 NWM）：
+An Agent sends `GET /actions`; the node returns the full NWM `actions` field as JSON (for dynamic discovery without downloading the entire NWM):
 
 ```json
 {
@@ -252,82 +252,82 @@ Agent 发起 `GET /actions`，节点返回 NWM `actions` 字段的完整 JSON（
 
 ---
 
-## 5. Schema 获取流程
+## 5. Schema Retrieval Flow
 
-Agent 通过以下流程获取 Node 的 Schema（AnchorFrame 由 Node 发布，Agent 只读引用）：
+Agents retrieve a Node's schema via the following flow (AnchorFrames are published by Nodes; Agents are read-only consumers):
 
 ```
 Agent                              Node
   │                                  │
-  │── GET /.nwm ─────────────────→   │  1. 读取清单，获取 schema_anchors
+  │── GET /.nwm ─────────────────→   │  1. Read manifest, get schema_anchors
   │←── NWM JSON ──────────────────   │     { "order": "sha256:a3f9..." }
   │                                  │
-  │── GET /.schema ──────────────→   │  2. 获取完整 AnchorFrame（按需）
-  │←── AnchorFrame JSON ──────────   │     Agent 本地缓存
+  │── GET /.schema ──────────────→   │  2. Fetch complete AnchorFrame (on demand)
+  │←── AnchorFrame JSON ──────────   │     Agent caches locally
   │                                  │
-  │── QueryFrame(anchor_ref) ────→   │  3. 查询只携带 anchor_ref
+  │── QueryFrame(anchor_ref) ────→   │  3. Query carries only anchor_ref
   │←── CapsFrame(anchor_ref) ─────   │
 ```
 
-Agent SHOULD 在首次连接时预加载 NWM 中声明的所有 schema_anchors 对应的 AnchorFrame，减少后续请求延迟。
+Agents SHOULD preload AnchorFrames for all `schema_anchors` declared in the NWM on first connection, reducing latency for subsequent requests.
 
 ---
 
 ## 6. QueryFrame (0x10)
 
-用于 Memory Node 的结构化数据查询。
+Used for structured data queries on Memory Nodes.
 
-### 6.1 字段定义
+### 6.1 Field Definitions
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `frame` | uint8 | 必填 | 固定值 `0x10` |
-| `anchor_ref` | string | 条件必填 | Schema anchor_id；聚合查询可省略 |
-| `auto_anchor` | bool | 可选 | true 时若 anchor 过期，Node 在响应中自动附加最新 AnchorFrame，默认 true |
-| `stream` | bool | 可选 | true 时触发流式查询模式（见 §6.6），响应为 StreamFrame 序列而非 CapsFrame |
-| `aggregate` | object | 可选 | 聚合操作（见 §6.7）；设置后 `anchor_ref` 可省略 |
-| `filter` | object | 可选 | 过滤条件，见 §6.2 |
-| `fields` | array | 可选 | 返回字段列表；省略表示返回全部字段 |
-| `limit` | uint32 | 可选 | 最大返回条数，默认 20，最大 1000；流式查询时为每帧最大条数 |
-| `cursor` | string | 可选 | 分页游标，来自上一响应的 `next_cursor` |
-| `order` | array | 可选 | 排序规则，见 §6.3 |
-| `vector_search` | object | 可选 | 向量相似搜索，见 §6.4 |
-| `token_budget` | uint32 | 可选 | NPT 预算上限（原生模式等价于 `X-NWP-Budget`）|
-| `tokenizer` | string | 可选 | 使用的 tokenizer 标识（原生模式等价于 `X-NWP-Tokenizer`）|
-| `depth` | uint8 | 可选 | 节点图谱遍历深度，默认 1，最大 5（原生模式等价于 `X-NWP-Depth`）|
-| `request_id` | string | 可选 | UUID v4，用于请求追踪；节点在响应和日志中原样回传 |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frame` | uint8 | Required | Fixed value `0x10` |
+| `anchor_ref` | string | Conditionally Required | Schema anchor_id; may be omitted for aggregation queries |
+| `auto_anchor` | bool | Optional | If true and the anchor is stale, the Node automatically attaches the latest AnchorFrame in the response. Default: true |
+| `stream` | bool | Optional | If true, triggers streaming query mode (see §6.6); response is a StreamFrame sequence rather than a CapsFrame |
+| `aggregate` | object | Optional | Aggregation operation (see §6.7); when set, `anchor_ref` may be omitted |
+| `filter` | object | Optional | Filter conditions, see §6.2 |
+| `fields` | array | Optional | List of fields to return; omit to return all fields |
+| `limit` | uint32 | Optional | Maximum records to return, default 20, max 1000; for streaming queries, max records per frame |
+| `cursor` | string | Optional | Pagination cursor from the previous response's `next_cursor` |
+| `order` | array | Optional | Sort rules, see §6.3 |
+| `vector_search` | object | Optional | Vector similarity search, see §6.4 |
+| `token_budget` | uint32 | Optional | NPT budget limit (native mode equivalent of `X-NWP-Budget`) |
+| `tokenizer` | string | Optional | Tokenizer identifier in use (native mode equivalent of `X-NWP-Tokenizer`) |
+| `depth` | uint8 | Optional | Node graph traversal depth, default 1, max 5 (native mode equivalent of `X-NWP-Depth`) |
+| `request_id` | string | Optional | UUID v4 for request tracing; echoed back by the node in response and logs |
 
-### 6.2 Filter 语法
+### 6.2 Filter Syntax
 
-| 运算符 | 含义 | 示例 |
-|--------|------|------|
-| `$eq` | 等于 | `{ "status": { "$eq": "active" } }` |
-| `$ne` | 不等于 | `{ "status": { "$ne": "deleted" } }` |
-| `$lt` | 小于 | `{ "price": { "$lt": 500 } }` |
-| `$lte` | 小于等于 | `{ "price": { "$lte": 500 } }` |
-| `$gt` | 大于 | `{ "stock": { "$gt": 0 } }` |
-| `$gte` | 大于等于 | `{ "rating": { "$gte": 4.0 } }` |
-| `$in` | 在列表中 | `{ "category": { "$in": ["phone", "tablet"] } }` |
-| `$nin` | 不在列表中 | `{ "tag": { "$nin": ["discontinued"] } }` |
-| `$contains` | 字符串包含（大小写敏感）| `{ "name": { "$contains": "Pro" } }` |
-| `$between` | 范围（含两端）| `{ "price": { "$between": [100, 500] } }` |
-| `$exists` | 字段是否存在 | `{ "thumbnail": { "$exists": true } }` |
-| `$regex` | 正则匹配（UTF-8）| `{ "sku": { "$regex": "^PROD-[0-9]{4}$" } }` |
-| `$and` | 逻辑与 | `{ "$and": [ {...}, {...} ] }` |
-| `$or` | 逻辑或 | `{ "$or": [ {...}, {...} ] }` |
-| `$not` | 逻辑非 | `{ "$not": { "status": { "$eq": "deleted" } } }` |
+| Operator | Meaning | Example |
+|----------|---------|---------|
+| `$eq` | Equal | `{ "status": { "$eq": "active" } }` |
+| `$ne` | Not equal | `{ "status": { "$ne": "deleted" } }` |
+| `$lt` | Less than | `{ "price": { "$lt": 500 } }` |
+| `$lte` | Less than or equal | `{ "price": { "$lte": 500 } }` |
+| `$gt` | Greater than | `{ "stock": { "$gt": 0 } }` |
+| `$gte` | Greater than or equal | `{ "rating": { "$gte": 4.0 } }` |
+| `$in` | In list | `{ "category": { "$in": ["phone", "tablet"] } }` |
+| `$nin` | Not in list | `{ "tag": { "$nin": ["discontinued"] } }` |
+| `$contains` | String contains (case-sensitive) | `{ "name": { "$contains": "Pro" } }` |
+| `$between` | Range (inclusive on both ends) | `{ "price": { "$between": [100, 500] } }` |
+| `$exists` | Field exists check | `{ "thumbnail": { "$exists": true } }` |
+| `$regex` | Regex match (UTF-8) | `{ "sku": { "$regex": "^PROD-[0-9]{4}$" } }` |
+| `$and` | Logical AND | `{ "$and": [ {...}, {...} ] }` |
+| `$or` | Logical OR | `{ "$or": [ {...}, {...} ] }` |
+| `$not` | Logical NOT | `{ "$not": { "status": { "$eq": "deleted" } } }` |
 
-**`$regex` 安全约束**：模式长度 ≤ 256 字符；禁止嵌套量词（如 `(a+)+`）；节点 MUST 做 ReDoS 检测，违规返回 `NWP-QUERY-REGEX-UNSAFE`。
+**`$regex` Security Constraints**: Pattern length ≤ 256 characters; nested quantifiers (e.g. `(a+)+`) are prohibited; nodes MUST perform ReDoS detection and return `NWP-QUERY-REGEX-UNSAFE` on violation.
 
-Filter 嵌套深度 MUST ≤ 8 层。
+Filter nesting depth MUST be ≤ 8 levels.
 
-### 6.3 排序规则
+### 6.3 Sort Rules
 
 ```json
 { "order": [{ "field": "price", "dir": "ASC" }, { "field": "name", "dir": "ASC" }] }
 ```
 
-### 6.4 向量搜索
+### 6.4 Vector Search
 
 ```json
 {
@@ -341,9 +341,9 @@ Filter 嵌套深度 MUST ≤ 8 层。
 }
 ```
 
-支持 `metric`：`cosine`（默认）、`euclidean`、`dot_product`。节点通过 `capabilities.vector_search=true` 声明，不支持时返回 `NWP-QUERY-VECTOR-UNSUPPORTED`。
+Supported `metric` values: `cosine` (default), `euclidean`, `dot_product`. Nodes declare support via `capabilities.vector_search=true`; unsupported nodes return `NWP-QUERY-VECTOR-UNSUPPORTED`.
 
-### 6.5 单次查询完整示例
+### 6.5 Single Query Complete Example
 
 ```json
 {
@@ -366,59 +366,59 @@ Filter 嵌套深度 MUST ≤ 8 层。
 }
 ```
 
-### 6.6 流式查询协议
+### 6.6 Streaming Query Protocol
 
-当 QueryFrame 中 `stream: true`（或使用 `/stream` 子路径）时，节点以 **StreamFrame (0x03) 序列**响应，而非单个 CapsFrame。需要节点 `capabilities.stream_query=true`。
+When QueryFrame contains `stream: true` (or uses the `/stream` sub-path), the node responds with a **StreamFrame (0x03) sequence** rather than a single CapsFrame. Requires `capabilities.stream_query=true`.
 
-**流式查询流程**
+**Streaming Query Flow**
 
 ```
 Agent                              Node
   │                                  │
   │── QueryFrame(stream:true) ────→  │
-  │                                  │  分批查询，每批 limit 条
-  │  ←── StreamFrame(seq=0) ───────  │  首帧，含 anchor_ref 和 estimated_total
-  │  ←── StreamFrame(seq=1) ───────  │  后续帧，data 为下一批记录
+  │                                  │  Query in batches, limit records per batch
+  │  ←── StreamFrame(seq=0) ───────  │  First frame, contains anchor_ref and estimated_total
+  │  ←── StreamFrame(seq=1) ───────  │  Subsequent frames, data is the next batch of records
   │       ...                        │
-  │  ←── StreamFrame(is_last=true) ─ │  最终帧，is_last=true，data 可为空
+  │  ←── StreamFrame(is_last=true) ─ │  Final frame, is_last=true, data may be empty
 ```
 
-**首帧附加字段（StreamFrame 扩展）**
+**First Frame Additional Fields (StreamFrame Extension)**
 
-流式查询时，首帧（seq=0）的 `data` 数组前 SHOULD 携带元数据帧头（通过 StreamFrame `error_code` 字段的对称扩展定义，或在节点实现中附加 `meta` 字段）：
+For streaming queries, the first frame (seq=0) SHOULD include metadata:
 
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| `estimated_total` | uint64 | 符合 filter 条件的记录总估算数；-1 表示未知 |
-| `request_id` | string | 回传 QueryFrame 中的 request_id |
+| Field | Type | Description |
+|-------|------|-------------|
+| `estimated_total` | uint64 | Estimated total records matching the filter; -1 means unknown |
+| `request_id` | string | Echo of the QueryFrame's request_id |
 
-**分页与流的关系**
+**Pagination vs. Streaming**
 
-- 流式查询不使用 `cursor`，记录按 `order` 连续推送，直到满足 `limit × 帧数` 或全量推送完毕
-- Agent 如需提前终止，发送 SubscribeFrame（`action="unsubscribe"`, `stream_id` 等于 QueryFrame 的 `request_id`）或直接断开连接
-- 节点 MUST 在连接断开后停止推送
+- Streaming queries do not use `cursor`; records are pushed continuously per `order` until `limit × frames` or full push completes
+- To terminate early, the Agent sends a SubscribeFrame (`action="unsubscribe"`, `stream_id` equals QueryFrame's `request_id`) or disconnects
+- The node MUST stop pushing after the connection is closed
 
-### 6.7 聚合查询
+### 6.7 Aggregation Queries
 
-当 QueryFrame 中包含 `aggregate` 字段时，节点返回聚合结果而非原始记录。需要节点 `capabilities.aggregate=true`。
+When QueryFrame contains an `aggregate` field, the node returns aggregated results rather than raw records. Requires `capabilities.aggregate=true`.
 
-**aggregate 字段定义**
+**aggregate Field Definitions**
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `operations` | array | 必填 | 聚合操作列表，见下 |
-| `group_by` | array | 可选 | 分组字段列表，如 `["category", "status"]` |
-| `having` | object | 可选 | 分组后过滤（与 filter 语法相同，但字段名为 alias）|
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `operations` | array | Required | List of aggregation operations, see below |
+| `group_by` | array | Optional | Grouping field list, e.g. `["category", "status"]` |
+| `having` | object | Optional | Post-grouping filter (same syntax as filter, but field names are aliases) |
 
-**operation 元素**
+**operation Element**
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `func` | string | 必填 | `COUNT` / `SUM` / `AVG` / `MIN` / `MAX` / `COUNT_DISTINCT` |
-| `field` | string | 条件必填 | 聚合字段（`COUNT` 可省略，表示行数）|
-| `alias` | string | 必填 | 结果字段名 |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `func` | string | Required | `COUNT` / `SUM` / `AVG` / `MIN` / `MAX` / `COUNT_DISTINCT` |
+| `field` | string | Conditionally Required | Field to aggregate (`COUNT` may omit, meaning row count) |
+| `alias` | string | Required | Result field name |
 
-**聚合查询示例**
+**Aggregation Query Example**
 
 ```json
 {
@@ -438,9 +438,9 @@ Agent                              Node
 }
 ```
 
-**聚合响应（CapsFrame）**
+**Aggregation Response (CapsFrame)**
 
-聚合响应不使用业务 schema，`anchor_ref` 固定为 `"nps:system:aggregate:result"`：
+Aggregation responses do not use a business schema; `anchor_ref` is fixed as `"nps:system:aggregate:result"`:
 
 ```json
 {
@@ -459,23 +459,23 @@ Agent                              Node
 
 ## 7. ActionFrame (0x11)
 
-用于 Action Node 和 Complex Node 的操作调用。
+Used for operation invocation on Action Nodes and Complex Nodes.
 
-### 7.1 字段定义
+### 7.1 Field Definitions
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `frame` | uint8 | 必填 | 固定值 `0x11` |
-| `action_id` | string | 必填 | 操作标识符，格式：`{domain}.{verb}`；系统保留操作见 §7.3 |
-| `params` | object | 可选 | 操作参数，Schema 由 NWM actions.{action_id}.params_anchor 定义 |
-| `idempotency_key` | string | 可选 | 幂等键（UUID v4），有效期 24 小时 |
-| `timeout_ms` | uint32 | 可选 | 超时毫秒数，默认 5000，最大 300000 |
-| `async` | bool | 可选 | true 表示异步执行，响应返回 `task_id` |
-| `callback_url` | string | 可选 | 异步任务完成时的回调 URL（`https://`）|
-| `priority` | string | 可选 | 任务优先级：`"low"` / `"normal"`（默认）/ `"high"` |
-| `request_id` | string | 可选 | UUID v4，用于请求追踪（回传至响应和 task status）|
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frame` | uint8 | Required | Fixed value `0x11` |
+| `action_id` | string | Required | Operation identifier, format: `{domain}.{verb}`; system-reserved operations see §7.3 |
+| `params` | object | Optional | Operation parameters; schema defined by NWM `actions.{action_id}.params_anchor` |
+| `idempotency_key` | string | Optional | Idempotency key (UUID v4), valid for 24 hours |
+| `timeout_ms` | uint32 | Optional | Timeout in milliseconds, default 5000, max 300000 |
+| `async` | bool | Optional | If true, execute asynchronously; response returns `task_id` |
+| `callback_url` | string | Optional | Callback URL for async task completion (`https://` only) |
+| `priority` | string | Optional | Task priority: `"low"` / `"normal"` (default) / `"high"` |
+| `request_id` | string | Optional | UUID v4 for request tracing (echoed in response and task status) |
 
-### 7.2 异步任务状态机
+### 7.2 Async Task State Machine
 
 ```
 PENDING → RUNNING → COMPLETED
@@ -483,7 +483,7 @@ PENDING → RUNNING → COMPLETED
                   ↘ CANCELLED
 ```
 
-异步执行时，初始响应（CapsFrame）：
+For async execution, the initial response (CapsFrame):
 
 ```json
 {
@@ -495,16 +495,16 @@ PENDING → RUNNING → COMPLETED
 }
 ```
 
-### 7.3 系统保留操作
+### 7.3 System-Reserved Operations
 
-所有支持异步 Action 的节点 MUST 实现：
+All nodes supporting async Actions MUST implement:
 
-| action_id | 描述 | 必填参数 | 响应 |
-|-----------|------|---------|------|
-| `system.task.status` | 轮询任务状态 | `{ "task_id": "uuid" }` | 任务状态对象（见下）|
-| `system.task.cancel` | 取消任务 | `{ "task_id": "uuid" }` | `{ "cancelled": true }` 或错误 |
+| action_id | Description | Required Params | Response |
+|-----------|-------------|-----------------|----------|
+| `system.task.status` | Poll task status | `{ "task_id": "uuid" }` | Task status object (see below) |
+| `system.task.cancel` | Cancel a task | `{ "task_id": "uuid" }` | `{ "cancelled": true }` or error |
 
-**`system.task.status` 响应**
+**`system.task.status` Response**
 
 ```json
 {
@@ -519,7 +519,7 @@ PENDING → RUNNING → COMPLETED
 }
 ```
 
-### 7.4 完整示例
+### 7.4 Complete Example
 
 ```json
 {
@@ -539,58 +539,58 @@ PENDING → RUNNING → COMPLETED
 
 ## 8. SubscribeFrame (0x12)
 
-用于在 Memory Node 上建立变更订阅，服务端以 DiffFrame (0x02) 推送增量更新。
+Used to establish change subscriptions on Memory Nodes. The server pushes incremental updates via DiffFrame (0x02).
 
-### 8.1 字段定义
+### 8.1 Field Definitions
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `frame` | uint8 | 必填 | 固定值 `0x12` |
-| `action` | string | 必填 | `"subscribe"` / `"unsubscribe"` / `"ping"` |
-| `stream_id` | string | 必填 | 客户端生成的 UUID v4 |
-| `anchor_ref` | string | 条件必填 | 订阅数据的 anchor_id（`action="subscribe"` 时必填）|
-| `filter` | object | 可选 | 过滤条件（同 §6.2）；需 `capabilities.subscribe_filter=true` |
-| `heartbeat_interval` | uint32 | 可选 | 心跳间隔秒数，0 = 禁用，默认 30 |
-| `resume_from_seq` | uint64 | 可选 | 断线恢复时提供，从此序号之后重播事件（含该序号对应事件）；节点无法满足时返回 `NWP-SUBSCRIBE-SEQ-TOO-OLD` |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frame` | uint8 | Required | Fixed value `0x12` |
+| `action` | string | Required | `"subscribe"` / `"unsubscribe"` / `"ping"` |
+| `stream_id` | string | Required | Client-generated UUID v4 |
+| `anchor_ref` | string | Conditionally Required | anchor_id of the subscribed data (required when `action="subscribe"`) |
+| `filter` | object | Optional | Filter conditions (same as §6.2); requires `capabilities.subscribe_filter=true` |
+| `heartbeat_interval` | uint32 | Optional | Heartbeat interval in seconds, 0 = disabled, default 30 |
+| `resume_from_seq` | uint64 | Optional | Provided on reconnection; replays events after this sequence number (inclusive); node returns `NWP-SUBSCRIBE-SEQ-TOO-OLD` if it cannot satisfy the request |
 
-### 8.2 DiffFrame 订阅扩展字段
+### 8.2 DiffFrame Subscription Extension Fields
 
-订阅推送的 DiffFrame（0x02）在标准字段基础上附加：
+Subscription-pushed DiffFrames (0x02) add the following to the standard fields:
 
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| `stream_id` | string | 关联的订阅流 ID |
-| `seq` | uint64 | 单调递增的事件序号（per-stream，从 1 开始）；Agent 用于检测丢帧和断线恢复 |
+| Field | Type | Description |
+|-------|------|-------------|
+| `stream_id` | string | Associated subscription stream ID |
+| `seq` | uint64 | Monotonically increasing event sequence number (per-stream, starting from 1); Agents use this to detect dropped frames and support reconnection |
 | `event_type` | string | `"create"` / `"update"` / `"delete"` |
-| `timestamp` | string | 变更发生时间（ISO 8601）|
+| `timestamp` | string | Time of change (ISO 8601) |
 
-**序号语义**
+**Sequence Number Semantics**
 
-- 每个 stream_id 的 seq 独立维护，从 1 开始，单调递增
-- Agent 检测到 seq 不连续时，SHOULD 使用 `resume_from_seq` 重新订阅
-- 节点 SHOULD 缓冲最近 N 个事件（推荐缓冲 10 分钟或 10,000 条，取先达者）
-- 若 `resume_from_seq` 超出缓冲范围，节点 MUST 返回 `NWP-SUBSCRIBE-SEQ-TOO-OLD`（Agent 需全量重查后重新订阅）
+- Each `stream_id` maintains its own independent `seq`, starting from 1 and monotonically increasing
+- When the Agent detects a `seq` gap, it SHOULD re-subscribe using `resume_from_seq`
+- Nodes SHOULD buffer recent N events (recommended: 10 minutes or 10,000 events, whichever comes first)
+- If `resume_from_seq` is outside the buffer range, the node MUST return `NWP-SUBSCRIBE-SEQ-TOO-OLD` (Agent must do a full re-query before re-subscribing)
 
-### 8.3 订阅流程
+### 8.3 Subscription Flow
 
 ```
 Agent                                  Node
   │                                       │
-  │── SubscribeFrame(subscribe, sid) ───→ │  建立订阅
-  │  ←─────────────────── CapsFrame(ack) │  确认（stream_id, status="subscribed"）
+  │── SubscribeFrame(subscribe, sid) ───→ │  Establish subscription
+  │  ←─────────────────── CapsFrame(ack) │  Confirm (stream_id, status="subscribed")
   │                                       │
-  │  ←─── DiffFrame(seq=1, event) ──────  │  变更推送
+  │  ←─── DiffFrame(seq=1, event) ──────  │  Change push
   │  ←─── DiffFrame(seq=2, event) ──────  │
-  │  ←─── DiffFrame(seq=N, ping) ───────  │  心跳（patch=[]）
+  │  ←─── DiffFrame(seq=N, ping) ───────  │  Heartbeat (patch=[])
   │                                       │
-  │  [ 连接中断 ]                          │
-  │── SubscribeFrame(subscribe, sid,      │  断线恢复
+  │  [ Connection interrupted ]           │
+  │── SubscribeFrame(subscribe, sid,      │  Reconnection with resume
   │      resume_from_seq=N) ───────────→  │
-  │  ←─────────────────── CapsFrame(ack) │  确认（status="subscribed", resumed=true）
-  │  ←─── DiffFrame(seq=N+1, ...) ──────  │  从断点续播
+  │  ←─────────────────── CapsFrame(ack) │  Confirm (status="subscribed", resumed=true)
+  │  ←─── DiffFrame(seq=N+1, ...) ──────  │  Replay from breakpoint
 ```
 
-**订阅确认 CapsFrame**
+**Subscription Acknowledgement CapsFrame**
 
 ```json
 {
@@ -607,10 +607,10 @@ Agent                                  Node
 }
 ```
 
-- `last_seq`：节点当前已知的最新事件 seq（新订阅时为 0，恢复时为缓冲中最新事件的 seq）
-- `resumed`：true 表示这是一次断线恢复
+- `last_seq`: The latest event seq the node currently knows (0 for new subscriptions, or the most recent buffered event's seq for resumptions)
+- `resumed`: true indicates this is a reconnection resumption
 
-### 8.4 HTTP 模式下的订阅（SSE）
+### 8.4 Subscription in HTTP Mode (SSE)
 
 ```
 POST /nwp/orders/subscribe HTTP/1.1
@@ -628,50 +628,50 @@ data: [DiffFrame bytes, base64]
 
 ---
 
-## 9. HTTP 头（HTTP 模式）
+## 9. HTTP Headers (HTTP Mode)
 
-### 9.1 请求头
+### 9.1 Request Headers
 
-| 头 | 必填 | 描述 |
-|----|------|------|
-| `X-NWP-Agent` | 条件必填 | Agent NID（auth.required=true 时必填）|
-| `X-NWP-Budget` | 可选 | NPT 预算上限（uint32）|
-| `X-NWP-Tokenizer` | 可选 | Agent 使用的 tokenizer 标识 |
-| `X-NWP-Depth` | 可选 | 节点图谱遍历深度，默认 1，最大 5 |
-| `X-NWP-Encoding` | 可选 | 请求编码 Tier：`json`/`msgpack`，默认 `msgpack` |
-| `X-NWP-Request-ID` | 可选 | UUID v4，请求追踪 ID；节点在响应头中原样回传 |
-| `If-None-Match` | 可选 | NWM 条件请求；值为 `manifest_version` |
-| `Content-Type` | 必填 | `application/nwp-frame` |
+| Header | Required | Description |
+|--------|----------|-------------|
+| `X-NWP-Agent` | Conditionally Required | Agent NID (required when auth.required=true) |
+| `X-NWP-Budget` | Optional | NPT budget limit (uint32) |
+| `X-NWP-Tokenizer` | Optional | Tokenizer identifier used by the Agent |
+| `X-NWP-Depth` | Optional | Node graph traversal depth, default 1, max 5 |
+| `X-NWP-Encoding` | Optional | Request encoding tier: `json`/`msgpack`, default `msgpack` |
+| `X-NWP-Request-ID` | Optional | UUID v4 request tracing ID; echoed back by the node in the response header |
+| `If-None-Match` | Optional | NWM conditional request; value is `manifest_version` |
+| `Content-Type` | Required | `application/nwp-frame` |
 
-### 9.2 响应头
+### 9.2 Response Headers
 
-| 头 | 描述 |
-|----|------|
-| `X-NWP-Schema` | 响应使用的 anchor_id |
-| `X-NWP-Tokens` | 实际 NPT 消耗 |
-| `X-NWP-Tokens-Native` | 原生 token 消耗 |
-| `X-NWP-Tokenizer-Used` | 实际使用的 tokenizer |
-| `X-NWP-Cached` | `true` 表示命中缓存 |
-| `X-NWP-Node-Type` | 节点类型 |
-| `X-NWP-Request-ID` | 回传请求方的 `X-NWP-Request-ID`（若未提供，节点 MAY 自动生成）|
-| `X-NWP-Rate-Limit` | 每分钟请求上限 |
-| `X-NWP-Rate-Remaining` | 本分钟剩余请求数 |
-| `X-NWP-Rate-Reset` | 限速窗口重置时间（Unix 时间戳）|
-| `Content-Type` | `application/nwp-capsule`（正常响应）/ `application/nwp-error+json`（错误响应）|
+| Header | Description |
+|--------|-------------|
+| `X-NWP-Schema` | anchor_id used in the response |
+| `X-NWP-Tokens` | Actual NPT consumed |
+| `X-NWP-Tokens-Native` | Native token consumption |
+| `X-NWP-Tokenizer-Used` | Tokenizer actually used |
+| `X-NWP-Cached` | `true` indicates a cache hit |
+| `X-NWP-Node-Type` | Node type |
+| `X-NWP-Request-ID` | Echo of the requester's `X-NWP-Request-ID` (node MAY auto-generate if not provided) |
+| `X-NWP-Rate-Limit` | Max requests per minute |
+| `X-NWP-Rate-Remaining` | Remaining requests this minute |
+| `X-NWP-Rate-Reset` | Rate limit window reset time (Unix timestamp) |
+| `Content-Type` | `application/nwp-capsule` (normal response) / `application/nwp-error+json` (error response) |
 
-### 9.3 原生模式字段映射
+### 9.3 Native Mode Field Mapping
 
-| HTTP 头 | QueryFrame 字段 | ActionFrame 字段 |
-|---------|----------------|-----------------|
-| `X-NWP-Agent` | — (HelloFrame `agent_id` 握手时已声明) | 同左 |
+| HTTP Header | QueryFrame Field | ActionFrame Field |
+|-------------|-----------------|-------------------|
+| `X-NWP-Agent` | — (declared in HelloFrame `agent_id` handshake) | Same |
 | `X-NWP-Budget` | `token_budget` | — |
 | `X-NWP-Tokenizer` | `tokenizer` | — |
 | `X-NWP-Depth` | `depth` | — |
 | `X-NWP-Request-ID` | `request_id` | `request_id` |
 
-### 9.4 HTTP 模式错误响应格式
+### 9.4 HTTP Mode Error Response Format
 
-HTTP 模式下，错误响应使用以下格式，`Content-Type: application/nwp-error+json`：
+In HTTP mode, error responses use the following format, `Content-Type: application/nwp-error+json`:
 
 ```json
 {
@@ -683,23 +683,23 @@ HTTP 模式下，错误响应使用以下格式，`Content-Type: application/nwp
 }
 ```
 
-HTTP 状态码由 NPS 状态码映射决定，见 [status-codes.md](status-codes.md)。
+The HTTP status code is determined by the NPS status code mapping; see [status-codes.md](status-codes.md).
 
-**字段说明**
+**Field Descriptions**
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `status` | string | 必填 | NPS 状态码 |
-| `error` | string | 必填 | 协议级错误码（如 `NWP-ACTION-NOT-FOUND`）|
-| `message` | string | 可选 | 人类可读描述 |
-| `details` | object | 可选 | 结构化错误附加信息 |
-| `request_id` | string | 可选 | 回传请求中的 `X-NWP-Request-ID` |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `status` | string | Required | NPS status code |
+| `error` | string | Required | Protocol-level error code (e.g. `NWP-ACTION-NOT-FOUND`) |
+| `message` | string | Optional | Human-readable description |
+| `details` | object | Optional | Structured additional error information |
+| `request_id` | string | Optional | Echo of the `X-NWP-Request-ID` from the request |
 
 ---
 
-## 10. 完整请求响应示例
+## 10. Complete Request/Response Example
 
-**HTTP 模式查询请求**
+**HTTP Mode Query Request**
 
 ```
 POST /nwp/orders/query HTTP/1.1
@@ -713,7 +713,7 @@ Content-Type: application/nwp-frame
 [QueryFrame: { anchor_ref, filter, fields, limit, auto_anchor }]
 ```
 
-**成功响应**
+**Success Response**
 
 ```
 HTTP/1.1 200 OK
@@ -727,7 +727,7 @@ Content-Type: application/nwp-capsule
 [CapsFrame]
 ```
 
-**错误响应**
+**Error Response**
 
 ```
 HTTP/1.1 404 Not Found
@@ -739,9 +739,9 @@ Content-Type: application/nwp-error+json
 
 ---
 
-## 11. Complex Node — 节点图谱
+## 11. Complex Node — Node Graph
 
-Complex Node 在 NWM 中声明子节点引用：
+Complex Nodes declare sub-node references in the NWM:
 
 ```json
 {
@@ -755,83 +755,83 @@ Complex Node 在 NWM 中声明子节点引用：
 }
 ```
 
-Agent 通过 `X-NWP-Depth` 头（HTTP 模式）或 QueryFrame `depth` 字段（原生模式）控制遍历深度。节点 MUST 检测循环引用（返回 `NWP-GRAPH-CYCLE`），并维护子节点 URL 白名单（防 SSRF）。
+Agents control traversal depth via the `X-NWP-Depth` header (HTTP mode) or the QueryFrame `depth` field (native mode). Nodes MUST detect circular references (return `NWP-GRAPH-CYCLE`) and maintain a sub-node URL whitelist (SSRF prevention).
 
 ---
 
-## 12. 错误码
+## 12. Error Codes
 
-| 错误码 | NPS 状态码 | 描述 |
-|--------|-----------|------|
-| `NWP-AUTH-NID-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | Agent scope 不覆盖目标节点 |
-| `NWP-AUTH-NID-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | NID 证书已过期 |
-| `NWP-AUTH-NID-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | NID 已被吊销 |
-| `NWP-AUTH-NID-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | NID 颁发者不在 trusted_issuers 中 |
-| `NWP-AUTH-NID-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Agent 缺少节点要求的能力 |
-| `NWP-QUERY-FILTER-INVALID` | `NPS-CLIENT-BAD-PARAM` | Filter 语法不合法或嵌套超限 |
-| `NWP-QUERY-FIELD-UNKNOWN` | `NPS-CLIENT-BAD-PARAM` | fields 中引用了不存在的字段 |
-| `NWP-QUERY-CURSOR-INVALID` | `NPS-CLIENT-BAD-PARAM` | cursor 值无法解码或已过期 |
-| `NWP-QUERY-REGEX-UNSAFE` | `NPS-CLIENT-BAD-PARAM` | `$regex` 模式被拒绝（ReDoS 风险或超长）|
-| `NWP-QUERY-VECTOR-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点不支持向量搜索 |
-| `NWP-QUERY-AGGREGATE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点不支持聚合查询 |
-| `NWP-QUERY-AGGREGATE-INVALID` | `NPS-CLIENT-BAD-PARAM` | aggregate 结构不合法（未知 func、alias 重复等）|
-| `NWP-QUERY-STREAM-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点不支持流式查询 |
-| `NWP-ACTION-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | action_id 不存在 |
-| `NWP-ACTION-PARAMS-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | 操作参数 Schema 校验失败 |
-| `NWP-ACTION-IDEMPOTENCY-CONFLICT` | `NPS-CLIENT-CONFLICT` | 相同 idempotency_key 的请求正在进行中 |
-| `NWP-TASK-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | task_id 不存在 |
-| `NWP-TASK-ALREADY-CANCELLED` | `NPS-CLIENT-CONFLICT` | 任务已被取消 |
-| `NWP-TASK-ALREADY-COMPLETED` | `NPS-CLIENT-CONFLICT` | 任务已完成，无法取消 |
-| `NWP-TASK-ALREADY-FAILED` | `NPS-CLIENT-CONFLICT` | 任务已失败，无法取消 |
-| `NWP-SUBSCRIBE-STREAM-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | unsubscribe 的 stream_id 不存在 |
-| `NWP-SUBSCRIBE-LIMIT-EXCEEDED` | `NPS-LIMIT-EXCEEDED` | 超出最大并发订阅数 |
-| `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点不支持带 filter 的订阅 |
-| `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | 订阅流因数据源中断而终止 |
-| `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | resume_from_seq 超出节点缓冲范围，需全量重查 |
-| `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | 响应将超过 token 预算 |
-| `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | depth 超过节点允许的 max_depth |
-| `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | 节点图谱存在循环引用 |
-| `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | 底层数据源暂不可用 |
-| `NWP-MANIFEST-VERSION-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Agent NPS 版本低于 min_agent_version |
-| `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | 超出频率限制 |
-
----
-
-## 13. 安全考量
-
-### 13.1 Scope 强制校验
-节点 MUST 在每次请求时校验 Agent NID 的 scope。超出 scope 的请求 MUST 返回 `NWP-AUTH-NID-SCOPE-VIOLATION`，不得返回任何数据。
-
-### 13.2 SSRF 防护
-Complex Node 解析子节点引用时，MUST 维护允许的节点 URL 前缀白名单，禁止访问内网地址（RFC 1918）。
-
-### 13.3 Token Budget 强制执行
-超过预算时，节点 SHOULD 优先裁剪响应内容（字段精简 → 摘要 → 截断记录数）；无法裁剪时 MUST 返回 `NWP-BUDGET-EXCEEDED`，不得直接截断数据。详见 [token-budget.md §4.3](token-budget.md)。
-
-### 13.4 频率限制
-节点 SHOULD 对每个 Agent NID 实施频率限制。超限时返回 `NWP-RATE-LIMIT-EXCEEDED` 并附加 `X-NWP-Rate-Reset` 头。未认证请求 SHOULD 使用 IP 维度限制。
-
-### 13.5 Filter 注入防护
-- 字段名 MUST 仅含字母/数字/下划线/点，长度 ≤ 128 字符
-- `$regex` MUST 经过 ReDoS 检测；Filter 嵌套深度 ≤ 8
-- 节点 MUST 使用参数化查询，禁止字符串拼接
-
-### 13.6 callback_url 防滥用
-- ActionFrame `callback_url` MUST 为 `https://` 前缀
-- 节点 SHOULD 对回调 URL 做 SSRF 检查（禁止内网地址）
-- 节点 SHOULD 对 callback 推送失败做指数退避重试（最多 3 次），之后放弃并标记任务为 `COMPLETED` 而非无限重试
+| Error Code | NPS Status Code | Description |
+|-----------|----------------|-------------|
+| `NWP-AUTH-NID-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | Agent scope does not cover the target node |
+| `NWP-AUTH-NID-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | NID certificate has expired |
+| `NWP-AUTH-NID-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | NID has been revoked |
+| `NWP-AUTH-NID-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | NID issuer not in trusted_issuers |
+| `NWP-AUTH-NID-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Agent lacks a capability required by the node |
+| `NWP-QUERY-FILTER-INVALID` | `NPS-CLIENT-BAD-PARAM` | Filter syntax is invalid or nesting is too deep |
+| `NWP-QUERY-FIELD-UNKNOWN` | `NPS-CLIENT-BAD-PARAM` | fields references a non-existent field |
+| `NWP-QUERY-CURSOR-INVALID` | `NPS-CLIENT-BAD-PARAM` | cursor value cannot be decoded or has expired |
+| `NWP-QUERY-REGEX-UNSAFE` | `NPS-CLIENT-BAD-PARAM` | `$regex` pattern rejected (ReDoS risk or too long) |
+| `NWP-QUERY-VECTOR-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node does not support vector search |
+| `NWP-QUERY-AGGREGATE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node does not support aggregation queries |
+| `NWP-QUERY-AGGREGATE-INVALID` | `NPS-CLIENT-BAD-PARAM` | aggregate structure is invalid (unknown func, duplicate alias, etc.) |
+| `NWP-QUERY-STREAM-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node does not support streaming queries |
+| `NWP-ACTION-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | action_id does not exist |
+| `NWP-ACTION-PARAMS-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | Operation parameter schema validation failed |
+| `NWP-ACTION-IDEMPOTENCY-CONFLICT` | `NPS-CLIENT-CONFLICT` | A request with the same idempotency_key is already in progress |
+| `NWP-TASK-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | task_id does not exist |
+| `NWP-TASK-ALREADY-CANCELLED` | `NPS-CLIENT-CONFLICT` | Task has already been cancelled |
+| `NWP-TASK-ALREADY-COMPLETED` | `NPS-CLIENT-CONFLICT` | Task has already completed; cannot cancel |
+| `NWP-TASK-ALREADY-FAILED` | `NPS-CLIENT-CONFLICT` | Task has already failed; cannot cancel |
+| `NWP-SUBSCRIBE-STREAM-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | stream_id referenced in unsubscribe does not exist |
+| `NWP-SUBSCRIBE-LIMIT-EXCEEDED` | `NPS-LIMIT-EXCEEDED` | Exceeded maximum concurrent subscriptions |
+| `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node does not support filtered subscriptions |
+| `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | Subscription stream terminated due to underlying data source interruption |
+| `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | resume_from_seq is outside the node's buffer range; full re-query required |
+| `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | Response would exceed the token budget |
+| `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | depth exceeds the node's allowed max_depth |
+| `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | Node graph contains a circular reference |
+| `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | Underlying data source temporarily unavailable |
+| `NWP-MANIFEST-VERSION-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Agent NPS version is below the node's min_agent_version |
+| `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | Rate limit exceeded |
 
 ---
 
-## 14. 变更历史
+## 13. Security Considerations
 
-| 版本 | 日期 | 变更 |
-|------|------|------|
-| 0.4 | 2026-04-14 | §3.2 新增 `/actions` 子路径；§4.1 NWM 新增 `actions` 字段；§4.2 capabilities 新增 stream_query、aggregate；§4.6 NWM Action 注册表（ActionSpec、params_anchor/result_anchor/async/idempotent）；QueryFrame §6.1 新增 `stream`、`aggregate`、`request_id`；§6.6 流式查询协议（StreamFrame 序列、estimated_total、提前终止）；§6.7 聚合查询（COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT、group_by、having）；ActionFrame §7.1 新增 `request_id`；SubscribeFrame §8.1 新增 `resume_from_seq`；§8.2 DiffFrame 扩展字段（seq 单调递增、event_type、timestamp）及断线恢复语义；§9.1/9.2 新增 X-NWP-Request-ID；§9.4 HTTP 模式错误响应格式（application/nwp-error+json）；§10 更新完整示例（含错误响应）；§13.6 callback_url 防滥用安全节；新增 5 条错误码（AGGREGATE-UNSUPPORTED/-INVALID、STREAM-UNSUPPORTED、SUBSCRIBE-SEQ-TOO-OLD、task cancel 系列）|
-| 0.3 | 2026-04-14 | SubscribeFrame (0x12)；auto_anchor；Filter $not/$exists/$regex；ActionFrame callback_url/priority；system.task.*；NWM min_agent_version/rate_limits；§13.4/13.5 安全节 |
-| 0.2 | 2026-04-12 | 统一端口 17433；AnchorFrame 改为 Node 发布；NPT 计量；NPS 状态码映射 |
-| 0.1 | 2026-04-10 | 初始规范 |
+### 13.1 Scope Enforcement
+Nodes MUST validate the Agent NID's scope on every request. Requests exceeding scope MUST return `NWP-AUTH-NID-SCOPE-VIOLATION` and MUST NOT return any data.
+
+### 13.2 SSRF Protection
+When Complex Nodes resolve sub-node references, they MUST maintain an allowlist of permitted node URL prefixes and MUST NOT access internal network addresses (RFC 1918).
+
+### 13.3 Token Budget Enforcement
+When the budget is exceeded, nodes SHOULD prefer trimming response content (field reduction → summary → record truncation); if trimming is not possible, they MUST return `NWP-BUDGET-EXCEEDED` and MUST NOT silently truncate data. See [token-budget.md §4.3](token-budget.md).
+
+### 13.4 Rate Limiting
+Nodes SHOULD enforce per-Agent NID rate limiting. On limit exceeded, return `NWP-RATE-LIMIT-EXCEEDED` with an `X-NWP-Rate-Reset` header. Unauthenticated requests SHOULD be limited by IP.
+
+### 13.5 Filter Injection Protection
+- Field names MUST contain only letters/digits/underscores/dots, length ≤ 128 characters
+- `$regex` patterns MUST undergo ReDoS detection; filter nesting depth ≤ 8
+- Nodes MUST use parameterized queries; string concatenation is prohibited
+
+### 13.6 callback_url Abuse Prevention
+- ActionFrame `callback_url` MUST use the `https://` scheme
+- Nodes SHOULD perform SSRF checks on callback URLs (internal network addresses prohibited)
+- Nodes SHOULD apply exponential backoff retries for failed callback deliveries (max 3 attempts), then abandon and mark the task as `COMPLETED` rather than retrying indefinitely
 
 ---
 
-*归属：LabAcacia / INNO LOTUS PTY LTD · Apache 2.0*
+## 14. Changelog
+
+| Version | Date | Changes |
+|---------|------|---------|
+| 0.4 | 2026-04-14 | §3.2 added `/actions` sub-path; §4.1 NWM added `actions` field; §4.2 capabilities added stream_query and aggregate; §4.6 NWM Action Registry (ActionSpec, params_anchor/result_anchor/async/idempotent); QueryFrame §6.1 added `stream`, `aggregate`, `request_id`; §6.6 Streaming Query Protocol (StreamFrame sequence, estimated_total, early termination); §6.7 Aggregation queries (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT, group_by, having); ActionFrame §7.1 added `request_id`; SubscribeFrame §8.1 added `resume_from_seq`; §8.2 DiffFrame extension fields (monotonic seq, event_type, timestamp) and reconnection semantics; §9.1/9.2 added X-NWP-Request-ID; §9.4 HTTP mode error response format (application/nwp-error+json); §10 updated complete examples (including error response); §13.6 callback_url abuse prevention security section; 5 new error codes (AGGREGATE-UNSUPPORTED/-INVALID, STREAM-UNSUPPORTED, SUBSCRIBE-SEQ-TOO-OLD, task cancel series) |
+| 0.3 | 2026-04-14 | SubscribeFrame (0x12); auto_anchor; Filter $not/$exists/$regex; ActionFrame callback_url/priority; system.task.*; NWM min_agent_version/rate_limits; §13.4/13.5 security sections |
+| 0.2 | 2026-04-12 | Unified port 17433; AnchorFrame owned by Node; NPT metering; NPS status code mapping |
+| 0.1 | 2026-04-10 | Initial specification |
+
+---
+
+*Attribution: LabAcacia / INNO LOTUS PTY LTD · Apache 2.0*
