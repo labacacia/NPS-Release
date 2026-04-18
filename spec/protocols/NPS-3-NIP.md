@@ -1,3 +1,5 @@
+[English Version](./NPS-3-NIP.en.md) | 中文版
+
 # NPS-3: Neural Identity Protocol (NIP)
 
 **Spec Number**: NPS-3  

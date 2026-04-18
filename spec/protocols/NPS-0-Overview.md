@@ -1,3 +1,5 @@
+[English Version](./NPS-0-Overview.en.md) | 中文版
+
 # NPS-0: Neural Protocol Suite — Overview
 
 **Spec Number**: NPS-0  
