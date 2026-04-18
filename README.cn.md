@@ -61,28 +61,28 @@ NPS 在协议层解决以上四个问题：一次性 Schema 锚点、Ed25519 身
 
 | 文档 | 说明 |
 |------|------|
-| [NPS-0 总览](./doc/protocols/NPS-0-Overview.md) | 套件总览，阅读入口 |
-| [NPS-1 NCP](./doc/protocols/NPS-1-NCP.md) | 帧格式、帧头、编码分层 |
-| [NPS-2 NWP（中）](./doc/protocols/NPS-2-NWP.md) / [EN](./doc/protocols/NPS-2-NWP.en.md) | Neural Web Protocol |
-| [NPS-3 NIP](./doc/protocols/NPS-3-NIP.md) | Neural Identity Protocol |
-| [NPS-4 NDP](./doc/protocols/NPS-4-NDP.md) | Neural Discovery Protocol |
-| [NPS-5 NOP（中）](./doc/protocols/NPS-5-NOP.md) / [EN](./doc/protocols/NPS-5-NOP.en.md) | Neural Orchestration Protocol |
+| [NPS-0 总览](./spec/protocols/NPS-0-Overview.md) | 套件总览，阅读入口 |
+| [NPS-1 NCP](./spec/protocols/NPS-1-NCP.md) | 帧格式、帧头、编码分层 |
+| [NPS-2 NWP（中）](./spec/protocols/NPS-2-NWP.md) / [EN](./spec/protocols/NPS-2-NWP.en.md) | Neural Web Protocol |
+| [NPS-3 NIP](./spec/protocols/NPS-3-NIP.md) | Neural Identity Protocol |
+| [NPS-4 NDP](./spec/protocols/NPS-4-NDP.md) | Neural Discovery Protocol |
+| [NPS-5 NOP（中）](./spec/protocols/NPS-5-NOP.md) / [EN](./spec/protocols/NPS-5-NOP.en.md) | Neural Orchestration Protocol |
 
 ### 参考文档
 
 | 文档 | 说明 |
 |------|------|
-| [帧注册表](./doc/frame-registry.yaml) | 机器可读帧类型注册表 |
-| [错误码](./doc/error-codes.md) | 统一错误码命名空间 |
-| [状态码](./doc/status-codes.md) | NPS 原生状态码 + HTTP 映射 |
-| [Token Budget](./doc/token-budget.md) | NPT Token Budget 规范 |
-| [路线图](./doc/NPS-Roadmap.md) | Phase 0–4 开发路线图 |
+| [帧注册表](./spec/frame-registry.yaml) | 机器可读帧类型注册表 |
+| [错误码](./spec/error-codes.md) | 统一错误码命名空间 |
+| [状态码](./spec/status-codes.md) | NPS 原生状态码 + HTTP 映射 |
+| [Token Budget](./spec/token-budget.md) | NPT Token Budget 规范 |
+| [路线图](./spec/NPS-Roadmap.md) | Phase 0–4 开发路线图 |
 
 ### 服务层规范
 
 | 文档 | 说明 |
 |------|------|
-| [AaaS Profile（中）](./doc/services/NPS-AaaS-Profile.md) / [EN](./doc/services/NPS-AaaS-Profile.en.md) | Agent-as-a-Service 合规规范（Gateway Node、Vector Proxy Layer、L1/L2/L3 合规） |
+| [AaaS Profile（中）](./spec/services/NPS-AaaS-Profile.md) / [EN](./spec/services/NPS-AaaS-Profile.en.md) | Agent-as-a-Service 合规规范（Gateway Node、Vector Proxy Layer、L1/L2/L3 合规） |
 
 ---
 
@@ -115,7 +115,7 @@ NPS 在协议层解决以上四个问题：一次性 Schema 锚点、Ed25519 身
 | `0x40–0x4F` | **NOP** | Task(0x40)、Delegate(0x41)、Sync(0x42)、AlignStream(0x43) |
 | `0xFE`      | 系统   | ErrorFrame — 跨协议统一错误帧 |
 
-完整机器可读清单参见 [`doc/frame-registry.yaml`](./doc/frame-registry.yaml)。
+完整机器可读清单参见 [`spec/frame-registry.yaml`](./spec/frame-registry.yaml)。
 
 ---
 

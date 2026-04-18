@@ -137,7 +137,7 @@ Goal: move NPS toward W3C / IETF formal standards; freeze NPS 1.0.
 | R04 | NIP CA key compromise | Low | Critical | HSM interface reserved; annual rotation enforced |
 | R07 | W3C / IETF standardization slow | High | Low | Pursue de-facto adoption via OSS; formal RFC is secondary |
 
-Full register: [NPS-Roadmap.md](https://github.com/labacacia/NPS-Release/blob/main/doc/NPS-Roadmap.md).
+Full register: [NPS-Roadmap.md](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-Roadmap.md).
 
 ---
 
