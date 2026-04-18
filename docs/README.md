@@ -1,5 +1,7 @@
 # NPS documentation site (`/docs`)
 
+> English | [中文版](README.cn.md)
+
 This folder is a self-contained **GitHub Pages** site built on [MDWiki](https://dynalon.github.io/mdwiki/) 0.6.2.
 
 No build step. Markdown in, HTML in the browser.
