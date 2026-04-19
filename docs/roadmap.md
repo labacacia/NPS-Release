@@ -52,7 +52,7 @@ Goal: NCP + NWP + NIP + NDP + NOP production-ready in the six reference language
 | Language   | Package                            | Status                 |
 |------------|------------------------------------|------------------------|
 | .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`) | ✅ v1.0.0-alpha.2 shipped |
-| Python     | `nps-sdk`                          | ✅ v1.0.0-alpha.2 shipped (162 tests, 97% coverage) |
+| Python     | `nps-lib`                          | ✅ v1.0.0-alpha.2 shipped (162 tests, 97% coverage) |
 | TypeScript | `@labacacia/nps-sdk`               | ✅ v1.0.0-alpha.2 shipped (264 tests) |
 | Java       | `com.labacacia:nps-sdk`            | ✅ v1.0.0-alpha.2 shipped (87 tests) |
 | Rust       | `nps-sdk`                          | ✅ v1.0.0-alpha.2 shipped (88 tests) |
