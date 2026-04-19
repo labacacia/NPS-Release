@@ -32,7 +32,7 @@ NPS solves all four **at the wire level**:
 
 ```bash
 # Python
-pip install nps-sdk==1.0.0a2
+pip install nps-lib==1.0.0a2
 
 # TypeScript
 npm install @labacacia/nps-sdk@1.0.0-alpha.2

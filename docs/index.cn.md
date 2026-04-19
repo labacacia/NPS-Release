@@ -32,7 +32,7 @@ NPS 在**协议层面**同时解决这四个问题：
 
 ```bash
 # Python
-pip install nps-sdk==1.0.0a2
+pip install nps-lib==1.0.0a2
 
 # TypeScript
 npm install @labacacia/nps-sdk@1.0.0-alpha.2

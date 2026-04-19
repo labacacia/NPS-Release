@@ -11,7 +11,7 @@ Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP
 | Language | Package | Min version | Repo | API Reference |
 |----------|---------|-------------|------|---------------|
 | .NET      | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`)      | .NET 10     | [NPS-sdk-dotnet](https://github.com/labacacia/NPS-sdk-dotnet) | [doc/](https://github.com/labacacia/NPS-sdk-dotnet/tree/main/doc) |
-| Python    | `nps-sdk`                                    | 3.11        | [NPS-sdk-py](https://github.com/labacacia/NPS-sdk-py)         | [doc/](https://github.com/labacacia/NPS-sdk-py/tree/main/doc)     |
+| Python    | `nps-lib`                                    | 3.11        | [NPS-sdk-py](https://github.com/labacacia/NPS-sdk-py)         | [doc/](https://github.com/labacacia/NPS-sdk-py/tree/main/doc)     |
 | TypeScript| `@labacacia/nps-sdk`                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [doc/](https://github.com/labacacia/NPS-sdk-ts/tree/main/doc)     |
 | Java      | `com.labacacia:nps-sdk`                      | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [doc/](https://github.com/labacacia/NPS-sdk-java/tree/main/doc)   |
 | Rust      | `nps-sdk`                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [doc/](https://github.com/labacacia/NPS-sdk-rust/tree/main/doc)   |
@@ -26,7 +26,7 @@ Every SDK repo also ships a `nip-ca-server/` reference deployment of the NIP Cer
 ### Python
 
 ```bash
-pip install nps-sdk==1.0.0a2
+pip install nps-lib==1.0.0a2
 ```
 
 ### TypeScript / JavaScript
