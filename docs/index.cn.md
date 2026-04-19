@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — 为 AI Agent 和神经模型量身设计的完整互联网协议栈。
 >
-> 版本 1.0.0-alpha.1 · Apache 2.0 · [English](index.md)
+> 1.0.0-alpha.2 · · Apache 2.0 · [English](index.md)
 
 ---
 
@@ -32,22 +32,22 @@ NPS 在**协议层面**同时解决这四个问题：
 
 ```bash
 # Python
-pip install nps-sdk
+pip install nps-sdk==1.0.0a2
 
 # TypeScript
-npm install @labacacia/nps-sdk
+npm install @labacacia/nps-sdk@1.0.0-alpha.2
 
 # Rust
-cargo add nps-sdk
+cargo add nps-sdk@=1.0.0-alpha.2
 
 # Go
-go get github.com/labacacia/nps/impl/go
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.2
 
 # Java (Gradle)
-implementation("com.labacacia:nps-sdk:1.0.0-alpha.1")
+implementation("com.labacacia:nps-sdk:1.0.0-alpha.2")
 
 # .NET
-dotnet add package NPS.SDK --version 1.0.0-alpha.1
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.2
 ```
 
 ---
@@ -63,7 +63,7 @@ dotnet add package NPS.SDK --version 1.0.0-alpha.1
 
 ## 状态
 
-**v1.0.0-alpha.1** — Phase 1 release。五大子协议全部完成 v0.2+ 草案。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。NIP CA Server 六语言齐备。
+**v1.0.0-alpha.2** — Phase 1 release。五大子协议全部完成 v0.2+ 草案。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。NIP CA Server 六语言齐备。
 
 ---
 
