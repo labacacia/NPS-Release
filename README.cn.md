@@ -2,7 +2,7 @@
 
 # Neural Protocol Suite (NPS) — 协议规范
 
-> **版本：** 1.0.0-alpha.1 | **状态：** Draft | **许可证：** Apache 2.0
+> **版本：** 1.0.0-alpha.2 | **状态：** Proposed | **许可证：** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia 开源实验室
 
@@ -46,10 +46,10 @@ NPS 在协议层解决以上四个问题：一次性 Schema 锚点、Ed25519 身
 | 协议 | 类比 | 版本 | 说明 |
 |------|------|------|------|
 | **NCP** — Neural Communication Protocol | Wire / 帧格式 | v0.4 | 二进制帧格式、双层编码（JSON/MsgPack）、流式传输 |
-| **NWP** — Neural Web Protocol | HTTP | v0.4 | 语义请求/响应、AnchorFrame Schema 缓存、Memory/Action/Gateway 节点 |
-| **NIP** — Neural Identity Protocol | TLS / PKI | v0.2 | Ed25519 身份、证书生命周期、CA、OCSP、CRL |
-| **NDP** — Neural Discovery Protocol | DNS | v0.2 | 节点公告、签名记录、图遍历 |
-| **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.3 | DAG 任务编排、委托、流式结果 |
+| **NWP** — Neural Web Protocol | HTTP | v0.5 | 语义请求/响应、AnchorFrame Schema 缓存、Memory/Action/Gateway 节点 |
+| **NIP** — Neural Identity Protocol | TLS / PKI | v0.3 | Ed25519 身份、证书生命周期、CA、OCSP、CRL |
+| **NDP** — Neural Discovery Protocol | DNS | v0.3 | 节点公告、签名记录、图遍历 |
+| **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.4 | DAG 任务编排、委托、流式结果 |
 
 **依赖关系：** `NCP ← NWP ← NIP ← NDP` / `NCP + NWP + NIP ← NOP`
 

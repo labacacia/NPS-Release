@@ -2,7 +2,7 @@
 
 > English | [中文版](sdks.cn.md)
 
-Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP + NDP + NOP** — at version **1.0.0-alpha.1**.
+Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP + NDP + NOP** — at version **1.0.0-alpha.2**.
 
 ---
 
@@ -10,12 +10,12 @@ Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP
 
 | Language | Package | Min version | Repo | API Reference |
 |----------|---------|-------------|------|---------------|
-| .NET      | `NPS.SDK`                                    | .NET 10     | [NPS-sdk-dotnet](https://github.com/labacacia/NPS-sdk-dotnet) | [doc/](https://github.com/labacacia/NPS-sdk-dotnet/tree/main/doc) |
+| .NET      | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`)      | .NET 10     | [NPS-sdk-dotnet](https://github.com/labacacia/NPS-sdk-dotnet) | [doc/](https://github.com/labacacia/NPS-sdk-dotnet/tree/main/doc) |
 | Python    | `nps-sdk`                                    | 3.11        | [NPS-sdk-py](https://github.com/labacacia/NPS-sdk-py)         | [doc/](https://github.com/labacacia/NPS-sdk-py/tree/main/doc)     |
-| TypeScript| `@labacacia/nps-sdk`                         | Node 18     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [doc/](https://github.com/labacacia/NPS-sdk-ts/tree/main/doc)     |
+| TypeScript| `@labacacia/nps-sdk`                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [doc/](https://github.com/labacacia/NPS-sdk-ts/tree/main/doc)     |
 | Java      | `com.labacacia:nps-sdk`                      | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [doc/](https://github.com/labacacia/NPS-sdk-java/tree/main/doc)   |
 | Rust      | `nps-sdk`                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [doc/](https://github.com/labacacia/NPS-sdk-rust/tree/main/doc)   |
-| Go        | `github.com/labacacia/nps/impl/go`           | Go 1.23     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [doc/](https://github.com/labacacia/NPS-sdk-go/tree/main/doc)     |
+| Go        | `github.com/labacacia/NPS-sdk-go`            | Go 1.25     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [doc/](https://github.com/labacacia/NPS-sdk-go/tree/main/doc)     |
 
 Every SDK repo also ships a `nip-ca-server/` reference deployment of the NIP Certificate Authority, Docker-packaged.
 
@@ -26,42 +26,42 @@ Every SDK repo also ships a `nip-ca-server/` reference deployment of the NIP Cer
 ### Python
 
 ```bash
-pip install nps-sdk
+pip install nps-sdk==1.0.0a2
 ```
 
 ### TypeScript / JavaScript
 
 ```bash
-npm install @labacacia/nps-sdk
+npm install @labacacia/nps-sdk@1.0.0-alpha.2
 # or
-pnpm add @labacacia/nps-sdk
+pnpm add @labacacia/nps-sdk@1.0.0-alpha.2
 ```
 
 ### Rust
 
 ```toml
 [dependencies]
-nps-sdk = "1.0.0-alpha.1"
+nps-sdk = "1.0.0-alpha.2"
 ```
 
 ### Go
 
 ```bash
-go get github.com/labacacia/nps/impl/go@v1.0.0-alpha.1
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.2
 ```
 
 ### Java (Gradle Kotlin DSL)
 
 ```kotlin
 dependencies {
-    implementation("com.labacacia:nps-sdk:1.0.0-alpha.1")
+    implementation("com.labacacia:nps-sdk:1.0.0-alpha.2")
 }
 ```
 
 ### .NET
 
 ```bash
-dotnet add package NPS.SDK --version 1.0.0-alpha.1
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.2
 ```
 
 ---
@@ -115,8 +115,8 @@ let wire  = codec.encode(&frame)?;
 
 ```go
 import (
-    "github.com/labacacia/nps/impl/go/core"
-    "github.com/labacacia/nps/impl/go/ncp"
+    "github.com/labacacia/NPS-sdk-go/core"
+    "github.com/labacacia/NPS-sdk-go/ncp"
 )
 
 codec := core.NewNpsFrameCodec(core.CreateFullRegistry())
