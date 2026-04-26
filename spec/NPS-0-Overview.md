@@ -3,9 +3,9 @@ English | [中文版](./NPS-0-Overview.cn.md)
 # NPS-0: Neural Protocol Suite — Overview
 
 **Spec Number**: NPS-0  
-**Status**: Draft  
-**Version**: 0.2  
-**Date**: 2026-04-12  
+**Status**: Proposed  
+**Version**: 0.3  
+**Date**: 2026-04-19  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **License**: Apache 2.0  
 
@@ -168,7 +168,7 @@ A Node publishes an AnchorFrame containing the full Schema definition and a SHA-
 
 ### 4.3 NPS Token (NPT) and Token Budget
 
-NPS introduces the **NPS Token (NPT)** as a standardized cross-model token accounting unit. An Agent declares its maximum NPT consumption per request via the `X-NWP-Budget` header. The Node determines the calculation method through the tokenizer resolution chain and truncates the response or rejects the request accordingly. See [token-budget.md](../token-budget.md).
+NPS introduces the **NPS Token (NPT)** as a standardized cross-model token accounting unit. An Agent declares its maximum NPT consumption per request via the `X-NWP-Budget` header. The Node determines the calculation method through the tokenizer resolution chain and truncates the response or rejects the request accordingly. See [token-budget.md](./token-budget.md).
 
 ### 4.4 Node Types
 
@@ -221,7 +221,7 @@ NCP/0.3     Sub-protocol version
 
 ## 6. Frame Namespace
 
-All NPS frames share a single byte namespace, partitioned by protocol. See [frame-registry.yaml](../frame-registry.yaml) for the full definition.
+All NPS frames share a single byte namespace, partitioned by protocol. See [frame-registry.yaml](./frame-registry.yaml) for the full definition.
 
 | Range | Protocol | Frames |
 |-------|----------|--------|
@@ -303,7 +303,7 @@ NPS does not replace MCP — it adds an efficiency layer on top. MCP answers "ho
 | Phase 3 | 2027 Q1–Q2 | Ecosystem validation; NPS Cloud CA v1.0; industry PoCs |
 | Phase 4 | 2027 Q3+ | W3C / IETF standardization; NPS 1.0 freeze |
 
-Full roadmap: [NPS-Roadmap.md](../NPS-Roadmap.md).
+Full roadmap: [NPS-Roadmap.md](./NPS-Roadmap.md).
 
 ---
 
@@ -345,10 +345,10 @@ Optional dedicated per-protocol ports: NWP 17434, NIP 17435, NDP 17436, NOP 1743
 
 | Document | Description |
 |----------|-------------|
-| [status-codes.md](../status-codes.md) | NPS native status codes and HTTP mapping |
-| [token-budget.md](../token-budget.md) | NPS Token Budget specification |
-| [error-codes.md](../error-codes.md) | Unified error-code namespace |
-| [frame-registry.yaml](../frame-registry.yaml) | Machine-readable frame registry |
+| [status-codes.md](./status-codes.md) | NPS native status codes and HTTP mapping |
+| [token-budget.md](./token-budget.md) | NPS Token Budget specification |
+| [error-codes.md](./error-codes.md) | Unified error-code namespace |
+| [frame-registry.yaml](./frame-registry.yaml) | Machine-readable frame registry |
 
 ---
 

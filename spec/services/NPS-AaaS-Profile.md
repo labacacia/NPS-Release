@@ -2,11 +2,11 @@ English | [中文版](./NPS-AaaS-Profile.cn.md)
 
 # NPS-AaaS Profile: Agent-as-a-Service Compliance Specification
 
-**Status**: Draft
-**Version**: 0.1
-**Date**: 2026-04-15
+**Status**: Proposed
+**Version**: 0.3
+**Date**: 2026-04-26
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.4), NPS-2 (NWP v0.4), NPS-3 (NIP v0.2), NPS-5 (NOP v0.3)
+**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.7), NPS-3 (NIP v0.4), NPS-4 (NDP v0.5), NPS-5 (NOP v0.4)
 
 > This specification defines compliance requirements for building Agent-as-a-Service (AaaS)
 > platforms on the NPS protocol suite, covering three architectural layers: service entry,
@@ -26,7 +26,7 @@ requiring consumers to understand internal implementation details.
 
 | Current Pain Point | NPS-AaaS Solution |
 |-------------------|-------------------|
-| Incompatible APIs across Agent platforms | Unified Gateway Node entry + NWP standard frame protocol |
+| Incompatible APIs across Agent platforms | Unified Anchor Node entry (cluster front door) + Bridge Node (NPS↔external) + NWP standard frame protocol |
 | Non-standard, unobservable internal orchestration | NOP DAG orchestration + OpenTelemetry tracing |
 | High token overhead for AI accessing traditional DBs | Vector Proxy Layer vectorization middleware |
 | No Agent identity/permission standard | NIP NID identity + scope delegation chain |
@@ -39,7 +39,7 @@ Consumer Agent
       │
       ▼
 ┌─────────────────────────────────┐
-│  Gateway Node (new NWP type)    │  ← Service entry, external API
+│  Anchor Node (NWP type)         │  ← Service entry, external API
 │  • Authentication (NIP)         │
 │  • Routing / Rate limit / NPT  │
 │  • Service catalog (NWM)        │
@@ -63,22 +63,26 @@ Consumer Agent
 
 ---
 
-## 2. Gateway Node (NWP Extension)
+## 2. Anchor Node (NWP Extension)
+
+> **Renamed from "Gateway Node" by [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md) in v1.0-alpha.3.** The role described in this section — stateless cluster entry point that routes inbound NWP `Action` frames into NOP `TaskFrame`s — is unchanged. The wire value `node_type: "gateway"` was removed and parsers MUST reject it. Implementations MAY add long-lived member-node registry behavior on top of the per-request stateless dispatch (NPS-2 §2.1 *Anchor Node — detailed semantics*); the topology read-back surface (`topology.snapshot` / `topology.stream`) is reserved for [NPS-CR-0002](../cr/NPS-CR-0002-anchor-topology-queries.md) in v1.0-alpha.4.
 
 ### 2.1 Definition
 
-Gateway Node is the fourth NWP node type, serving as the unified entry point for AaaS
+**Anchor Node** is an NWP node type serving as the unified entry point for AaaS
 services. It does not handle business logic directly but routes requests to the internal
-NOP orchestration layer.
+NOP orchestration layer. A single Anchor Node MAY simultaneously declare other roles
+(e.g. `Memory Node`) via NDP `Announce.node_kind` array form (NPS-4 §3.1).
 
 | Property | Value |
 |----------|-------|
-| Node type | `gateway` |
-| NWM node_type | `"gateway"` |
+| Node type | `anchor` |
+| NWM node_type | `"anchor"` |
+| NDP node_kind | `"anchor"` (or array form including `"anchor"`) |
 | Frame entry | ActionFrame (0x11) |
 | Internal conversion | ActionFrame → NOP TaskFrame (0x40) |
 
-### 2.2 Gateway Node Responsibilities
+### 2.2 Anchor Node Responsibilities
 
 | Responsibility | Protocol | Description |
 |---------------|----------|-------------|
@@ -88,15 +92,16 @@ NOP orchestration layer.
 | **Token metering** | NPT | Per-request Token Budget management |
 | **Rate limiting** | NWP | NID-based rate limiting |
 | **Observability** | NOP Context | Inject trace_id/span_id for full-chain tracing |
+| **Cluster registry** *(optional)* | NDP | Track member nodes registered via `Announce.cluster_anchor`; surface them through future `topology.snapshot` (CR-0002) |
 
-### 2.3 NWM Gateway Manifest Example
+### 2.3 NWM Anchor Manifest Example
 
 ```json
 {
-  "nwm_version": "0.4",
-  "node_type": "gateway",
+  "nwm_version": "0.7",
+  "node_type": "anchor",
   "node_id": "nwp://api.example.com/agent-service",
-  "display_name": "Example AaaS Gateway",
+  "display_name": "Example AaaS Anchor",
   "capabilities": ["nop:orchestrate", "nwp:invoke", "nip:delegate"],
   "actions": [
     {
@@ -116,7 +121,7 @@ NOP orchestration layer.
   },
   "auth": {
     "required": true,
-    "min_nip_version": "0.2",
+    "min_nip_version": "0.4",
     "required_scopes": ["agent:invoke"]
   }
 }
@@ -125,7 +130,7 @@ NOP orchestration layer.
 ### 2.4 Request Flow: ActionFrame → TaskFrame
 
 ```
-Consumer                    Gateway Node                    NOP Orchestrator
+Consumer                    Anchor Node                    NOP Orchestrator
   │                              │                                │
   │── ActionFrame ──────────→   │                                │
   │   (action_id, params)       │                                │
@@ -138,6 +143,53 @@ Consumer                    Gateway Node                    NOP Orchestrator
   │                              │   ←── AlignStream(result) ──  │
   │  ←── CapsFrame(result) ──── │                                │
 ```
+
+---
+
+## 2A. Bridge Node (NWP Extension)
+
+> Introduced by [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md) in v1.0-alpha.3 as the **second** half of the Gateway Node split. While Anchor Node sits at the front door of an NPS cluster (inbound NPS → routed NPS), Bridge Node sits at the *outbound* edge: NPS frames going **out** to non-NPS systems.
+
+### 2A.1 Definition
+
+**Bridge Node** is an NWP node type that translates NPS frames to and from non-NPS protocols. It is stateless per request and does not participate in cluster topology.
+
+| Property | Value |
+|----------|-------|
+| Node type | `bridge` |
+| NWM node_type | `"bridge"` |
+| NDP node_kind | `"bridge"` (or array form including `"bridge"`) |
+| NDP bridge_protocols | array of supported targets, e.g. `["http", "grpc"]` |
+| Frame entry | ActionFrame (0x11) carrying `bridge_target` |
+
+> **Direction note.** Bridge Node carries the **NPS → external** direction. The legacy `compat/*-bridge` packages historically published under LabAcacia (MCP / A2A / gRPC) carry the **inverse** direction (external → NPS) and have been renamed `compat/*-ingress` to remove the naming collision. See [NPS-CR-0001 §3.2](../cr/NPS-CR-0001-anchor-bridge-split.md) and CR-0001 §6.
+
+### 2A.2 Bridge Node Responsibilities
+
+| Responsibility | Protocol | Description |
+|---------------|----------|-------------|
+| **NPS frame ingest** | NWP | Accept ActionFrame containing `bridge_target` (target external endpoint + protocol selector) |
+| **Outbound translation** | HTTP / gRPC / MCP / A2A | Encode the NPS payload as the target protocol's request format |
+| **Response translation** | NWP | Decode the target's response and return as `CapsFrame` |
+| **Authentication relay** *(optional)* | NIP / vendor | Forward NIP credentials as the target protocol's auth token (where mappable), or use vendor-side credentials configured per Bridge instance |
+| **Observability** | NOP Context | Annotate spans with the target protocol + endpoint so end-to-end traces traverse the boundary cleanly |
+
+### 2A.3 Standard Targets at v1.0-alpha.3
+
+The set below is the minimum that reference Bridge Node implementations are expected to support; concrete `bridge_target` schemas per target protocol are deferred to follow-up CRs.
+
+| Target | NDP `bridge_protocols` value | Notes |
+|--------|------------------------------|-------|
+| HTTP / HTTPS | `"http"` | REST and streaming |
+| gRPC | `"grpc"` | Unary and streaming |
+| Model Context Protocol | `"mcp"` | LLM-tool integration target |
+| Agent-to-Agent | `"a2a"` | Google A2A v0.2 |
+
+Additional protocols MAY be registered through future CRs by adding new `bridge_protocols` values.
+
+### 2A.4 Removed: Gateway Node
+
+> **Gateway Node** (removed in v1.0-alpha.3) — the role formerly known as "Gateway Node" lives on as **Anchor Node** (this section's §2). The new **Bridge Node** name was introduced because the term "bridge" had already been informally taken by `compat/*-bridge`; those packages have been renamed `compat/*-ingress`. See NPS-CR-0001 for full rationale.
 
 ---
 
@@ -249,7 +301,7 @@ The Vector Proxy Layer is fully transparent to consumers. Standard NWP QueryFram
 }
 ```
 
-NWP v0.4 already supports the `vector_search` field (§6.4). The Vector Proxy Layer
+NWP v0.5 already supports the `vector_search` field (§6.4). The Vector Proxy Layer
 only needs to implement this interface for seamless integration.
 
 ---
@@ -260,7 +312,7 @@ only needs to implement this interface for seamless integration.
 
 | Level | Name | Requirements |
 |-------|------|-------------|
-| **Level 1** | Basic | Gateway Node + NIP auth + NWM service catalog |
+| **Level 1** | Basic | Anchor Node + NIP auth + NWM service catalog |
 | **Level 2** | Standard | Level 1 + NOP orchestration + OpenTelemetry tracing + Token Budget |
 | **Level 3** | Advanced | Level 2 + Vector Proxy Layer + K-of-N fault tolerance + audit log |
 
@@ -268,7 +320,7 @@ only needs to implement this interface for seamless integration.
 
 | Req ID | Description | Protocol |
 |--------|-------------|----------|
-| L1-01 | MUST deploy Gateway Node as the sole service entry point | NWP |
+| L1-01 | MUST deploy Anchor Node as the sole service entry point | NWP |
 | L1-02 | MUST verify consumer NID via NIP | NIP |
 | L1-03 | MUST publish NWM manifest with all available Actions | NWP |
 | L1-04 | MUST support NPS unified port 17433 | NCP |
@@ -306,7 +358,7 @@ only needs to implement this interface for seamless integration.
 ### Scenario: Consumer Agent Requests Data Analysis Service
 
 ```
-Consumer Agent                Gateway Node              NOP              Vector Memory Node    Action Worker
+Consumer Agent                Anchor Node               NOP              Vector Memory Node    Action Worker
      │                             │                     │                      │                   │
      │── ActionFrame ────────→    │                     │                      │                   │
      │   action: analysis.run     │                     │                      │                   │
@@ -340,15 +392,16 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 NPT → analyze
 
 | Profile Component | NPS Protocol Dependency | Protocol Change Required |
 |------------------|------------------------|------------------------|
-| Gateway Node | NWP v0.4 | Yes: add `node_type: "gateway"` to NWM |
-| Request routing | NOP v0.3 | No: reuses TaskFrame/DelegateFrame |
-| Authentication | NIP v0.2 | No: reuses NID + scope |
-| Vector queries | NWP v0.4 §6.4 | No: reuses vector_search |
+| Anchor Node | NWP v0.7 | Yes: rename `node_type: "gateway"` to `"anchor"` (CR-0001); legacy `"gateway"` rejected |
+| Bridge Node | NWP v0.7 | Yes: new `node_type: "bridge"` value (CR-0001) |
+| Request routing | NOP v0.4 | No: reuses TaskFrame/DelegateFrame |
+| Authentication | NIP v0.3 | No: reuses NID + scope |
+| Vector queries | NWP v0.5 §6.4 | No: reuses vector_search |
 | Vector Proxy | NWP + NCP | No: implementation-level middleware |
 | Token metering | NPT v0.1 | No: reuses token_est |
-| Audit trail | NOP v0.3 §8.3 | No: reuses context.trace_id |
+| Audit trail | NOP v0.4 §8.3 | No: reuses context.trace_id |
 
-**Only protocol change required**: Add `gateway` node type to NWP NWM (backward compatible).
+**Protocol changes required**: NWP NWM `node_type` enum must accept `"anchor"` and `"bridge"` (replacing the removed `"gateway"`); NDP AnnounceFrame gains `node_kind`/`cluster_anchor`/`bridge_protocols` fields. All additive at the wire layer except the `"gateway"` removal — see [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md).
 
 ---
 
@@ -356,6 +409,7 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 NPT → analyze
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.3 | 2026-04-26 | **Breaking** (per [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md)). §2 renamed Gateway Node → **Anchor Node**, all wire/manifest examples updated (`node_type: "anchor"`, `nwm_version: "0.7"`, `min_nip_version: "0.4"`); new §2.2 row for optional cluster registry. New §2A **Bridge Node** (NPS↔non-NPS protocol translation, `bridge_protocols` declaration, direction-vs-`compat/*-bridge` clarification). §1.2 / §1.3 architecture diagram and §6 protocol-relationship table updated; L1 §4.2 / §5 references re-pointed to Anchor Node. §6 protocol-change line replaced "add gateway" with "rename gateway → anchor + new bridge". Depends-On upgraded to NCP v0.6 (RFC-0001) + NWP v0.7 (CR-0001) + NIP v0.4 (RFC-0003) + NDP v0.5 (CR-0001 fields). |
 | 0.1 | 2026-04-15 | Initial draft: AaaS architecture overview, Gateway Node definition, Vector Proxy Layer design, three-tier compliance requirements |
 
 ---

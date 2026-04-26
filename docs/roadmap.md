@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.2** — closes out Phase 1 for six SDKs and delivers the Phase 2 MCP + A2A compatibility bridges.
+NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.3** — closes out Phase 1 for six SDKs and delivers the Phase 2 MCP + A2A compatibility bridges.
 
 ---
 
@@ -32,14 +32,14 @@ Each phase breaks down into three segments:
 Goal: establish the full NPS skeleton, unify the frame namespace, publish a v0.2-draft for community comment.
 
 - ✅ `NPS-0-Overview.md` v0.3
-- ✅ `NPS-1-NCP.md` v0.5 (dual transport, configurable frame size, ErrorFrame)
-- ✅ `NPS-2-NWP.md` v0.5 (Node-published AnchorFrame, NPT)
-- ✅ `NPS-3-NIP.md` v0.3 (metadata field, NPS status codes)
-- ✅ `NPS-4-NDP.md` v0.3
+- ✅ `NPS-1-NCP.md` v0.6 (dual transport, configurable frame size, ErrorFrame)
+- ✅ `NPS-2-NWP.md` v0.7 (Node-published AnchorFrame, NPT)
+- ✅ `NPS-3-NIP.md` v0.5 (metadata field, NPS status codes)
+- ✅ `NPS-4-NDP.md` v0.5
 - ✅ `NPS-5-NOP.md` v0.4
-- ✅ `frame-registry.yaml` v0.5 (with ErrorFrame 0xFE)
-- ✅ `error-codes.md` v0.5 + `status-codes.md` v0.2 + `token-budget.md` v0.2
-- ✅ `services/NPS-AaaS-Profile.md` v0.2 (Gateway Node, Vector Proxy Layer, L1/L2/L3 compliance)
+- ✅ `frame-registry.yaml` v0.9 (with ErrorFrame 0xFE)
+- ✅ `error-codes.md` v0.8 + `status-codes.md` v0.2 + `token-budget.md` v0.2
+- ✅ `services/NPS-AaaS-Profile.md` v0.2 (Anchor Node, Bridge Node, Vector Proxy Layer, L1/L2/L3 compliance)
 
 ---
 
@@ -51,12 +51,12 @@ Goal: NCP + NWP + NIP + NDP + NOP production-ready in the six reference language
 
 | Language   | Package                            | Status                 |
 |------------|------------------------------------|------------------------|
-| .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`) | ✅ v1.0.0-alpha.2 shipped |
-| Python     | `nps-lib`                          | ✅ v1.0.0-alpha.2 shipped (162 tests, 97% coverage) |
-| TypeScript | `@labacacia/nps-sdk`               | ✅ v1.0.0-alpha.2 shipped (264 tests) |
-| Java       | `com.labacacia:nps-sdk`            | ✅ v1.0.0-alpha.2 shipped (87 tests) |
-| Rust       | `nps-sdk`                          | ✅ v1.0.0-alpha.2 shipped (88 tests) |
-| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.2 shipped (75 tests) |
+| .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`) | ✅ v1.0.0-alpha.3 shipped |
+| Python     | `nps-lib`                          | ✅ v1.0.0-alpha.3 shipped (162 tests, 97% coverage) |
+| TypeScript | `@labacacia/nps-sdk`               | ✅ v1.0.0-alpha.3 shipped (264 tests) |
+| Java       | `com.labacacia:nps-sdk`            | ✅ v1.0.0-alpha.3 shipped (87 tests) |
+| Rust       | `nps-sdk`                          | ✅ v1.0.0-alpha.3 shipped (88 tests) |
+| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.3 shipped (75 tests) |
 
 ### NIP CA Server (six-language reference deployment)
 
@@ -89,8 +89,8 @@ Goal: adapters to existing ecosystems (MCP, A2A), richer SDK examples, Tier-2 Ms
 
 - ✅ TypeScript SDK shipped (Phase 2 scope advanced to Phase 1)
 - ✅ Go SDK shipped (Phase 2 scope advanced to Phase 1)
-- ✅ `compat/mcp-bridge/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpBridge` v1.0.0-alpha.2)
-- ✅ `compat/a2a-bridge/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aBridge` v1.0.0-alpha.2)
+- ✅ `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpIngress` v1.0.0-alpha.3)
+- ✅ `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.3)
 - ✅ Tier-2 MsgPack wire-size benchmark (aggregate **63.6 %** reduction vs JSON — steady-state frames 61.9 %–88.4 %)
 - ✅ Token-savings benchmark (aggregate **45.0 %** NPT reduction vs REST — above Phase 1 ≥ 30 % bar)
 - ⬜ First reference product — **NPS Studio** (human visual debugger) + **NPS Probe** (Agent Coder conformance CLI)

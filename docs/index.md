@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — a complete internet protocol stack purpose-built for AI agents and neural models.
 >
-> Version 1.0.0-alpha.2 · Apache 2.0 · [中文版](index.cn.md)
+> Version 1.0.0-alpha.3 · Apache 2.0 · [中文版](index.cn.md)
 
 ---
 
@@ -35,19 +35,19 @@ NPS solves all four **at the wire level**:
 pip install nps-lib==1.0.0a2
 
 # TypeScript
-npm install @labacacia/nps-sdk@1.0.0-alpha.2
+npm install @labacacia/nps-sdk@1.0.0-alpha.3
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.2
+cargo add nps-sdk@=1.0.0-alpha.3
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.2
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.3
 
 # Java (Gradle)
-implementation("com.labacacia:nps-sdk:1.0.0-alpha.2")
+implementation("com.labacacia:nps-sdk:1.0.0-alpha.3")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.2
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.3
 ```
 
 ---
@@ -63,7 +63,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.2
 
 ## Status
 
-**v1.0.0-alpha.2** — Phase 1 / Phase 2 synchronized release. All 11 spec documents at `Proposed` (NCP v0.5, NWP v0.5, NIP v0.3, NDP v0.3, NOP v0.4). Reference implementations in **.NET**, **Python**, **TypeScript**, **Java**, **Rust**, **Go** — full NCP + NWP + NIP + NDP + NOP coverage. NIP CA Server available in all six languages.
+**v1.0.0-alpha.3** — Phase 1 / Phase 2 synchronized release. All 11 spec documents at `Proposed` (NCP v0.6, NWP v0.7, NIP v0.5, NDP v0.5, NOP v0.4). Reference implementations in **.NET**, **Python**, **TypeScript**, **Java**, **Rust**, **Go** — full NCP + NWP + NIP + NDP + NOP coverage. NIP CA Server available in all six languages.
 
 ---
 

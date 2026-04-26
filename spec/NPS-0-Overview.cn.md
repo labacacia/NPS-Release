@@ -3,9 +3,9 @@
 # NPS-0: Neural Protocol Suite — Overview
 
 **Spec Number**: NPS-0  
-**Status**: Draft  
-**Version**: 0.2  
-**Date**: 2026-04-12  
+**Status**: Proposed  
+**Version**: 0.3  
+**Date**: 2026-04-19  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **License**: Apache 2.0  
 

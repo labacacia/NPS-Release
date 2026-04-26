@@ -2,8 +2,8 @@ English | [中文版](./token-budget.cn.md)
 
 # NPS Token Budget Specification
 
-**Version**: 0.1  
-**Date**: 2026-04-12  
+**Version**: 0.2  
+**Date**: 2026-04-19  
 
 ---
 

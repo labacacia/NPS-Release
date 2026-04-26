@@ -2,7 +2,7 @@ English | [中文版](./README.cn.md)
 
 # Neural Protocol Suite (NPS) — Protocol Specification
 
-> **Version:** 1.0.0-alpha.2 | **Status:** Proposed | **License:** Apache 2.0
+> **Version:** 1.0.0-alpha.3 | **Status:** Proposed | **License:** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 
@@ -45,10 +45,10 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 | Protocol | Analogue | Version | Summary |
 |----------|----------|---------|---------|
-| **NCP** — Neural Communication Protocol | Wire / Framing | v0.5 | Binary frame format, dual-tier codec (JSON / MsgPack), streaming |
-| **NWP** — Neural Web Protocol | HTTP | v0.5 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Gateway nodes |
-| **NIP** — Neural Identity Protocol | TLS / PKI | v0.3 | Ed25519 identity, certificate lifecycle, CA, OCSP, CRL |
-| **NDP** — Neural Discovery Protocol | DNS | v0.3 | Node announcement, signed records, graph traversal |
+| **NCP** — Neural Communication Protocol | Wire / Framing | v0.6 | Binary frame format, dual-tier codec (JSON / MsgPack), streaming |
+| **NWP** — Neural Web Protocol | HTTP | v0.7 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Anchor / Bridge nodes |
+| **NIP** — Neural Identity Protocol | TLS / PKI | v0.5 | Ed25519 identity, certificate lifecycle, CA, OCSP, CRL |
+| **NDP** — Neural Discovery Protocol | DNS | v0.5 | Node announcement, signed records, graph traversal |
 | **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.4 | DAG task orchestration, delegation, streaming results |
 
 **Dependency chain:** `NCP ← NWP ← NIP ← NDP` / `NCP + NWP + NIP ← NOP`
@@ -61,12 +61,12 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 | Document | Description |
 |----------|-------------|
-| [NPS-0 Overview](./spec/protocols/NPS-0-Overview.md) | Suite overview — start here |
-| [NPS-1 NCP](./spec/protocols/NPS-1-NCP.md) | Wire format, frame header, encoding tiers |
-| [NPS-2 NWP](./spec/protocols/NPS-2-NWP.md) | Neural Web Protocol |
-| [NPS-3 NIP](./spec/protocols/NPS-3-NIP.md) | Neural Identity Protocol |
-| [NPS-4 NDP](./spec/protocols/NPS-4-NDP.md) | Neural Discovery Protocol |
-| [NPS-5 NOP](./spec/protocols/NPS-5-NOP.md) | Neural Orchestration Protocol |
+| [NPS-0 Overview](./spec/NPS-0-Overview.md) | Suite overview — start here |
+| [NPS-1 NCP](./spec/NPS-1-NCP.md) | Wire format, frame header, encoding tiers |
+| [NPS-2 NWP](./spec/NPS-2-NWP.md) | Neural Web Protocol |
+| [NPS-3 NIP](./spec/NPS-3-NIP.md) | Neural Identity Protocol |
+| [NPS-4 NDP](./spec/NPS-4-NDP.md) | Neural Discovery Protocol |
+| [NPS-5 NOP](./spec/NPS-5-NOP.md) | Neural Orchestration Protocol |
 
 ### Reference Documents
 
@@ -82,7 +82,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 | Document | Description |
 |----------|-------------|
-| [AaaS Profile](./spec/services/NPS-AaaS-Profile.md) | Agent-as-a-Service compliance profile (Gateway Node, Vector Proxy Layer, L1/L2/L3 compliance) |
+| [AaaS Profile](./spec/services/NPS-AaaS-Profile.md) | Agent-as-a-Service compliance profile (Anchor Node, Bridge Node, Vector Proxy Layer, L1/L2/L3 compliance) |
 
 ---
 
