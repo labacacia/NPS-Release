@@ -22,12 +22,18 @@ English | [中文版](./README.cn.md)
 | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust) | Async Rust SDK | Rust stable |
 | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go) | Go SDK | Go 1.23+ |
 | [nip-ca-server](https://github.com/labacacia/nip-ca-server) | NIP Certificate Authority — single-Docker self-hostable CA for issuing NID certificates | C# / .NET 10 + PostgreSQL |
+| [nps-daemons](https://github.com/labacacia/nps-daemons) | Reference deployment binaries — `npsd`, `nps-runner`, `nps-gateway`, `nps-registry` (Layer 1 + Layer 2 of the standard NPS topology) | C# / .NET 10 |
 
 The .NET SDK ships the underlying CA library (`LabAcacia.NPS.NIP`); the
 standalone [`nip-ca-server`](https://github.com/labacacia/nip-ca-server)
 repo wraps it as a deployable service. Five frozen reference ports
 (Python / TypeScript / Java / Rust / Go) live under that repo's
 `example/` directory.
+
+The Layer-3 trust-anchor daemons (`nps-cloud-ca` and `nps-ledger`) live
+in the `innolotus` GitHub organisation as **private** repos and ship
+publicly with **NPS Cloud** GA (planned 2027 Q1+). For self-host CA
+needs today, use [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server).
 
 ---
 
