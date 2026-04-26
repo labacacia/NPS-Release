@@ -63,7 +63,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.3
 
 ## 状态
 
-**v1.0.0-alpha.3** — Phase 1 release。五大子协议全部完成 v0.2+ 草案。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。**NIP CA Server** 拆出独立发布仓 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)（C# / ASP.NET Core 10 + PostgreSQL）；其它语言的 5 个冻结参考移植放在该仓库的 `example/` 目录。
+**v1.0.0-alpha.3** — Phase 1 release。五大子协议全部完成 v0.2+ 草案。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。**NIP CA Server** 拆出独立发布仓 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons**（`npsd` + `nps-runner` + `nps-gateway` + `nps-registry` —— 标准三层中的 Layer 1 + Layer 2）打成一个 bundle 仓 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons) 发布。Layer-3 信任锚 daemon（`nps-cloud-ca`、`nps-ledger`）在 `innolotus` 组织私有，跟 NPS Cloud GA 一起公开（2027 Q1+）。
 
 ---
 
