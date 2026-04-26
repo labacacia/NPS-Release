@@ -17,7 +17,15 @@
 | Rust       | `nps-sdk`                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [doc/](https://github.com/labacacia/NPS-sdk-rust/tree/main/doc)   |
 | Go         | `github.com/labacacia/NPS-sdk-go`            | Go 1.25     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [doc/](https://github.com/labacacia/NPS-sdk-go/tree/main/doc)     |
 
-每个 SDK 仓库下都附带一个 `nip-ca-server/` — NIP Certificate Authority 的参考部署，Docker 打包。
+## NIP CA Server
+
+可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构。`v1.0.0-alpha.3` 起从 SDK 中拆出独立发布。
+
+| 仓库 | 技术栈 | 快速开始 |
+|------|--------|----------|
+| [labacacia/nip-ca-server](https://github.com/labacacia/nip-ca-server) | C# / ASP.NET Core 10 + PostgreSQL，单 Docker | `git clone … && docker compose up -d` |
+
+构建在已发布的 [`LabAcacia.NPS.NIP`](https://www.nuget.org/packages/LabAcacia.NPS.NIP/) NuGet 包之上，自包含（不依赖 monorepo）。仓库 `example/` 收录 5 个其他语言（Python / TypeScript / Java / Rust / Go）的冻结参考移植，仅供阅读。
 
 ---
 
