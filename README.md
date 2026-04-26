@@ -21,8 +21,13 @@ English | [中文版](./README.cn.md)
 | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java) | JVM SDK | Java 21+ |
 | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust) | Async Rust SDK | Rust stable |
 | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go) | Go SDK | Go 1.23+ |
+| [nip-ca-server](https://github.com/labacacia/nip-ca-server) | NIP Certificate Authority — single-Docker self-hostable CA for issuing NID certificates | C# / .NET 10 + PostgreSQL |
 
-Each SDK repo includes a `nip-ca-server/` reference deployment of the NIP Certificate Authority.
+The .NET SDK ships the underlying CA library (`LabAcacia.NPS.NIP`); the
+standalone [`nip-ca-server`](https://github.com/labacacia/nip-ca-server)
+repo wraps it as a deployable service. Five frozen reference ports
+(Python / TypeScript / Java / Rust / Go) live under that repo's
+`example/` directory.
 
 ---
 

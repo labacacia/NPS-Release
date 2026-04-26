@@ -63,7 +63,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.3
 
 ## 状态
 
-**v1.0.0-alpha.3** — Phase 1 release。五大子协议全部完成 v0.2+ 草案。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。NIP CA Server 六语言齐备。
+**v1.0.0-alpha.3** — Phase 1 release。五大子协议全部完成 v0.2+ 草案。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。**NIP CA Server** 拆出独立发布仓 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)（C# / ASP.NET Core 10 + PostgreSQL）；其它语言的 5 个冻结参考移植放在该仓库的 `example/` 目录。
 
 ---
 
