@@ -21,8 +21,12 @@
 | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java) | JVM SDK | Java 21+ |
 | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust) | 异步 Rust SDK | Rust stable |
 | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go) | Go SDK | Go 1.23+ |
+| [nip-ca-server](https://github.com/labacacia/nip-ca-server) | NIP 证书颁发机构 —— 单 Docker 自托管 CA，签发 NID 证书 | C# / .NET 10 + PostgreSQL |
 
-每个 SDK 仓库下的 `nip-ca-server/` 均提供 NIP 证书颁发机构的参考部署。
+.NET SDK 提供底层 CA 库（`LabAcacia.NPS.NIP`）；独立仓
+[`nip-ca-server`](https://github.com/labacacia/nip-ca-server) 把它
+封装成可部署服务。仓库 `example/` 目录下另收录 5 个冻结的参考移植
+（Python / TypeScript / Java / Rust / Go）。
 
 ---
 

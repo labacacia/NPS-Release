@@ -17,7 +17,15 @@ Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP
 | Rust      | `nps-sdk`                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [doc/](https://github.com/labacacia/NPS-sdk-rust/tree/main/doc)   |
 | Go        | `github.com/labacacia/NPS-sdk-go`            | Go 1.25     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [doc/](https://github.com/labacacia/NPS-sdk-go/tree/main/doc)     |
 
-Every SDK repo also ships a `nip-ca-server/` reference deployment of the NIP Certificate Authority, Docker-packaged.
+## NIP CA Server
+
+Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Released independently from the SDKs at `v1.0.0-alpha.3`.
+
+| Repo | Stack | Quickstart |
+|------|-------|------------|
+| [labacacia/nip-ca-server](https://github.com/labacacia/nip-ca-server) | C# / ASP.NET Core 10, PostgreSQL, single-Docker | `git clone … && docker compose up -d` |
+
+Built on the published [`LabAcacia.NPS.NIP`](https://www.nuget.org/packages/LabAcacia.NPS.NIP/) NuGet package; self-contained (no monorepo dependency). The repo's `example/` folder carries five frozen reference ports (Python / TypeScript / Java / Rust / Go) for educational reading only.
 
 ---
 
