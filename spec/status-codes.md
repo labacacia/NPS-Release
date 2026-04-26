@@ -2,8 +2,8 @@ English | [中文版](./status-codes.cn.md)
 
 # NPS Native Status Codes and HTTP Mapping
 
-**Version**: 0.1  
-**Date**: 2026-04-12  
+**Version**: 0.4  
+**Date**: 2026-04-26  
 
 NPS defines a native status-code system independent of HTTP. Native mode uses NPS status codes directly; HTTP / Overlay mode additionally provides a mapping to HTTP status codes.
 
@@ -29,6 +29,7 @@ All uppercase, hyphen-separated. For the full error-code list, see [error-codes.
 | `STREAM` | Stream transport-related errors | — |
 | `AUTH` | Authentication / authorization errors | HTTP 401/403 |
 | `LIMIT` | Resource or quota limits | HTTP 429 |
+| `PROTO` | Protocol-level pre-handshake error (version mismatch, malformed connection preamble); not always emitted on the wire | — |
 
 ---
 
@@ -78,6 +79,7 @@ All uppercase, hyphen-separated. For the full error-code list, see [error-codes.
 | `NPS-SERVER-UNAVAILABLE` | 503 | Service temporarily unavailable |
 | `NPS-SERVER-TIMEOUT` | 408/504 | Operation timed out |
 | `NPS-SERVER-ENCODING-UNSUPPORTED` | 415 | Requested encoding tier is not supported |
+| `NPS-DOWNSTREAM-UNAVAILABLE` | 502/503 | A required downstream service that the node depends on (reputation log operator, external auth service, etc.) is unreachable; distinguish from `NPS-SERVER-UNAVAILABLE` so clients can retry against an alternate downstream when policy permits (NPS-RFC-0004) |
 
 ### Stream (STREAM)
 
@@ -86,6 +88,15 @@ All uppercase, hyphen-separated. For the full error-code list, see [error-codes.
 | `NPS-STREAM-SEQ-GAP` | 422 | Sequence gap |
 | `NPS-STREAM-NOT-FOUND` | 404 | Stream id does not exist |
 | `NPS-STREAM-LIMIT` | 429 | Concurrent stream limit exceeded |
+
+### Protocol-Level (PROTO)
+
+> Pre-handshake or transport-bracketing errors. These are detected before any frame parser runs (or in lieu of it). In native mode they are usually NOT emitted as ErrorFrames — the connection is closed silently because the peer has not been confirmed to speak NCP. The status codes still exist for SDK-internal telemetry (logs, metrics, classification of close reasons).
+
+| NPS Status | HTTP | Description |
+|------------|------|-------------|
+| `NPS-PROTO-VERSION-INCOMPATIBLE` | 426 | Client `min_version` exceeds server's max supported version (HelloFrame negotiation failure). HTTP mode emits 426 Upgrade Required; native mode disconnects after a single ErrorFrame. |
+| `NPS-PROTO-PREAMBLE-INVALID` | 400 (not emitted) | Native-mode connection opened with bytes other than the constant preamble `b"NPS/1.0\n"`. Server closes silently within 500 ms; no ErrorFrame is sent. (NPS-RFC-0001) |
 
 ---
 
@@ -105,6 +116,14 @@ Each protocol's specific error code (e.g. `NCP-ANCHOR-NOT-FOUND`) maps to the co
 | `NCP-STREAM-NOT-FOUND` | `NPS-STREAM-NOT-FOUND` |
 | `NCP-STREAM-LIMIT-EXCEEDED` | `NPS-STREAM-LIMIT` |
 | `NCP-ENCODING-UNSUPPORTED` | `NPS-SERVER-ENCODING-UNSUPPORTED` |
+| `NCP-VERSION-INCOMPATIBLE` | `NPS-PROTO-VERSION-INCOMPATIBLE` |
+| `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` |
+| `NIP-ASSURANCE-MISMATCH` | `NPS-CLIENT-BAD-FRAME` |
+| `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` |
+| `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` |
+| `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` |
+| `NWP-AUTH-ASSURANCE-TOO-LOW` | `NPS-AUTH-FORBIDDEN` |
+| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` |
 | `NWP-AUTH-NID-*` | `NPS-AUTH-*` (maps per specific error) |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` |
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` |

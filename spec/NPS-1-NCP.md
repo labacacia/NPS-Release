@@ -3,9 +3,9 @@ English | [中文版](./NPS-1-NCP.cn.md)
 # NPS-1: Neural Communication Protocol (NCP)
 
 **Spec Number**: NPS-1  
-**Status**: Draft  
-**Version**: 0.4  
-**Date**: 2026-04-14  
+**Status**: Proposed  
+**Version**: 0.6  
+**Date**: 2026-04-25  
 **Port**: 17433 (default, shared across the protocol suite)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 
@@ -59,7 +59,7 @@ TCP connect → api.example.com:17433
 ← CapsFrame (response, 0x04)
 ```
 
-The frame payload is identical in both modes. In native mode, errors are returned via ErrorFrame (0xFE); in HTTP mode, the HTTP status code is returned in parallel (mapping: [status-codes.md](../status-codes.md)).
+The frame payload is identical in both modes. In native mode, errors are returned via ErrorFrame (0xFE); in HTTP mode, the HTTP status code is returned in parallel (mapping: [status-codes.md](./status-codes.md)).
 
 ### 2.3 Unified Port
 
@@ -111,6 +111,7 @@ In native mode, connection setup MUST follow the handshake below:
 Client (Agent)                        Server (Node)
       │                                     │
       │── TCP/QUIC connect ──────────────→  │
+      │── 8 bytes "NPS/1.0\n"  (preamble) → │  validate; close on mismatch (no ErrorFrame)
       │── HelloFrame (0x06) ─────────────→  │  declare client version & capabilities
       │                                     │  version negotiation & capability intersection
       │  ←──────────────── CapsFrame (0x04) │  return negotiated server capabilities
@@ -142,6 +143,63 @@ If the handshake fails (incompatible version, empty capability set, etc.), Serve
   "details": { "server_version": "0.4", "client_min_version": "0.5" }
 }
 ```
+
+### 2.6.1 Connection Preamble (Native Mode)
+
+> **Status**: Mandatory (added in NCP v0.6 by [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md)).
+
+In native mode, every NCP connection MUST begin with an **8-byte constant preamble** sent by the client immediately after the transport (TCP / QUIC) handshake completes and before the first `HelloFrame`. HTTP mode is unaffected (the `Content-Type: application/nwp-frame` header serves the same identification role).
+
+**Wire format**
+
+```
+Offset  0   1   2   3   4   5   6   7
+       ┌───┬───┬───┬───┬───┬───┬───┬───┐
+       │ N │ P │ S │ / │ 1 │ . │ 0 │\n │
+       └───┴───┴───┴───┴───┴───┴───┴───┘
+       0x4E 50  53  2F  31  2E  30  0A
+```
+
+Hex: `4E 50 53 2F 31 2E 30 0A`. The preamble is **not** a frame — it has no header, no Flags, no length field. Frame-type byte `0x4E` is reserved (see [frame-registry.yaml](frame-registry.yaml) `reservations:` block) and MUST NOT be assigned to any NCP frame.
+
+**Client behavior**
+
+- Client MUST write the 8 bytes in a single buffer (no interleaving with application logic; never split across writes — at 8 bytes, transport MTU constraints are never reached in practice).
+- Client MAY pipeline `HelloFrame` back-to-back with the preamble (no round-trip wait), since server validation is byte-by-byte against a constant.
+
+**Server behavior**
+
+1. On accepting a native-mode connection, server reads exactly 8 bytes.
+2. If the bytes match `b"NPS/1.0\n"`, server proceeds to frame parsing.
+3. If they do not match:
+   - Server MUST close the connection within 500 ms.
+   - Server MUST NOT send an `ErrorFrame` — the peer is not known to speak NCP, and emitting framed bytes would leak protocol details to scanners.
+   - Server MAY log the first 32 received bytes for operational diagnosis.
+4. If fewer than 8 bytes arrive within 10 seconds, server treats it as a timeout and closes silently.
+
+**Major-version semantics**
+
+- `b"NPS/2.0\n"` and other future major-version preambles are reserved.
+- A v1.x server reading `NPS/2.0\n` MUST close the connection (unknown major). It MAY write a single 32-byte diagnostic line `NPS-PREAMBLE-UNSUPPORTED-VERSION\n` before closing — permitted because the peer self-identified as an NPS speaker.
+- The minor-version byte (the `0` in `1.0`) is reserved; v1 clients MUST send `0`, v1 servers MUST accept `0` only. A future RFC may define minor-version negotiation.
+
+**Errors**
+
+| Code | When |
+|------|------|
+| `NCP-PREAMBLE-INVALID` (`NPS-PROTO-PREAMBLE-INVALID`) | First 8 bytes do not match the constant; close silent within 500 ms. |
+| (timeout) | Fewer than 8 bytes within 10 s; close silent. No code emitted on the wire. |
+
+**Server state machine (native mode)**
+
+```
+[LISTEN] ──accept──→ [PREAMBLE-WAIT] ──8-byte match──→ [FRAMING] ──HelloFrame──→ [HANDSHAKE] ──CapsFrame──→ [ESTABLISHED]
+                          │
+                          ├──mismatch──→ [CLOSING] (≤ 500 ms)
+                          └──10 s timeout──→ [CLOSING] (silent)
+```
+
+See [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md) for full design rationale, alternatives considered, and SDK rollout phases.
 
 ---
 
@@ -377,7 +435,7 @@ Encapsulates a full response body; the most common response frame. Also used for
 | `count` | uint32 | required | Length of `data`; MUST equal `len(data)` |
 | `data` | array | required | Data records; each conforms to the anchor_ref Schema |
 | `next_cursor` | string | optional | Next-page cursor, Base64-URL encoded; null = last page |
-| `token_est` | uint32 | optional | Estimated NPT consumption for this response (see [token-budget.md](../token-budget.md)) |
+| `token_est` | uint32 | optional | Estimated NPT consumption for this response (see [token-budget.md](./token-budget.md)) |
 | `tokenizer_used` | string | optional | Identifier of the tokenizer actually applied |
 | `cached` | bool | optional | `true` = response came from server-side cache |
 | `inline_anchor` | object | optional | Latest AnchorFrame included inline when the Schema has been updated, avoiding an extra RTT (see §5.4) |
@@ -486,7 +544,7 @@ The unified NPS error frame, shared across all protocol layers. Carries error re
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `frame` | uint8 | required | Fixed value `0xFE` |
-| `status` | string | required | NPS status code (see [status-codes.md](../status-codes.md)) |
+| `status` | string | required | NPS status code (see [status-codes.md](./status-codes.md)) |
 | `error` | string | required | Protocol-level error code (e.g. `NCP-ANCHOR-NOT-FOUND`) |
 | `message` | string | optional | Human-readable error description |
 | `details` | object | optional | Structured error context (e.g. `anchor_ref`, `stream_id`) |
@@ -583,7 +641,7 @@ If the Agent references an `anchor_ref` the Node does not recognize (hand-crafte
 
 NPS uses a two-tier error model:
 
-1. **NPS status codes**: transport-level status categories, see [status-codes.md](../status-codes.md).
+1. **NPS status codes**: transport-level status categories, see [status-codes.md](./status-codes.md).
 2. **Protocol error codes**: specific error identifiers, prefixed by the owning protocol.
 
 ### NCP Error Codes
@@ -604,8 +662,9 @@ NPS uses a two-tier error model:
 | `NCP-DIFF-FORMAT-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | DiffFrame used a patch_format the receiver does not support |
 | `NCP-VERSION-INCOMPATIBLE` | `NPS-PROTO-VERSION-INCOMPATIBLE` | Client min_version exceeds server's supported version |
 | `NCP-STREAM-WINDOW-OVERFLOW` | `NPS-STREAM-LIMIT` | Sender continued after the flow-control window was exhausted |
+| `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | Native-mode connection opened with bytes other than `b"NPS/1.0\n"`; server closes silently within 500 ms (no ErrorFrame) — see §2.6.1 |
 
-HTTP-mode status mapping: see [status-codes.md](../status-codes.md).
+HTTP-mode status mapping: see [status-codes.md](./status-codes.md).
 
 ---
 
@@ -698,6 +757,7 @@ Defaults: Tier-2 for production, Tier-1 for development.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.6 | 2026-04-25 | Added §2.6.1 native-mode connection preamble (8-byte constant `b"NPS/1.0\n"`); reserved frame-type byte 0x4E in `frame-registry.yaml`; added error code `NCP-PREAMBLE-INVALID` and status code `NPS-PROTO-PREAMBLE-INVALID`. See [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md). |
 | 0.4 | 2026-04-14 | Added HelloFrame (0x06); new §2.6 handshake sequence & version-negotiation rules; anchor_id computation now explicitly references RFC 8785 JCS; DiffFrame gains `patch_format` (json_patch / binary_bitset); CapsFrame gains `inline_anchor`; StreamFrame flow control formalized (window_size protocol); §7.4 E2E encryption section (ENC flag, AES-256-GCM / ChaCha20-Poly1305, payload layout); §5.4 auto-anchor protocol (NCP-ANCHOR-STALE + inline_anchor); added error codes NCP-ANCHOR-STALE, NCP-DIFF-FORMAT-UNSUPPORTED, NCP-VERSION-INCOMPATIBLE, NCP-STREAM-WINDOW-OVERFLOW, NCP-ENC-NOT-NEGOTIATED, NCP-ENC-AUTH-FAILED |
 | 0.3 | 2026-04-12 | Dual transport (HTTP / native); unified port 17433; configurable frame size (EXT bit); ErrorFrame (0xFE); NPS status-code system; Tier-3 marked Reserved; AnchorFrame ownership clarified as Node-published; token estimation switched to NPT |
 | 0.2 | 2026-04-10 | AnchorFrame / DiffFrame / StreamFrame / CapsFrame / AlignFrame definitions; bit-level Flags definition; AlignFrame marked Deprecated |

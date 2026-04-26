@@ -2,7 +2,7 @@
 
 # Neural Protocol Suite (NPS) — 协议规范
 
-> **版本：** 1.0.0-alpha.2 | **状态：** Proposed | **许可证：** Apache 2.0
+> **版本：** 1.0.0-alpha.3 | **状态：** Proposed | **许可证：** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia 开源实验室
 
@@ -46,9 +46,9 @@ NPS 在协议层解决以上四个问题：一次性 Schema 锚点、Ed25519 身
 | 协议 | 类比 | 版本 | 说明 |
 |------|------|------|------|
 | **NCP** — Neural Communication Protocol | Wire / 帧格式 | v0.4 | 二进制帧格式、双层编码（JSON/MsgPack）、流式传输 |
-| **NWP** — Neural Web Protocol | HTTP | v0.5 | 语义请求/响应、AnchorFrame Schema 缓存、Memory/Action/Gateway 节点 |
-| **NIP** — Neural Identity Protocol | TLS / PKI | v0.3 | Ed25519 身份、证书生命周期、CA、OCSP、CRL |
-| **NDP** — Neural Discovery Protocol | DNS | v0.3 | 节点公告、签名记录、图遍历 |
+| **NWP** — Neural Web Protocol | HTTP | v0.7 | 语义请求/响应、AnchorFrame Schema 缓存、Memory/Action/Anchor/Bridge 节点 |
+| **NIP** — Neural Identity Protocol | TLS / PKI | v0.5 | Ed25519 身份、证书生命周期、CA、OCSP、CRL |
+| **NDP** — Neural Discovery Protocol | DNS | v0.5 | 节点公告、签名记录、图遍历 |
 | **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.4 | DAG 任务编排、委托、流式结果 |
 
 **依赖关系：** `NCP ← NWP ← NIP ← NDP` / `NCP + NWP + NIP ← NOP`
@@ -61,12 +61,12 @@ NPS 在协议层解决以上四个问题：一次性 Schema 锚点、Ed25519 身
 
 | 文档 | 说明 |
 |------|------|
-| [NPS-0 总览](./spec/protocols/NPS-0-Overview.cn.md) | 套件总览，阅读入口 |
-| [NPS-1 NCP](./spec/protocols/NPS-1-NCP.cn.md) | 帧格式、帧头、编码分层 |
-| [NPS-2 NWP](./spec/protocols/NPS-2-NWP.cn.md) | Neural Web Protocol |
-| [NPS-3 NIP](./spec/protocols/NPS-3-NIP.cn.md) | Neural Identity Protocol |
-| [NPS-4 NDP](./spec/protocols/NPS-4-NDP.cn.md) | Neural Discovery Protocol |
-| [NPS-5 NOP](./spec/protocols/NPS-5-NOP.cn.md) | Neural Orchestration Protocol |
+| [NPS-0 总览](./spec/NPS-0-Overview.cn.md) | 套件总览，阅读入口 |
+| [NPS-1 NCP](./spec/NPS-1-NCP.cn.md) | 帧格式、帧头、编码分层 |
+| [NPS-2 NWP](./spec/NPS-2-NWP.cn.md) | Neural Web Protocol |
+| [NPS-3 NIP](./spec/NPS-3-NIP.cn.md) | Neural Identity Protocol |
+| [NPS-4 NDP](./spec/NPS-4-NDP.cn.md) | Neural Discovery Protocol |
+| [NPS-5 NOP](./spec/NPS-5-NOP.cn.md) | Neural Orchestration Protocol |
 
 ### 参考文档
 
@@ -82,7 +82,7 @@ NPS 在协议层解决以上四个问题：一次性 Schema 锚点、Ed25519 身
 
 | 文档 | 说明 |
 |------|------|
-| [AaaS Profile](./spec/services/NPS-AaaS-Profile.cn.md) | Agent-as-a-Service 合规规范（Gateway Node、Vector Proxy Layer、L1/L2/L3 合规） |
+| [AaaS Profile](./spec/services/NPS-AaaS-Profile.cn.md) | Agent-as-a-Service 合规规范（Anchor Node、Bridge Node、Vector Proxy Layer、L1/L2/L3 合规） |
 
 ---
 

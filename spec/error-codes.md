@@ -2,8 +2,8 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 0.4  
-**Date**: 2026-04-14  
+**Version**: 0.8  
+**Date**: 2026-04-26  
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -33,6 +33,7 @@ NPS uses a two-level error system:
 | `NCP-STREAM-WINDOW-OVERFLOW` | `NPS-STREAM-LIMIT` | Sender continues to emit StreamFrames after the application-layer flow-control window is exhausted |
 | `NCP-ENC-NOT-NEGOTIATED` | `NPS-CLIENT-BAD-FRAME` | Received an ENC=1 frame but no E2E encryption algorithm was negotiated for the session (not declared in HelloFrame) |
 | `NCP-ENC-AUTH-FAILED` | `NPS-CLIENT-BAD-FRAME` | E2E encryption auth-tag verification failed; the frame may have been tampered with |
+| `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | Native-mode connection opened with bytes other than the constant preamble `b"NPS/1.0\n"`; server closes the connection silently without emitting an ErrorFrame (NPS-RFC-0001) |
 
 ---
 
@@ -45,6 +46,8 @@ NPS uses a two-level error system:
 | `NWP-AUTH-NID-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | NID has been revoked |
 | `NWP-AUTH-NID-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | NID issuer is not in `trusted_issuers` |
 | `NWP-AUTH-NID-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Agent is missing a capability required by the node (e.g., `nwp:query`) |
+| `NWP-AUTH-ASSURANCE-TOO-LOW` | `NPS-AUTH-FORBIDDEN` | Agent's assurance level is below the node's `min_assurance_level` (NPS-2 §4.1) or per-action override (§4.6); response SHOULD include a `hint` pointing to a CA enrolment URL (NPS-RFC-0003) |
+| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | Reputation policy on the receiving Node matched a `reject_on` rule against the requesting `subject_nid`; response SHOULD include the matching `incident` + `severity` + log entry `seq` for traceability (NPS-RFC-0004) |
 | `NWP-QUERY-FILTER-INVALID` | `NPS-CLIENT-BAD-PARAM` | Filter syntax is invalid or nests deeper than 8 levels |
 | `NWP-QUERY-FIELD-UNKNOWN` | `NPS-CLIENT-BAD-PARAM` | `fields` references an unknown field |
 | `NWP-QUERY-CURSOR-INVALID` | `NPS-CLIENT-BAD-PARAM` | Cursor cannot be decoded or has expired |
@@ -91,6 +94,10 @@ NPS uses a two-level error system:
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | Requested scope exceeds the parent scope (delegation-chain violation) |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP service temporarily unavailable |
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame signature or format is invalid |
+| `NIP-ASSURANCE-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.assurance_level` does not match the cert extension `id-nid-assurance-level` (downgrade-attack defence) — see NPS-3 §5.1.1 (NPS-RFC-0003) |
+| `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `assurance_level` carries a value outside the defined enum (`anonymous` / `attested` / `verified`) — see NPS-3 §5.1.1 (NPS-RFC-0003) |
+| `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | Reputation log entry signature fails verification or canonical (RFC 8785 JCS) form is malformed — see NPS-3 §5.1.2 (NPS-RFC-0004) |
+| `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | A log operator referenced by a Node's `reputation_policy` cannot be reached during admission evaluation — see NPS-3 §5.1.2 (NPS-RFC-0004) |
 
 ---
 
