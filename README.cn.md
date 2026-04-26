@@ -22,11 +22,17 @@
 | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust) | 异步 Rust SDK | Rust stable |
 | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go) | Go SDK | Go 1.23+ |
 | [nip-ca-server](https://github.com/labacacia/nip-ca-server) | NIP 证书颁发机构 —— 单 Docker 自托管 CA，签发 NID 证书 | C# / .NET 10 + PostgreSQL |
+| [nps-daemons](https://github.com/labacacia/nps-daemons) | 参考部署二进制 —— `npsd`、`nps-runner`、`nps-gateway`、`nps-registry`（NPS 标准三层中的 Layer 1 + Layer 2） | C# / .NET 10 |
 
 .NET SDK 提供底层 CA 库（`LabAcacia.NPS.NIP`）；独立仓
 [`nip-ca-server`](https://github.com/labacacia/nip-ca-server) 把它
 封装成可部署服务。仓库 `example/` 目录下另收录 5 个冻结的参考移植
 （Python / TypeScript / Java / Rust / Go）。
+
+Layer-3 信任锚 daemon（`nps-cloud-ca` 和 `nps-ledger`）在 GitHub
+`innolotus` 组织下作为**私有**仓存放，跟 **NPS Cloud** GA 一起公开
+（计划 2027 Q1+）。今天就要自托管 CA，用
+[`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。
 
 ---
 

@@ -27,6 +27,18 @@ Standalone deployable Certificate Authority for the Neural Identity Protocol (NP
 
 Built on the published [`LabAcacia.NPS.NIP`](https://www.nuget.org/packages/LabAcacia.NPS.NIP/) NuGet package; self-contained (no monorepo dependency). The repo's `example/` folder carries five frozen reference ports (Python / TypeScript / Java / Rust / Go) for educational reading only.
 
+## NPS Daemons
+
+Reference deployment binaries for the standard three-layer NPS topology. The four open-source daemons (Layer 1 + Layer 2) ship in one bundle repo at `v1.0.0-alpha.3`.
+
+| Repo | Daemons | Quickstart |
+|------|---------|------------|
+| [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd` (L1 host-local, port 17433) · `nps-runner` (L1 FaaS) · `nps-gateway` (L2 ingress, :8080) · `nps-registry` (L2 NDP, :17436) | `git clone … && docker compose up -d` |
+
+All four depend on published `LabAcacia.NPS.*` NuGet packages (Core / NIP / NDP / NWP / NWP.Anchor / NOP) and ship as multi-stage Docker images. Each daemon has its own subdirectory with `README` / `CHANGELOG` / `Dockerfile` / `Program.cs`, and the bundle's top-level `docker-compose.yml` spins them all up at once.
+
+The Layer-3 **trust-anchor** daemons (`nps-cloud-ca` and `nps-ledger`) live in private repos under the `innolotus` GitHub organisation and ship publicly with **NPS Cloud** GA (planned 2027 Q1+). For self-host CA needs today, use [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server).
+
 ---
 
 ## Install

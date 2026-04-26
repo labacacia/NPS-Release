@@ -63,7 +63,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.3
 
 ## Status
 
-**v1.0.0-alpha.3** — Phase 1 / Phase 2 synchronized release. All 11 spec documents at `Proposed` (NCP v0.6, NWP v0.7, NIP v0.5, NDP v0.5, NOP v0.4). Reference implementations in **.NET**, **Python**, **TypeScript**, **Java**, **Rust**, **Go** — full NCP + NWP + NIP + NDP + NOP coverage. **NIP CA Server** is now released as a standalone repo at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (C# / ASP.NET Core 10 + PostgreSQL); five frozen reference ports in other languages live under that repo's `example/`.
+**v1.0.0-alpha.3** — Phase 1 / Phase 2 synchronized release. All 11 spec documents at `Proposed` (NCP v0.6, NWP v0.7, NIP v0.5, NDP v0.5, NOP v0.4). Reference implementations in **.NET**, **Python**, **TypeScript**, **Java**, **Rust**, **Go** — full NCP + NWP + NIP + NDP + NOP coverage. **NIP CA Server** is now released as a standalone repo at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server). **NPS Daemons** (`npsd` + `nps-runner` + `nps-gateway` + `nps-registry` — Layer 1 + Layer 2 of the standard topology) ship together as a bundle at [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons). Layer-3 trust-anchor daemons (`nps-cloud-ca`, `nps-ledger`) are private under the `innolotus` org and ship publicly with NPS Cloud GA (2027 Q1+).
 
 ---
 

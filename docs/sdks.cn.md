@@ -27,6 +27,18 @@
 
 构建在已发布的 [`LabAcacia.NPS.NIP`](https://www.nuget.org/packages/LabAcacia.NPS.NIP/) NuGet 包之上，自包含（不依赖 monorepo）。仓库 `example/` 收录 5 个其他语言（Python / TypeScript / Java / Rust / Go）的冻结参考移植，仅供阅读。
 
+## NPS Daemons
+
+NPS 标准三层部署拓扑的参考部署二进制。4 个 OSS daemon（Layer 1 + Layer 2）打成一个 bundle 仓在 `v1.0.0-alpha.3` 发布。
+
+| 仓库 | Daemons | 快速开始 |
+|------|---------|----------|
+| [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd`（L1 主机本地，端口 17433）· `nps-runner`（L1 FaaS）· `nps-gateway`（L2 ingress，:8080）· `nps-registry`（L2 NDP，:17436） | `git clone … && docker compose up -d` |
+
+4 个 daemon 都依赖 nuget.org 上发布的 `LabAcacia.NPS.*` NuGet 包（Core / NIP / NDP / NWP / NWP.Anchor / NOP），都是多阶段 Docker 镜像。每个 daemon 有自己的子目录（`README` / `CHANGELOG` / `Dockerfile` / `Program.cs`），仓库根的 `docker-compose.yml` 一键拉起 4 个。
+
+Layer-3 **信任锚** daemon（`nps-cloud-ca` 和 `nps-ledger`）在 GitHub `innolotus` 组织下作为私有仓存放，跟 **NPS Cloud** GA 一起公开（计划 2027 Q1+）。今天就要自托管 CA，用 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。
+
 ---
 
 ## 安装
