@@ -33,7 +33,7 @@ NCP defines the 4-byte (or 8-byte EXT) frame header, the 1-byte flags byte, the 
 - Encoding: MsgPack by default in production (~60 % smaller than JSON); JSON for debug and interop
 - `AnchorFrame` TTL defaults to 3600 seconds
 
-Read the full spec: [NPS-1 NCP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-1-NCP.md).
+Read the full spec: [NPS-1 NCP](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-1-NCP.md).
 
 ---
 
@@ -52,10 +52,10 @@ NWP defines how an agent queries or acts against a node, carrying the `anchor_re
 
 - **Memory Node** — owns an anchor and serves queries (your product catalog, your KB)
 - **Action Node** — exposes callable actions (send email, place order)
-- **Gateway Node** — stateless router to NOP DAGs; the heart of the AaaS Profile
+- **Anchor Node** — stateless router to NOP DAGs (renamed from Gateway Node by NPS-CR-0001) and **Bridge Node** — NPS↔non-NPS protocol translation
 - **Agent Node** — speaks NWP + NOP, often an LLM-driven executor
 
-Read the full spec: [NPS-2 NWP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-2-NWP.md).
+Read the full spec: [NPS-2 NWP](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-2-NWP.md).
 
 ---
 
@@ -75,7 +75,7 @@ Every node and every agent has an Ed25519 keypair and an **NID** — a URN of th
 
 **Key storage:** the reference implementation persists keys with AES-256-GCM + PBKDF2-SHA256 at 600,000 iterations. A standalone **NIP CA Server** ships in six languages (C# / Python / TypeScript / Java / Rust / Go).
 
-Read the full spec: [NPS-3 NIP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-3-NIP.md).
+Read the full spec: [NPS-3 NIP](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-3-NIP.md).
 
 ---
 
@@ -93,7 +93,7 @@ An agent needs to resolve `nwp://api.example.com/products` to an actual (host, p
 
 **Announces are signed** — a resolver validates the signature against a known public key before accepting the record. TTL = 0 means "shutting down, evict me."
 
-Read the full spec: [NPS-4 NDP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-4-NDP.md).
+Read the full spec: [NPS-4 NDP](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-4-NDP.md).
 
 ---
 
@@ -117,7 +117,7 @@ NOP takes a DAG — nodes execute actions, edges pass outputs — and provides d
 - Max timeout 3,600,000 ms (1 hour)
 - `callback_url` is SSRF-validated by the orchestrator
 
-Read the full spec: [NPS-5 NOP](https://github.com/labacacia/NPS-Release/blob/main/spec/protocols/NPS-5-NOP.md).
+Read the full spec: [NPS-5 NOP](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-5-NOP.md).
 
 ---
 

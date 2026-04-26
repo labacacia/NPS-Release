@@ -2,8 +2,8 @@ English | [中文版](./NPS-Roadmap.cn.md)
 
 # NPS Roadmap
 
-**Version**: 0.2  
-**Date**: 2026-04-12  
+**Version**: 0.3  
+**Date**: 2026-04-19  
 **Owner**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -43,8 +43,8 @@ Each phase breaks into three segments:
 - [x] error-codes.md v0.2 complete (with NPS status-code mapping)
 - [x] status-codes.md v0.1 complete (NPS native status codes + HTTP mapping)
 - [x] token-budget.md v0.1 complete (NPT metering + tokenizer resolution chain)
-- [ ] LabAcacia repo made public, Discussions enabled
-- [ ] v0.2-draft GitHub Release published
+- [x] LabAcacia repos made public, Discussions enabled (all shipped SDK + bridge repos public; `NPS-Dev` monorepo intentionally private — see `nps-repo-list.md`)
+- [x] v1.0.0-alpha.2 synchronized pre-release published across 10 repos (2026-04-19)
 
 **Completion bar**: no empty sections in any sub-protocol doc, `frame-registry.yaml` covers every frame (including ErrorFrame), `status-codes.md` covers every error-code mapping, GitHub repo public.
 
@@ -99,6 +99,7 @@ Each phase breaks into three segments:
 - [ ] Connected-vehicle PoC (device NIDs, StreamFrame real-time telemetry)
 - [ ] Token-savings benchmark report (publicly released)
 - [ ] NIP CA Server OSS v1.0 (PostgreSQL + Web Admin UI)
+- [ ] NIP CA Server self-hosted on an NWP Memory Node backend (dogfooding — protocol eats its own storage surface; see `log/todo/20260419.todo.md`)
 - [ ] GitHub stars ≥ 500
 
 ---
