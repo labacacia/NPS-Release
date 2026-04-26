@@ -3,12 +3,12 @@ English | [中文版](./NPS-4-NDP.cn.md)
 # NPS-4: Neural Discovery Protocol (NDP)
 
 **Spec Number**: NPS-4  
-**Status**: Draft  
-**Version**: 0.2  
-**Date**: 2026-04-12  
+**Status**: Proposed  
+**Version**: 0.5  
+**Date**: 2026-04-26  
 **Port**: 17433 (default, shared) / 17436 (optional dedicated)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
-**Depends-On**: NPS-1 (NCP v0.3), NPS-3 (NIP v0.2)  
+**Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.4)  
 
 ---
 
@@ -47,9 +47,15 @@ A node or agent broadcasts its presence and capabilities.
 | `capabilities` | array | required | Capability list (reuses the NIP capability vocabulary) |
 | `ttl` | uint32 | required | Broadcast validity in seconds; `0` = offline notification |
 | `timestamp` | string | required | Broadcast time (ISO 8601 UTC) |
+| `activation_mode` | string | conditional | One of `ephemeral` / `resident` / `hybrid`. REQUIRED for publishers claiming NPS-Node Profile L1+ compliance. OPTIONAL for pre-L1 publishers. Receivers MUST treat an absent field as `ephemeral` (backward compatibility with NPS v1.0-alpha.2 publishers). See §3.1.1. |
+| `node_kind` | string OR array of strings | optional | Node-functionality role(s) carried by this publisher. Each value is one of `"memory"`, `"action"`, `"complex"`, `"anchor"`, `"bridge"`. The legacy value `"gateway"` was removed in v1.0-alpha.3 and parsers MUST reject it (see [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)). Single-string form is preferred when only one role applies (`"node_kind": "memory"`); array form is used when a node carries multiple roles (`"node_kind": ["anchor", "memory"]`). Implementations MUST accept both forms when parsing. Absent means "single role per `node_type`" — i.e. the receiver SHOULD fall back to the `node_type` field. (NPS-CR-0001) |
+| `cluster_anchor` | string (NID) | optional | For non-Anchor nodes joining a cluster, identifies the Anchor Node they register with. Absent for standalone nodes and for Anchor Nodes themselves. (NPS-CR-0001) |
+| `bridge_protocols` | array of strings | optional | For nodes declaring `"bridge"` in `node_kind`, lists supported external protocols. Standard values: `"http"`, `"grpc"`, `"mcp"`, `"a2a"`. Open-ended; third-party adapters MAY register additional values via future CRs. MUST be absent for nodes that do not declare `"bridge"`. (NPS-CR-0001) |
+| `activation_endpoint` | object | conditional | Push target for `resident` / `hybrid` publishers; same shape as an `addresses[]` entry. REQUIRED when `activation_mode ∈ {resident, hybrid}`; MUST be absent otherwise. |
+| `spawn_spec_ref` | string | optional | Opaque reference the publishing daemon can resolve to construct an agent process on demand. Meaningful for `ephemeral` and `hybrid` cold start. Content schema is standardized at NPS-Node Profile L3 (see future NPS-Daemon-Spec). |
 | `signature` | string | required | Signature with IdentFrame private key; prevents forgery |
 
-**Example**
+**Example (L1+ publisher, ephemeral)**
 
 ```json
 {
@@ -62,9 +68,43 @@ A node or agent broadcasts its presence and capabilities.
   "capabilities": ["nwp:query", "nwp:stream"],
   "ttl": 300,
   "timestamp": "2026-04-10T00:00:00Z",
+  "activation_mode": "ephemeral",
   "signature": "ed25519:..."
 }
 ```
+
+**Example (L2+ publisher, resident)**
+
+```json
+{
+  "frame": "0x30",
+  "nid": "urn:nps:agent:labacacia:writer-42",
+  "node_type": "agent",
+  "addresses": [
+    { "host": "10.0.0.5", "port": 17434, "protocol": "nwp" }
+  ],
+  "capabilities": ["nwp:invoke"],
+  "ttl": 300,
+  "timestamp": "2026-04-24T00:00:00Z",
+  "activation_mode": "resident",
+  "activation_endpoint": { "host": "10.0.0.5", "port": 17440, "protocol": "nwp" },
+  "signature": "ed25519:..."
+}
+```
+
+#### 3.1.1 Activation semantics
+
+`activation_mode` tells receivers whether the publisher expects outbound traffic by push or by pull:
+
+| Mode | Sender behavior | Receiver expectation |
+|------|-----------------|----------------------|
+| `ephemeral` | Deliver via inbox + pull; publisher may not be running when the frame arrives. | Frame is queued in the publisher's per-NID inbox. |
+| `resident` | Push over a long-lived connection to `activation_endpoint`. | Publisher accepts pushed frames on the declared endpoint. |
+| `hybrid` | Attempt push to `activation_endpoint` first; fall back to inbox if the endpoint is unreachable within the publisher's wake budget. | Publisher wakes from hibernation on first frame; push target resumes once awake. |
+
+**Backward compatibility**: NPS v1.0-alpha.2 publishers do not emit `activation_mode`. Receivers MUST handle an absent field as `ephemeral` so that alpha.2 AnnounceFrames continue to resolve correctly. A receiver MUST NOT reject an AnnounceFrame solely for lacking the field.
+
+**Conformance reference**: See [NPS-Node Profile §1.3 and §6](./services/NPS-Node-Profile.md) for the compliance framing and per-level requirements around these fields.
 
 ---
 
@@ -165,7 +205,7 @@ _nps-ca.mycompany.com.      IN TXT  "v=nps1 ca=https://ca.mycompany.com/.well-kn
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame sequence numbers are not contiguous |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry temporarily unavailable |
 
-HTTP-mode status mapping: see [status-codes.md](../status-codes.md).
+HTTP-mode status mapping: see [status-codes.md](./status-codes.md).
 
 ---
 
@@ -183,6 +223,9 @@ A centralized registry (NPS Cloud) MUST require a valid IdentFrame from the anno
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.5 | 2026-04-26 | AnnounceFrame (0x30) gains three additive fields supporting NPS-CR-0001 — `node_kind` (string OR array of strings; values `"memory"`/`"action"`/`"complex"`/`"anchor"`/`"bridge"`; legacy `"gateway"` rejected), `cluster_anchor` (NID — for non-Anchor members of a cluster), `bridge_protocols` (array of strings — for `"bridge"` nodes; standard values `"http"`/`"grpc"`/`"mcp"`/`"a2a"`). All additive and backward-compatible: pre-alpha.3 publishers omit `node_kind` and receivers fall back to `node_type`. Depends-On upgraded to NCP v0.6 (NPS-RFC-0001) + NIP v0.4 (NPS-RFC-0003). |
+| 0.4 | 2026-04-24 | AnnounceFrame (0x30) gains three additive fields — `activation_mode` (required for NPS-Node Profile L1+), `activation_endpoint` (required for `resident` / `hybrid`), `spawn_spec_ref` (L3, optional). New §3.1.1 Activation semantics with backward-compatibility rule for pre-alpha.3 publishers. `Depends-On` NCP version corrected to v0.5. |
+| 0.3 | 2026-04-19 | Status Draft → Proposed; bilingual unification (EN primary + CN mirror); no wire-layer change |
 | 0.2 | 2026-04-12 | Unified port 17433; error codes switched to NPS-status-code mapping; error-code list completed |
 | 0.1 | 2026-04-10 | Initial skeleton: AnnounceFrame / ResolveFrame / GraphFrame, DNS TXT spec, initialization flow |
 

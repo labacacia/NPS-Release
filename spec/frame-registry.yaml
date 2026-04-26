@@ -2,18 +2,26 @@
 # 机器可读帧注册表，CI 强制校验用
 # 归属：LabAcacia / INNO LOTUS PTY LTD · Apache 2.0
 
-version: "0.4"
-date: "2026-04-14"
+version: "0.9"
+date: "2026-04-26"
 
 # 统一端口：17433（全协议族共用，通过帧类型码路由）
 # 各协议可选独立端口：NWP 17434、NIP 17435、NDP 17436、NOP 17437
+
+# Reserved frame-type bytes — MUST NOT be assigned to any frame.
+# See per-RFC reservation rationale below.
+reservations:
+  - byte: "0x4E"
+    reserved_for: "NCP native-mode connection preamble (ASCII 'N' of \"NPS/1.0\\n\")"
+    rfc: "NPS-RFC-0001"
+    notes: "First 8 bytes of every native-mode connection MUST be the constant b\"NPS/1.0\\n\". Servers MUST NOT interpret 0x4E as a frame type when read as the very first byte after the transport handshake."
 
 frames:
   # ── NCP (0x01–0x0F) ────────────────────────────────────────────
   - id: "0x01"
     name: AnchorFrame
     protocol: NCP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: stable
     description: Schema anchor published by Node. anchor_id computed via RFC 8785 JCS + SHA-256. Establishes a global reference to avoid repeated schema transmission. Agent reads and caches; does not author.
     fields_ref: "NPS-1-NCP.md#41-anchorframe-0x01"
@@ -21,7 +29,7 @@ frames:
   - id: "0x02"
     name: DiffFrame
     protocol: NCP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: stable
     description: Incremental data frame. Supports json_patch (RFC 6902, Tier-1 default) and binary_bitset (Tier-2, 15–20% smaller) via patch_format field.
     fields_ref: "NPS-1-NCP.md#42-diffframe-0x02"
@@ -29,7 +37,7 @@ frames:
   - id: "0x03"
     name: StreamFrame
     protocol: NCP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: stable
     description: Streaming data chunk with formal flow control (window_size backpressure protocol). Used for large datasets, real-time push, or payload fragmentation.
     fields_ref: "NPS-1-NCP.md#43-streamframe-0x03"
@@ -37,7 +45,7 @@ frames:
   - id: "0x04"
     name: CapsFrame
     protocol: NCP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: stable
     description: Capsule response frame. Wraps a complete response body with anchor reference and pagination cursor. Also used for connection capability negotiation (server-side). Supports inline_anchor for zero-RTT schema refresh.
     fields_ref: "NPS-1-NCP.md#44-capsframe-0x04"
@@ -45,7 +53,7 @@ frames:
   - id: "0x05"
     name: AlignFrame
     protocol: NCP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: deprecated
     deprecated_by: "0x43"
     description: "DEPRECATED. Multi-AI state alignment. Superseded by NOP AlignStream (0x43)."
@@ -54,7 +62,7 @@ frames:
   - id: "0x06"
     name: HelloFrame
     protocol: NCP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: stable
     description: Native-mode client handshake frame. Sent by Agent immediately after TCP/QUIC connect to declare protocol version, encoding capabilities, and max_frame_payload. Server responds with CapsFrame. Not used in HTTP mode.
     fields_ref: "NPS-1-NCP.md#46-helloframe-0x06"
@@ -63,7 +71,7 @@ frames:
   - id: "0x10"
     name: QueryFrame
     protocol: NWP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: draft
     description: Structured data query for Memory Nodes. Supports filter ($eq/$ne/$lt/$lte/$gt/$gte/$in/$nin/$contains/$between/$exists/$regex/$and/$or/$not), field selection, cursor pagination, ordering, vector search, auto_anchor, native-mode budget/tokenizer/depth/request_id fields, streaming mode (stream:true → StreamFrame sequence), and aggregation (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT with group_by and having).
     fields_ref: "NPS-2-NWP.md#6-queryframe-0x10"
@@ -71,7 +79,7 @@ frames:
   - id: "0x11"
     name: ActionFrame
     protocol: NWP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: draft
     description: Operation invocation for Action and Complex Nodes. Supports sync/async execution, idempotency, callback_url, priority, request_id, and system-reserved actions (system.task.status / system.task.cancel). Action/Complex Nodes declare available operations in NWM actions registry (§4.6).
     fields_ref: "NPS-2-NWP.md#7-actionframe-0x11"
@@ -79,7 +87,7 @@ frames:
   - id: "0x12"
     name: SubscribeFrame
     protocol: NWP
-    protocol_version: "0.4"
+    protocol_version: "0.5"
     status: draft
     description: Change subscription management for Memory Nodes. Actions: subscribe / unsubscribe / ping. Server pushes DiffFrame (0x02) updates with monotonic seq (per-stream, from 1), event_type, and timestamp. HTTP mode uses Server-Sent Events. Supports optional filter, heartbeat_interval, and resume_from_seq for lossless reconnection.
     fields_ref: "NPS-2-NWP.md#8-subscribeframe-0x12"
@@ -88,15 +96,15 @@ frames:
   - id: "0x20"
     name: IdentFrame
     protocol: NIP
-    protocol_version: "0.2"
+    protocol_version: "0.4"
     status: draft
-    description: Agent identity declaration and certificate. Carries NID, public key, capabilities, scope, and optional metadata (model_family, tokenizer). Used as connection handshake.
+    description: Agent identity declaration and certificate. Carries NID, public key, capabilities, scope, optional metadata (model_family, tokenizer), and (NPS-RFC-0003) optional assurance_level — one of anonymous/attested/verified — that MUST agree with the cert id-nid-assurance-level extension when present. Used as connection handshake.
     fields_ref: "NPS-3-NIP.md#51-identframe-0x20"
 
   - id: "0x21"
     name: TrustFrame
     protocol: NIP
-    protocol_version: "0.2"
+    protocol_version: "0.3"
     status: draft
     description: Cross-CA trust chain delegation. Allows one organization CA to grant scoped trust to another CA.
     fields_ref: "NPS-3-NIP.md#52-trustframe-0x21"
@@ -104,7 +112,7 @@ frames:
   - id: "0x22"
     name: RevokeFrame
     protocol: NIP
-    protocol_version: "0.2"
+    protocol_version: "0.3"
     status: draft
     description: NID or capability revocation. Takes immediate effect upon CA acknowledgment.
     fields_ref: "NPS-3-NIP.md#53-revokeframe-0x22"
@@ -113,15 +121,15 @@ frames:
   - id: "0x30"
     name: AnnounceFrame
     protocol: NDP
-    protocol_version: "0.2"
+    protocol_version: "0.5"
     status: draft
-    description: Node or Agent presence broadcast. Announces NID, physical addresses, capabilities, and TTL. Must be signed with IdentFrame private key.
+    description: Node or Agent presence broadcast. Announces NID, physical addresses, capabilities, TTL, and (NPS-Node Profile L1+) activation_mode — one of ephemeral/resident/hybrid — plus optional activation_endpoint (required for resident/hybrid push target) and spawn_spec_ref (L3, on-demand spawn). NPS-CR-0001 adds three additive fields — node_kind (string OR array; values memory/action/complex/anchor/bridge; legacy "gateway" rejected), cluster_anchor (NID, for non-Anchor cluster members), bridge_protocols (array, for "bridge" nodes; standard values http/grpc/mcp/a2a). Must be signed with IdentFrame private key. Receivers treat absent activation_mode as ephemeral and absent node_kind as falling back to node_type for backward compatibility with v1.0-alpha.2 publishers.
     fields_ref: "NPS-4-NDP.md#31-announceframe-0x30"
 
   - id: "0x31"
     name: ResolveFrame
     protocol: NDP
-    protocol_version: "0.2"
+    protocol_version: "0.5"
     status: draft
     description: Resolves a nwp:// URL to a physical endpoint (host:port + cert fingerprint).
     fields_ref: "NPS-4-NDP.md#32-resolveframe-0x31"
@@ -129,7 +137,7 @@ frames:
   - id: "0x32"
     name: GraphFrame
     protocol: NDP
-    protocol_version: "0.2"
+    protocol_version: "0.5"
     status: draft
     description: Node graph synchronization and change subscription. Supports full and incremental sync modes.
     fields_ref: "NPS-4-NDP.md#33-graphframe-0x32"
@@ -138,7 +146,7 @@ frames:
   - id: "0x40"
     name: TaskFrame
     protocol: NOP
-    protocol_version: "0.3"
+    protocol_version: "0.4"
     status: draft
     description: Task definition and dispatch. Defines a DAG of subtasks with per-node timeout/retry_policy/condition/input_mapping. Supports preflight resource check, OpenTelemetry context (trace_id/span_id/baggage), callback_url for long-running tasks, and priority.
     fields_ref: "NPS-5-NOP.md#31-taskframe-0x40"
@@ -146,7 +154,7 @@ frames:
   - id: "0x41"
     name: DelegateFrame
     protocol: NOP
-    protocol_version: "0.3"
+    protocol_version: "0.4"
     status: draft
     description: Subtask delegation to a Worker Agent. Carries a carved-down scope (MUST NOT exceed parent scope). Adds node_id, idempotency_key, priority, context propagation. Also used for preflight probe (action="preflight") and cancellation (action="cancel").
     fields_ref: "NPS-5-NOP.md#32-delegateframe-0x41"
@@ -154,7 +162,7 @@ frames:
   - id: "0x42"
     name: SyncFrame
     protocol: NOP
-    protocol_version: "0.3"
+    protocol_version: "0.4"
     status: draft
     description: Multi-Agent synchronization barrier. Supports K-of-N semantics (min_required), aggregation strategies (merge/first/all/fastest_k), and per-barrier timeout.
     fields_ref: "NPS-5-NOP.md#33-syncframe-0x42"
@@ -162,7 +170,7 @@ frames:
   - id: "0x43"
     name: AlignStream
     protocol: NOP
-    protocol_version: "0.3"
+    protocol_version: "0.4"
     status: draft
     supersedes: "0x05"
     description: Directed task stream. Extends NCP AlignFrame with task DAG context (task_id + subtask_id), NID binding, Token-level backpressure (window_size in NPT), and error propagation field. Replaces deprecated AlignFrame (0x05).

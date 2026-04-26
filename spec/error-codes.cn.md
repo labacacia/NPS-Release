@@ -2,8 +2,8 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 0.4  
-**Date**: 2026-04-14  
+**Version**: 0.8  
+**Date**: 2026-04-26  
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -33,6 +33,7 @@ NPS 采用两级错误体系：
 | `NCP-STREAM-WINDOW-OVERFLOW` | `NPS-STREAM-LIMIT` | 发送方在应用层流量控制窗口耗尽后继续发送 StreamFrame |
 | `NCP-ENC-NOT-NEGOTIATED` | `NPS-CLIENT-BAD-FRAME` | 收到 ENC=1 帧，但会话未协商 E2E 加密算法（HelloFrame 中未声明）|
 | `NCP-ENC-AUTH-FAILED` | `NPS-CLIENT-BAD-FRAME` | E2E 加密 Auth Tag 验证失败，帧可能被篡改 |
+| `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | 原生模式连接首 8 字节非常量前导 `b"NPS/1.0\n"`；服务端静默关闭连接，不返回 ErrorFrame（NPS-RFC-0001） |
 
 ---
 
@@ -45,6 +46,8 @@ NPS 采用两级错误体系：
 | `NWP-AUTH-NID-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | NID 已被吊销 |
 | `NWP-AUTH-NID-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | NID 颁发者不在 trusted_issuers 中 |
 | `NWP-AUTH-NID-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Agent 缺少节点要求的能力（如 nwp:query）|
+| `NWP-AUTH-ASSURANCE-TOO-LOW` | `NPS-AUTH-FORBIDDEN` | Agent 保证等级低于节点 `min_assurance_level`（NPS-2 §4.1）或 ActionSpec 的 per-action 覆盖（§4.6）；响应 SHOULD 在 `hint` 字段附 CA 注册 URL（NPS-RFC-0003）|
+| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | 接收 Node 的声誉策略命中了对发起方 `subject_nid` 的 `reject_on` 规则；响应 SHOULD 携带匹配的 `incident` + `severity` + 日志条目 `seq` 便于追溯（NPS-RFC-0004）|
 | `NWP-QUERY-FILTER-INVALID` | `NPS-CLIENT-BAD-PARAM` | Filter 语法不合法或嵌套超过 8 层 |
 | `NWP-QUERY-FIELD-UNKNOWN` | `NPS-CLIENT-BAD-PARAM` | fields 中引用了不存在的字段 |
 | `NWP-QUERY-CURSOR-INVALID` | `NPS-CLIENT-BAD-PARAM` | cursor 值无法解码或已过期 |
@@ -91,6 +94,10 @@ NPS 采用两级错误体系：
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | 请求的 scope 超出父级 scope（委托链违规）|
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP 服务暂时不可用 |
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame 签名或格式不合法 |
+| `NIP-ASSURANCE-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.assurance_level` 与证书扩展 `id-nid-assurance-level` 不一致（防 downgrade 攻击）—— 见 NPS-3 §5.1.1（NPS-RFC-0003）|
+| `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `assurance_level` 取值不在定义枚举（`anonymous` / `attested` / `verified`）—— 见 NPS-3 §5.1.1（NPS-RFC-0003）|
+| `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | 声誉日志条目签名校验失败或规范化（RFC 8785 JCS）形式不合法 —— 见 NPS-3 §5.1.2（NPS-RFC-0004）|
+| `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | 准入评估时无法到达 Node `reputation_policy` 引用的某个日志运营方 —— 见 NPS-3 §5.1.2（NPS-RFC-0004）|
 
 ---
 

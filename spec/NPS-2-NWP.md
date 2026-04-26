@@ -3,12 +3,12 @@ English | [中文版](./NPS-2-NWP.cn.md)
 # NPS-2: Neural Web Protocol (NWP)
 
 **Spec Number**: NPS-2  
-**Status**: Draft  
-**Version**: 0.4  
-**Date**: 2026-04-14  
+**Status**: Proposed  
+**Version**: 0.7  
+**Date**: 2026-04-26  
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
-**Depends-On**: NPS-1 (NCP v0.4)  
+**Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.4), NPS-4 (NDP v0.5)  
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -31,11 +31,51 @@ NWP defines how AI Agents access web data and services. Agents use `nwp://` addr
 | **Memory Node** | Data storage and retrieval, no compute logic | RDS, NoSQL, file systems, vector databases |
 | **Action Node** | Executes operations, returns results or side effects | Functions, external APIs, message queues, Webhooks |
 | **Complex Node** | Mixed data and operations, with sub-node references | All of the above + sub-node references |
-| **Gateway Node** | Stateless service entry point, routes requests to NOP orchestration layer | AaaS platforms, multi-agent service gateways |
+| **Anchor Node** | Cluster control plane and external entry point — routes inbound NWP `Action`/`Query` frames to member nodes via NOP, optionally maintains member-node topology | AaaS platforms, multi-agent service gateways, sub-cluster routers |
+| **Bridge Node** | Translates between NPS frames and non-NPS protocols (HTTP/HTTPS, gRPC, MCP, A2A) | Calls to legacy REST APIs, gRPC services, Model Context Protocol servers, Agent-to-Agent endpoints |
 
-> **Gateway Node** is an extended node type introduced by the AaaS Profile (see `spec/services/NPS-AaaS-Profile.md`).
-> It executes no business logic itself; all Action invocations are translated into NOP TaskFrames dispatched to internal Workers.
-> Key distinction from Complex Node: Gateway Node is **stateless** and can scale horizontally without side-effect concerns.
+A node MAY simultaneously carry more than one role (for example, a single deployment can be both a Memory Node and an Anchor Node when role separation is unnecessary). Multi-role declaration travels in the NDP `Announce` frame's `node_kind` field, which accepts either a single string or an array of strings (NPS-4 §3.1).
+
+> **Anchor Node** and **Bridge Node** were introduced together by [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md), replacing the original `Gateway Node` type:
+> - **Anchor Node** inherits the cluster-entry / NOP-routing role that Gateway Node was carrying. It is stateless per request but MAY maintain a long-lived registry of member nodes.
+> - **Bridge Node** is a new type whose role is **NPS → external protocol** translation. It is stateless per request and does not participate in cluster topology. (Direction note: this is the inverse of the bridges historically published under `compat/*-bridge`, which are external-protocol → NPS ingress adapters; those have been renamed `compat/*-ingress` to free the "Bridge" word for this new node type.)
+> - The original `Gateway Node` term is retired; the wire value `"gateway"` is removed and parsers MUST reject it with a clear error referencing CR-0001.
+
+#### Removed types
+
+> **Gateway Node** (removed in v1.0-alpha.3) — Split into **Anchor Node** (cluster entry / NOP routing) and **Bridge Node** (NPS↔non-NPS protocol translation). See [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md) for full rationale and migration notes. Implementations MUST reject the legacy `node_type: "gateway"` and `node_kind: "gateway"` wire values; SDKs SHOULD surface a one-shot deprecation message naming the CR before failing.
+
+#### Anchor Node — detailed semantics
+
+An Anchor Node MUST:
+
+1. Accept inbound NWP `Action` and `Query` frames addressed to the cluster (i.e. to the Anchor's NID rather than to a specific member NID).
+2. Dispatch frames to appropriate member nodes based on their declared capabilities and current load. The reference dispatch path converts an `ActionFrame` into a NOP `TaskFrame` and delegates to a local NOP orchestrator (see [NPS-AaaS-Profile §2](services/NPS-AaaS-Profile.md)).
+3. Aggregate outbound responses from member nodes into a single response stream toward the originating caller.
+4. Optionally maintain a registry of member nodes within its cluster (their NIDs, declared capabilities, and `activation_mode` per [NPS-Node Profile §6](services/NPS-Node-Profile.md)). Member nodes register on cluster join via NDP `Announce` frames carrying `cluster_anchor` referencing the Anchor Node's NID; deregistration follows standard NDP offline semantics.
+
+A cluster MUST have at least one Anchor Node. High-availability deployments MAY operate multiple Anchor Nodes for the same cluster; the consensus protocol between Anchor Nodes is implementation-defined and is deferred to NPS-AaaS Profile L3.
+
+Topology read-back surface (`topology.snapshot` / `topology.stream`) is **not** specified by this CR — it is reserved for [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md), which targets v1.0-alpha.4.
+
+#### Bridge Node — detailed semantics
+
+A Bridge Node MUST:
+
+1. Accept inbound NWP frames carrying a `bridge_target` parameter that identifies the external protocol and endpoint (concrete schema for `bridge_target` is implementation-defined in this CR; standardization is deferred to a follow-up CR per protocol).
+2. Produce outbound requests in the target protocol's format.
+3. Translate target-protocol responses back into NWP frames (typically `CapsFrame`).
+
+Bridge Nodes are stateless per request and do not participate in cluster topology. A single Bridge Node MAY translate to multiple distinct external protocols; deployments MAY operate dedicated Bridge Nodes per protocol for isolation.
+
+Standard external protocols expected to be supported by reference Bridge Node implementations:
+
+- HTTP / HTTPS (REST and streaming)
+- gRPC (unary and streaming)
+- MCP (Model Context Protocol)
+- A2A (Agent-to-Agent protocol)
+
+Additional protocol adapters MAY be registered through future CRs. The set of supported protocols is declared in NDP `Announce.bridge_protocols` (NPS-4 §3.1).
 
 ### 2.2 Overlay Mode
 
@@ -88,10 +128,11 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 |-------|------|----------|-------------|
 | `nwp` | string | Required | NWP version, currently `"0.4"` |
 | `node_id` | string | Required | Node NID, format: `urn:nps:node:{host}:{path}` |
-| `node_type` | string | Required | `"memory"` / `"action"` / `"complex"` / `"gateway"` |
+| `node_type` | string | Required | `"memory"` / `"action"` / `"complex"` / `"anchor"` / `"bridge"`. The legacy value `"gateway"` was removed in v1.0-alpha.3 (see §2.1 *Removed types* and [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)); parsers MUST reject it. For nodes that simultaneously carry multiple roles, declare them in NDP `Announce.node_kind` (NPS-4 §3.1) — `node_type` here remains the **primary** role advertised on `/.nwm`. |
 | `display_name` | string | Optional | Human-readable node name |
 | `manifest_version` | string | Optional | Manifest version identifier (ETag), for conditional request cache control |
 | `min_agent_version` | string | Optional | Minimum NPS version the Agent must support, format `"major.minor"`; Agents below this version MUST be rejected with `NWP-MANIFEST-VERSION-UNSUPPORTED` |
+| `min_assurance_level` | string | Optional | One of `"anonymous"` (default) / `"attested"` / `"verified"` (see [NIP §5.1.1](NPS-3-NIP.md#511-assurance-levels-nps-rfc-0003)). Requests presenting a level lower than this MUST be rejected with `NWP-AUTH-ASSURANCE-TOO-LOW` (`NPS-AUTH-FORBIDDEN`); response SHOULD include a `hint` pointing to a CA enrolment URL. Default `"anonymous"` preserves backward compatibility with v1.0-alpha.2 nodes. Per-action override is permitted via the `auth.min_assurance_level` field on an individual `ActionSpec` (§4.6). (NPS-RFC-0003) |
 | `wire_formats` | array | Required | Supported encoding formats: `["ncp-capsule", "msgpack", "json"]` |
 | `preferred_format` | string | Required | Preferred format |
 | `schema_anchors` | object | Optional | Pre-declared schema anchors, `{name: anchor_id}` |
@@ -768,6 +809,8 @@ Agents control traversal depth via the `X-NWP-Depth` header (HTTP mode) or the Q
 | `NWP-AUTH-NID-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | NID has been revoked |
 | `NWP-AUTH-NID-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | NID issuer not in trusted_issuers |
 | `NWP-AUTH-NID-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Agent lacks a capability required by the node |
+| `NWP-AUTH-ASSURANCE-TOO-LOW` | `NPS-AUTH-FORBIDDEN` | Agent's `assurance_level` is below the node's `min_assurance_level` (or the per-action override). Response SHOULD include a `hint` pointing to a CA enrolment URL. (NPS-RFC-0003) |
+| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | The receiving Node's `reputation_policy` (Phase 2 NWM field — see [NPS-RFC-0004 §4.4](rfcs/NPS-RFC-0004-nid-reputation-log.md)) matched a `reject_on` rule against the requesting `subject_nid`. Response SHOULD include the matching `incident` + `severity` + log entry `seq` for traceability. The field shape that produces this error lands at NWP v0.8 (Phase 2); the error code itself is reserved at NWP v0.7 (Phase 1) so SDKs can begin recognising it without round-tripping through a future spec bump. (NPS-RFC-0004) |
 | `NWP-QUERY-FILTER-INVALID` | `NPS-CLIENT-BAD-PARAM` | Filter syntax is invalid or nesting is too deep |
 | `NWP-QUERY-FIELD-UNKNOWN` | `NPS-CLIENT-BAD-PARAM` | fields references a non-existent field |
 | `NWP-QUERY-CURSOR-INVALID` | `NPS-CLIENT-BAD-PARAM` | cursor value cannot be decoded or has expired |
@@ -827,6 +870,8 @@ Nodes SHOULD enforce per-Agent NID rate limiting. On limit exceeded, return `NWP
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.7 | 2026-04-26 | **Breaking.** §2.1 Node Types: `Gateway Node` removed; replaced by **Anchor Node** (cluster control plane + NOP routing — inherits the existing role) and **Bridge Node** (NPS↔non-NPS protocol translation — new). NWM `node_type` enum updated; legacy `"gateway"` MUST be rejected. Anchor Node detailed semantics (§2.1 inline) cover member dispatch + optional registry; Bridge Node semantics cover HTTP/gRPC/MCP/A2A target adapters. Depends-On upgraded to NDP v0.5 for the `node_kind` array form + `cluster_anchor` + `bridge_protocols` fields. See [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md). |
+| 0.6 | 2026-04-25 | NWM gains optional top-level `min_assurance_level` field (`anonymous` / `attested` / `verified`), with `auth.min_assurance_level` per-action override permitted on individual ActionSpecs. New error code `NWP-AUTH-ASSURANCE-TOO-LOW` (`NPS-AUTH-FORBIDDEN`). `Depends-On` upgraded to NCP v0.6 (NPS-RFC-0001) and NIP v0.4 (NPS-RFC-0003). See [NPS-RFC-0003](rfcs/NPS-RFC-0003-agent-identity-assurance-levels.md). |
 | 0.4 | 2026-04-14 | §3.2 added `/actions` sub-path; §4.1 NWM added `actions` field; §4.2 capabilities added stream_query and aggregate; §4.6 NWM Action Registry (ActionSpec, params_anchor/result_anchor/async/idempotent); QueryFrame §6.1 added `stream`, `aggregate`, `request_id`; §6.6 Streaming Query Protocol (StreamFrame sequence, estimated_total, early termination); §6.7 Aggregation queries (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT, group_by, having); ActionFrame §7.1 added `request_id`; SubscribeFrame §8.1 added `resume_from_seq`; §8.2 DiffFrame extension fields (monotonic seq, event_type, timestamp) and reconnection semantics; §9.1/9.2 added X-NWP-Request-ID; §9.4 HTTP mode error response format (application/nwp-error+json); §10 updated complete examples (including error response); §13.6 callback_url abuse prevention security section; 5 new error codes (AGGREGATE-UNSUPPORTED/-INVALID, STREAM-UNSUPPORTED, SUBSCRIBE-SEQ-TOO-OLD, task cancel series) |
 | 0.3 | 2026-04-14 | SubscribeFrame (0x12); auto_anchor; Filter $not/$exists/$regex; ActionFrame callback_url/priority; system.task.*; NWM min_agent_version/rate_limits; §13.4/13.5 security sections |
 | 0.2 | 2026-04-12 | Unified port 17433; AnchorFrame owned by Node; NPT metering; NPS status code mapping |

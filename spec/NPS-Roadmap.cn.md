@@ -2,8 +2,8 @@
 
 # NPS 路线图
 
-**Version**: 0.2  
-**Date**: 2026-04-12  
+**Version**: 0.3  
+**Date**: 2026-04-19  
 **归属**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -43,8 +43,8 @@
 - [x] error-codes.cn.md v0.2 完成（含 NPS 状态码映射）
 - [x] status-codes.cn.md v0.1 完成（NPS 原生状态码 + HTTP 映射）
 - [x] token-budget.cn.md v0.1 完成（NPT 计量 + tokenizer 解析链）
-- [ ] LabAcacia 仓库公开，Discussions 开启
-- [ ] v0.2-draft GitHub Release 发布
+- [x] LabAcacia 仓库公开，Discussions 开启（所有 SDK + 桥接公开仓均开启；`NPS-Dev` monorepo 按设计保持私有——见 `nps-repo-list.cn.md`）
+- [x] v1.0.0-alpha.2 跨仓同步预发布完成（2026-04-19，10 个仓库对齐）
 
 **完成标准**：所有子协议文档无空节，frame-registry.yaml 涵盖全部帧（含 ErrorFrame），status-codes.cn.md 覆盖所有错误码映射，GitHub 仓库公开。
 
@@ -99,6 +99,7 @@
 - [ ] 车联网 PoC（设备 NID，StreamFrame 实时遥测）
 - [ ] Token 节约基准测试报告（公开发布）
 - [ ] NIP CA Server OSS v1.0（PostgreSQL + Web Admin UI）
+- [ ] NIP CA Server 以 NWP Memory Node 为后端自托管（dogfooding——协议吃自己的存储层；见 `log/todo/20260419.todo.md`）
 - [ ] GitHub Stars ≥ 500
 
 ---
