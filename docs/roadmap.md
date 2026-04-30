@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.3** — closes out Phase 1 for six SDKs and delivers the Phase 2 MCP + A2A compatibility bridges.
+NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.4** — advances NWP topology queries (CR-0002), lands the X.509/ACME NID prototype (RFC-0002), and ships SQLite-backed registry and ledger daemons.
 
 ---
 

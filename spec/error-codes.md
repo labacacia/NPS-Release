@@ -2,8 +2,8 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 0.8  
-**Date**: 2026-04-26  
+**Version**: 0.9  
+**Date**: 2026-04-27  
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -98,6 +98,10 @@ NPS uses a two-level error system:
 | `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `assurance_level` carries a value outside the defined enum (`anonymous` / `attested` / `verified`) — see NPS-3 §5.1.1 (NPS-RFC-0003) |
 | `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | Reputation log entry signature fails verification or canonical (RFC 8785 JCS) form is malformed — see NPS-3 §5.1.2 (NPS-RFC-0004) |
 | `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | A log operator referenced by a Node's `reputation_policy` cannot be reached during admission evaluation — see NPS-3 §5.1.2 (NPS-RFC-0004) |
+| `NIP-CERT-FORMAT-INVALID` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.cert_chain` is not DER-encoded X.509 or fails ASN.1 parsing — see NPS-RFC-0002 §4.3 |
+| `NIP-CERT-EKU-MISSING` | `NPS-CLIENT-BAD-FRAME` | Required NPS EKU (`agent-identity` or `node-identity`) absent or non-critical on the leaf cert — see NPS-RFC-0002 §4.1 / §4.3 |
+| `NIP-CERT-SUBJECT-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | X.509 leaf cert subject CN / SAN URI does not match the `IdentFrame.nid` field — see NPS-RFC-0002 §4.3 |
+| `NIP-ACME-CHALLENGE-FAILED` | `NPS-CLIENT-BAD-FRAME` | ACME `agent-01` challenge validation failed (token mismatch, signature verification failure, or replay) — see NPS-RFC-0002 §4.4 |
 
 ---
 

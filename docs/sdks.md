@@ -2,7 +2,7 @@
 
 > English | [中文版](sdks.cn.md)
 
-Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP + NDP + NOP** — at version **1.0.0-alpha.2**.
+Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP + NDP + NOP** — at version **1.0.0-alpha.4**.
 
 ---
 

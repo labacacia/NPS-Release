@@ -2,8 +2,8 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 0.8  
-**Date**: 2026-04-26  
+**Version**: 0.9  
+**Date**: 2026-04-27  
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -98,6 +98,10 @@ NPS 采用两级错误体系：
 | `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `assurance_level` 取值不在定义枚举（`anonymous` / `attested` / `verified`）—— 见 NPS-3 §5.1.1（NPS-RFC-0003）|
 | `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | 声誉日志条目签名校验失败或规范化（RFC 8785 JCS）形式不合法 —— 见 NPS-3 §5.1.2（NPS-RFC-0004）|
 | `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | 准入评估时无法到达 Node `reputation_policy` 引用的某个日志运营方 —— 见 NPS-3 §5.1.2（NPS-RFC-0004）|
+| `NIP-CERT-FORMAT-INVALID` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.cert_chain` 不是 DER 编码 X.509，或 ASN.1 解析失败 —— 见 NPS-RFC-0002 §4.3 |
+| `NIP-CERT-EKU-MISSING` | `NPS-CLIENT-BAD-FRAME` | leaf 证书缺少必需的 NPS EKU（`agent-identity` 或 `node-identity`）或未标 critical —— 见 NPS-RFC-0002 §4.1 / §4.3 |
+| `NIP-CERT-SUBJECT-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | X.509 leaf 证书 subject CN / SAN URI 与 `IdentFrame.nid` 字段不一致 —— 见 NPS-RFC-0002 §4.3 |
+| `NIP-ACME-CHALLENGE-FAILED` | `NPS-CLIENT-BAD-FRAME` | ACME `agent-01` challenge 校验失败（token 不匹配、签名验证失败或 replay）—— 见 NPS-RFC-0002 §4.4 |
 
 ---
 

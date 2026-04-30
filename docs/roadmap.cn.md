@@ -2,7 +2,7 @@
 
 > [English](roadmap.md) | 中文版
 
-NPS 的路径分为四个 Phase — 从草案规范走向正式标准。当前发布 — **v1.0.0-alpha.3** — 为六种 SDK 收尾 Phase 1，并交付 Phase 2 的 MCP + A2A 兼容桥。
+NPS 的路径分为四个 Phase — 从草案规范走向正式标准。当前发布 — **v1.0.0-alpha.4** — 落地 NWP 拓扑查询（CR-0002）、X.509/ACME NID 原型（RFC-0002），并交付 SQLite 持久化的注册中心与审计日志 daemon。
 
 ---
 

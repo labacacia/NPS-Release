@@ -2,7 +2,7 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK。每个 SDK 都实现了完整的五层协议 — **NCP + NWP + NIP + NDP + NOP** — 统一版本 **1.0.0-alpha.2**。
+六种官方 SDK。每个 SDK 都实现了完整的五层协议 — **NCP + NWP + NIP + NDP + NOP** — 统一版本 **1.0.0-alpha.4**。
 
 ---
 

@@ -2,7 +2,7 @@
 
 # Neural Protocol Suite (NPS) — 协议规范
 
-> **版本：** 1.0.0-alpha.3 | **状态：** Proposed | **许可证：** Apache 2.0
+> **版本：** 1.0.0-alpha.4 | **状态：** Proposed | **许可证：** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia 开源实验室
 

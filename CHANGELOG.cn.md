@@ -8,6 +8,51 @@
 
 ---
 
+## [1.0.0-alpha.4] —— 2026-04-30
+
+### 规范
+
+- **NPS-CR-0002 —— Implemented（pre-1.0 快速通道）**：在 Anchor Node 上保留查询类型
+  `topology.snapshot` 和 `topology.stream`，在 NPS-AaaS-Profile L2 级别为强制要求。
+  NWP 新增顶层 §12，涵盖两种查询类型；QueryFrame §6.1 和 SubscribeFrame §8.1 均新增
+  可选 `type` 字段；DiffFrame §8.2 `event_type` 枚举扩展了拓扑事件类型。
+  `spec/error-codes.md` 新增四个错误码。新增 §14.7 拓扑读回安全节。
+  AaaS-Profile §4.3 新增 L2-08，要求维护成员注册表的 Anchor Node 实现两种查询类型。
+  新合规测试套件 `spec/services/conformance/NPS-Node-L2.md` v0.1，含七个
+  `TC-N2-AnchorTopo-*` / `TC-N2-AnchorStream-*` 测试用例；
+  配套 `NPS-NODE-L2-CERTIFIED.md` 自我声明模板。
+
+- **NPS-RFC-0002 —— 原型已落地（状态：Draft）**：`IdentFrame` 新增可选
+  `cert_format`（`"v1-proprietary"` 默认 | `"v2-x509"`）和 `cert_chain`（base64url DER）字段
+  —— 非破坏性双信任扩展；v1 验证方忽略新字段，行为不变。`spec/error-codes.md` 新增四个
+  NIP 错误码（`NIP-CERT-FORMAT-INVALID`、`NIP-CERT-EKU-MISSING`、
+  `NIP-CERT-SUBJECT-NID-MISMATCH`、`NIP-ACME-CHALLENGE-FAILED`）。
+  RFC 仍为 Draft，晋升 Proposed/Accepted 等待跨 SDK 移植波次完成 + IANA PEN
+  （`nid-assurance-level` 当前使用临时 OID `1.3.6.1.4.1.99999`）。
+
+### 版本变更（相对 alpha.3）
+
+| 文档 | alpha.3 | alpha.4 |
+|------|---------|---------|
+| NPS-1 NCP | v0.6 | v0.6（不变）|
+| NPS-2 NWP | v0.7 | v0.8 |
+| NPS-3 NIP | v0.5 | v0.5（不变）|
+| NPS-4 NDP | v0.5 | v0.5（不变）|
+| NPS-5 NOP | v0.4 | v0.4（不变）|
+| NPS-AaaS-Profile | v0.3 | v0.4 |
+| NPS-Node-Profile | v0.1 | v0.1（不变）|
+| NPS-Node-L2 合规 | n/a | v0.1（新增）|
+| frame-registry | v0.9 | v0.9（不变）|
+| error-codes | v0.8 | v0.9 |
+| status-codes | v0.4 | v0.4（不变）|
+| token-budget | v0.2 | v0.2（不变）|
+
+### GitHub Pages
+
+- README 及 Pages 站点内容全面更新至 `v1.0.0-alpha.4`。
+
+---
+
 ## [1.0.0-alpha.3] —— 2026-04-26
 
 ### 规范 —— 内容大版本
@@ -105,6 +150,7 @@
 
 首次归档规范文档和 GitHub Pages 站点。
 
+[1.0.0-alpha.4]: https://github.com/LabAcacia/NPS-Release/releases/tag/v1.0.0-alpha.4
 [1.0.0-alpha.3]: https://github.com/LabAcacia/NPS-Release/releases/tag/v1.0.0-alpha.3
 [1.0.0-alpha.2]: https://github.com/LabAcacia/NPS-Release/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/NPS-Release/releases/tag/v1.0.0-alpha.1

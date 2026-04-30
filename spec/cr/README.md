@@ -50,7 +50,7 @@ late in 0.x is still pending when v1.0 is cut).
 | CR | Title | Target | Status |
 |---|---|---|---|
 | [NPS-CR-0001](./NPS-CR-0001-anchor-bridge-split.md) | Split Gateway Node into Anchor Node + Bridge Node | v1.0-alpha.3 | Implemented (2026-04-26) |
-| [NPS-CR-0002](./NPS-CR-0002-anchor-topology-queries.md) | Standard topology query types for Anchor Node (`topology.snapshot` / `topology.stream`) | v1.0-alpha.4 | Draft (depends on CR-0001) |
+| [NPS-CR-0002](./NPS-CR-0002-anchor-topology-queries.md) | Standard topology query types for Anchor Node (`topology.snapshot` / `topology.stream`) | v1.0-alpha.4 | Implemented (2026-04-27) |
 
 ## Authoring a new CR
 

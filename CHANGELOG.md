@@ -8,6 +8,55 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [1.0.0-alpha.4] — 2026-04-30
+
+### Spec
+
+- **NPS-CR-0002 — Implemented (pre-1.0 fast-track)**: Reserved query types
+  `topology.snapshot` and `topology.stream` on Anchor Nodes, mandatory at
+  NPS-AaaS-Profile L2. New top-level NWP §12 covers both query types;
+  QueryFrame §6.1 and SubscribeFrame §8.1 each gain an optional `type` field;
+  DiffFrame §8.2 `event_type` enum extends to topology events. Four new error
+  codes added to `spec/error-codes.md`. New §14.7 Topology Read-back security
+  section. AaaS-Profile §4.3 gains L2-08 mandating both query types on Anchor
+  Nodes that maintain a member registry. New conformance suite
+  `spec/services/conformance/NPS-Node-L2.md` v0.1 with seven
+  `TC-N2-AnchorTopo-*` / `TC-N2-AnchorStream-*` test cases; companion
+  `NPS-NODE-L2-CERTIFIED.md` self-attestation template.
+
+- **NPS-RFC-0002 — Prototype landed (status: Draft)**: `IdentFrame` gains
+  optional `cert_format` (`"v1-proprietary"` default | `"v2-x509"`) and
+  `cert_chain` (base64url DER) fields — non-breaking dual-trust extension; v1
+  verifiers ignore the new fields and remain valid. Four new NIP error codes
+  (`NIP-CERT-FORMAT-INVALID`, `NIP-CERT-EKU-MISSING`,
+  `NIP-CERT-SUBJECT-NID-MISMATCH`, `NIP-ACME-CHALLENGE-FAILED`) added to
+  `spec/error-codes.md`. RFC remains Draft pending shepherd review; promotion
+  to Proposed/Accepted blocked on cross-SDK port wave completion + IANA PEN
+  (`nid-assurance-level` currently under provisional OID `1.3.6.1.4.1.99999`).
+
+### Version bumps (vs alpha.3)
+
+| Doc | alpha.3 | alpha.4 |
+|-----|---------|---------|
+| NPS-1 NCP | v0.6 | v0.6 (unchanged) |
+| NPS-2 NWP | v0.7 | v0.8 |
+| NPS-3 NIP | v0.5 | v0.5 (unchanged) |
+| NPS-4 NDP | v0.5 | v0.5 (unchanged) |
+| NPS-5 NOP | v0.4 | v0.4 (unchanged) |
+| NPS-AaaS-Profile | v0.3 | v0.4 |
+| NPS-Node-Profile | v0.1 | v0.1 (unchanged) |
+| NPS-Node-L2 conformance | n/a | v0.1 (new) |
+| frame-registry | v0.9 | v0.9 (unchanged) |
+| error-codes | v0.8 | v0.9 |
+| status-codes | v0.4 | v0.4 (unchanged) |
+| token-budget | v0.2 | v0.2 (unchanged) |
+
+### GitHub Pages
+
+- README + Pages site sources updated to `v1.0.0-alpha.4` throughout.
+
+---
+
 ## [1.0.0-alpha.3] — 2026-04-26
 
 ### Spec — major content release
@@ -118,6 +167,7 @@ expanded surface".
 
 Initial archive of spec documents and GitHub Pages site.
 
+[1.0.0-alpha.4]: https://github.com/LabAcacia/NPS-Release/releases/tag/v1.0.0-alpha.4
 [1.0.0-alpha.3]: https://github.com/LabAcacia/NPS-Release/releases/tag/v1.0.0-alpha.3
 [1.0.0-alpha.2]: https://github.com/LabAcacia/NPS-Release/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/NPS-Release/releases/tag/v1.0.0-alpha.1
