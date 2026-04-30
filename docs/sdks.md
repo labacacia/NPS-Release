@@ -13,13 +13,13 @@ Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP
 | .NET      | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`)      | .NET 10     | [NPS-sdk-dotnet](https://github.com/labacacia/NPS-sdk-dotnet) | [doc/](https://github.com/labacacia/NPS-sdk-dotnet/tree/main/doc) |
 | Python    | `nps-lib`                                    | 3.11        | [NPS-sdk-py](https://github.com/labacacia/NPS-sdk-py)         | [doc/](https://github.com/labacacia/NPS-sdk-py/tree/main/doc)     |
 | TypeScript| `@labacacia/nps-sdk`                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [doc/](https://github.com/labacacia/NPS-sdk-ts/tree/main/doc)     |
-| Java      | `com.labacacia:nps-sdk`                      | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [doc/](https://github.com/labacacia/NPS-sdk-java/tree/main/doc)   |
+| Java      | `com.labacacia.nps:nps-java`                 | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [doc/](https://github.com/labacacia/NPS-sdk-java/tree/main/doc)   |
 | Rust      | `nps-sdk`                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [doc/](https://github.com/labacacia/NPS-sdk-rust/tree/main/doc)   |
 | Go        | `github.com/labacacia/NPS-sdk-go`            | Go 1.25     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [doc/](https://github.com/labacacia/NPS-sdk-go/tree/main/doc)     |
 
 ## NIP CA Server
 
-Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Released independently from the SDKs at `v1.0.0-alpha.3`.
+Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Currently at `v1.0.0-alpha.4` (released independently from the SDKs since `v1.0.0-alpha.3`).
 
 | Repo | Stack | Quickstart |
 |------|-------|------------|
@@ -29,7 +29,7 @@ Built on the published [`LabAcacia.NPS.NIP`](https://www.nuget.org/packages/LabA
 
 ## NPS Daemons
 
-Reference deployment binaries for the standard three-layer NPS topology. The four open-source daemons (Layer 1 + Layer 2) ship in one bundle repo at `v1.0.0-alpha.3`.
+Reference deployment binaries for the standard three-layer NPS topology. The four open-source daemons (Layer 1 + Layer 2) ship in one bundle repo, currently at `v1.0.0-alpha.4`.
 
 | Repo | Daemons | Quickstart |
 |------|---------|------------|
@@ -46,42 +46,42 @@ The Layer-3 **trust-anchor** daemons (`nps-cloud-ca` and `nps-ledger`) live in p
 ### Python
 
 ```bash
-pip install nps-lib==1.0.0a2
+pip install nps-lib==1.0.0a4
 ```
 
 ### TypeScript / JavaScript
 
 ```bash
-npm install @labacacia/nps-sdk@1.0.0-alpha.2
+npm install @labacacia/nps-sdk@1.0.0-alpha.4
 # or
-pnpm add @labacacia/nps-sdk@1.0.0-alpha.2
+pnpm add @labacacia/nps-sdk@1.0.0-alpha.4
 ```
 
 ### Rust
 
 ```toml
 [dependencies]
-nps-sdk = "1.0.0-alpha.2"
+nps-sdk = "1.0.0-alpha.4"
 ```
 
 ### Go
 
 ```bash
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.2
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.4
 ```
 
 ### Java (Gradle Kotlin DSL)
 
 ```kotlin
 dependencies {
-    implementation("com.labacacia:nps-sdk:1.0.0-alpha.2")
+    implementation("com.labacacia.nps:nps-java:1.0.0-alpha.4")
 }
 ```
 
 ### .NET
 
 ```bash
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.2
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.4
 ```
 
 ---

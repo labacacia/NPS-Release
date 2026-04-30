@@ -13,13 +13,13 @@
 | .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`)       | .NET 10     | [NPS-sdk-dotnet](https://github.com/labacacia/NPS-sdk-dotnet) | [doc/](https://github.com/labacacia/NPS-sdk-dotnet/tree/main/doc) |
 | Python     | `nps-lib`                                    | 3.11        | [NPS-sdk-py](https://github.com/labacacia/NPS-sdk-py)         | [doc/](https://github.com/labacacia/NPS-sdk-py/tree/main/doc)     |
 | TypeScript | `@labacacia/nps-sdk`                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [doc/](https://github.com/labacacia/NPS-sdk-ts/tree/main/doc)     |
-| Java       | `com.labacacia:nps-sdk`                      | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [doc/](https://github.com/labacacia/NPS-sdk-java/tree/main/doc)   |
+| Java       | `com.labacacia.nps:nps-java`                 | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [doc/](https://github.com/labacacia/NPS-sdk-java/tree/main/doc)   |
 | Rust       | `nps-sdk`                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [doc/](https://github.com/labacacia/NPS-sdk-rust/tree/main/doc)   |
 | Go         | `github.com/labacacia/NPS-sdk-go`            | Go 1.25     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [doc/](https://github.com/labacacia/NPS-sdk-go/tree/main/doc)     |
 
 ## NIP CA Server
 
-可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构。`v1.0.0-alpha.3` 起从 SDK 中拆出独立发布。
+可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构。当前版本 `v1.0.0-alpha.4`（自 `v1.0.0-alpha.3` 起从 SDK 中拆出独立发布）。
 
 | 仓库 | 技术栈 | 快速开始 |
 |------|--------|----------|
@@ -29,7 +29,7 @@
 
 ## NPS Daemons
 
-NPS 标准三层部署拓扑的参考部署二进制。4 个 OSS daemon（Layer 1 + Layer 2）打成一个 bundle 仓在 `v1.0.0-alpha.3` 发布。
+NPS 标准三层部署拓扑的参考部署二进制。4 个 OSS daemon（Layer 1 + Layer 2）打成一个 bundle 仓，当前版本 `v1.0.0-alpha.4`。
 
 | 仓库 | Daemons | 快速开始 |
 |------|---------|----------|
@@ -46,42 +46,42 @@ Layer-3 **信任锚** daemon（`nps-cloud-ca` 和 `nps-ledger`）在 GitHub `inn
 ### Python
 
 ```bash
-pip install nps-lib==1.0.0a2
+pip install nps-lib==1.0.0a4
 ```
 
 ### TypeScript / JavaScript
 
 ```bash
-npm install @labacacia/nps-sdk@1.0.0-alpha.2
+npm install @labacacia/nps-sdk@1.0.0-alpha.4
 # 或
-pnpm add @labacacia/nps-sdk@1.0.0-alpha.2
+pnpm add @labacacia/nps-sdk@1.0.0-alpha.4
 ```
 
 ### Rust
 
 ```toml
 [dependencies]
-nps-sdk = "1.0.0-alpha.2"
+nps-sdk = "1.0.0-alpha.4"
 ```
 
 ### Go
 
 ```bash
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.2
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.4
 ```
 
 ### Java（Gradle Kotlin DSL）
 
 ```kotlin
 dependencies {
-    implementation("com.labacacia:nps-sdk:1.0.0-alpha.2")
+    implementation("com.labacacia.nps:nps-java:1.0.0-alpha.4")
 }
 ```
 
 ### .NET
 
 ```bash
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.2
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.4
 ```
 
 ---
