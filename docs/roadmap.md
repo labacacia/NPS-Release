@@ -51,12 +51,12 @@ Goal: NCP + NWP + NIP + NDP + NOP production-ready in the six reference language
 
 | Language   | Package                            | Status                 |
 |------------|------------------------------------|------------------------|
-| .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`) | ✅ v1.0.0-alpha.3 shipped |
-| Python     | `nps-lib`                          | ✅ v1.0.0-alpha.3 shipped (162 tests, 97% coverage) |
-| TypeScript | `@labacacia/nps-sdk`               | ✅ v1.0.0-alpha.3 shipped (264 tests) |
-| Java       | `com.labacacia:nps-sdk`            | ✅ v1.0.0-alpha.3 shipped (87 tests) |
-| Rust       | `nps-sdk`                          | ✅ v1.0.0-alpha.3 shipped (88 tests) |
-| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.3 shipped (75 tests) |
+| .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NWP.Anchor` / `.NWP.Bridge` / `.NIP` / `.NDP` / `.NOP`) | ✅ v1.0.0-alpha.4 shipped (639 tests) |
+| Python     | `nps-lib`                          | ✅ v1.0.0-alpha.4 shipped (211 tests, ≥97% coverage) |
+| TypeScript | `@labacacia/nps-sdk`               | ✅ v1.0.0-alpha.4 shipped (284 tests) |
+| Java       | `com.labacacia.nps:nps-java`       | ✅ v1.0.0-alpha.4 shipped (112 tests) |
+| Rust       | `nps-sdk` (+ 6 sibling crates)     | ✅ v1.0.0-alpha.4 shipped (109 tests) |
+| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.4 shipped (96 tests) |
 
 ### NIP CA Server (six-language reference deployment)
 
@@ -89,8 +89,9 @@ Goal: adapters to existing ecosystems (MCP, A2A), richer SDK examples, Tier-2 Ms
 
 - ✅ TypeScript SDK shipped (Phase 2 scope advanced to Phase 1)
 - ✅ Go SDK shipped (Phase 2 scope advanced to Phase 1)
-- ✅ `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpIngress` v1.0.0-alpha.3)
-- ✅ `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.3)
+- ✅ `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpIngress` v1.0.0-alpha.4)
+- ✅ `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.4)
+- ✅ `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC adapter (`LabAcacia.GrpcIngress` v1.0.0-alpha.4)
 - ✅ Tier-2 MsgPack wire-size benchmark (aggregate **63.6 %** reduction vs JSON — steady-state frames 61.9 %–88.4 %)
 - ✅ Token-savings benchmark (aggregate **45.0 %** NPT reduction vs REST — above Phase 1 ≥ 30 % bar)
 - ⬜ First reference product — **NPS Studio** (human visual debugger) + **NPS Probe** (Agent Coder conformance CLI)
