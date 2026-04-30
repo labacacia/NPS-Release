@@ -3,10 +3,10 @@ English | [中文版](./NPS-AaaS-Profile.cn.md)
 # NPS-AaaS Profile: Agent-as-a-Service Compliance Specification
 
 **Status**: Proposed
-**Version**: 0.3
-**Date**: 2026-04-26
+**Version**: 0.4
+**Date**: 2026-04-27
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.7), NPS-3 (NIP v0.4), NPS-4 (NDP v0.5), NPS-5 (NOP v0.4)
+**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.8), NPS-3 (NIP v0.4), NPS-4 (NDP v0.5), NPS-5 (NOP v0.4)
 
 > This specification defines compliance requirements for building Agent-as-a-Service (AaaS)
 > platforms on the NPS protocol suite, covering three architectural layers: service entry,
@@ -65,7 +65,7 @@ Consumer Agent
 
 ## 2. Anchor Node (NWP Extension)
 
-> **Renamed from "Gateway Node" by [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md) in v1.0-alpha.3.** The role described in this section — stateless cluster entry point that routes inbound NWP `Action` frames into NOP `TaskFrame`s — is unchanged. The wire value `node_type: "gateway"` was removed and parsers MUST reject it. Implementations MAY add long-lived member-node registry behavior on top of the per-request stateless dispatch (NPS-2 §2.1 *Anchor Node — detailed semantics*); the topology read-back surface (`topology.snapshot` / `topology.stream`) is reserved for [NPS-CR-0002](../cr/NPS-CR-0002-anchor-topology-queries.md) in v1.0-alpha.4.
+> **Renamed from "Gateway Node" by [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md) in v1.0-alpha.3.** The role described in this section — stateless cluster entry point that routes inbound NWP `Action` frames into NOP `TaskFrame`s — is unchanged. The wire value `node_type: "gateway"` was removed and parsers MUST reject it. Implementations MAY add long-lived member-node registry behavior on top of the per-request stateless dispatch (NPS-2 §2.1 *Anchor Node — detailed semantics*); the topology read-back surface (`topology.snapshot` / `topology.stream`) is defined in [NPS-2 §12](../NPS-2-NWP.md) and is mandatory at L2 (see §4.3 below) per [NPS-CR-0002](../cr/NPS-CR-0002-anchor-topology-queries.md).
 
 ### 2.1 Definition
 
@@ -92,7 +92,7 @@ NOP orchestration layer. A single Anchor Node MAY simultaneously declare other r
 | **Token metering** | NPT | Per-request Token Budget management |
 | **Rate limiting** | NWP | NID-based rate limiting |
 | **Observability** | NOP Context | Inject trace_id/span_id for full-chain tracing |
-| **Cluster registry** *(optional)* | NDP | Track member nodes registered via `Announce.cluster_anchor`; surface them through future `topology.snapshot` (CR-0002) |
+| **Cluster registry** *(optional at L1, mandatory at L2)* | NDP + NWP | Track member nodes registered via `Announce.cluster_anchor`; surface them through `topology.snapshot` / `topology.stream` (NPS-2 §12) |
 
 ### 2.3 NWM Anchor Manifest Example
 
@@ -338,6 +338,7 @@ only needs to implement this interface for seamless integration.
 | L2-05 | MUST implement NOP retry and timeout semantics | NOP |
 | L2-06 | SHOULD support async Actions (ActionFrame.async=true) | NWP |
 | L2-07 | SHOULD implement AlignStream back-pressure control | NOP |
+| L2-08 | MUST implement `topology.snapshot` and `topology.stream` reserved query types on Anchor Nodes that maintain a member registry, per [NPS-2 §12](../NPS-2-NWP.md). The version counter MUST be monotonic per Anchor lifetime and SHOULD survive in-process restarts via rebase + `anchor_state.version_rebased` event. | NWP §12 |
 
 ### 4.4 Level 3 — Advanced Compliance
 
@@ -392,8 +393,8 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 NPT → analyze
 
 | Profile Component | NPS Protocol Dependency | Protocol Change Required |
 |------------------|------------------------|------------------------|
-| Anchor Node | NWP v0.7 | Yes: rename `node_type: "gateway"` to `"anchor"` (CR-0001); legacy `"gateway"` rejected |
-| Bridge Node | NWP v0.7 | Yes: new `node_type: "bridge"` value (CR-0001) |
+| Anchor Node | NWP v0.8 | Yes: rename `node_type: "gateway"` to `"anchor"` (CR-0001); legacy `"gateway"` rejected. L2 cluster registry surfaces via `topology.snapshot` / `topology.stream` (CR-0002) |
+| Bridge Node | NWP v0.8 | Yes: new `node_type: "bridge"` value (CR-0001) |
 | Request routing | NOP v0.4 | No: reuses TaskFrame/DelegateFrame |
 | Authentication | NIP v0.3 | No: reuses NID + scope |
 | Vector queries | NWP v0.5 §6.4 | No: reuses vector_search |
@@ -409,6 +410,7 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 NPT → analyze
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.4 | 2026-04-27 | New L2-08 requirement (§4.3) mandating `topology.snapshot` / `topology.stream` on Anchor Nodes that maintain a member registry, per [NPS-CR-0002](../cr/NPS-CR-0002-anchor-topology-queries.md) and [NPS-2 §12](../NPS-2-NWP.md). §2 intro placeholder ("reserved for v1.0-alpha.4") replaced with concrete L2 mandate. §2.2 cluster-registry row promoted from "optional" to "optional at L1, mandatory at L2". §6 protocol-relationship table re-pointed at NWP v0.8 to pick up the new §12 surface. Depends-On bumped: NPS-2 (NWP v0.7 → v0.8). |
 | 0.3 | 2026-04-26 | **Breaking** (per [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md)). §2 renamed Gateway Node → **Anchor Node**, all wire/manifest examples updated (`node_type: "anchor"`, `nwm_version: "0.7"`, `min_nip_version: "0.4"`); new §2.2 row for optional cluster registry. New §2A **Bridge Node** (NPS↔non-NPS protocol translation, `bridge_protocols` declaration, direction-vs-`compat/*-bridge` clarification). §1.2 / §1.3 architecture diagram and §6 protocol-relationship table updated; L1 §4.2 / §5 references re-pointed to Anchor Node. §6 protocol-change line replaced "add gateway" with "rename gateway → anchor + new bridge". Depends-On upgraded to NCP v0.6 (RFC-0001) + NWP v0.7 (CR-0001) + NIP v0.4 (RFC-0003) + NDP v0.5 (CR-0001 fields). |
 | 0.1 | 2026-04-15 | Initial draft: AaaS architecture overview, Gateway Node definition, Vector Proxy Layer design, three-tier compliance requirements |
 

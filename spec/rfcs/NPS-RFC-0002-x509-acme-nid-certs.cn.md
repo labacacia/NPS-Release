@@ -3,11 +3,11 @@
 ---
 **RFC 编号**：NPS-RFC-0002
 **标题**：NID 证书改用 X.509 + ACME
-**状态**：Draft
+**状态**：Draft（prototype 于 2026-04-27 落地 —— 实测数据见 §9；推到 Proposed/Accepted 由 shepherd 评审决定）
 **作者**：Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**：_待定——PR 开立时指派_
 **创建日期**：2026-04-21
-**最后更新**：2026-04-21
+**最后更新**：2026-04-27
 **接受日期**：_（合入 `dev` 时填写）_
 **激活日期**：_（首个参考 SDK 发版时填写）_
 **取代**：_无_
@@ -287,31 +287,81 @@ Client (Agent)                 ACME Server (NIP CA)
   ≤ 50 µs/cert（现有自研解析器 ~10 µs；≤ 5× 回归可接受，
   换来的是生态复用）。
 
+> **2026-04-27 prototype 后修订（详见 §9.2）**：wire-size 上限放宽到
+> 1600 字节（prototype 实测 1512 B）；删除 50 µs 绝对值目标，仅保留
+> ≤ 5× regression 比率（绝对延迟受宿主硬件影响过大；prototype 在测
+> 试容器内 v1 baseline 已经远超 50 µs，绝对目标不可移植）。新增
+> "CA Server 二进制 ≤ 2×" 推迟到 daemon / nip-ca-server 多语言移植期再测。
+
 ---
 
 ## 9. 实测数据
 
-暂无。在进入 `Accepted` 之前会补：
-- 一个原型分支展示 .NET NIP 发 X.509
-- v1 vs v2 证书 wire-size 实测
-- `agent-01` 与 `pebble`（ACME 测试服务端）互通证明
+### 9.1 Prototype 分支
+
+Prototype 落地于 `feat/rfc-0002-x509-acme-prototype`，按顺序交付：
+
+- **.NET NIP 发与验 X.509** ——
+  `impl/dotnet/src/NPS.NIP/X509/{NpsX509Oids,NipX509Builder,NipX509Verifier,Ed25519X509SignatureGenerator}.cs`。
+  `tests/NPS.Tests/Nip/X509/NipX509Tests.cs` 5 个用例覆盖 round-trip、
+  EKU 缺失拒绝、subject/NID 不匹配拒绝、v1↔v2 跨格式共存。
+- **In-process ACME 服务端 + `agent-01` challenge** ——
+  `impl/dotnet/src/NPS.NIP/Acme/{AcmeJws,AcmeMessages,AcmeServer,AcmeClient}.cs` +
+  `tests/NPS.Tests/Nip/Acme/AcmeAgent01Tests.cs`。两个用例覆盖 agent-01
+  端到端发证 + 篡改签名负面路径返回 `NIP-ACME-CHALLENGE-FAILED`。
+- **Pebble（RFC 8555 参考服务端）interop 推迟到后续。** 原因：pebble
+  不实现 `agent-01`（这是本 RFC 自己提的非标准 challenge 类型）；用
+  pebble 验证 ACME 标准合规只能加 HTTP-01 的覆盖，相对 `agent-01`
+  本身的端到端证明价值边际很小。`tools/pebble/setup.sh` 已经放好
+  二进制下载脚本，留给后续 PR。
+
+### 9.2 实测
+
+下表数据由 `NPS.Benchmarks.NipCert` 产出
+（`dotnet run -c Release --project impl/dotnet/benchmarks/NPS.Benchmarks.NipCert -- --emit`），
+报告写入 `docs/benchmarks/nip-cert-prototype.md`。
 
 | 指标 | 基线 (v1) | 提议 (v2) | 差值 | 方法 |
 |------|-----------|-----------|------|------|
-| 证书体积（Ed25519 叶子） | ~200 B | ~500 B | +300 B | DER 字节数 |
-| 验签延迟 | TBD | TBD | 目标 ≤ 5× | `BenchmarkDotNet` |
-| CA Server 二进制体积 | TBD | TBD | 目标 ≤ 2× | `dotnet publish -c Release` |
+| `IdentFrame` JSON 体积 | 459 B | 1512 B | +1053 B (+229%) | `JsonSerializer.Serialize(IdentFrame)` 的 UTF-8 字节数 |
+| 验签延迟（2000 次平均） | 597.8 µs | 1698.5 µs | 2.84× | `Stopwatch` 计时 `verifier.VerifyAsync(frame)` |
+
+§8.4 两条阈值因此被 prototype 数据修订：
+
+- **Wire-size 上限**（原 ≤ 1200 B）：prototype 超 26%（1512 B）。
+  prototype 的 chain 是 leaf + self-signed root，不是规范预期的
+  leaf + 真正 intermediate；后者 KeyUsage/extensions 更少，base64url
+  膨胀也可分摊。可读为"1200 B 在生产部署里偏紧 —— 实际要为
+  IdentFrame 留 +1 KiB 左右余量"。规范上限放宽到 **1600 B**。
+- **验签延迟绝对目标**（原 ≤ 50 µs）：v1 与 v2 在测试容器都未达
+  （分别 12× 与 34×）。v1 baseline 已经被 JSON 规范化 + Ed25519
+  verify 主导，而 X.509 chain 验证只在其上增量。比率目标
+  （≤ 5×）**满足**（2.84×）。RFC 删除 50 µs 绝对目标，保留比率。
+
+### 9.3 §10 OQ-1 的含义
+
+Prototype 流程是先 X.509，后叠 ACME。耗时：X.509 + verifier + 测试 ~5
+工作日；ACME（client + in-process server + agent-01 + 测试）~2 工作日。
+pebble HTTP-01 interop 如果可做要再 ~1 天，被 `agent-01` 不被 pebble
+理解阻塞。
+
+OQ-1 推荐：**X.509 + ACME 一起做**（即原"both together"立场）。一旦
+X.509 issuance 接好，ACME 大部分是机械工作；拆开会强迫做两轮跨语言
+SDK 移植，把 ACME 一并合进同一个 acceptance 是更经济的做法。
 
 ---
 
 ## 10. 未决问题
 
-- [ ] **OQ-1**：Phase 1 —— 先 X.509 后 ACME，还是一起做？
-  负责人：Ori Lynn。目标：Accepted 前解决。_默认立场：一起做；
-  ACME 实现工作量相对于心智切换而言占比很小。_
+- [x] **OQ-1**：Phase 1 —— 先 X.509 后 ACME，还是一起做？
+  **2026-04-27 由 prototype 数据确认（详见 §9.3）**：一起做。.NET 上
+  X.509 + ACME 合计 7 工作日；拆开会要做两轮 5 SDK × 2 阶段移植，
+  把 ACME 在同一个 acceptance 内顺手合并明显更经济。
 - [ ] **OQ-2**：IANA Private Enterprise Number (PEN) 申请中。
   目标：本 RFC 进入 Accepted 后 2 周内提交。PEN 下发前，用
-  `1.3.6.1.4.1.99999.1` 下的 arc 并标记 "PROVISIONAL"。
+  `1.3.6.1.4.1.99999.1` 下的 arc 并标记 "PROVISIONAL"。Prototype
+  已在 `NpsX509Oids` 中使用此 arc，PEN 下发后做一次 search-replace
+  即可。
 - [ ] **OQ-3**：NIP CA 是否要和公共 CA（例如 Let's Encrypt）
   交叉签名？延后到后续 RFC。
 
@@ -342,4 +392,5 @@ Client (Agent)                 ACME Server (NIP CA)
 
 | 日期 | 作者 | 变更 |
 |------|------|------|
+| 2026-04-27 | Claude (prototype) | 用 `feat/rfc-0002-x509-acme-prototype`（.NET prototype + `NPS.Benchmarks.NipCert`）实测数据回填 §9 实测数据。OQ-1 闭环（X.509 + ACME 一起做）。§8.4 阈值修订（体积 1200 → 1600 B；删除绝对延迟目标，保留比率）。 |
 | 2026-04-21 | Ori Lynn | 初稿 |

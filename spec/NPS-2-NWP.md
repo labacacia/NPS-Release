@@ -4,8 +4,8 @@ English | [中文版](./NPS-2-NWP.cn.md)
 
 **Spec Number**: NPS-2  
 **Status**: Proposed  
-**Version**: 0.7  
-**Date**: 2026-04-26  
+**Version**: 0.8  
+**Date**: 2026-04-27  
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.4), NPS-4 (NDP v0.5)  
@@ -56,7 +56,7 @@ An Anchor Node MUST:
 
 A cluster MUST have at least one Anchor Node. High-availability deployments MAY operate multiple Anchor Nodes for the same cluster; the consensus protocol between Anchor Nodes is implementation-defined and is deferred to NPS-AaaS Profile L3.
 
-Topology read-back surface (`topology.snapshot` / `topology.stream`) is **not** specified by this CR — it is reserved for [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md), which targets v1.0-alpha.4.
+Anchor Nodes that maintain a member registry MUST expose it via the reserved query types `topology.snapshot` and `topology.stream` (§12), per [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md). Both are mandatory at NPS-AaaS Profile L2 and above.
 
 #### Bridge Node — detailed semantics
 
@@ -323,7 +323,8 @@ Used for structured data queries on Memory Nodes.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `frame` | uint8 | Required | Fixed value `0x10` |
-| `anchor_ref` | string | Conditionally Required | Schema anchor_id; may be omitted for aggregation queries |
+| `type` | string | Optional | Reserved query type identifier per §12. When set, type-specific fields apply and `anchor_ref` semantics are defined by the type. Absent: per-anchor query behavior below |
+| `anchor_ref` | string | Conditionally Required | Schema anchor_id; may be omitted for aggregation queries or when `type` selects a reserved type that does not require it |
 | `auto_anchor` | bool | Optional | If true and the anchor is stale, the Node automatically attaches the latest AnchorFrame in the response. Default: true |
 | `stream` | bool | Optional | If true, triggers streaming query mode (see §6.6); response is a StreamFrame sequence rather than a CapsFrame |
 | `aggregate` | object | Optional | Aggregation operation (see §6.7); when set, `anchor_ref` may be omitted |
@@ -588,8 +589,9 @@ Used to establish change subscriptions on Memory Nodes. The server pushes increm
 |-------|------|----------|-------------|
 | `frame` | uint8 | Required | Fixed value `0x12` |
 | `action` | string | Required | `"subscribe"` / `"unsubscribe"` / `"ping"` |
+| `type` | string | Optional | Reserved subscribe type identifier per §12. When set, type-specific fields apply and `anchor_ref` semantics are defined by the type. Absent: per-anchor subscribe behavior below |
 | `stream_id` | string | Required | Client-generated UUID v4 |
-| `anchor_ref` | string | Conditionally Required | anchor_id of the subscribed data (required when `action="subscribe"`) |
+| `anchor_ref` | string | Conditionally Required | anchor_id of the subscribed data (required when `action="subscribe"` and `type` is absent or the reserved type requires an anchor) |
 | `filter` | object | Optional | Filter conditions (same as §6.2); requires `capabilities.subscribe_filter=true` |
 | `heartbeat_interval` | uint32 | Optional | Heartbeat interval in seconds, 0 = disabled, default 30 |
 | `resume_from_seq` | uint64 | Optional | Provided on reconnection; replays events after this sequence number (inclusive); node returns `NWP-SUBSCRIBE-SEQ-TOO-OLD` if it cannot satisfy the request |
@@ -602,7 +604,7 @@ Subscription-pushed DiffFrames (0x02) add the following to the standard fields:
 |-------|------|-------------|
 | `stream_id` | string | Associated subscription stream ID |
 | `seq` | uint64 | Monotonically increasing event sequence number (per-stream, starting from 1); Agents use this to detect dropped frames and support reconnection |
-| `event_type` | string | `"create"` / `"update"` / `"delete"` |
+| `event_type` | string | `"create"` / `"update"` / `"delete"` for default subscriptions. Reserved subscribe types (§12) MAY define additional values (e.g. topology event types per §12.2) |
 | `timestamp` | string | Time of change (ISO 8601) |
 
 **Sequence Number Semantics**
@@ -800,7 +802,159 @@ Agents control traversal depth via the `X-NWP-Depth` header (HTTP mode) or the Q
 
 ---
 
-## 12. Error Codes
+## 12. Reserved Query Types
+
+The `type` field on `QueryFrame` (§6.1) and `SubscribeFrame` (§8.1) opts a request into a **reserved query type** with specification-defined semantics. Identifiers in the `topology.*` namespace are reserved for cluster topology operations on Anchor Nodes; all reserved namespaces below are **mandatory** for the node roles indicated.
+
+| Namespace | Owning role | Mandatory at | Operations |
+|-----------|-------------|--------------|------------|
+| `topology.*` | Anchor Node (§2.1) | NPS-AaaS Profile L2 ([services/NPS-AaaS-Profile.md §4.3](services/NPS-AaaS-Profile.md)) | `topology.snapshot` (§12.1), `topology.stream` (§12.2) |
+
+When `type` is absent, default per-anchor query/subscribe semantics apply (§6, §8). When `type` is set, the per-type fields documented below apply and any conflicting standard fields (e.g. `anchor_ref`, top-level `filter`) are ignored unless the per-type schema explicitly carries them.
+
+Implementations that do not recognize a reserved `type` value MUST reject the request with `NWP-ACTION-NOT-FOUND` (for QueryFrame) or `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` (for SubscribeFrame) so the caller can fall back to default behavior or fail explicitly.
+
+### 12.1 `topology.snapshot`
+
+Single-shot retrieval of an Anchor Node's cluster topology.
+
+| Property | Value |
+|----------|-------|
+| Frame | QueryFrame (0x10) with `type = "topology.snapshot"` |
+| Required of | All Anchor Nodes (mandatory at NPS-AaaS Profile L2 and above) |
+| Idempotent | Yes |
+| Caching | Responses MAY be cached client-side; the `version` field correlates the snapshot with subsequent `topology.stream` events |
+
+**Request fields** (top-level on QueryFrame, supplementing §6.1):
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Required | Constant `"topology.snapshot"` |
+| `topology` | object | Required | Container for topology-specific parameters per below |
+| `topology.scope` | string | Required | `"cluster"` for the Anchor's own cluster; `"member"` for a single member (requires `topology.target_nid`) |
+| `topology.include` | array of strings | Optional | Subset of `["members", "capabilities", "tags", "metrics"]`. Default `["members"]`. The `capabilities` and `metrics` schemas are implementation-defined and MAY be empty |
+| `topology.depth` | uint8 | Optional | For sub-Anchor members, controls recursion. `1` (default) lists sub-Anchors as references only; `2+` recurses. Anchor Nodes MAY cap depth and set `truncated: true` when exceeded. Sub-Anchor recursion at depth ≥ 2 is **OPTIONAL** at L2; clients SHOULD recurse manually by issuing one snapshot per sub-Anchor |
+| `topology.target_nid` | string | Conditionally Required | Required when `topology.scope = "member"`; the NID of the member to introspect |
+
+**Response**: `CapsFrame (0x04)` with `anchor_ref = "nps:system:topology:snapshot"` and a single-element `data` array carrying the snapshot payload below.
+
+```json
+{
+  "frame": "0x04",
+  "anchor_ref": "nps:system:topology:snapshot",
+  "count": 1,
+  "data": [{
+    "version": 142,
+    "anchor_nid": "urn:nps:node:labacacia:host-abc123",
+    "cluster_size": 23,
+    "members": [
+      {
+        "nid": "urn:nps:agent:labacacia:host-abc123-sess-aaa",
+        "node_kind": ["memory"],
+        "activation_mode": "ephemeral",
+        "tags": ["dev", "library"],
+        "joined_at": "2026-04-15T10:23:00Z",
+        "last_seen": "2026-04-26T14:55:00Z"
+      },
+      {
+        "nid": "urn:nps:node:labacacia:host-def456",
+        "node_kind": ["anchor"],
+        "activation_mode": "resident",
+        "child_anchor": true,
+        "member_count": 7,
+        "tags": ["sub-cluster", "training"]
+      }
+    ],
+    "truncated": false
+  }]
+}
+```
+
+**Snapshot payload fields**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `version` | uint64 | Required | Monotonically increasing topology version. Resets only on Anchor restart / rebase (§12.3) |
+| `anchor_nid` | string | Required | NID of the responding Anchor Node |
+| `cluster_size` | uint32 | Required | Total direct members, regardless of `depth` truncation |
+| `members` | array of member objects | Required | Per the member object schema below |
+| `truncated` | bool | Optional | True iff `topology.depth` cap was hit; otherwise omitted or false |
+
+**Member object schema**:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `nid` | string | Required | Member NID |
+| `node_kind` | array of strings | Required | NDP `node_kind` flags (NPS-4 §3.1) |
+| `activation_mode` | string | Required | NDP `activation_mode` — one of `ephemeral` / `resident` / `hybrid` (NPS-4) |
+| `child_anchor` | bool | Optional | True if this member is itself an Anchor Node of a sub-cluster; implies `member_count` |
+| `member_count` | uint32 | Conditionally Required | Required when `child_anchor = true`; count of the sub-Anchor's direct members |
+| `tags` | array of strings | Optional | NDP-declared tags |
+| `joined_at` | string | Optional | RFC 3339 timestamp; first observed |
+| `last_seen` | string | Optional | RFC 3339 timestamp; most recent NDP `Announce` |
+| `capabilities` | object | Optional | Returned only if requested via `topology.include`; schema implementation-defined |
+| `metrics` | object | Optional | Returned only if requested via `topology.include`; schema implementation-defined |
+
+### 12.2 `topology.stream`
+
+Continuous topology change feed for an Anchor Node's cluster.
+
+| Property | Value |
+|----------|-------|
+| Frame | SubscribeFrame (0x12) with `type = "topology.stream"` |
+| Required of | All Anchor Nodes (mandatory at NPS-AaaS Profile L2 and above) |
+| Cancelable | Yes — via standard `SubscribeFrame.action = "unsubscribe"` |
+
+**Request fields** (top-level on SubscribeFrame, supplementing §8.1):
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `type` | string | Required | Constant `"topology.stream"` |
+| `topology` | object | Required | Container for topology-specific parameters per below |
+| `topology.scope` | string | Required | `"cluster"` (default for Anchor's own cluster); future scopes reserved |
+| `topology.filter` | object | Optional | Reduces event volume. Supported keys: `tags_any` (array, match-any), `tags_all` (array, match-all), `node_kind` (array). Anchor Nodes MUST reject unsupported filter keys with `NWP-TOPOLOGY-FILTER-UNSUPPORTED` |
+| `topology.since_version` | uint64 | Optional | Resume from a previous version. Anchor Node MUST replay missed events when feasible; if the version is outside the retention window, MUST emit a `resync_required` event and the client MUST issue a fresh `topology.snapshot` |
+
+For `type = "topology.stream"`, `topology.since_version` is the topology-scoped synonym of `SubscribeFrame.resume_from_seq` (§8.1). When both fields are present, `topology.since_version` takes precedence.
+
+**Events** are pushed as `DiffFrame (0x02)` with the §8.2 extension fields. For `topology.stream` subscriptions, `event_type` carries one of the topology event types below (extending the default `"create" / "update" / "delete"` enum), `seq` is the post-event topology version (§12.3), and `payload` carries the event-specific data.
+
+| `event_type` | Trigger | `payload` shape |
+|--------------|---------|-----------------|
+| `member_joined` | NDP `Announce` from a node naming this Anchor as `cluster_anchor` | Full member object (§12.1) |
+| `member_left` | Member explicitly leaves OR exceeds NDP liveness TTL | `{ "nid": "urn:nps:..." }` |
+| `member_updated` | Existing member's metadata changes (tags, activation_mode, capabilities, etc.) | `{ "nid": "urn:nps:...", "changes": { "<field>": <new value>, ... } }` — field-level diff only; reassembly is the client's responsibility |
+| `anchor_state` | Rare. Anchor Node internal state change relevant to clients (e.g., version counter rebase after restart) | `{ "field": "version_rebased", "details": { ... } }` |
+| `resync_required` | Subscriber's `topology.since_version` is no longer replayable | `{ "reason": "version_too_old" }`. This event omits `seq` and the subscriber MUST issue a fresh `topology.snapshot` |
+
+Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "unsubscribe"`) operate unchanged.
+
+### 12.3 Versioning and Consistency Model
+
+**Guaranteed**:
+
+- A `topology.snapshot` returned at `version: V` reflects the cluster state after exactly `V` topology mutations.
+- A `topology.stream` event with `seq: V` reflects the cluster state after exactly `V` mutations.
+- A snapshot at `V` combined with all subsequent stream events `V+1, V+2, …` yields a consistent live view.
+
+**Not guaranteed**:
+
+- Real-time delivery latency — events MAY batch.
+- Event ordering across multiple Anchor Nodes — each Anchor maintains its own `version` counter.
+- Total ordering with non-topology events (Action / Query traffic on member nodes).
+
+**Restart and rebase**: An Anchor Node MAY rebase its `version` counter on restart. When rebasing, the Anchor MUST emit an `anchor_state` event with `field: "version_rebased"` to all active subscribers; subscribers MUST treat this as equivalent to `resync_required` and issue a fresh `topology.snapshot`.
+
+### 12.4 Out of Scope
+
+- **Capability and metric schema standardization**: §12.1's `capabilities` and `metrics` field schemas are implementation-defined; standardization is deferred to a follow-up CR once enough implementations exist.
+- **Cross-cluster federation queries**: Querying topology across multiple Anchor Nodes is an NPS-AaaS Profile L3 / NPS Cloud concern. This section is single-Anchor only.
+- **Authorization model**: `NWP-TOPOLOGY-UNAUTHORIZED` is reserved as the wire-level signal but the policy that produces it is deferred to a follow-up CR (NeuronHub commercial deployment driver).
+- **Browser transport (WebSocket)**: Whether `npsd` exposes a WebSocket endpoint for browser clients is tracked separately. Topology query semantics here are transport-independent.
+
+---
+
+## 13. Error Codes
 
 | Error Code | NPS Status Code | Description |
 |-----------|----------------|-------------|
@@ -837,43 +991,51 @@ Agents control traversal depth via the `X-NWP-Depth` header (HTTP mode) or the Q
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | Underlying data source temporarily unavailable |
 | `NWP-MANIFEST-VERSION-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Agent NPS version is below the node's min_agent_version |
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | Rate limit exceeded |
+| `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | Caller lacks permission to read this Anchor's topology (§12). Authorization policy is implementation-defined per §12.4 |
+| `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` value is not implemented by this Anchor |
+| `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Requested `topology.depth` exceeds this Anchor's maximum |
+| `NWP-TOPOLOGY-FILTER-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | `topology.filter` contains an unrecognized key |
 
 ---
 
-## 13. Security Considerations
+## 14. Security Considerations
 
-### 13.1 Scope Enforcement
+### 14.1 Scope Enforcement
 Nodes MUST validate the Agent NID's scope on every request. Requests exceeding scope MUST return `NWP-AUTH-NID-SCOPE-VIOLATION` and MUST NOT return any data.
 
-### 13.2 SSRF Protection
+### 14.2 SSRF Protection
 When Complex Nodes resolve sub-node references, they MUST maintain an allowlist of permitted node URL prefixes and MUST NOT access internal network addresses (RFC 1918).
 
-### 13.3 Token Budget Enforcement
+### 14.3 Token Budget Enforcement
 When the budget is exceeded, nodes SHOULD prefer trimming response content (field reduction → summary → record truncation); if trimming is not possible, they MUST return `NWP-BUDGET-EXCEEDED` and MUST NOT silently truncate data. See [token-budget.md §4.3](token-budget.md).
 
-### 13.4 Rate Limiting
+### 14.4 Rate Limiting
 Nodes SHOULD enforce per-Agent NID rate limiting. On limit exceeded, return `NWP-RATE-LIMIT-EXCEEDED` with an `X-NWP-Rate-Reset` header. Unauthenticated requests SHOULD be limited by IP.
 
-### 13.5 Filter Injection Protection
+### 14.5 Filter Injection Protection
 - Field names MUST contain only letters/digits/underscores/dots, length ≤ 128 characters
 - `$regex` patterns MUST undergo ReDoS detection; filter nesting depth ≤ 8
 - Nodes MUST use parameterized queries; string concatenation is prohibited
 
-### 13.6 callback_url Abuse Prevention
+### 14.6 callback_url Abuse Prevention
 - ActionFrame `callback_url` MUST use the `https://` scheme
 - Nodes SHOULD perform SSRF checks on callback URLs (internal network addresses prohibited)
 - Nodes SHOULD apply exponential backoff retries for failed callback deliveries (max 3 attempts), then abandon and mark the task as `COMPLETED` rather than retrying indefinitely
 
+### 14.7 Topology Read-back
+Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stream` as authenticated surfaces. Until the authorization model is standardized (§12.4), implementations MUST at minimum require `auth.required = true` at L2 and SHOULD restrict topology access to NIDs whose declared `node_kind` includes `anchor` or whose Agent scope explicitly grants `topology:read`. Unauthorized callers MUST receive `NWP-TOPOLOGY-UNAUTHORIZED` rather than silent empty responses to prevent oracle attacks against cluster membership.
+
 ---
 
-## 14. Changelog
+## 15. Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.8 | 2026-04-27 | New §12 **Reserved Query Types** introducing the `topology.*` namespace mandatory at NPS-AaaS Profile L2: `topology.snapshot` (QueryFrame, `type="topology.snapshot"`) and `topology.stream` (SubscribeFrame, `type="topology.stream"`). Both QueryFrame §6.1 and SubscribeFrame §8.1 gain an optional top-level `type` field for opting into reserved types. DiffFrame §8.2 `event_type` enum extended via reserved subscribe types — `topology.stream` adds `member_joined` / `member_left` / `member_updated` / `anchor_state` / `resync_required`. Five new error codes: `NWP-TOPOLOGY-UNAUTHORIZED`, `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`, `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`, `NWP-TOPOLOGY-FILTER-UNSUPPORTED` (table §13). New §14.7 Topology Read-back security section. Existing §12 Error Codes / §13 Security / §14 Changelog renumbered to §13 / §14 / §15 to accommodate the new section. See [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md). |
 | 0.7 | 2026-04-26 | **Breaking.** §2.1 Node Types: `Gateway Node` removed; replaced by **Anchor Node** (cluster control plane + NOP routing — inherits the existing role) and **Bridge Node** (NPS↔non-NPS protocol translation — new). NWM `node_type` enum updated; legacy `"gateway"` MUST be rejected. Anchor Node detailed semantics (§2.1 inline) cover member dispatch + optional registry; Bridge Node semantics cover HTTP/gRPC/MCP/A2A target adapters. Depends-On upgraded to NDP v0.5 for the `node_kind` array form + `cluster_anchor` + `bridge_protocols` fields. See [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md). |
 | 0.6 | 2026-04-25 | NWM gains optional top-level `min_assurance_level` field (`anonymous` / `attested` / `verified`), with `auth.min_assurance_level` per-action override permitted on individual ActionSpecs. New error code `NWP-AUTH-ASSURANCE-TOO-LOW` (`NPS-AUTH-FORBIDDEN`). `Depends-On` upgraded to NCP v0.6 (NPS-RFC-0001) and NIP v0.4 (NPS-RFC-0003). See [NPS-RFC-0003](rfcs/NPS-RFC-0003-agent-identity-assurance-levels.md). |
 | 0.4 | 2026-04-14 | §3.2 added `/actions` sub-path; §4.1 NWM added `actions` field; §4.2 capabilities added stream_query and aggregate; §4.6 NWM Action Registry (ActionSpec, params_anchor/result_anchor/async/idempotent); QueryFrame §6.1 added `stream`, `aggregate`, `request_id`; §6.6 Streaming Query Protocol (StreamFrame sequence, estimated_total, early termination); §6.7 Aggregation queries (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT, group_by, having); ActionFrame §7.1 added `request_id`; SubscribeFrame §8.1 added `resume_from_seq`; §8.2 DiffFrame extension fields (monotonic seq, event_type, timestamp) and reconnection semantics; §9.1/9.2 added X-NWP-Request-ID; §9.4 HTTP mode error response format (application/nwp-error+json); §10 updated complete examples (including error response); §13.6 callback_url abuse prevention security section; 5 new error codes (AGGREGATE-UNSUPPORTED/-INVALID, STREAM-UNSUPPORTED, SUBSCRIBE-SEQ-TOO-OLD, task cancel series) |
-| 0.3 | 2026-04-14 | SubscribeFrame (0x12); auto_anchor; Filter $not/$exists/$regex; ActionFrame callback_url/priority; system.task.*; NWM min_agent_version/rate_limits; §13.4/13.5 security sections |
+| 0.3 | 2026-04-14 | SubscribeFrame (0x12); auto_anchor; Filter $not/$exists/$regex; ActionFrame callback_url/priority; system.task.*; NWM min_agent_version/rate_limits; §14.4/14.5 security sections |
 | 0.2 | 2026-04-12 | Unified port 17433; AnchorFrame owned by Node; NPT metering; NPS status code mapping |
 | 0.1 | 2026-04-10 | Initial specification |
 

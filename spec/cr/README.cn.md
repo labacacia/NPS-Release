@@ -46,7 +46,7 @@
 | CR | 标题 | 目标版本 | 状态 |
 |---|---|---|---|
 | [NPS-CR-0001](./NPS-CR-0001-anchor-bridge-split.md) | 把 Gateway Node 拆为 Anchor Node + Bridge Node | v1.0-alpha.3 | Implemented（2026-04-26）|
-| [NPS-CR-0002](./NPS-CR-0002-anchor-topology-queries.md) | Anchor Node 标准拓扑查询类型（`topology.snapshot` / `topology.stream`） | v1.0-alpha.4 | Draft（依赖 CR-0001） |
+| [NPS-CR-0002](./NPS-CR-0002-anchor-topology-queries.md) | Anchor Node 标准拓扑查询类型（`topology.snapshot` / `topology.stream`） | v1.0-alpha.4 | Implemented（2026-04-27）|
 
 ## 起草新 CR 的方法
 

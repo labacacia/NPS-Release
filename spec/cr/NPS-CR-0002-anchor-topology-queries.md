@@ -6,13 +6,16 @@ Licensed under the Apache License, Version 2.0
 Saved verbatim as received from author 2026-04-25.
 Depends on CR-0001 (Anchor Node must exist as a node type before its
 topology query surface can be specified). Target alpha.4.
+
+Implementation status flipped 2026-04-27 — see Implementation Notes at the
+bottom of this file for what shipped and what remains as follow-up.
 -->
 
 # NPS Change Request: Standard Topology Query Types for Anchor Node
 
 **CR ID**: NPS-CR-0002
 **Target version**: v1.0-alpha.4 (after CR-0001 lands)
-**Status**: Draft, depends on CR-0001
+**Status**: Implemented (2026-04-27) — see [§11 Implementation Notes](#11-implementation-notes)
 **Type**: Additive (new reserved query types, no wire breakage)
 **Author**: Ori, LabAcacia
 **Affected components**: NWP spec, Anchor Node implementations, conformance tests
@@ -264,12 +267,13 @@ Add to `conformance/L2-test/`:
 
 ## 8. Acceptance criteria
 
-- [ ] Spec changes per §3 merged
-- [ ] .NET SDK types per §4 implemented and tested
-- [ ] L2 conformance tests per §5 passing on `nps-daemon` Anchor Node implementation
-- [ ] `nps-starmap` demo successfully renders a snapshot and updates from stream events
-- [ ] CHANGELOG entry written
-- [ ] At least one independent reviewer signs off
+- [x] Spec changes per §3 merged (NWP §12 + AaaS-Profile L2-08 + Node-L2 conformance suite)
+- [x] .NET SDK types per §4 implemented and tested (`NPS.NWP.Anchor.Topology` + `NPS.NWP.Anchor.Client.AnchorNodeClient`)
+- [x] L2 conformance tests per §5 passing on the `NPS.NWP.Anchor` reference Anchor Node implementation (10/10 in `tests/NPS.Tests/Nwp/Anchor/AnchorTopologyTests.cs` — 7 TC-N2-* cases + 3 negative path cases)
+- [ ] L2 conformance tests passing on the `nps-daemon` Anchor Node implementation — **deferred**: npsd today is `node_type: "memory"`; promoting it (or adding a sibling Anchor daemon) is tracked as follow-up work
+- [ ] `nps-starmap` demo successfully renders a snapshot and updates from stream events — **deferred**: out-of-tree project; the wire contract it consumes is now stable
+- [x] CHANGELOG entry written (v1.0-alpha.4 unreleased section)
+- [ ] At least one independent reviewer signs off — **pending PR review**
 
 ## 9. CHANGELOG entry (proposed)
 
@@ -300,3 +304,47 @@ Add to `conformance/L2-test/`:
 2. **Should `member_updated` events carry the full member object or only the diff?** — Diff is bandwidth-efficient but pushes reassembly complexity to clients. Default proposal: diff (`changes` object), with field-level granularity.
 
 3. **Should there be a separate `topology.health` query for liveness/metrics, or fold into snapshot's `metrics` include?** — Folded means one fewer query type. Separate means health queries can have different cache / push semantics. Default proposal: fold into `metrics`, revisit if real consumers complain.
+
+---
+
+## 11. Implementation Notes
+
+This section was added 2026-04-27 when the CR was flipped to **Implemented**. It records what shipped, what was deliberately reduced in scope, and the open OQ resolutions that became implementation defaults.
+
+### 11.1 OQ resolutions
+
+All three OQ defaults from §10 were accepted at the author's recommendation:
+
+1. **OQ-1 — sub-Anchor recursion at depth ≥ 2 is OPTIONAL at L2.** §12.1 of the spec records "clients SHOULD recurse manually by issuing one snapshot per sub-Anchor." `InMemoryAnchorTopologyService` does not implement depth-2+ recursion; it returns `truncated = false` because at depth 1 the cap is never exceeded. A future implementation MAY add recursion without re-opening this CR.
+2. **OQ-2 — `member_updated` carries `changes` (field-level diff), not the full member object.** Encoded by the typed `MemberChanges` record on the .NET side and the `payload.changes` schema in §12.2 on the wire side. The diff is computed in `InMemoryAnchorTopologyService.DiffMembers`.
+3. **OQ-3 — health/metrics fold into snapshot's `metrics` include rather than getting their own query type.** No separate `topology.health` is reserved; `topology.include = ["metrics"]` is the documented hook. Schema of the `metrics` payload remains implementation-defined per §12.4.
+
+### 11.2 What landed in this PR
+
+**Spec**:
+- `spec/NPS-2-NWP.md` (+`.cn.md`) v0.7 → v0.8: new §12 Reserved Query Types; §6.1 / §8.1 `type` field; §8.2 `event_type` extension; new error codes; new §14.7 Topology Read-back security section; sections renumbered §12→§13 / §13→§14 / §14→§15.
+- `spec/services/NPS-AaaS-Profile.md` (+`.cn.md`) v0.3 → v0.4: §4.3 L2-08 row; §2 placeholder removed; §6 NWP version bumped.
+- `spec/services/conformance/NPS-Node-L2.md` (+`.cn.md`) v0.1: 7 `TC-N2-*` test cases.
+- `spec/services/conformance/NPS-NODE-L2-CERTIFIED.md` v0.1: self-attestation template (mirrors L1 layout).
+- `CHANGELOG.md` (+`.cn.md`): new v1.0-alpha.4 unreleased section.
+
+**.NET reference implementation** (in `impl/dotnet/src/NPS.NWP.Anchor`):
+- `Topology/TopologyTypes.cs` — public records (`TopologySnapshot` / `MemberInfo` / `TopologyEvent` hierarchy / `TopologyFilter`).
+- `Topology/IAnchorTopologyService.cs` — server contract.
+- `Topology/InMemoryAnchorTopologyService.cs` — reference implementation: thread-safe member map, monotonic version counter, ring buffer (default 256 events), `RebaseVersion(...)` for restart-and-rebase, `Channel<T>`-based fan-out.
+- `Topology/NwpTopologyErrorCodes.cs` — `NWP-TOPOLOGY-*` constants + `TopologyProtocolException`.
+- `AnchorNodeMiddleware.cs` — extended with `/query` (type=topology.snapshot) and `/subscribe` (type=topology.stream) routing; topology service resolved from DI (optional).
+- `AnchorServiceExtensions.cs` — new `AddInMemoryAnchorTopology(...)` helper.
+- `Client/AnchorNodeClient.cs` — typed client over `HttpClient`: `GetSnapshotAsync(...)` + `IAsyncEnumerable<TopologyEvent> SubscribeAsync(...)`; NDJSON wire transport for the stream.
+
+**Tests** (in `impl/dotnet/tests/NPS.Tests/Nwp/Anchor/AnchorTopologyTests.cs`):
+- 7 tests mapping 1:1 to `TC-N2-AnchorTopo-01..03` + `TC-N2-AnchorStream-01..04`.
+- 3 negative-path tests covering `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`, `NWP-TOPOLOGY-FILTER-UNSUPPORTED`, and unknown reserved-type rejection.
+- All 10 pass; full suite remains 602/602 green.
+
+### 11.3 Deferred work (tracked as follow-up)
+
+- **`nps-daemon` Anchor adoption.** `tools/daemons/npsd/` today is `node_type: "memory"`. Two possible paths: (a) extend npsd with an Anchor mode behind a config switch, (b) introduce a separate `nps-anchord` daemon. Either way the integration is mechanical now that `IAnchorTopologyService` + `AddInMemoryAnchorTopology(...)` exist; it is deferred to a follow-up branch to keep this PR's blast radius proportionate to the wire-contract change.
+- **`nps-starmap` demo.** Out-of-tree LabAcacia project; will be wired up against this CR's contract once npsd Anchor mode lands.
+- **Multi-language SDK clients.** The Python / TypeScript / Java / Rust / Go SDKs do not yet implement `AnchorNodeClient`. Each is a self-contained port and is tracked alongside their existing publish cadences (per `MEMORY.md` "npsd publish lag at alpha.3" item).
+- **Authorization model** for `NWP-TOPOLOGY-UNAUTHORIZED` (§12.4 / §3.5 OQ "out of scope"). The error code is wired; the policy is not. Will land in a NeuronHub-driven follow-up CR.

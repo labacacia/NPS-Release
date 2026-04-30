@@ -2,7 +2,7 @@ English | [中文版](./README.cn.md)
 
 # Neural Protocol Suite (NPS) — Protocol Specification
 
-> **Version:** 1.0.0-alpha.3 | **Status:** Proposed | **License:** Apache 2.0
+> **Version:** 1.0.0-alpha.4 | **Status:** Proposed | **License:** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 
