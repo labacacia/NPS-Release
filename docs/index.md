@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — a complete internet protocol stack purpose-built for AI agents and neural models.
 >
-> Version 1.0.0-alpha.3 · Apache 2.0 · [中文版](index.cn.md)
+> Version 1.0.0-alpha.4 · Apache 2.0 · [中文版](index.cn.md)
 
 ---
 
@@ -32,22 +32,22 @@ NPS solves all four **at the wire level**:
 
 ```bash
 # Python
-pip install nps-lib==1.0.0a2
+pip install nps-lib==1.0.0a4
 
 # TypeScript
-npm install @labacacia/nps-sdk@1.0.0-alpha.3
+npm install @labacacia/nps-sdk@1.0.0-alpha.4
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.3
+cargo add nps-sdk@=1.0.0-alpha.4
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.3
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.4
 
 # Java (Gradle)
-implementation("com.labacacia:nps-sdk:1.0.0-alpha.3")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.4")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.3
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.4
 ```
 
 ---
@@ -63,7 +63,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.3
 
 ## Status
 
-**v1.0.0-alpha.3** — Phase 1 / Phase 2 synchronized release. All 11 spec documents at `Proposed` (NCP v0.6, NWP v0.7, NIP v0.5, NDP v0.5, NOP v0.4). Reference implementations in **.NET**, **Python**, **TypeScript**, **Java**, **Rust**, **Go** — full NCP + NWP + NIP + NDP + NOP coverage. **NIP CA Server** is now released as a standalone repo at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server). **NPS Daemons** (`npsd` + `nps-runner` + `nps-gateway` + `nps-registry` — Layer 1 + Layer 2 of the standard topology) ship together as a bundle at [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons). Layer-3 trust-anchor daemons (`nps-cloud-ca`, `nps-ledger`) are private under the `innolotus` org and ship publicly with NPS Cloud GA (2027 Q1+).
+**v1.0.0-alpha.4** — Phase 1 / Phase 2 synchronized release. Spec at NCP v0.6, NWP v0.8, NIP v0.5, NDP v0.5, NOP v0.4 (NWP §12 reserves Anchor Node `topology.snapshot` / `topology.stream` query types per NPS-CR-0002). Reference implementations in **.NET**, **Python**, **TypeScript**, **Java**, **Rust**, **Go** — full NCP + NWP + NIP + NDP + NOP coverage, with NPS-RFC-0001 Phase 2 (NCP preamble runtime) and NPS-RFC-0002 Phase A/B (X.509 NID certs + ACME `agent-01`) shipped across all six SDKs. **NIP CA Server** at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server). **NPS Daemons** bundle (`npsd` + `nps-runner` + `nps-gateway` + `nps-registry`) at [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons), with `nps-registry` shipping the SQLite-backed real registry and `nps-ledger` (private) shipping Phase 2 (RFC 9162 Merkle + STH + inclusion proofs). Layer-3 trust-anchor daemons (`nps-cloud-ca`, `nps-ledger`) are private under the `innolotus` org and ship publicly with NPS Cloud GA (2027 Q1+).
 
 ---
 
