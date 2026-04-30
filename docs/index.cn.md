@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — 为 AI Agent 和神经模型量身设计的完整互联网协议栈。
 >
-> 1.0.0-alpha.3 · · Apache 2.0 · [English](index.md)
+> 1.0.0-alpha.4 · · Apache 2.0 · [English](index.md)
 
 ---
 
@@ -32,22 +32,22 @@ NPS 在**协议层面**同时解决这四个问题：
 
 ```bash
 # Python
-pip install nps-lib==1.0.0a2
+pip install nps-lib==1.0.0a4
 
 # TypeScript
-npm install @labacacia/nps-sdk@1.0.0-alpha.3
+npm install @labacacia/nps-sdk@1.0.0-alpha.4
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.3
+cargo add nps-sdk@=1.0.0-alpha.4
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.3
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.4
 
 # Java (Gradle)
-implementation("com.labacacia:nps-sdk:1.0.0-alpha.3")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.4")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.3
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.4
 ```
 
 ---
@@ -63,7 +63,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.3
 
 ## 状态
 
-**v1.0.0-alpha.3** — Phase 1 release。五大子协议全部完成 v0.2+ 草案。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。**NIP CA Server** 拆出独立发布仓 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons**（`npsd` + `nps-runner` + `nps-gateway` + `nps-registry` —— 标准三层中的 Layer 1 + Layer 2）打成一个 bundle 仓 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons) 发布。Layer-3 信任锚 daemon（`nps-cloud-ca`、`nps-ledger`）在 `innolotus` 组织私有，跟 NPS Cloud GA 一起公开（2027 Q1+）。
+**v1.0.0-alpha.4** — Phase 1 / Phase 2 同步发布。规范：NCP v0.6、NWP v0.8、NIP v0.5、NDP v0.5、NOP v0.4（NWP §12 按 NPS-CR-0002 保留 Anchor Node `topology.snapshot` / `topology.stream` 查询类型）。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP，并跨 SDK 完成 NPS-RFC-0001 Phase 2（NCP preamble 运行时）与 NPS-RFC-0002 Phase A/B（X.509 NID 证书 + ACME `agent-01`）。**NIP CA Server** 在 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-gateway` + `nps-registry`）在 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)，本次 `nps-registry` 交付 SQLite 实仓注册表，`nps-ledger`（私有）交付 Phase 2（RFC 9162 Merkle 树 + STH + inclusion proof）。Layer-3 信任锚 daemon（`nps-cloud-ca`、`nps-ledger`）在 `innolotus` 组织私有，跟 NPS Cloud GA 一起公开（2027 Q1+）。
 
 ---
 
