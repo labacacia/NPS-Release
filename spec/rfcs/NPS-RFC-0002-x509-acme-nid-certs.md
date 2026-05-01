@@ -184,8 +184,10 @@ Client (Agent)                 ACME Server (NIP CA)
 
 The `agent-01` challenge proves possession of the NID private key in a
 way that mirrors TLS-ALPN-01's simplicity: one signed token, no external
-DNS / HTTP dependency. Servers MUST implement timing-safe comparison per
-`spec/NPS-3-NIP.md §10.2`.
+DNS / HTTP dependency. Servers MUST implement constant-time (timing-safe) comparison when
+verifying the signed challenge token against the expected value, to prevent
+timing-oracle attacks on the NID private key. (NIP §10.2 covers a distinct
+concern — OCSP response-time normalization — and does not apply here.)
 
 ### 4.5 Backward Compatibility
 

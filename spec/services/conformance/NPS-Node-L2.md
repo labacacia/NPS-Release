@@ -3,8 +3,8 @@ English | [中文版](./NPS-Node-L2.cn.md)
 # NPS-Node-L2 Conformance Suite
 
 **Status**: Draft
-**Version**: 0.1
-**Date**: 2026-04-27
+**Version**: 0.2
+**Date**: 2026-05-01
 **Applies-To**: [NPS-AaaS-Profile §4.3](../NPS-AaaS-Profile.md) — Level 2 Standard
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
 
@@ -66,7 +66,9 @@ the fixture, the actions, and the acceptance criteria.
 ### 3.1 Anchor Topology — `topology.snapshot` / `topology.stream`
 
 These cases validate L2-08: implementation of the reserved query types defined in
-[NPS-2 §12](../../NPS-2-NWP.md). All seven cases MUST pass for L2-08 to be claimed.
+[NPS-2 §12](../../NPS-2-NWP.md). All twelve cases MUST pass for L2-08 to be claimed:
+TC-N2-AnchorTopo-01 through TC-N2-AnchorStream-04 cover happy paths; TC-N2-AnchorTopo-04
+through TC-N2-AnchorTopo-08 cover required negative paths (one MUST-reject per error code).
 
 #### TC-N2-AnchorTopo-01 — Snapshot of a 3-member cluster
 **Req**: L2-08 (`topology.snapshot`)
@@ -81,7 +83,7 @@ These cases validate L2-08: implementation of the reserved query types defined i
 - IUT responds with a `CapsFrame` carrying `anchor_ref = "nps:system:topology:snapshot"`.
 - Response payload `cluster_size` equals 3.
 - Response payload `members` lists exactly the three NIDs `M1`, `M2`, `M3` in some order.
-- Each member object carries `nid`, `node_kind`, `activation_mode`.
+- Each member object carries `nid`, `node_roles`, `activation_mode`.
 - `version` is a positive integer.
 - Response includes the IUT's NID as `anchor_nid`.
 
@@ -102,7 +104,7 @@ These cases validate L2-08: implementation of the reserved query types defined i
 **Req**: L2-08 (sub-Anchor member representation, [NPS-2 §12.1](../../NPS-2-NWP.md))
 **Fixture**: IUT acting as Anchor; peer-simulated child Anchor `CA` with 2 of its own members.
 **Action**:
-1. Peer announces child Anchor `CA` to the IUT — `node_kind = ["anchor"]`, `cluster_anchor` = IUT NID, with metadata indicating `CA` itself has 2 members.
+1. Peer announces child Anchor `CA` to the IUT — `node_roles = ["anchor"]`, `cluster_anchor` = IUT NID, with metadata indicating `CA` itself has 2 members.
 2. Peer takes a snapshot of the IUT with default `topology.depth = 1`.
 **Pass**:
 - The member object for `CA` carries `child_anchor: true`.
@@ -146,6 +148,54 @@ These cases validate L2-08: implementation of the reserved query types defined i
 - No event for `M1` is replayed (its `seq = V1` is the boundary; replay starts strictly after).
 - No `resync_required` event is emitted.
 
+#### TC-N2-AnchorTopo-04 — Unauthorized topology access (missing `topology:read`) → `NWP-TOPOLOGY-UNAUTHORIZED`
+**Req**: L2-08 (authorization gate, [NPS-2 §12.4](../../NPS-2-NWP.md); M6)
+**Fixture**: IUT acting as Anchor with one announced member.
+**Action**:
+1. Peer presents an IdentFrame **without** `topology:read` in `capabilities` (all other required capabilities present).
+2. Peer sends a `QueryFrame` with `type = "topology.snapshot"`.
+**Pass**:
+- IUT responds with an `ErrorFrame` carrying error code `NWP-TOPOLOGY-UNAUTHORIZED`.
+- IUT does NOT return any snapshot payload or partial membership data.
+- IUT does NOT silently drop the request — an error response MUST be sent.
+
+#### TC-N2-AnchorTopo-05 — Depth cap exceeded → `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`
+**Req**: L2-08 (depth enforcement, [NPS-2 §12.1](../../NPS-2-NWP.md))
+**Fixture**: IUT acting as Anchor, with its maximum `topology.depth` documented or configurable for the test; use `max_depth = 3` if not otherwise specified.
+**Action**:
+1. Peer (with `topology:read`) sends a `QueryFrame` with `type = "topology.snapshot"` and `topology.depth = max_depth + 1` (e.g. `4` for `max_depth = 3`).
+**Pass**:
+- IUT responds with an `ErrorFrame` carrying error code `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`.
+- IUT does NOT silently truncate or return a partial snapshot without an error.
+
+#### TC-N2-AnchorTopo-06 — Unrecognized `topology.scope` value → `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`
+**Req**: L2-08 (scope validation, [NPS-2 §12.1](../../NPS-2-NWP.md))
+**Fixture**: IUT acting as Anchor with one announced member.
+**Action**:
+1. Peer (with `topology:read`) sends a `QueryFrame` with `type = "topology.snapshot"` and `topology.scope = "nonexistent_scope"`.
+**Pass**:
+- IUT responds with an `ErrorFrame` carrying error code `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`.
+- IUT does NOT silently fall back to a default scope and return data.
+
+#### TC-N2-AnchorTopo-07 — Unrecognized `topology.filter` key → `NWP-TOPOLOGY-FILTER-UNSUPPORTED`
+**Req**: L2-08 (filter key validation, [NPS-2 §12.1](../../NPS-2-NWP.md))
+**Fixture**: IUT acting as Anchor with one announced member.
+**Action**:
+1. Peer (with `topology:read`) sends a `QueryFrame` with `type = "topology.snapshot"` and `topology.filter = { "nonexistent_key": "value" }`.
+**Pass**:
+- IUT responds with an `ErrorFrame` carrying error code `NWP-TOPOLOGY-FILTER-UNSUPPORTED`.
+- IUT does NOT silently ignore the unknown key and return unfiltered data.
+
+#### TC-N2-AnchorTopo-08 — Unrecognized reserved `type` value → `NWP-RESERVED-TYPE-UNSUPPORTED`
+**Req**: L2-08 (reserved-type validation, [NPS-2 §12](../../NPS-2-NWP.md); M4)
+**Fixture**: IUT acting as Anchor.
+**Action**:
+1. Peer (with `topology:read`) sends a `QueryFrame` with `type = "topology.nonexistent_operation"`.
+**Pass**:
+- IUT responds with an `ErrorFrame` carrying error code `NWP-RESERVED-TYPE-UNSUPPORTED`.
+- IUT does NOT respond with `NWP-ACTION-NOT-FOUND` (these codes are explicitly distinct — see NPS-2 §13).
+- IUT does NOT silently ignore the unknown type.
+
 #### TC-N2-AnchorStream-04 — `resync_required` when version is too old
 **Req**: L2-08 (`resync_required` semantics, [NPS-2 §12.2](../../NPS-2-NWP.md))
 **Fixture**: IUT acting as Anchor with retention buffer configured to 5 events.
@@ -186,16 +236,21 @@ manifest is embedded into [`NPS-NODE-L2-CERTIFIED.md`](./NPS-NODE-L2-CERTIFIED.m
     { "id": "TC-N2-AnchorTopo-01", "result": "pass" },
     { "id": "TC-N2-AnchorTopo-02", "result": "pass" },
     { "id": "TC-N2-AnchorTopo-03", "result": "pass" },
+    { "id": "TC-N2-AnchorTopo-04", "result": "pass" },
+    { "id": "TC-N2-AnchorTopo-05", "result": "pass" },
+    { "id": "TC-N2-AnchorTopo-06", "result": "pass" },
+    { "id": "TC-N2-AnchorTopo-07", "result": "pass" },
+    { "id": "TC-N2-AnchorTopo-08", "result": "pass" },
     { "id": "TC-N2-AnchorStream-01", "result": "pass" },
     { "id": "TC-N2-AnchorStream-02", "result": "pass" },
     { "id": "TC-N2-AnchorStream-03", "result": "pass" },
     { "id": "TC-N2-AnchorStream-04", "result": "pass" }
   ],
-  "summary": { "pass": 7, "fail": 0, "skip": 0, "na": 0 }
+  "summary": { "pass": 12, "fail": 0, "skip": 0, "na": 0 }
 }
 ```
 
-Certification of L2-08 is granted when **all 7 cases are `pass`**. There are no
+Certification of L2-08 is granted when **all 12 cases are `pass`**. There are no
 optional cases at this scope; an Anchor Node either implements `topology.snapshot`
 and `topology.stream` per [NPS-2 §12](../../NPS-2-NWP.md) or it does not.
 
@@ -221,6 +276,7 @@ test-run report maps 1:1 onto the §4 manifest.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2 | 2026-05-01 | Added 5 negative-path test cases (TC-N2-AnchorTopo-04 through -08) to enforce the "every MUST-reject clause has a failure-path TC" standard: unauthorized access (M6 capability gate, `NWP-TOPOLOGY-UNAUTHORIZED`), depth cap exceeded (`NWP-TOPOLOGY-DEPTH-UNSUPPORTED`), unrecognized scope (`NWP-TOPOLOGY-UNSUPPORTED-SCOPE`), unrecognized filter key (`NWP-TOPOLOGY-FILTER-UNSUPPORTED`), unrecognized reserved type (`NWP-RESERVED-TYPE-UNSUPPORTED`). Total cases: 7 → 12. Fixed `node_kind` → `node_roles` in TC-N2-AnchorTopo-01 and -03 (M1 consistency). |
 | 0.1 | 2026-04-27 | Initial draft: 7 test cases covering L2-08 (`topology.snapshot` / `topology.stream`) per [NPS-CR-0002](../../cr/NPS-CR-0002-anchor-topology-queries.md). Paired-peer methodology inherited from L1. |
 
 ---

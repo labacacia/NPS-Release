@@ -2,8 +2,8 @@ English | [中文版](./token-budget.cn.md)
 
 # NPS Token Budget Specification
 
-**Version**: 0.2  
-**Date**: 2026-04-19  
+**Version**: 0.3  
+**Date**: 2026-05-01  
 
 ---
 
@@ -135,6 +135,31 @@ The `token_est` field in a CapsFrame is in NPT:
 - The exchange-rate table should be hot-reloadable configuration, not hard-coded.
 - For high-frequency scenarios, token estimation MAY be sampled rather than computed record-by-record.
 - NPT values are always uint32 — maximum 4,294,967,295.
+
+---
+
+## 7. Streaming and Subscription Budget Policy
+
+The `X-NWP-Budget` cap applies to **synchronous request/response operations** (QueryFrame → CapsFrame / StreamFrame batch). The following continuous-push operations are subject to modified rules:
+
+### 7.1 Streaming Queries (QueryFrame `stream: true`)
+
+- `X-NWP-Budget` applies **per StreamFrame batch**, not to the total stream.
+- The node MUST trim or stop the batch if processing that batch would exceed the declared budget.
+- `X-NWP-Tokens` in the response header reports the NPT consumed by the current batch only.
+- The Agent MAY choose to disconnect early once its cumulative budget is exhausted.
+
+### 7.2 SubscribeFrame / Push Streams (topology.stream, event subscriptions)
+
+Long-running push streams (e.g. `topology.stream` via SubscribeFrame) represent an ongoing series of events with no fixed response size. Budget semantics differ:
+
+| Aspect | Behavior |
+|--------|----------|
+| `X-NWP-Budget` enforcement | Not applied by the node; push events are generated independently of any per-request budget cap |
+| `X-NWP-Tokens` reporting | The node SHOULD include this header on each push event (DiffFrame) reporting the NPT for that event's payload |
+| Agent-side enforcement | The Agent is responsible for tracking cumulative NPT across events and disconnecting when its session budget is exhausted |
+
+> **Rationale**: Enforcing `X-NWP-Budget` on push streams would require the node to buffer future events, which is incompatible with real-time topology change delivery. Agent-side enforcement is the correct locus for subscription-stream budget control.
 
 ---
 

@@ -4,11 +4,11 @@ English | [中文版](./NPS-2-NWP.cn.md)
 
 **Spec Number**: NPS-2  
 **Status**: Proposed  
-**Version**: 0.8  
-**Date**: 2026-04-27  
+**Version**: 0.10  
+**Date**: 2026-05-01  
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
-**Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.4), NPS-4 (NDP v0.5)  
+**Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6)  
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -34,7 +34,7 @@ NWP defines how AI Agents access web data and services. Agents use `nwp://` addr
 | **Anchor Node** | Cluster control plane and external entry point — routes inbound NWP `Action`/`Query` frames to member nodes via NOP, optionally maintains member-node topology | AaaS platforms, multi-agent service gateways, sub-cluster routers |
 | **Bridge Node** | Translates between NPS frames and non-NPS protocols (HTTP/HTTPS, gRPC, MCP, A2A) | Calls to legacy REST APIs, gRPC services, Model Context Protocol servers, Agent-to-Agent endpoints |
 
-A node MAY simultaneously carry more than one role (for example, a single deployment can be both a Memory Node and an Anchor Node when role separation is unnecessary). Multi-role declaration travels in the NDP `Announce` frame's `node_kind` field, which accepts either a single string or an array of strings (NPS-4 §3.1).
+A node MAY simultaneously carry more than one role (for example, a single deployment can be both a Memory Node and an Anchor Node when role separation is unnecessary). Multi-role declaration travels in the NDP `Announce` frame's `node_roles` field (NPS-4 §3.1).
 
 > **Anchor Node** and **Bridge Node** were introduced together by [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md), replacing the original `Gateway Node` type:
 > - **Anchor Node** inherits the cluster-entry / NOP-routing role that Gateway Node was carrying. It is stateless per request but MAY maintain a long-lived registry of member nodes.
@@ -43,7 +43,20 @@ A node MAY simultaneously carry more than one role (for example, a single deploy
 
 #### Removed types
 
-> **Gateway Node** (removed in v1.0-alpha.3) — Split into **Anchor Node** (cluster entry / NOP routing) and **Bridge Node** (NPS↔non-NPS protocol translation). See [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md) for full rationale and migration notes. Implementations MUST reject the legacy `node_type: "gateway"` and `node_kind: "gateway"` wire values; SDKs SHOULD surface a one-shot deprecation message naming the CR before failing.
+> **Gateway Node** (removed in v1.0-alpha.3) — Split into **Anchor Node** (cluster entry / NOP routing) and **Bridge Node** (NPS↔non-NPS protocol translation). See [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md) for full rationale and migration notes. Implementations MUST reject the legacy `node_type: "gateway"` with `NWP-MANIFEST-NODE-TYPE-REMOVED` and the legacy `node_roles: ["gateway"]` (or legacy `node_kind: "gateway"`) with `NDP-ANNOUNCE-ROLE-REMOVED`; response SHOULD include a `hint` pointing to NPS-CR-0001.
+
+#### Node Role Resolution
+
+Two fields participate in node-role declaration at different protocol layers. They are intentionally distinct in name and semantics:
+
+| Field | Protocol | Layer | Cardinality | Authoritative for |
+|-------|----------|-------|-------------|-------------------|
+| `node_roles` | NDP `Announce` (NPS-4 §3.1) | Discovery | Array — all roles the node carries | Full role set; used for discovery filtering and cluster membership |
+| `node_type` | NWP NWM (§4.1) | Service | String — single operative role | Which role this particular `/.nwm` endpoint is serving |
+
+**Constraint**: `node_type` MUST be one of the values declared in the node's `node_roles`. Validators SHOULD verify this against cached NDP `Announce` data when available.
+
+Multi-role nodes (e.g., `node_roles: ["anchor", "memory"]`) MAY expose separate `/.nwm` endpoints on different paths or ports, each advertising a different `node_type`; or may choose a single dominant `node_type` matching the primary role served at that endpoint. In either case the constraint holds: `node_type ∈ node_roles`.
 
 #### Anchor Node — detailed semantics
 
@@ -128,7 +141,7 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 |-------|------|----------|-------------|
 | `nwp` | string | Required | NWP version, currently `"0.4"` |
 | `node_id` | string | Required | Node NID, format: `urn:nps:node:{host}:{path}` |
-| `node_type` | string | Required | `"memory"` / `"action"` / `"complex"` / `"anchor"` / `"bridge"`. The legacy value `"gateway"` was removed in v1.0-alpha.3 (see §2.1 *Removed types* and [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)); parsers MUST reject it. For nodes that simultaneously carry multiple roles, declare them in NDP `Announce.node_kind` (NPS-4 §3.1) — `node_type` here remains the **primary** role advertised on `/.nwm`. |
+| `node_type` | string | Required | `"memory"` / `"action"` / `"complex"` / `"anchor"` / `"bridge"`. The legacy value `"gateway"` was removed in v1.0-alpha.3 (see §2.1 *Removed types* and [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)); parsers MUST reject it with `NWP-MANIFEST-NODE-TYPE-REMOVED`. Any other unrecognized value MUST be rejected with `NWP-MANIFEST-NODE-TYPE-UNKNOWN`. This field declares the **operative role** this NWP service endpoint is serving — it MUST be one of the values in the node's NDP `Announce.node_roles` (NPS-4 §3.1). For multi-role nodes, `node_type` selects which role is active at this endpoint; see §2.1 *Node Role Resolution* for the full constraint. |
 | `display_name` | string | Optional | Human-readable node name |
 | `manifest_version` | string | Optional | Manifest version identifier (ETag), for conditional request cache control |
 | `min_agent_version` | string | Optional | Minimum NPS version the Agent must support, format `"major.minor"`; Agents below this version MUST be rejected with `NWP-MANIFEST-VERSION-UNSUPPORTED` |
@@ -438,7 +451,7 @@ For streaming queries, the first frame (seq=0) SHOULD include metadata:
 **Pagination vs. Streaming**
 
 - Streaming queries do not use `cursor`; records are pushed continuously per `order` until `limit × frames` or full push completes
-- To terminate early, the Agent sends a SubscribeFrame (`action="unsubscribe"`, `stream_id` equals QueryFrame's `request_id`) or disconnects
+- To terminate early, the Agent sends a SubscribeFrame (`action="unsubscribe"`, `stream_id` equals QueryFrame's `request_id`) or disconnects. **Note**: reusing SubscribeFrame for streaming-query cancellation is intentional — it is the protocol-wide stream-cancellation signal; nodes route it by `stream_id` regardless of whether the stream originated from a QueryFrame or a SubscribeFrame.
 - The node MUST stop pushing after the connection is closed
 
 ### 6.7 Aggregation Queries
@@ -813,7 +826,7 @@ The `type` field on `QueryFrame` (§6.1) and `SubscribeFrame` (§8.1) opts a req
 
 When `type` is absent, default per-anchor query/subscribe semantics apply (§6, §8). When `type` is set, the per-type fields documented below apply and any conflicting standard fields (e.g. `anchor_ref`, top-level `filter`) are ignored unless the per-type schema explicitly carries them.
 
-Implementations that do not recognize a reserved `type` value MUST reject the request with `NWP-ACTION-NOT-FOUND` (for QueryFrame) or `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` (for SubscribeFrame) so the caller can fall back to default behavior or fail explicitly.
+Implementations that do not recognize a reserved `type` value MUST reject the request with `NWP-RESERVED-TYPE-UNSUPPORTED` (§13) so the caller can distinguish "unknown reserved operation" from "action_id not found" (`NWP-ACTION-NOT-FOUND`) and fall back or fail explicitly.
 
 ### 12.1 `topology.snapshot`
 
@@ -851,7 +864,7 @@ Single-shot retrieval of an Anchor Node's cluster topology.
     "members": [
       {
         "nid": "urn:nps:agent:labacacia:host-abc123-sess-aaa",
-        "node_kind": ["memory"],
+        "node_roles": ["memory"],
         "activation_mode": "ephemeral",
         "tags": ["dev", "library"],
         "joined_at": "2026-04-15T10:23:00Z",
@@ -859,7 +872,7 @@ Single-shot retrieval of an Anchor Node's cluster topology.
       },
       {
         "nid": "urn:nps:node:labacacia:host-def456",
-        "node_kind": ["anchor"],
+        "node_roles": ["anchor"],
         "activation_mode": "resident",
         "child_anchor": true,
         "member_count": 7,
@@ -886,7 +899,7 @@ Single-shot retrieval of an Anchor Node's cluster topology.
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `nid` | string | Required | Member NID |
-| `node_kind` | array of strings | Required | NDP `node_kind` flags (NPS-4 §3.1) |
+| `node_roles` | array of strings | Required | NDP `node_roles` — the full role set declared by this member (NPS-4 §3.1) |
 | `activation_mode` | string | Required | NDP `activation_mode` — one of `ephemeral` / `resident` / `hybrid` (NPS-4) |
 | `child_anchor` | bool | Optional | True if this member is itself an Anchor Node of a sub-cluster; implies `member_count` |
 | `member_count` | uint32 | Conditionally Required | Required when `child_anchor = true`; count of the sub-Anchor's direct members |
@@ -913,7 +926,7 @@ Continuous topology change feed for an Anchor Node's cluster.
 | `type` | string | Required | Constant `"topology.stream"` |
 | `topology` | object | Required | Container for topology-specific parameters per below |
 | `topology.scope` | string | Required | `"cluster"` (default for Anchor's own cluster); future scopes reserved |
-| `topology.filter` | object | Optional | Reduces event volume. Supported keys: `tags_any` (array, match-any), `tags_all` (array, match-all), `node_kind` (array). Anchor Nodes MUST reject unsupported filter keys with `NWP-TOPOLOGY-FILTER-UNSUPPORTED` |
+| `topology.filter` | object | Optional | Reduces event volume. Supported keys: `tags_any` (array, match-any), `tags_all` (array, match-all), `node_roles` (array — filter by role, matches members whose `node_roles` intersects the given values). Anchor Nodes MUST reject unsupported filter keys with `NWP-TOPOLOGY-FILTER-UNSUPPORTED` |
 | `topology.since_version` | uint64 | Optional | Resume from a previous version. Anchor Node MUST replay missed events when feasible; if the version is outside the retention window, MUST emit a `resync_required` event and the client MUST issue a fresh `topology.snapshot` |
 
 For `type = "topology.stream"`, `topology.since_version` is the topology-scoped synonym of `SubscribeFrame.resume_from_seq` (§8.1). When both fields are present, `topology.since_version` takes precedence.
@@ -950,7 +963,13 @@ Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "un
 
 - **Capability and metric schema standardization**: §12.1's `capabilities` and `metrics` field schemas are implementation-defined; standardization is deferred to a follow-up CR once enough implementations exist.
 - **Cross-cluster federation queries**: Querying topology across multiple Anchor Nodes is an NPS-AaaS Profile L3 / NPS Cloud concern. This section is single-Anchor only.
-- **Authorization model**: `NWP-TOPOLOGY-UNAUTHORIZED` is reserved as the wire-level signal but the policy that produces it is deferred to a follow-up CR (NeuronHub commercial deployment driver).
+- **Authorization model — minimum binding (Phase 1–2)**: Anchor Nodes MUST enforce the following minimum before serving any `topology.*` request:
+
+  1. **Capability gate**: The requesting NID MUST declare `topology:read` in `IdentFrame.capabilities` (NPS-3 §5.1); absent capability MUST produce `NWP-TOPOLOGY-UNAUTHORIZED`. The IdentFrame is signed by the requester's private key, so the claim is integrity-protected but self-declared — it is not CA-attested at Phase 1–2.
+  2. **NDP role cross-check (defense-in-depth)**: The Anchor SHOULD additionally verify that the requester's last received `AnnounceFrame` (within TTL) declares `node_roles` containing `"anchor"`. A mismatch SHOULD produce `NWP-TOPOLOGY-UNAUTHORIZED` with a `hint`. An absent `AnnounceFrame` MUST NOT block a requester that has passed the capability gate.
+  3. **Phase 3 [RFC-0002 stable]**: Anchors SHOULD additionally verify a CA-attested `id-nps-node-roles` cert extension (to be defined in a follow-up RFC-0002 amendment) to close the self-declaration gap and bind the role claim to a CA-issued certificate.
+
+  Fine-grained per-cluster namespace or ACL policies remain implementation-defined and are tracked for a follow-up CR.
 - **Browser transport (WebSocket)**: Whether `npsd` exposes a WebSocket endpoint for browser clients is tracked separately. Topology query semantics here are transport-independent.
 
 ---
@@ -991,7 +1010,10 @@ Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "un
 | `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | Node graph contains a circular reference |
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | Underlying data source temporarily unavailable |
 | `NWP-MANIFEST-VERSION-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Agent NPS version is below the node's min_agent_version |
+| `NWP-MANIFEST-NODE-TYPE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` contains the removed legacy value `"gateway"` (NPS-CR-0001); response SHOULD include a `hint` pointing to NPS-CR-0001 |
+| `NWP-MANIFEST-NODE-TYPE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` contains an unrecognized value (see `NWP-MANIFEST-NODE-TYPE-REMOVED` for the `"gateway"` case) |
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | Rate limit exceeded |
+| `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | `QueryFrame` or `SubscribeFrame` `type` is an unrecognized reserved-type identifier (§12). Distinct from `NWP-ACTION-NOT-FOUND` — the unknown operand is `type`, not `action_id`. |
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | Caller lacks permission to read this Anchor's topology (§12). Authorization policy is implementation-defined per §12.4 |
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` value is not implemented by this Anchor |
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Requested `topology.depth` exceeds this Anchor's maximum |
@@ -1024,7 +1046,7 @@ Nodes SHOULD enforce per-Agent NID rate limiting. On limit exceeded, return `NWP
 - Nodes SHOULD apply exponential backoff retries for failed callback deliveries (max 3 attempts), then abandon and mark the task as `COMPLETED` rather than retrying indefinitely
 
 ### 14.7 Topology Read-back
-Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stream` as authenticated surfaces. Until the authorization model is standardized (§12.4), implementations MUST at minimum require `auth.required = true` at L2 and SHOULD restrict topology access to NIDs whose declared `node_kind` includes `anchor` or whose Agent scope explicitly grants `topology:read`. Unauthorized callers MUST receive `NWP-TOPOLOGY-UNAUTHORIZED` rather than silent empty responses to prevent oracle attacks against cluster membership.
+Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stream` as authenticated surfaces. The minimum authorization binding is defined in §12.4: at Phase 1–2, the requesting NID MUST declare `topology:read` in `IdentFrame.capabilities` (primary gate); NDP `node_roles` cross-check is a defense-in-depth SHOULD. Unauthorized callers MUST receive `NWP-TOPOLOGY-UNAUTHORIZED` rather than silent empty responses to prevent oracle attacks against cluster membership.
 
 ---
 
@@ -1032,6 +1054,8 @@ Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stre
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.10 | 2026-05-01 | §12.4 authorization model replaced "implementation-defined" with a Phase 1–2 minimum binding: Anchor Nodes MUST require `topology:read` in `IdentFrame.capabilities` (capability gate, self-declared but signed); SHOULD cross-check NDP `node_roles` contains `"anchor"` as defense-in-depth; Phase 3 [RFC-0002 stable] adds CA-attested `id-nps-node-roles` cert extension. §14.7 updated to reference §12.4 defined minimum instead of the previous hedging "SHOULD restrict" language. `Depends-On` NIP bumped to v0.6 (defines `topology:read` capability). |
+| 0.9 | 2026-05-01 | **Breaking rename (pre-1.0)**: Topology member object field `node_kind` renamed to `node_roles` (§12.1); topology stream filter key `node_kind` renamed to `node_roles` (§12.2). §2.1 updated: `node_kind` reference to `node_roles`. New §2.1 **Node Role Resolution** section: `node_roles` (NDP, discovery-layer, array) and `node_type` (NWM, service-layer, string) are distinct fields — `node_type` MUST be one of the values in `node_roles`; validators SHOULD verify against cached NDP data. §4.1 `node_type` description updated with the cross-protocol constraint and pointer to §2.1. §14.7 `node_kind` reference updated to `node_roles`. Depends-On NDP bumped to v0.6. Fixes M1 naming-disambiguation issue. |
 | 0.8 | 2026-04-27 | New §12 **Reserved Query Types** introducing the `topology.*` namespace mandatory at NPS-AaaS Profile L2: `topology.snapshot` (QueryFrame, `type="topology.snapshot"`) and `topology.stream` (SubscribeFrame, `type="topology.stream"`). Both QueryFrame §6.1 and SubscribeFrame §8.1 gain an optional top-level `type` field for opting into reserved types. DiffFrame §8.2 `event_type` enum extended via reserved subscribe types — `topology.stream` adds `member_joined` / `member_left` / `member_updated` / `anchor_state` / `resync_required`. Five new error codes: `NWP-TOPOLOGY-UNAUTHORIZED`, `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`, `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`, `NWP-TOPOLOGY-FILTER-UNSUPPORTED` (table §13). New §14.7 Topology Read-back security section. Existing §12 Error Codes / §13 Security / §14 Changelog renumbered to §13 / §14 / §15 to accommodate the new section. See [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md). |
 | 0.7 | 2026-04-26 | **Breaking.** §2.1 Node Types: `Gateway Node` removed; replaced by **Anchor Node** (cluster control plane + NOP routing — inherits the existing role) and **Bridge Node** (NPS↔non-NPS protocol translation — new). NWM `node_type` enum updated; legacy `"gateway"` MUST be rejected. Anchor Node detailed semantics (§2.1 inline) cover member dispatch + optional registry; Bridge Node semantics cover HTTP/gRPC/MCP/A2A target adapters. Depends-On upgraded to NDP v0.5 for the `node_kind` array form + `cluster_anchor` + `bridge_protocols` fields. See [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md). |
 | 0.6 | 2026-04-25 | NWM gains optional top-level `min_assurance_level` field (`anonymous` / `attested` / `verified`), with `min_assurance_level` per-action override on individual ActionSpecs (§4.6). New error code `NWP-AUTH-ASSURANCE-TOO-LOW` (`NPS-AUTH-FORBIDDEN`). `Depends-On` upgraded to NCP v0.6 (NPS-RFC-0001) and NIP v0.4 (NPS-RFC-0003). See [NPS-RFC-0003](rfcs/NPS-RFC-0003-agent-identity-assurance-levels.md). |

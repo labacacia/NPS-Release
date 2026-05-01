@@ -2,8 +2,8 @@
 # 机器可读帧注册表，CI 强制校验用
 # 归属：LabAcacia / INNO LOTUS PTY LTD · Apache 2.0
 
-version: "0.9"
-date: "2026-04-26"
+version: "0.10"
+date: "2026-05-01"
 
 # 统一端口：17433（全协议族共用，通过帧类型码路由）
 # 各协议可选独立端口：NWP 17434、NIP 17435、NDP 17436、NOP 17437
@@ -29,9 +29,9 @@ frames:
   - id: "0x02"
     name: DiffFrame
     protocol: NCP
-    protocol_version: "0.5"
+    protocol_version: "0.6"
     status: stable
-    description: Incremental data frame. Supports json_patch (RFC 6902, Tier-1 default) and binary_bitset (Tier-2, 15–20% smaller) via patch_format field.
+    description: Incremental data frame. Supports json_patch (RFC 6902, Tier-1 default) and binary_bitset (Tier-2, 15–20% smaller) via patch_format field. NPS-CR-0002 (NWP §8.2) extends the event_type enum with topology-stream values — member_joined / member_left / member_updated; for topology.stream subscriptions seq carries the post-event topology version and payload carries event-specific data.
     fields_ref: "NPS-1-NCP.md#42-diffframe-0x02"
 
   - id: "0x03"
@@ -71,9 +71,9 @@ frames:
   - id: "0x10"
     name: QueryFrame
     protocol: NWP
-    protocol_version: "0.5"
+    protocol_version: "0.8"
     status: draft
-    description: Structured data query for Memory Nodes. Supports filter ($eq/$ne/$lt/$lte/$gt/$gte/$in/$nin/$contains/$between/$exists/$regex/$and/$or/$not), field selection, cursor pagination, ordering, vector search, auto_anchor, native-mode budget/tokenizer/depth/request_id fields, streaming mode (stream:true → StreamFrame sequence), and aggregation (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT with group_by and having).
+    description: Structured data query for Memory Nodes. Supports filter ($eq/$ne/$lt/$lte/$gt/$gte/$in/$nin/$contains/$between/$exists/$regex/$and/$or/$not), field selection, cursor pagination, ordering, vector search, auto_anchor, native-mode budget/tokenizer/depth/request_id fields, streaming mode (stream:true → StreamFrame sequence), and aggregation (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT with group_by and having). NPS-CR-0002 (§12) adds optional type field for reserved query namespaces (topology.snapshot, topology.stream); absent means default per-anchor query semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED.
     fields_ref: "NPS-2-NWP.md#6-queryframe-0x10"
 
   - id: "0x11"
@@ -87,9 +87,9 @@ frames:
   - id: "0x12"
     name: SubscribeFrame
     protocol: NWP
-    protocol_version: "0.5"
+    protocol_version: "0.8"
     status: draft
-    description: Change subscription management for Memory Nodes. Actions: subscribe / unsubscribe / ping. Server pushes DiffFrame (0x02) updates with monotonic seq (per-stream, from 1), event_type, and timestamp. HTTP mode uses Server-Sent Events. Supports optional filter, heartbeat_interval, and resume_from_seq for lossless reconnection.
+    description: Change subscription management for Memory Nodes. Actions: subscribe / unsubscribe / ping. Server pushes DiffFrame (0x02) updates with monotonic seq (per-stream, from 1), event_type, and timestamp. HTTP mode uses Server-Sent Events. Supports optional filter, heartbeat_interval, and resume_from_seq for lossless reconnection. NPS-CR-0002 (§12) adds optional type field for reserved subscribe namespaces (topology.stream); absent means default per-anchor subscribe semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED.
     fields_ref: "NPS-2-NWP.md#8-subscribeframe-0x12"
 
   # ── NIP (0x20–0x2F) ���──────────��────────────────────────────���───
@@ -121,9 +121,9 @@ frames:
   - id: "0x30"
     name: AnnounceFrame
     protocol: NDP
-    protocol_version: "0.5"
+    protocol_version: "0.6"
     status: draft
-    description: Node or Agent presence broadcast. Announces NID, physical addresses, capabilities, TTL, and (NPS-Node Profile L1+) activation_mode — one of ephemeral/resident/hybrid — plus optional activation_endpoint (required for resident/hybrid push target) and spawn_spec_ref (L3, on-demand spawn). NPS-CR-0001 adds three additive fields — node_kind (string OR array; values memory/action/complex/anchor/bridge; legacy "gateway" rejected), cluster_anchor (NID, for non-Anchor cluster members), bridge_protocols (array, for "bridge" nodes; standard values http/grpc/mcp/a2a). Must be signed with IdentFrame private key. Receivers treat absent activation_mode as ephemeral and absent node_kind as falling back to node_type for backward compatibility with v1.0-alpha.2 publishers.
+    description: Node or Agent presence broadcast. Announces NID, physical addresses, capabilities, TTL, and (NPS-Node Profile L1+) activation_mode — one of ephemeral/resident/hybrid — plus optional activation_endpoint (required for resident/hybrid push target) and spawn_spec_ref (L3, on-demand spawn). NPS-CR-0001 adds three additive fields — node_roles (array of strings; values memory/action/complex/anchor/bridge; legacy "gateway" rejected; renamed from node_kind in NDP v0.6 — parsers MUST accept node_kind as alias through alpha.5), cluster_anchor (NID, for non-Anchor cluster members), bridge_protocols (array, for "bridge" nodes; standard values http/grpc/mcp/a2a). Must be signed with IdentFrame private key. Receivers treat absent activation_mode as ephemeral and absent node_roles as falling back to node_type for backward compatibility with v1.0-alpha.2 publishers. Constraint: NWP NWM node_type MUST be one of the values in node_roles (see NWP §2.1 Node Role Resolution).
     fields_ref: "NPS-4-NDP.md#31-announceframe-0x30"
 
   - id: "0x31"

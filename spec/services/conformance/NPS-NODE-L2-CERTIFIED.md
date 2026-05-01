@@ -97,6 +97,13 @@ _Sign the hex-encoded SHA-256 of the results-manifest JSON (compact form, RFC 87
 canonicalized) with the IUT's root private key. Verifiers MUST check this signature
 against the root public key declared above._
 
+> **RFC 8785 JCS requirements**: "RFC 8785 canonicalized" means JSON Canonicalization
+> Scheme (JCS). Implementations MUST use a JCS-compliant library that produces:
+> (1) UTF-8 encoding with no BOM; (2) keys sorted by Unicode code point; (3) numbers
+> in the specific IEEE 754 / ECMAScript serialization defined by JCS (no trailing zeros,
+> no `+` sign); (4) Unicode escapes as specified in RFC 8785 §3.2.2.2. Deviations in
+> any of these rules will produce a different SHA-256 and fail cross-language verification.
+
 | Field | Value |
 |-------|-------|
 | **Manifest SHA-256** | _(64 hex chars)_ |

@@ -2,7 +2,7 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK。每个 SDK 都实现了完整的五层协议 — **NCP + NWP + NIP + NDP + NOP** — 统一版本 **1.0.0-alpha.4**。
+六种官方 SDK。每个 SDK 都实现了完整的五层协议 — **NCP + NWP + NIP + NDP + NOP** — 统一版本 **1.0.0-alpha.5**。
 
 ---
 
@@ -19,7 +19,7 @@
 
 ## NIP CA Server
 
-可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构。当前版本 `v1.0.0-alpha.4`（自 `v1.0.0-alpha.3` 起从 SDK 中拆出独立发布）。
+可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构。当前版本 `v1.0.0-alpha.5`（自 `v1.0.0-alpha.3` 起从 SDK 中拆出独立发布）。
 
 | 仓库 | 技术栈 | 快速开始 |
 |------|--------|----------|
@@ -29,7 +29,7 @@
 
 ## NPS Daemons
 
-NPS 标准三层部署拓扑的参考部署二进制。4 个 OSS daemon（Layer 1 + Layer 2）打成一个 bundle 仓，当前版本 `v1.0.0-alpha.4`。
+NPS 标准三层部署拓扑的参考部署二进制。4 个 OSS daemon（Layer 1 + Layer 2）打成一个 bundle 仓，当前版本 `v1.0.0-alpha.5`。
 
 | 仓库 | Daemons | 快速开始 |
 |------|---------|----------|
@@ -46,42 +46,42 @@ Layer-3 **信任锚** daemon（`nps-cloud-ca` 和 `nps-ledger`）在 GitHub `inn
 ### Python
 
 ```bash
-pip install nps-lib==1.0.0a4
+pip install nps-lib==1.0.0a5
 ```
 
 ### TypeScript / JavaScript
 
 ```bash
-npm install @labacacia/nps-sdk@1.0.0-alpha.4
+npm install @labacacia/nps-sdk@1.0.0-alpha.5
 # 或
-pnpm add @labacacia/nps-sdk@1.0.0-alpha.4
+pnpm add @labacacia/nps-sdk@1.0.0-alpha.5
 ```
 
 ### Rust
 
 ```toml
 [dependencies]
-nps-sdk = "1.0.0-alpha.4"
+nps-sdk = "1.0.0-alpha.5"
 ```
 
 ### Go
 
 ```bash
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.4
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.5
 ```
 
 ### Java（Gradle Kotlin DSL）
 
 ```kotlin
 dependencies {
-    implementation("com.labacacia.nps:nps-java:1.0.0-alpha.4")
+    implementation("com.labacacia.nps:nps-java:1.0.0-alpha.5")
 }
 ```
 
 ### .NET
 
 ```bash
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.4
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.5
 ```
 
 ---

@@ -76,6 +76,7 @@ All uppercase, hyphen-separated. For the full error-code list, see [error-codes.
 | NPS Status | HTTP | Description |
 |------------|------|-------------|
 | `NPS-SERVER-INTERNAL` | 500 | Internal error |
+| `NPS-SERVER-UNSUPPORTED` | 501 | The server does not implement the requested operation (e.g. an unrecognized reserved query type in `QueryFrame` or `SubscribeFrame`) |
 | `NPS-SERVER-UNAVAILABLE` | 503 | Service temporarily unavailable |
 | `NPS-SERVER-TIMEOUT` | 408/504 | Operation timed out |
 | `NPS-SERVER-ENCODING-UNSUPPORTED` | 415 | Requested encoding tier is not supported |
@@ -126,6 +127,7 @@ Each protocol's specific error code (e.g. `NCP-ANCHOR-NOT-FOUND`) maps to the co
 | `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` |
 | `NWP-AUTH-NID-*` | `NPS-AUTH-*` (maps per specific error) |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` |
+| `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` |
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` |
 | `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` |
 | `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` |

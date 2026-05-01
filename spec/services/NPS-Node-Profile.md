@@ -3,10 +3,10 @@ English | [中文版](./NPS-Node-Profile.cn.md)
 # NPS-Node Profile: Node-Side Compliance Specification
 
 **Status**: Draft
-**Version**: 0.1
-**Date**: 2026-04-24
+**Version**: 0.2
+**Date**: 2026-05-01
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.5), NPS-3 (NIP v0.3), NPS-4 (NDP v0.4)
+**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.10), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6)
 
 > Companion to [NPS-AaaS Profile](./NPS-AaaS-Profile.md). Where AaaS Profile defines what a
 > *service* must do to expose Agent capabilities, this profile defines what a *node host*
@@ -135,12 +135,12 @@ L2 = L1 + every "+" row in the L2 column of §2. Headline additions:
 - **NCP**: Tier-2 MsgPack MUST.
 - **NIP**: Trust-chain validation against a configured trust anchor MUST.
 - **NDP**: GraphFrame subscription MUST; node SHOULD react to incremental changes within the GraphFrame `seq` window.
-- **NWP**: ActionFrame push and Subscribe MUST; pull remains available.
+- **NWP**: ActionFrame push and Subscribe MUST; pull remains available. Anchor Nodes MUST additionally implement the `topology.snapshot` / `topology.stream` reserved query types ([NPS-2 §12](../NPS-2-NWP.md)); see [NPS-AaaS-Profile](./NPS-AaaS-Profile.md) L2-08.
 - **NOP**: TaskFrame and DelegateFrame MUST be accepted; full DAG execution is L3.
 - **Activation**: `resident` mode MUST be supported; `hybrid` MAY be supported.
 - **Observability**: Prometheus-style metrics endpoint MUST be exposed (frame counters, inbox depth, connection count, handshake latency histogram).
 
-Detailed requirement IDs (`N2-NCP-*` etc.) are TODO; tracked under [Roadmap Phase 2](../../docs/roadmap.md).
+Detailed requirement IDs (`N2-NCP-*` etc.) are TODO; tracked under [NPS-Roadmap Phase 2](../NPS-Roadmap.md).
 
 ---
 
@@ -162,7 +162,7 @@ process; the spawned process MUST receive its target frame within an implementat
 startup budget (recommended: ≤ 2 s for headless agents). The schema of `spawn_spec_ref`
 content is standardized at L3 in a future companion document (NPS-Daemon-Spec).
 
-Detailed requirement IDs (`N3-*`) are TODO; tracked under [Roadmap Phase 3](../../docs/roadmap.md).
+Detailed requirement IDs (`N3-*`) are TODO; tracked under [NPS-Roadmap Phase 3](../NPS-Roadmap.md).
 
 ---
 
@@ -189,8 +189,8 @@ The normative field definitions, JSON example, and backward-compatibility rules 
 | Level | Document | Reference suite |
 |-------|----------|-----------------|
 | L1 | [`conformance/NPS-Node-L1.md`](./conformance/NPS-Node-L1.md) | .NET 10 / xUnit (this release) |
-| L2 | `conformance/NPS-Node-L2.md` | TODO (Roadmap Phase 2) |
-| L3 | `conformance/NPS-Node-L3.md` | TODO (Roadmap Phase 3) |
+| L2 | `conformance/NPS-Node-L2.md` | TODO (NPS-Roadmap Phase 2) |
+| L3 | `conformance/NPS-Node-L3.md` | TODO (NPS-Roadmap Phase 3) |
 
 ### 7.2 Self-attestation
 
@@ -211,10 +211,11 @@ available at this release.
 | NPS-AaaS | "Is my service a compliant Agent-as-a-Service provider?" |
 | NPS-Node | "Is my host a compliant participant in the NPS network?" |
 
-A deployment may carry both badges, either, or neither. AaaS L1 does not require Node L1
-of its underlying host, but in practice an AaaS Anchor Node operator SHOULD also satisfy
-Node L1 for the daemon hosting the Anchor (the role formerly known as "Gateway Node" prior
-to NPS-CR-0001).
+A deployment may carry both badges, either, or neither. An AaaS Anchor Node operator MUST
+satisfy Node-Profile L1 for the daemon hosting the Anchor (formerly "Gateway Node" prior to
+NPS-CR-0001). An Anchor that maintains an active member registry and claims [AaaS
+L2-08](./NPS-AaaS-Profile.md#level-2--interactive-compliance) MUST also satisfy
+Node-Profile L2.
 
 ---
 
@@ -222,6 +223,7 @@ to NPS-CR-0001).
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2 | 2026-05-01 | M8 cross-profile contract clarification. §4 NWP bullet extended: Anchor Nodes at L2 MUST implement `topology.snapshot` / `topology.stream` (NPS-2 §12; AaaS L2-08 reference added). §8 relationship paragraph: SHOULD → MUST for Node-Profile L1 on Anchor hosts; explicit MUST for Node-Profile L2 when claiming AaaS L2-08. Depends-On bumped: NCP v0.5 → v0.6, added NPS-2 (NWP v0.10), NIP v0.3 → v0.6, NDP v0.4 → v0.6. |
 | 0.1 | 2026-04-24 | Initial draft: three-level node compliance (L1/L2/L3), `activation_mode` model, L1 detailed requirement IDs, L1 conformance suite reference, AaaS Profile relationship |
 
 ---

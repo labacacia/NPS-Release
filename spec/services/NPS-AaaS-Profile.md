@@ -3,10 +3,10 @@ English | [中文版](./NPS-AaaS-Profile.cn.md)
 # NPS-AaaS Profile: Agent-as-a-Service Compliance Specification
 
 **Status**: Proposed
-**Version**: 0.4
-**Date**: 2026-04-27
+**Version**: 0.6
+**Date**: 2026-05-01
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.8), NPS-3 (NIP v0.4), NPS-4 (NDP v0.5), NPS-5 (NOP v0.4)
+**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.10), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6), NPS-5 (NOP v0.4)
 
 > This specification defines compliance requirements for building Agent-as-a-Service (AaaS)
 > platforms on the NPS protocol suite, covering three architectural layers: service entry,
@@ -338,7 +338,8 @@ only needs to implement this interface for seamless integration.
 | L2-05 | MUST implement NOP retry and timeout semantics | NOP |
 | L2-06 | SHOULD support async Actions (ActionFrame.async=true) | NWP |
 | L2-07 | SHOULD implement AlignStream back-pressure control | NOP |
-| L2-08 | MUST implement `topology.snapshot` and `topology.stream` reserved query types on Anchor Nodes that maintain a member registry, per [NPS-2 §12](../NPS-2-NWP.md). The version counter MUST be monotonic per Anchor lifetime and SHOULD survive in-process restarts via rebase + `anchor_state.version_rebased` event. | NWP §12 |
+| L2-08 | MUST implement `topology.snapshot` and `topology.stream` reserved query types on Anchor Nodes that maintain a member registry, per [NPS-2 §12](../NPS-2-NWP.md). The version counter MUST be monotonic per Anchor lifetime and SHOULD survive in-process restarts via rebase + `anchor_state.version_rebased` event. Implementations claiming L2-08 MUST satisfy [NPS-Node-Profile](./NPS-Node-Profile.md) L1 for the host running the Anchor; an Anchor maintaining an active member registry SHOULD also satisfy Node-Profile L2. | NWP §12 |
+| L2-09 | SHOULD configure a `reputation_policy` in the NWM and consult at least one NPS-RFC-0004 compliant log operator on agent admission. The recommended minimum policy for L2 AaaS deployments is: reject agents with an active `cert-revoked` incident of any severity, or a `rate-limit-violation` / `tos-violation` incident of `major` or higher within the last 30 days. Nodes SHOULD publish their `reputation_policy` under the NWM `reputation_policy` key. | NPS-RFC-0004 |
 
 ### 4.4 Level 3 — Advanced Compliance
 
@@ -410,6 +411,8 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 NPT → analyze
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.6 | 2026-05-01 | alpha.5 update. New L2-09 requirement (§4.3): SHOULD configure a `reputation_policy` and consult at least one NPS-RFC-0004-compliant log operator; recommended minimum policy defined. Depends-On bumped: NPS-RFC-0004 Phase 3 (STH gossip). |
+| 0.5 | 2026-05-01 | M8 cross-profile contract clarification. §4.3 L2-08 description extended: implementations claiming L2-08 MUST satisfy Node-Profile L1 for the Anchor host; active-registry Anchors SHOULD also satisfy Node-Profile L2. Depends-On bumped: NPS-2 (NWP v0.8 → v0.10), NPS-3 (NIP v0.4 → v0.6), NPS-4 (NDP v0.5 → v0.6). |
 | 0.4 | 2026-04-27 | New L2-08 requirement (§4.3) mandating `topology.snapshot` / `topology.stream` on Anchor Nodes that maintain a member registry, per [NPS-CR-0002](../cr/NPS-CR-0002-anchor-topology-queries.md) and [NPS-2 §12](../NPS-2-NWP.md). §2 intro placeholder ("reserved for v1.0-alpha.4") replaced with concrete L2 mandate. §2.2 cluster-registry row promoted from "optional" to "optional at L1, mandatory at L2". §6 protocol-relationship table re-pointed at NWP v0.8 to pick up the new §12 surface. Depends-On bumped: NPS-2 (NWP v0.7 → v0.8). |
 | 0.3 | 2026-04-26 | **Breaking** (per [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md)). §2 renamed Gateway Node → **Anchor Node**, all wire/manifest examples updated (`node_type: "anchor"`, `nwm_version: "0.7"`, `min_nip_version: "0.4"`); new §2.2 row for optional cluster registry. New §2A **Bridge Node** (NPS↔non-NPS protocol translation, `bridge_protocols` declaration, direction-vs-`compat/*-bridge` clarification). §1.2 / §1.3 architecture diagram and §6 protocol-relationship table updated; L1 §4.2 / §5 references re-pointed to Anchor Node. §6 protocol-change line replaced "add gateway" with "rename gateway → anchor + new bridge". Depends-On upgraded to NCP v0.6 (RFC-0001) + NWP v0.7 (CR-0001) + NIP v0.4 (RFC-0003) + NDP v0.5 (CR-0001 fields). |
 | 0.1 | 2026-04-15 | Initial draft: AaaS architecture overview, Gateway Node definition, Vector Proxy Layer design, three-tier compliance requirements |

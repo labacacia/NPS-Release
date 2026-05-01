@@ -171,8 +171,9 @@ Client (Agent)                 ACME Server (NIP CA)
 ```
 
 `agent-01` 挑战以 TLS-ALPN-01 的简洁度证明 NID 私钥持有：单个
-签名 token，不依赖外部 DNS / HTTP。服务端比较 MUST 按
-`spec/NPS-3-NIP.md §10.2` 做 timing-safe 比较。
+签名 token，不依赖外部 DNS / HTTP。服务端 MUST 使用常数时间（timing-safe）
+比较验证签名后的挑战 token，以防止针对 NID 私钥的时序预言攻击。
+（NIP §10.2 涉及的是另一个问题——OCSP 响应时间规范化，与此处无关。）
 
 ### 4.5 向后兼容性
 
