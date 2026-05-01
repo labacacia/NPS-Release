@@ -86,17 +86,15 @@ X.509 世界用 EV / OV / DV + CA/B Forum baseline 解决了同类问题；
 
 | 字段 | 类型 | 必填 | 描述 |
 |------|------|------|------|
-| `assurance_level` | `enum { anonymous, attested, verified }` | 是 | MUST 与 NPS-RFC-0002 §4.1 定义的 critical 扩展 `id-nid-assurance-level` 一致 |
+| `assurance_level` | `enum { anonymous, attested, verified }` | 是 | 当 NID 证书携带 `id-nid-assurance-level` 扩展（NPS-RFC-0002 §4.1）时，本字段 MUST 与之保持一致。**Phase gate**：Phase 1–2（当前）强制可选（SHOULD 检查并记录不匹配，MAY 强制执行）；Phase 3 flag day（见 §8.1）起强制变为 MUST，违规返回 `NIP-ASSURANCE-MISMATCH`。 |
 
-证书是事实源；`IdentFrame.assurance_level` 是给不想解析证书就路由
-请求的服务端的冗余便利。Verifier 仍然 MUST 校验证书扩展，若两者
-不一致 MUST 以 `NIP-ASSURANCE-MISMATCH` 关闭连接。
+证书是事实源；`IdentFrame.assurance_level` 是给不想解析证书就路由请求的服务端的冗余便利。
 
-**X.509 扩展升级**：NPS-RFC-0002 定义 `id-nid-assurance-level`
-（`1.3.6.1.4.1.<PEN>.2.1`）为**非 critical**。本 RFC 把它翻成
-**critical**——旧 verifier MUST 拒绝带 critical 扩展的证书直到
-升级。这是**故意的**：一个启用了 `min_assurance_level` 的 Node
-MUST NOT 静默接收一个解析不了该扩展的 verifier。
+**Phase 1–2（当前）**：Verifier SHOULD 校验证书扩展并记录不匹配，但 MAY 跳过强制执行。选择执行的实现 MUST 以 `NIP-ASSURANCE-MISMATCH` 关闭连接。
+
+**Phase 3（flag day，见 §8.1）**：Verifier MUST 校验证书扩展，若两者不一致 MUST 以 `NIP-ASSURANCE-MISMATCH` 关闭连接。这是完成升级的硬性截止点。
+
+**X.509 扩展升级（Phase 3 — 尚未生效）**：NPS-RFC-0002 定义 `id-nid-assurance-level`（`1.3.6.1.4.1.<PEN>.2.1`）为**非 critical**。从 Phase 3 flag day 起，本 RFC 将其升级为 **critical**——旧 verifier MUST 拒绝带 critical 扩展的证书直到升级。这是**故意的**：一个启用了 `min_assurance_level` 的 Node MUST NOT 静默接收一个解析不了该扩展的 verifier。该升级在 Phase 1–2 **尚未生效**。
 
 ### 4.3 Manifest / NWM 变更
 
@@ -238,7 +236,7 @@ Agent (L0)                         Node
 |------|------|----------|
 | 1 | .NET NIP 解析证书扩展；IdentFrame 带字段；NWM 解析 `min_assurance_level`；强制可选 | 单测绿；默认行为不变 |
 | 2 | 6 SDK + 6 CA Server 全部支持；CA Server 通过 ACME 签 L1 证书；每家 CA 的 L2 签发流程出文档 | 跨 SDK interop：L0/L1/L2 矩阵绿 |
-| 3 | NWM 里设了 `min_assurance_level` 时默认启用强制；扩展翻 critical；21 天通告 | 无回归 |
+| 3 | NWM 里设了 `min_assurance_level` 时默认启用强制；`id-nid-assurance-level` 扩展升级为 critical。**Flag day**：提前 ≥ 21 日历天在 NPS-Dev GitHub Discussions 公告；激活后，`NIP-ASSURANCE-MISMATCH` 强制为 MUST，不合规实现 MUST NOT 声称任何 NPS 合规级别 | 无回归；全 6 SDK 通过不匹配强制测试 |
 | 4 | 启用了更严默认的 Node 移除 L0 默认 fast path | N/A——运营方决定 |
 
 ### 8.2 SDK 覆盖矩阵
