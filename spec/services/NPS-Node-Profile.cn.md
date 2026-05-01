@@ -137,7 +137,7 @@ L2 = L1 + §2 L2 列每个 "+" 行。要点：
 - **激活**：MUST 支持 `resident` 模式；`hybrid` MAY 支持。
 - **可观测性**：MUST 暴露 Prometheus 风格 metrics 端点（帧计数、inbox 深度、连接数、握手延迟直方图）。
 
-详细 req ID（`N2-NCP-*` 等）TODO，追踪于 [NPS-Roadmap Phase 2](../NPS-Roadmap.cn.md)。
+详细 req ID（`N2-NCP-*` 等）TODO，追踪于[路线图 Phase 2](../../docs/roadmap.cn.md)。
 
 ---
 
@@ -158,7 +158,7 @@ L3 引入 **spawn-on-demand** 要求。节点 MUST 能从 `spawn_spec_ref`（见
 启动预算内收到目标帧（建议：headless Agent ≤ 2 s）。`spawn_spec_ref` 内容 schema 在 L3 由
 未来的姊妹文档（NPS-Daemon-Spec）标准化。
 
-详细 req ID（`N3-*`）TODO，追踪于 [NPS-Roadmap Phase 3](../NPS-Roadmap.cn.md)。
+详细 req ID（`N3-*`）TODO，追踪于[路线图 Phase 3](../../docs/roadmap.cn.md)。
 
 ---
 
@@ -184,8 +184,8 @@ L3 引入 **spawn-on-demand** 要求。节点 MUST 能从 `spawn_spec_ref`（见
 | 级别 | 文档 | 参考套件 |
 |------|------|---------|
 | L1 | [`conformance/NPS-Node-L1.cn.md`](./conformance/NPS-Node-L1.cn.md) | .NET 10 / xUnit（本次发布） |
-| L2 | `conformance/NPS-Node-L2.cn.md` | TODO（NPS-Roadmap Phase 2） |
-| L3 | `conformance/NPS-Node-L3.cn.md` | TODO（NPS-Roadmap Phase 3） |
+| L2 | `conformance/NPS-Node-L2.cn.md` | TODO（路线图 Phase 2） |
+| L3 | `conformance/NPS-Node-L3.cn.md` | TODO（路线图 Phase 3） |
 
 ### 7.2 自声明
 
