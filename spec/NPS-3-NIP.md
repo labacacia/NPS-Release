@@ -164,7 +164,7 @@ NPS defines three **assurance levels** an Agent identity may carry, modelled on 
 | Level | Enum value | Minimum CA criteria | Typical use |
 |-------|------------|---------------------|-------------|
 | L0 | `"anonymous"` | Self-signed, OR CA-signed without out-of-band identity binding | Hobbyist Agents, dev / test, free read-only endpoints |
-| L1 | `"attested"` | NID signed by an RFC-0002-compliant CA; CA attests possession of the NID private key (e.g. ACME `agent-01` challenge); contact email or domain verified | Most production Agents; default rate-limit tier |
+| L1 | `"attested"` | NID signed by an RFC-0002-compliant CA; CA attests possession of the NID private key (e.g. ACME `agent-01` challenge); contact email or domain verified. **Note**: "RFC-0002-compliant" requires RFC-0002 to be in Accepted status with a registered IANA OID. The prototype implementation using provisional OID `1.3.6.1.4.1.99999.1` does NOT satisfy this criterion for conformance or production purposes until the PEN is assigned (see NPS-RFC-0002 §10 OQ-2). | Most production Agents; default rate-limit tier |
 | L2 | `"verified"` | L1 criteria **plus** CA binds the operator's legal identity (corporate registration for org-NIDs, signed AaaS-operator attestation for hosted Agents) | Regulated integrations, paid premium tiers, contract-grade orchestration |
 
 Default is `"anonymous"` — pre-RFC-0003 NIDs and any NID lacking the field are treated as L0. A Node demanding stricter levels declares `min_assurance_level` in its NWM (NPS-2 §4.1, §4.3).

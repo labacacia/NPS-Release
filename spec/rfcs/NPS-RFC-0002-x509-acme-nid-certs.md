@@ -3,7 +3,7 @@ English | [中文版](./NPS-RFC-0002-x509-acme-nid-certs.cn.md)
 ---
 **RFC Number**: NPS-RFC-0002
 **Title**: Adopt X.509 + ACME for NID certificates
-**Status**: Draft (prototype landed 2026-04-27 — empirical data in §9; promotion to Proposed/Accepted gated on shepherd review)
+**Status**: Draft — **EXPERIMENTAL** (prototype only; provisional unregistered OID `1.3.6.1.4.1.99999.1` — MUST NOT be used for conformance testing or production cert issuance; promotion to Proposed/Accepted is gated on IANA PEN assignment, see §10 OQ-2)
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: _TBD — assigned on PR open_
 **Created**: 2026-04-21
@@ -15,6 +15,17 @@ English | [中文版](./NPS-RFC-0002-x509-acme-nid-certs.cn.md)
 **Affected Specs**: NPS-3 NIP, tools/nip-ca-server (all language variants), spec/error-codes.md
 **Affected SDKs**: .NET, Python, TypeScript, Java, Rust, Go
 ---
+
+> **WARNING: EXPERIMENTAL — NOT FOR CONFORMANCE OR PRODUCTION USE**
+>
+> This RFC is **Draft** and uses the provisional, **unregistered** OID arc `1.3.6.1.4.1.99999.1`. This OID has not been assigned by IANA and may collide with any other organisation's assignment.
+>
+> Implementations using this OID:
+> - MUST NOT be used for conformance testing at any compliance level
+> - MUST NOT issue certs for production NID issuance
+> - MUST NOT be deployed in cross-organisation interoperability tests
+>
+> This RFC will be promoted from Draft to Proposed/Accepted only after LabAcacia's IANA PEN is assigned and the provisional OID is replaced throughout. All certs issued under the provisional OID will need to be revoked and reissued at that point. See §10 OQ-2.
 
 # NPS-RFC-0002: Adopt X.509 + ACME for NID certificates
 
@@ -397,12 +408,21 @@ by doing it once.
   X.509 + ACME together took 7 days of working time on .NET; splitting
   would require two cross-language port waves (5 SDKs × 2 phases) and
   the marginal effort of layering ACME on top of X.509 is small.
-- [ ] **OQ-2**: IANA Private Enterprise Number (PEN) — application
-  pending. Target: submit within 2 weeks of this RFC entering Accepted.
-  Until PEN assigned, use OID arc under `1.3.6.1.4.1.99999.1` (marked
-  "PROVISIONAL"). The prototype already uses these OIDs in
-  `NpsX509Oids` so a search-and-replace will suffice once the real
-  PEN lands.
+- [ ] **OQ-2 — GATING CONDITION FOR PROMOTION**: IANA Private Enterprise
+  Number (PEN) — application not yet submitted. **This is the hard gate
+  for RFC-0002 promotion from Draft to Proposed/Accepted.** Until the
+  real PEN is assigned and this RFC is Accepted:
+  - Implementations using `1.3.6.1.4.1.99999.1` MUST treat all issued
+    certs as prototype-only (revoke and reissue once PEN lands)
+  - MUST NOT use prototype certs for conformance testing at any level
+  - MUST NOT use prototype certs for production NID issuance
+  - MUST NOT use prototype certs in cross-organisation interop tests
+  - The prototype OID `1.3.6.1.4.1.99999.1` is a development placeholder
+    only; it is unregistered and carries no legal or technical standing
+
+  Once PEN is assigned: all `NpsX509Oids` constants are replaced via
+  search-and-replace across all SDKs; all previously-issued prototype
+  certs are revoked; the RFC moves to Proposed for shepherd review.
 - [ ] **OQ-3**: Should NIP CA offer cross-signing with public CAs
   (e.g., Let's Encrypt)? Defer to a follow-up RFC.
 

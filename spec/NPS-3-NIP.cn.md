@@ -164,7 +164,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 | 等级 | 枚举值 | CA 最低要求 | 典型用途 |
 |------|--------|-------------|---------|
 | L0 | `"anonymous"` | 自签，或 CA 签发但无身份绑定 | 业余 Agent、开发/测试、免费只读端点 |
-| L1 | `"attested"` | NID 由 RFC-0002 兼容 CA 签发；CA 验证 NID 私钥持有（如 ACME `agent-01` 挑战）；联系邮箱或域名经过验证 | 大多数生产 Agent；默认限速级别 |
+| L1 | `"attested"` | NID 由 RFC-0002 兼容 CA 签发；CA 验证 NID 私钥持有（如 ACME `agent-01` 挑战）；联系邮箱或域名经过验证。**注**："RFC-0002 兼容"要求 RFC-0002 处于 Accepted 状态且使用已注册的 IANA OID。使用临时 OID `1.3.6.1.4.1.99999.1` 的原型实现不满足此合规或生产标准，须待 PEN 分配后方可（见 NPS-RFC-0002 §10 OQ-2）。| 大多数生产 Agent；默认限速级别 |
 | L2 | `"verified"` | L1 要求 **加** CA 绑定运营者法律身份（org-NID 用工商注册，托管 Agent 用 AaaS 运营者签字声明）| 受监管集成、付费高级、可签合约的编排 |
 
 默认为 `"anonymous"` —— RFC-0003 之前的 NID 以及任何缺该字段的 NID 都按 L0 处理。Node 通过 NWM 中 `min_assurance_level` 声明严格要求（NPS-2 §4.1、§4.3）。
