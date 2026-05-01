@@ -2,8 +2,8 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 0.9  
-**Date**: 2026-04-27  
+**Version**: 1.0  
+**Date**: 2026-05-01  
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -74,6 +74,10 @@ NPS uses a two-level error system:
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | Underlying data source is temporarily unavailable |
 | `NWP-MANIFEST-VERSION-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Agent's NPS version is lower than the node's `min_agent_version` |
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | Rate limit exceeded; reset timestamp is in the `X-NWP-Rate-Reset` header |
+| `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | Caller lacks permission to read this Anchor's topology (NPS-2 §12); authorization policy is implementation-defined per §12.4 (NPS-CR-0002) |
+| `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` value is not implemented by this Anchor Node (NPS-CR-0002) |
+| `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Requested `topology.depth` exceeds this Anchor Node's configured maximum (NPS-CR-0002) |
+| `NWP-TOPOLOGY-FILTER-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | `topology.filter` contains an unrecognized key or unsupported operator (NPS-CR-0002) |
 
 ---
 

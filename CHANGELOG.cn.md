@@ -8,6 +8,14 @@
 
 ---
 
+## [Unreleased]
+
+### 修复
+
+- **`spec/error-codes.md` v0.9 → v1.0**：四个 NWP 拓扑错误码（`NWP-TOPOLOGY-UNAUTHORIZED`、`NWP-TOPOLOGY-UNSUPPORTED-SCOPE`、`NWP-TOPOLOGY-DEPTH-UNSUPPORTED`、`NWP-TOPOLOGY-FILTER-UNSUPPORTED`）已在 NPS-2 NWP §13 和 NPS-CR-0002 §3.5 中定义并引用，但 alpha.4 规范同步时漏写入 error-codes 注册表。本次补入注册，措辞与 NWP §13 定义保持一致。
+
+---
+
 ## [1.0.0-alpha.4] —— 2026-04-30
 
 ### 规范
