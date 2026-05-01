@@ -87,7 +87,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 | [Error Codes](./spec/error-codes.md) | Unified protocol error code namespace |
 | [Status Codes](./spec/status-codes.md) | NPS native status codes + HTTP mapping |
 | [Token Budget](./spec/token-budget.md) | NPT token budget specification |
-| [Roadmap](./spec/NPS-Roadmap.md) | Phase 0–4 development roadmap |
+| [Roadmap](./docs/roadmap.md) | Phase 0–4 development roadmap |
 
 ### Service Specifications
 

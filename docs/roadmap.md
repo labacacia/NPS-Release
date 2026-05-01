@@ -2,21 +2,11 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.4** — advances NWP topology queries (CR-0002), lands the X.509/ACME NID prototype (RFC-0002), and ships SQLite-backed registry and ledger daemons.
+NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.4** — completes Phase 1 and makes significant progress on Phase 2: Anchor topology queries (CR-0002), X.509/ACME NID prototype (RFC-0002), SQLite-backed registry and ledger daemons, and gRPC/A2A/MCP adapters across all six languages.
 
 ---
 
-## Cadence
-
-Each phase breaks down into three segments:
-
-```
-① Spec Sprint   (2 weeks)    — freeze all specs for the phase
-② Impl Sprint   (6–8 weeks)  — implement, test, document
-③ Review Gate   (1 week)     — community / internal review before advancing
-```
-
-### Version convention
+## Version convention
 
 | Tag           | Meaning                                  |
 |---------------|------------------------------------------|
@@ -29,117 +19,55 @@ Each phase breaks down into three segments:
 
 ## Phase 0 — Spec Unification (2026 Q2) — ✅ done
 
-Goal: establish the full NPS skeleton, unify the frame namespace, publish a v0.2-draft for community comment.
-
-- ✅ `NPS-0-Overview.md` v0.3
-- ✅ `NPS-1-NCP.md` v0.6 (dual transport, configurable frame size, ErrorFrame)
-- ✅ `NPS-2-NWP.md` v0.7 (Node-published AnchorFrame, NPT)
-- ✅ `NPS-3-NIP.md` v0.5 (metadata field, NPS status codes)
-- ✅ `NPS-4-NDP.md` v0.5
-- ✅ `NPS-5-NOP.md` v0.4
-- ✅ `frame-registry.yaml` v0.9 (with ErrorFrame 0xFE)
-- ✅ `error-codes.md` v0.8 + `status-codes.md` v0.2 + `token-budget.md` v0.2
-- ✅ `services/NPS-AaaS-Profile.md` v0.2 (Anchor Node, Bridge Node, Vector Proxy Layer, L1/L2/L3 compliance)
+Established the full NPS spec skeleton across all five protocols (NCP / NWP / NIP / NDP / NOP), unified the frame namespace, published the AaaS and Node conformance profiles, and released public repositories.
 
 ---
 
 ## Phase 1 — Core Implementation (2026 Q3) — ✅ shipped
 
-Goal: NCP + NWP + NIP + NDP + NOP production-ready in the six reference languages. NIP CA Server OSS in all six.
+All five protocols production-ready in six reference SDKs (.NET / Python / TypeScript / Java / Rust / Go), with NIP CA Server reference deployments in all six languages. Key milestones:
 
-### SDKs
-
-| Language   | Package                            | Status                 |
-|------------|------------------------------------|------------------------|
-| .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NWP.Anchor` / `.NWP.Bridge` / `.NIP` / `.NDP` / `.NOP`) | ✅ v1.0.0-alpha.4 shipped (639 tests) |
-| Python     | `nps-lib`                          | ✅ v1.0.0-alpha.4 shipped (211 tests, ≥97% coverage) |
-| TypeScript | `@labacacia/nps-sdk`               | ✅ v1.0.0-alpha.4 shipped (284 tests) |
-| Java       | `com.labacacia.nps:nps-java`       | ✅ v1.0.0-alpha.4 shipped (112 tests) |
-| Rust       | `nps-sdk` (+ 6 sibling crates)     | ✅ v1.0.0-alpha.4 shipped (109 tests) |
-| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.4 shipped (96 tests) |
-
-### NIP CA Server (six-language reference deployment)
-
-| Language   | Stack                           | Status |
-|------------|---------------------------------|--------|
-| C# / .NET  | ASP.NET Core + SQLite + Docker  | ✅ v0.1 |
-| Python     | FastAPI + SQLite + Docker       | ✅ v0.1 |
-| TypeScript | Fastify + SQLite + Docker       | ✅ v0.1 |
-| Java       | Spring Boot 3.4 + SQLite        | ✅ v0.1 |
-| Rust       | Axum + SQLite + Docker          | ✅ v0.1 |
-| Go         | net/http stdlib + SQLite        | ✅ v0.1 |
-
-### .NET server runtime (reference)
-
-- ✅ `NPS.Core` — frame codec, AnchorCache, EXT header
-- ✅ `NPS.NWP` — Memory Node middleware (SQL Server / PostgreSQL), 284 integration tests
-- ✅ `NPS.NOP` — DAG validator + orchestration engine, delegation-chain depth limit (NPS-5 §8.2), callback_url SSRF protection (§8.4), exponential backoff retry, 429 tests
-- ✅ `NPS.NIP` — CA library: keygen, issuance / revocation, OCSP, CRL
-
-Completion bar:
-- ✅ Unit coverage ≥ 90 % across SDKs
-- ✅ Memory Node `QueryFrame` round-trip integration tests passing
-- ✅ NIP CA Server one-command Docker Compose boot documented
+- NPS-RFC-0001 (NCP connection preamble), NPS-RFC-0003 (agent identity assurance levels), NPS-CR-0001 (Anchor/Bridge Node split), NPS-CR-0002 (Anchor topology queries) — all shipped
+- NPS-RFC-0002 (X.509 NID + ACME) prototype across all six SDKs; promotion to Accepted pending IANA PEN
+- NPS-RFC-0004 (CT-style NID reputation ledger) Phase 1+2: SQLite + Merkle tree + STH + inclusion proofs
+- `npsd` L1 daemon with sub-NID issuance and per-NID inbox queues
+- Token-savings: **45.0 %** NPT reduction vs REST · Wire-size: **63.6 %** reduction vs JSON
 
 ---
 
 ## Phase 2 — Ecosystem Expansion (2026 Q4) — 🚧 in progress
 
-Goal: adapters to existing ecosystems (MCP, A2A), richer SDK examples, Tier-2 MsgPack production hardening.
+Adapters to MCP, A2A, and gRPC ecosystems; Tier-2 MsgPack production hardening; reference tooling.
 
-- ✅ TypeScript SDK shipped (Phase 2 scope advanced to Phase 1)
-- ✅ Go SDK shipped (Phase 2 scope advanced to Phase 1)
-- ✅ `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpIngress` v1.0.0-alpha.4)
-- ✅ `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.4)
-- ✅ `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC adapter (`LabAcacia.GrpcIngress` v1.0.0-alpha.4)
-- ✅ Tier-2 MsgPack wire-size benchmark (aggregate **63.6 %** reduction vs JSON — steady-state frames 61.9 %–88.4 %)
-- ✅ Token-savings benchmark (aggregate **45.0 %** NPT reduction vs REST — above Phase 1 ≥ 30 % bar)
-- ⬜ First reference product — **NPS Studio** (human visual debugger) + **NPS Probe** (Agent Coder conformance CLI)
-
-Completion bar:
-- ⬜ `NDP.ResolveFrame` resolves `nwp://` to a physical endpoint via DNS TXT
-- ✅ NOP orchestrator executes a 3-node DAG end-to-end (`impl/dotnet/samples/NPS.Samples.NopDag/`)
-- ✅ Claude Desktop talks to an NWP Memory Node through `mcp-bridge`
+- ✅ MCP, A2A, and gRPC ingress adapters shipped (v1.0.0-alpha.4)
+- ✅ Tier-2 MsgPack and token-savings benchmarks published
+- ✅ NOP orchestrator executes multi-node DAGs; Claude Desktop integration via `mcp-ingress` verified
+- ⬜ `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint)
+- ⬜ **NPS Studio** (visual frame debugger) + **NPS Probe** (conformance CLI)
 
 ---
 
 ## Phase 3 — Ecosystem Validation (2027 Q1–Q2)
 
-Goal: real-world PoCs, NPS Cloud CA v1.0, the beginnings of de-facto standard status.
+Real-world deployments, NPS Cloud CA v1.0, and the beginnings of de-facto standard status.
 
-- ⬜ **NPS Cloud CA v1.0** — multi-region HA, real-time OCSP, Professional Plan
+- ⬜ NPS Cloud CA v1.0 — multi-region HA, real-time OCSP
 - ⬜ LangChain / AutoGen / CrewAI integration packages
-- ⬜ FinTech PoC (Open Banking scenario, cross-org `TrustFrame`)
-- ⬜ Connected-vehicle PoC (device NIDs, `StreamFrame` real-time telemetry)
-- ⬜ Public token-savings benchmark report
+- ⬜ FinTech and connected-vehicle PoCs
 - ⬜ NIP CA Server OSS v1.0 (PostgreSQL + Web Admin UI)
+- ⬜ Public token-savings benchmark report
 - ⬜ GitHub stars ≥ 500
 
 ---
 
 ## Phase 4 — Standardization (2027 Q3 onward)
 
-Goal: move NPS toward W3C / IETF formal standards; freeze NPS 1.0.
+Formal W3C / IETF standardization and NPS 1.0 spec freeze.
 
-- ⬜ Joint vendor support statement (≥ 3 vendors)
 - ⬜ W3C WebAI Community Group proposal
 - ⬜ IETF Internet-Draft (NCP + NWP core)
 - ⬜ NPS 1.0 spec freeze
 - ⬜ ISO/IEC JTC 1 evaluation
-- ⬜ Tier-3 MatrixTensor specification
-
----
-
-## Risk register (excerpt)
-
-| ID  | Risk | P | Impact | Mitigation |
-|-----|------|---|--------|-----------|
-| R01 | Spec changes force implementation rework | High | High | Freeze spec before code; breaking changes via RFC |
-| R03 | Token savings < 30 % in practice | Med | High | Measure from Phase 1; AnchorFrame hit rate is the lever |
-| R04 | NIP CA key compromise | Low | Critical | HSM interface reserved; annual rotation enforced |
-| R07 | W3C / IETF standardization slow | High | Low | Pursue de-facto adoption via OSS; formal RFC is secondary |
-
-Full register: [NPS-Roadmap.md](https://github.com/labacacia/NPS-Release/blob/main/spec/NPS-Roadmap.md).
 
 ---
 
