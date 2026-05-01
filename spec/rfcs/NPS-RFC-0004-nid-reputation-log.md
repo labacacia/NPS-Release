@@ -7,7 +7,7 @@ English | [中文版](./NPS-RFC-0004-nid-reputation-log.cn.md)
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: Ori Lynn (pre-1.0 fast-track per `spec/cr/README.md`)
 **Created**: 2026-04-21
-**Last-Updated**: 2026-04-26
+**Last-Updated**: 2026-05-01
 **Accepted**: 2026-04-26 (pre-1.0 fast-track; see `spec/cr/README.md`)
 **Activated**: _(set when first reference log operator ships, target v1.0-alpha.4)_
 **Supersedes**: _none_
@@ -143,11 +143,22 @@ queriers — forward compatibility.
 
 ### 4.3 Log Operator Interface
 
+#### 4.3.1 Phase 1 — Submit and Query (current)
+
 A log operator exposes two HTTP endpoints, discoverable via NDP:
 
 ```
 POST /v1/log/entries        # submit a new entry (requires issuer auth)
 GET  /v1/log/entries?nid=<subject_nid>&since=<seq>  # query
+```
+
+#### 4.3.2 [Phase 2] — Merkle Integrity Proofs (deferred)
+
+> **[Phase 2 — deferred]** The following endpoints and Merkle structure
+> are not part of the Phase 1 implementation; they are targeted for
+> v1.0-alpha.5 per §8.1.
+
+```
 GET  /v1/log/sth            # signed tree head (Merkle root + seq + timestamp)
 GET  /v1/log/proof?seq=<n>&tree_size=<m>  # inclusion proof
 ```
@@ -159,6 +170,10 @@ queriers cryptographic proof that an entry is included without
 downloading the full log.
 
 ### 4.4 Manifest / NDP Changes
+
+> **[Phase 2 — deferred]** Everything in this section is targeted for
+> v1.0-alpha.5 per §8.1. Neither `/.nid/reputation` nor `reputation_policy`
+> is part of the Phase 1 implementation.
 
 NDP gains an optional well-known path for reputation discovery:
 
@@ -183,7 +198,86 @@ reputation_policy:
 
 Nodes choosing *not* to check reputation simply omit the field.
 
-### 4.5 Error Codes
+### 4.5 STH Gossip Protocol
+
+> **[Phase 3 — v1.0-alpha.5]** Enables cross-log consistency verification
+> and fork detection.  OQ-1 is resolved in favour of a lightweight NPS-native
+> variant (analogous to RFC 9162 §8.1.4 but without the HTTP-header transport
+> and with NPS error codes).
+
+#### 4.5.1 Gossip Endpoint
+
+Each log operator MUST expose:
+
+```
+GET /v1/log/gossip/sth
+```
+
+**Response** (JSON):
+
+```json
+{
+  "own_sth": {
+    "tree_size": 42817,
+    "timestamp": "2026-05-01T10:00:00Z",
+    "sha256_root_hash": "hex-of-merkle-root",
+    "log_id": "nid:ed25519:<log-operator-pubkey>",
+    "signature": "base64url(Ed25519(jcs(own_sth without signature)))"
+  },
+  "peer_sths": [
+    {
+      "log_id": "nid:ed25519:<peer-pubkey>",
+      "received_at": "2026-05-01T09:59:30Z",
+      "sth": { /* same shape as own_sth */ }
+    }
+  ]
+}
+```
+
+`peer_sths` contains the most recent validated STH received from each
+configured peer. Clients querying this endpoint can cross-check peers
+without contacting them directly.
+
+#### 4.5.2 Gossip Push Cycle
+
+Log operators configured with a `peers` list MUST run a background
+gossip cycle:
+
+1. **Fetch** `GET /v1/log/gossip/sth` from each peer (default interval: 30 s).
+2. **Verify** the peer's `own_sth.signature` against the peer's `log_id` public key.
+3. **Monotonicity check**: peer's new `tree_size` MUST be ≥ the last accepted `tree_size`
+   for that `log_id`.  A decrease is evidence of a fork attempt — log operators
+   SHOULD emit a `LOG-FORK-DETECTED` event to local audit and cease transacting
+   with that peer until manually reviewed.
+4. **Consistency proof** (SHOULD): when the peer's `tree_size` increases, the
+   operator SHOULD fetch an RFC 9162 consistency proof from
+   `GET /v1/log/proof?from=<prev_size>&to=<new_size>` and verify it before
+   accepting the new STH.  Failure to verify = potential fork.
+5. **Cache** the accepted peer STH in memory; serve it from `/gossip/sth`.
+
+#### 4.5.3 Configuration
+
+Log operator configuration gains an optional `peers` list:
+
+```json
+{
+  "peers": [
+    { "log_id": "nid:ed25519:<peer>", "endpoint": "https://log2.example.com" }
+  ],
+  "gossip_interval_s": 30
+}
+```
+
+`gossip_interval_s` defaults to 30; minimum 10; maximum 3600.
+
+#### 4.5.4 Error Codes (Phase 3 additions)
+
+| Error Code | NPS Status | Description |
+|------------|------------|-------------|
+| `NIP-REPUTATION-GOSSIP-FORK` | `NPS-SERVER-INTERNAL` | Cross-peer STH consistency check failed; possible fork detected |
+| `NIP-REPUTATION-GOSSIP-SIG-INVALID` | `NPS-CLIENT-BAD-FRAME` | Peer STH signature verification failed |
+
+### 4.7 Error Codes
 
 New entries in `spec/error-codes.md`:
 
@@ -214,7 +308,7 @@ For hot paths, Nodes SHOULD cache log results with a short TTL
 SHOULD be checked synchronously on every connection but can be
 satisfied by OCSP-stapling-like pre-fetch.
 
-### 4.7 Backward Compatibility
+### 4.8 Backward Compatibility
 
 - Old Nodes (no `reputation_policy`)? Fully compatible — log is ignored.
 - Old Agents? Never affected at the wire level; only their NIDs appear
@@ -291,8 +385,8 @@ A single LabAcacia-operated registry.
 ## 7. Security Considerations
 
 - **Log tampering**: prevented by Merkle tree + periodic STH
-  publication. Nodes SHOULD fetch STH and verify inclusion proofs
-  when they download entries.
+  publication. **[Phase 2]** Nodes SHOULD fetch STH and verify inclusion
+  proofs when they download entries.
 - **Entry forgery**: impossible without `issuer_nid` private key
   (signature over canonical form). Log operator additionally signs
   for ordering commit.
@@ -317,27 +411,27 @@ A single LabAcacia-operated registry.
 |-------|-------|----------------|
 | 1 | .NET reference log operator; entry format; submit + query HTTP API; no Merkle proofs yet | Unit tests green; another SDK can query |
 | 2 | Merkle tree + STH + inclusion proofs; NDP `/.nid/reputation` in all SDKs; NWM `reputation_policy` parsing | Interop: 2 independent logs + 2 SDK clients cross-check |
-| 3 | Default `reputation_policy` for AaaS Profile L2 tier; STH gossip between reference logs | Logs agree on STH within 60s of commit |
+| 3 | Default `reputation_policy` for AaaS Profile L2 tier; STH gossip between reference logs (see §4.5) | Logs agree on STH within 60s of commit |
 | 4 | Deprecate unsigned-entry experimental flag if any | Clean |
 
 ### 8.2 SDK Coverage Matrix
 
 | SDK | Owner | Status | Notes |
 |-----|-------|--------|-------|
-| .NET | Ori Lynn | pending | Reference log operator also in .NET |
-| Python | _TBD_ | pending | Client only Phase 1; operator Phase 2 |
-| TypeScript | _TBD_ | pending | — |
-| Java | _TBD_ | pending | — |
-| Rust | _TBD_ | pending | — |
-| Go | _TBD_ | pending | — |
+| .NET | Ori Lynn | ✅ Phase 1+2 done; Phase 3 (gossip) in alpha.5 | Reference log operator also in .NET (`nps-ledger`) |
+| Python | _TBD_ | Phase 1+2 pending | Client only |
+| TypeScript | _TBD_ | Phase 1+2 pending | — |
+| Java | _TBD_ | Phase 1+2 pending | — |
+| Rust | _TBD_ | Phase 1+2 pending | — |
+| Go | _TBD_ | Phase 1+2 pending | — |
 
 ### 8.3 Test Plan
 
 1. Entry round-trip: issuer signs → log operator appends → querier
    validates dual signature.
-2. Inclusion proof: query entry `seq=N`, verify against STH at
+2. **[Phase 2]** Inclusion proof: query entry `seq=N`, verify against STH at
    `tree_size >= N+1`.
-3. Tamper detection: modify entry bytes in storage → STH proof fails.
+3. **[Phase 2]** Tamper detection: modify entry bytes in storage → STH proof fails.
 4. NWM `reject_on` matching: `severity: ">=major"` matches `major`
    and `critical`, not `moderate`.
 5. Log unreachable during policy evaluation: `NIP-REPUTATION-LOG-UNREACHABLE`,
@@ -372,8 +466,8 @@ None yet. Before `Accepted`:
 
 ## 10. Open Questions
 
-- [ ] **OQ-1**: STH gossip protocol — reuse CT gossip (RFC 9162
-  Section 8.1.4) or define a lighter variant? Default: reuse.
+- [x] **OQ-1**: STH gossip protocol — resolved (v1.0-alpha.5): lightweight NPS-native
+  variant (analogous to RFC 9162 §8.1.4); see §4.5 for full design.
 - [ ] **OQ-2**: Dispute mechanism — can a `subject_nid` post a
   `dispute` entry against an allegation about themselves? Default:
   yes, as `incident: self-dispute` referencing the original `seq`.
@@ -412,3 +506,4 @@ None yet. Before `Accepted`:
 |------|--------|--------|
 | 2026-04-21 | Ori Lynn | Initial draft |
 | 2026-04-26 | Ori Lynn | Accepted via pre-1.0 fast-track. Phase 1 spec changes landed: NPS-3 §5.1.2 Reputation Log Entry (12-field signed JSON, 8-value `incident` enum, 5-step `severity` enum, JCS dual-signature rule), error codes `NIP-REPUTATION-ENTRY-INVALID` / `NIP-REPUTATION-LOG-UNREACHABLE` / `NWP-AUTH-REPUTATION-BLOCKED`, new `NPS-DOWNSTREAM-UNAVAILABLE` status code. Phase 1 .NET reference types landed under `NPS.NIP.Reputation.*`. Phase 2 (Merkle tree + STH + inclusion proofs + NDP `/.nid/reputation` discovery + NWM `reputation_policy` parsing) deferred to v1.0-alpha.4 per RFC §8.1. Phase 3 (default policy in AaaS Profile L2 + STH gossip) deferred to alpha.5+. |
+| 2026-05-01 | Ori Lynn | Phase 3 spec landed (v1.0-alpha.5): §4.5 STH Gossip Protocol (30s push cycle, `/v1/log/gossip/sth` endpoint, monotonicity + consistency-proof verification, fork detection); OQ-1 resolved; two new error codes `NIP-REPUTATION-GOSSIP-FORK` / `NIP-REPUTATION-GOSSIP-SIG-INVALID`; AaaS-Profile L2 default `reputation_policy` added in `NPS-AaaS-Profile.md`. Phase 3 .NET reference implementation in `nps-ledger`. |

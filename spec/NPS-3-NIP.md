@@ -4,8 +4,8 @@ English | [中文版](./NPS-3-NIP.cn.md)
 
 **Spec Number**: NPS-3  
 **Status**: Proposed  
-**Version**: 0.5  
-**Date**: 2026-04-26  
+**Version**: 0.6  
+**Date**: 2026-05-01  
 **Port**: 17433 (default, shared) / 17435 (optional dedicated)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **Depends-On**: NPS-1 (NCP v0.6)  
@@ -119,6 +119,7 @@ The `metadata` field is not included in the signature computation; an agent MAY 
 | `ncp:stream` | May initiate NCP streaming |
 | `nop:delegate` | May delegate subtasks to other agents |
 | `nop:orchestrate` | May act as an orchestrator and emit TaskFrames |
+| `topology:read` | May read Anchor Node topology data via reserved query types `topology.snapshot` / `topology.stream` (NPS-2 §12); Anchor Nodes MUST require this capability at Phase 1–2 per NPS-2 §12.4. Self-declared and signed at Phase 1–2; CA-attested role binding deferred to Phase 3 (RFC-0002 amendment). |
 
 **`scope` field**
 
@@ -170,6 +171,8 @@ NPS defines three **assurance levels** an Agent identity may carry, modelled on 
 Default is `"anonymous"` — pre-RFC-0003 NIDs and any NID lacking the field are treated as L0. A Node demanding stricter levels declares `min_assurance_level` in its NWM (NPS-2 §4.1, §4.3).
 
 The values are an **ordered enum**: `anonymous < attested < verified`. A request whose level is below the Node's required level MUST be rejected with `NWP-AUTH-ASSURANCE-TOO-LOW` (`NPS-AUTH-FORBIDDEN`).
+
+**Forward compatibility**: An implementation receiving an `assurance_level` value not present in this enum MUST treat it as a protocol error and return `NIP-ASSURANCE-UNKNOWN` (`NPS-CLIENT-BAD-FRAME`). Implementations MUST NOT silently demote an unknown value to `anonymous` — silent demotion would create a security loophole for future higher-assurance levels introduced by a later spec revision.
 
 See [NPS-RFC-0003](rfcs/NPS-RFC-0003-agent-identity-assurance-levels.md) for full design rationale, including the X.509 critical-extension flip planned in coordination with NPS-RFC-0002.
 
@@ -373,6 +376,7 @@ At every link in the delegation chain, scope MUST NOT exceed that of its parent.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.6 | 2026-05-01 | Added `topology:read` to the standard `capabilities` registry (§5.1 capabilities table). This capability is required by Anchor Nodes at Phase 1–2 to gate access to topology read operations (`topology.snapshot` / `topology.stream`) as defined by the NPS-2 §12.4 minimum authorization binding (M6). Self-declared and key-signed at Phase 1–2; CA-attested role binding (`id-nps-node-roles` cert extension) deferred to Phase 3 pending RFC-0002 stabilization. |
 | 0.5 | 2026-04-26 | Added §5.1.2 Reputation Log Entry — wire format for Certificate-Transparency-style append-only behavioral records about a `subject_nid`. Phase 1 ships the entry shape (12 fields including dual-signature requirements over JCS-canonicalised form), the initial 8-value `incident` enum (`cert-revoked` / `rate-limit-violation` / `tos-violation` / `scraping-pattern` / `payment-default` / `contract-dispute` / `impersonation-claim` / `positive-attestation`), and the 5-step `severity` enum. New error codes `NIP-REPUTATION-ENTRY-INVALID` and `NIP-REPUTATION-LOG-UNREACHABLE`. Merkle / STH / inclusion-proof surface deferred to Phase 2 per [NPS-RFC-0004](rfcs/NPS-RFC-0004-nid-reputation-log.md) §8.1. |
 | 0.4 | 2026-04-25 | Added §5.1.1 Assurance Levels (`anonymous` / `attested` / `verified`); IdentFrame gains optional `assurance_level` field with backward-compatible default `anonymous`; new error codes `NIP-ASSURANCE-MISMATCH` and `NIP-ASSURANCE-UNKNOWN`. See [NPS-RFC-0003](rfcs/NPS-RFC-0003-agent-identity-assurance-levels.md). `Depends-On` NCP version corrected to `v0.6` per NPS-RFC-0001. |
 | 0.2 | 2026-04-12 | Unified port 17433; added `metadata` field to IdentFrame (tokenizer auto-match); error codes switched to NPS-status-code mapping; error-code list completed |

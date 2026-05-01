@@ -98,7 +98,7 @@ A DAG consists of `nodes` (vertices) and `edges` (directed edges) describing sub
 - MUST be a Directed Acyclic Graph (no cycles; violation returns `NOP-TASK-DAG-CYCLE`)
 - MUST have at least one root node (no incoming edges) and one terminal node (no outgoing edges)
 - Maximum node count: **32** (violation returns `NOP-TASK-DAG-TOO-LARGE`)
-- Maximum delegation chain depth: **3 levels** (Orchestrator → Worker → Sub-Worker; violation returns `NOP-DELEGATE-CHAIN-TOO-DEEP`)
+- Maximum delegation chain depth: **3 levels** — each entity in the chain counts as one level (Orchestrator = level 1, Worker = level 2, Sub-Worker = level 3); a fourth entity (Sub-Sub-Worker) would exceed the limit. Equivalently: at most 2 `DelegateFrame` hops. Violation returns `NOP-DELEGATE-CHAIN-TOO-DEEP`.
 
 **DAG Example**
 
@@ -515,7 +515,7 @@ Orchestrator                              Worker B (Data)    Worker C (Inference
 | `NOP-TASK-CANCELLED` | `NPS-CLIENT-CONFLICT` | Task has been cancelled |
 | `NOP-DELEGATE-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | delegated_scope exceeds parent Agent scope |
 | `NOP-DELEGATE-REJECTED` | `NPS-CLIENT-UNPROCESSABLE` | Worker Agent rejected the delegation (insufficient capability or overloaded) |
-| `NOP-DELEGATE-CHAIN-TOO-DEEP` | `NPS-CLIENT-BAD-PARAM` | Delegation chain depth exceeds limit (default 3 levels) |
+| `NOP-DELEGATE-CHAIN-TOO-DEEP` | `NPS-CLIENT-BAD-PARAM` | Delegation chain depth exceeds the 3-level maximum (counted as entities: Orchestrator=1, Worker=2, Sub-Worker=3; a fourth entity triggers this error; at most 2 `DelegateFrame` hops permitted — see §3.1.1) |
 | `NOP-DELEGATE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | Subtask did not complete before deadline_at |
 | `NOP-SYNC-TIMEOUT` | `NPS-SERVER-TIMEOUT` | SyncFrame wait for dependent tasks timed out |
 | `NOP-SYNC-DEPENDENCY-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | A dependent subtask failed (and failure count exceeds K-of-N tolerance) |

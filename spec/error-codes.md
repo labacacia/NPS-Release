@@ -2,7 +2,7 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 1.0  
+**Version**: 1.2  
 **Date**: 2026-05-01  
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
@@ -73,7 +73,10 @@ NPS uses a two-level error system:
 | `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | Node graph contains a cyclic reference |
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | Underlying data source is temporarily unavailable |
 | `NWP-MANIFEST-VERSION-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Agent's NPS version is lower than the node's `min_agent_version` |
+| `NWP-MANIFEST-NODE-TYPE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` contains the removed legacy value `"gateway"` (NPS-CR-0001); use `"anchor"` or `"bridge"`. Response SHOULD include a `hint` pointing to NPS-CR-0001. |
+| `NWP-MANIFEST-NODE-TYPE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` contains an unrecognized value (not a known-removed legacy value — use `NWP-MANIFEST-NODE-TYPE-REMOVED` for that case). |
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | Rate limit exceeded; reset timestamp is in the `X-NWP-Rate-Reset` header |
+| `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | `QueryFrame` or `SubscribeFrame` `type` field contains an unrecognized reserved-type identifier; this node does not implement the requested reserved operation (NWP §12). Distinct from `NWP-ACTION-NOT-FOUND` — use this code when the `type` field is the unknown operand, not `action_id`. |
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | Caller lacks permission to read this Anchor's topology (NPS-2 §12); authorization policy is implementation-defined per §12.4 (NPS-CR-0002) |
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` value is not implemented by this Anchor Node (NPS-CR-0002) |
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Requested `topology.depth` exceeds this Anchor Node's configured maximum (NPS-CR-0002) |
@@ -102,6 +105,8 @@ NPS uses a two-level error system:
 | `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `assurance_level` carries a value outside the defined enum (`anonymous` / `attested` / `verified`) — see NPS-3 §5.1.1 (NPS-RFC-0003) |
 | `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | Reputation log entry signature fails verification or canonical (RFC 8785 JCS) form is malformed — see NPS-3 §5.1.2 (NPS-RFC-0004) |
 | `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | A log operator referenced by a Node's `reputation_policy` cannot be reached during admission evaluation — see NPS-3 §5.1.2 (NPS-RFC-0004) |
+| `NIP-REPUTATION-GOSSIP-FORK` | `NPS-SERVER-INTERNAL` | Cross-peer STH consistency check failed; possible Merkle tree fork detected — see NPS-RFC-0004 §4.5 |
+| `NIP-REPUTATION-GOSSIP-SIG-INVALID` | `NPS-CLIENT-BAD-FRAME` | Peer STH signature verification failed during gossip exchange — see NPS-RFC-0004 §4.5 |
 | `NIP-CERT-FORMAT-INVALID` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.cert_chain` is not DER-encoded X.509 or fails ASN.1 parsing — see NPS-RFC-0002 §4.3 |
 | `NIP-CERT-EKU-MISSING` | `NPS-CLIENT-BAD-FRAME` | Required NPS EKU (`agent-identity` or `node-identity`) absent or non-critical on the leaf cert — see NPS-RFC-0002 §4.1 / §4.3 |
 | `NIP-CERT-SUBJECT-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | X.509 leaf cert subject CN / SAN URI does not match the `IdentFrame.nid` field — see NPS-RFC-0002 §4.3 |
@@ -118,6 +123,8 @@ NPS uses a two-level error system:
 | `NDP-RESOLVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | Resolution request timed out |
 | `NDP-ANNOUNCE-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | AnnounceFrame signature verification failed |
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | NID in AnnounceFrame does not match the signing certificate |
+| `NDP-ANNOUNCE-ROLE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` contains the removed legacy value `"gateway"` (NPS-CR-0001); use `"anchor"` or `"bridge"`. Response SHOULD include a `hint` pointing to NPS-CR-0001. |
+| `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` contains an unrecognized value (not a known-removed legacy value — use `NDP-ANNOUNCE-ROLE-REMOVED` for that case). |
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame sequence numbers are not contiguous |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry temporarily unavailable |
 

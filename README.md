@@ -2,7 +2,7 @@ English | [中文版](./README.cn.md)
 
 # Neural Protocol Suite (NPS) — Protocol Specification
 
-> **Version:** 1.0.0-alpha.4 | **Status:** Proposed | **License:** Apache 2.0
+> **Version:** 1.0.0-alpha.5 | **Status:** Proposed | **License:** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 
@@ -57,9 +57,9 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 | Protocol | Analogue | Version | Summary |
 |----------|----------|---------|---------|
 | **NCP** — Neural Communication Protocol | Wire / Framing | v0.6 | Binary frame format, dual-tier codec (JSON / MsgPack), streaming |
-| **NWP** — Neural Web Protocol | HTTP | v0.7 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Anchor / Bridge nodes |
-| **NIP** — Neural Identity Protocol | TLS / PKI | v0.5 | Ed25519 identity, certificate lifecycle, CA, OCSP, CRL |
-| **NDP** — Neural Discovery Protocol | DNS | v0.5 | Node announcement, signed records, graph traversal |
+| **NWP** — Neural Web Protocol | HTTP | v0.10 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Anchor / Bridge nodes |
+| **NIP** — Neural Identity Protocol | TLS / PKI | v0.6 | Ed25519 identity, certificate lifecycle, CA, OCSP, CRL |
+| **NDP** — Neural Discovery Protocol | DNS | v0.6 | Node announcement, signed records, graph traversal |
 | **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.4 | DAG task orchestration, delegation, streaming results |
 
 **Dependency chain:** `NCP ← NWP ← NIP ← NDP` / `NCP + NWP + NIP ← NOP`

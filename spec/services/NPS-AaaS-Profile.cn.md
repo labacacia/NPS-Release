@@ -3,10 +3,10 @@
 # NPS-AaaS Profile: Agent-as-a-Service 合规性规范
 
 **Status**: Proposed
-**Version**: 0.4
-**Date**: 2026-04-27
+**Version**: 0.6
+**Date**: 2026-05-01
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6)、NPS-2 (NWP v0.8)、NPS-3 (NIP v0.4)、NPS-4 (NDP v0.5)、NPS-5 (NOP v0.4)
+**Depends-On**: NPS-1 (NCP v0.6)、NPS-2 (NWP v0.10)、NPS-3 (NIP v0.6)、NPS-4 (NDP v0.6)、NPS-5 (NOP v0.4)
 
 > 本规范定义基于 NPS 协议族构建 Agent-as-a-Service（AaaS）平台的合规性要求，
 > 涵盖服务入口、内部编排、数据访问三层架构。
@@ -362,7 +362,8 @@ NWP v0.5 已支持 `vector_search` 字段（§6.4），Vector Proxy Layer 只需
 | L2-05 | MUST 实现 NOP 重试和超时语义 | NOP |
 | L2-06 | SHOULD 支持异步 Action（ActionFrame.async=true） | NWP |
 | L2-07 | SHOULD 实现 AlignStream 背压控制 | NOP |
-| L2-08 | 维护成员注册表的 Anchor Node MUST 实现 `topology.snapshot` 与 `topology.stream` 保留查询类型，详见 [NPS-2 §12](../NPS-2-NWP.cn.md)。Version 计数器 MUST 在 Anchor 生命周期内单调，进程重启时 SHOULD 通过 rebase + `anchor_state.version_rebased` 事件保持订阅一致性。 | NWP §12 |
+| L2-08 | 维护成员注册表的 Anchor Node MUST 实现 `topology.snapshot` 与 `topology.stream` 保留查询类型，详见 [NPS-2 §12](../NPS-2-NWP.cn.md)。Version 计数器 MUST 在 Anchor 生命周期内单调，进程重启时 SHOULD 通过 rebase + `anchor_state.version_rebased` 事件保持订阅一致性。声明 L2-08 的实现 MUST 满足宿主 Anchor 的 [NPS-Node-Profile](./NPS-Node-Profile.cn.md) L1；维护活跃成员注册表的 Anchor SHOULD 同时满足 Node-Profile L2。 | NWP §12 |
+| L2-09 | SHOULD 在 NWM 中配置 `reputation_policy` 并在 Agent 接入时查询至少一个符合 NPS-RFC-0004 规范的日志运营方。L2 AaaS 部署推荐最小策略：拒绝任何级别存在 `cert-revoked` 事件的 Agent，以及过去 30 天内存在 `major` 或更高级别 `rate-limit-violation` / `tos-violation` 事件的 Agent。节点 SHOULD 在 NWM 的 `reputation_policy` 字段中公开其策略。 | NPS-RFC-0004 |
 
 ### 4.4 Level 3 — Advanced 合规
 
@@ -433,6 +434,8 @@ AaaS 向量化方式：fetch 返回 top-K 向量摘要 ~85 NPT → analyze ~50 N
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.6 | 2026-05-01 | alpha.5 更新。§4.3 新增 L2-09 要求：SHOULD 配置 `reputation_policy` 并查询至少一个 NPS-RFC-0004 合规日志运营方；定义推荐最小策略。Depends-On 增加 NPS-RFC-0004 Phase 3（STH gossip）。 |
+| 0.5 | 2026-05-01 | M8 跨 Profile 契约澄清。§4.3 L2-08 描述扩展：声明 L2-08 的实现 MUST 满足 Anchor 宿主的 Node-Profile L1；维护活跃注册表的 Anchor SHOULD 同时满足 Node-Profile L2。Depends-On 升级：NPS-2（NWP v0.8 → v0.10）、NPS-3（NIP v0.4 → v0.6）、NPS-4（NDP v0.5 → v0.6）。 |
 | 0.4 | 2026-04-27 | §4.3 新增 L2-08 要求，强制维护成员注册表的 Anchor Node 实现 `topology.snapshot` / `topology.stream`，详见 [NPS-CR-0002](../cr/NPS-CR-0002-anchor-topology-queries.md) 与 [NPS-2 §12](../NPS-2-NWP.cn.md)。§2 引言段中"留给 v1.0-alpha.4"的占位措辞替换为具体的 L2 强制声明。§2.2 集群注册表行从"可选"升级为"L1 可选、L2 强制"。§6 协议关系表对齐到 NWP v0.8 以引用新 §12 接口。Depends-On 升级：NPS-2（NWP v0.7 → v0.8）。 |
 | 0.3 | 2026-04-26 | **破坏性**（按 [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md)）。§2 Gateway Node 重命名为 **Anchor Node**，wire/manifest 示例同步更新（`node_type: "anchor"`、`nwm_version: "0.7"`、`min_nip_version: "0.4"`）；§2.2 新增可选集群注册表行。新增 §2A **Bridge Node**（NPS↔非-NPS 协议翻译、`bridge_protocols` 声明、与 `compat/*-bridge` 的方向澄清）。§1.2 / §1.3 架构图与 §6 协议关系表更新；L1 §4.2 / §5 引用改指向 Anchor Node。§6 协议变更行从"新增 gateway"改为"重命名 gateway → anchor + 新增 bridge"。Depends-On 升级为 NCP v0.6（RFC-0001）+ NWP v0.7（CR-0001）+ NIP v0.4（RFC-0003）+ NDP v0.5（CR-0001 字段）。 |
 | 0.1 | 2026-04-15 | 初始草案：AaaS 架构总览、Gateway Node 定义、Vector Proxy Layer 设计、三级合规要求 |

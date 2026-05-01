@@ -2,7 +2,7 @@
 
 > English | [中文版](sdks.cn.md)
 
-Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP + NDP + NOP** — at version **1.0.0-alpha.4**.
+Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP + NDP + NOP** — at version **1.0.0-alpha.5**.
 
 ---
 
@@ -19,7 +19,7 @@ Six official SDKs. Every SDK implements all five protocols — **NCP + NWP + NIP
 
 ## NIP CA Server
 
-Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Currently at `v1.0.0-alpha.4` (released independently from the SDKs since `v1.0.0-alpha.3`).
+Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Currently at `v1.0.0-alpha.5` (released independently from the SDKs since `v1.0.0-alpha.3`).
 
 | Repo | Stack | Quickstart |
 |------|-------|------------|
@@ -29,7 +29,7 @@ Built on the published [`LabAcacia.NPS.NIP`](https://www.nuget.org/packages/LabA
 
 ## NPS Daemons
 
-Reference deployment binaries for the standard three-layer NPS topology. The four open-source daemons (Layer 1 + Layer 2) ship in one bundle repo, currently at `v1.0.0-alpha.4`.
+Reference deployment binaries for the standard three-layer NPS topology. The four open-source daemons (Layer 1 + Layer 2) ship in one bundle repo, currently at `v1.0.0-alpha.5`.
 
 | Repo | Daemons | Quickstart |
 |------|---------|------------|
@@ -46,42 +46,42 @@ The Layer-3 **trust-anchor** daemons (`nps-cloud-ca` and `nps-ledger`) live in p
 ### Python
 
 ```bash
-pip install nps-lib==1.0.0a4
+pip install nps-lib==1.0.0a5
 ```
 
 ### TypeScript / JavaScript
 
 ```bash
-npm install @labacacia/nps-sdk@1.0.0-alpha.4
+npm install @labacacia/nps-sdk@1.0.0-alpha.5
 # or
-pnpm add @labacacia/nps-sdk@1.0.0-alpha.4
+pnpm add @labacacia/nps-sdk@1.0.0-alpha.5
 ```
 
 ### Rust
 
 ```toml
 [dependencies]
-nps-sdk = "1.0.0-alpha.4"
+nps-sdk = "1.0.0-alpha.5"
 ```
 
 ### Go
 
 ```bash
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.4
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.5
 ```
 
 ### Java (Gradle Kotlin DSL)
 
 ```kotlin
 dependencies {
-    implementation("com.labacacia.nps:nps-java:1.0.0-alpha.4")
+    implementation("com.labacacia.nps:nps-java:1.0.0-alpha.5")
 }
 ```
 
 ### .NET
 
 ```bash
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.4
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.5
 ```
 
 ---

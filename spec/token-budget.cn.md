@@ -2,8 +2,8 @@
 
 # NPS Token Budget 规范
 
-**Version**: 0.2  
-**Date**: 2026-04-19  
+**Version**: 0.3  
+**Date**: 2026-05-01  
 
 ---
 
@@ -135,6 +135,31 @@ CapsFrame 的 `token_est` 字段值为 NPT：
 - 汇率表建议作为可热更新配置，不硬编码
 - 高频场景可对 token 估算做采样而非逐条计算
 - NPT 值始终为 uint32，最大 4,294,967,295
+
+---
+
+## 7. 流式与订阅预算策略
+
+`X-NWP-Budget` 上限仅适用于**同步请求/响应操作**（QueryFrame → CapsFrame / StreamFrame 批次）。以下持续推送操作遵循不同规则：
+
+### 7.1 流式查询（QueryFrame `stream: true`）
+
+- `X-NWP-Budget` 按**每个 StreamFrame 批次**执行，不针对整个流。
+- 若处理某批次会超出声明预算，节点 MUST 对该批次进行裁剪或终止。
+- 响应头 `X-NWP-Tokens` 仅报告当前批次消耗的 NPT。
+- Agent 可在累计预算耗尽后主动断开连接。
+
+### 7.2 SubscribeFrame / 推送流（topology.stream、事件订阅）
+
+长连续推送流（如通过 SubscribeFrame 建立的 `topology.stream`）由一系列大小不固定的事件组成，预算语义有所不同：
+
+| 方面 | 行为 |
+|------|------|
+| `X-NWP-Budget` 强制 | 节点不执行；推送事件的生成独立于任何请求级预算上限 |
+| `X-NWP-Tokens` 上报 | 节点 SHOULD 在每个推送事件（DiffFrame）中附带此响应头，报告该事件有效载荷的 NPT |
+| Agent 侧强制 | Agent 负责跨事件累计 NPT，并在会话预算耗尽时主动断开连接 |
+
+> **设计原因**：对推送流执行 `X-NWP-Budget` 将要求节点缓冲未来事件，与实时拓扑变更交付的设计目标不兼容。订阅流的预算控制应由 Agent 侧负责。
 
 ---
 

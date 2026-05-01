@@ -2,7 +2,7 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 1.0  
+**Version**: 1.2  
 **Date**: 2026-05-01  
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
@@ -73,7 +73,10 @@ NPS 采用两级错误体系：
 | `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | 节点图谱中存在循环引用 |
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | 底层数据源暂不可用 |
 | `NWP-MANIFEST-VERSION-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Agent NPS 版本低于节点要求的 min_agent_version |
+| `NWP-MANIFEST-NODE-TYPE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` 包含已移除的遗留值 `"gateway"`（NPS-CR-0001）；请改用 `"anchor"` 或 `"bridge"`。响应 SHOULD 携带指向 NPS-CR-0001 的 `hint` 字段。|
+| `NWP-MANIFEST-NODE-TYPE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` 包含无法识别的值（非已知遗留移除值——遗留移除情况请用 `NWP-MANIFEST-NODE-TYPE-REMOVED`）。|
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | 超出频率限制，X-NWP-Rate-Reset 头包含重置时间 |
+| `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | `QueryFrame` 或 `SubscribeFrame` 的 `type` 字段包含不可识别的 reserved-type 标识符；当前节点未实现所请求的保留操作（NWP §12）。与 `NWP-ACTION-NOT-FOUND` 不同——当 `type` 字段是未知操作数（而非 `action_id`）时使用此码。|
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | 调用方无权读取该 Anchor 的拓扑信息（NPS-2 §12）；授权策略由实现方按 §12.4 自定义（NPS-CR-0002）|
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` 的值该 Anchor Node 未实现（NPS-CR-0002）|
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | 请求的 `topology.depth` 超出该 Anchor Node 配置的最大值（NPS-CR-0002）|
@@ -102,6 +105,8 @@ NPS 采用两级错误体系：
 | `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `assurance_level` 取值不在定义枚举（`anonymous` / `attested` / `verified`）—— 见 NPS-3 §5.1.1（NPS-RFC-0003）|
 | `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | 声誉日志条目签名校验失败或规范化（RFC 8785 JCS）形式不合法 —— 见 NPS-3 §5.1.2（NPS-RFC-0004）|
 | `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | 准入评估时无法到达 Node `reputation_policy` 引用的某个日志运营方 —— 见 NPS-3 §5.1.2（NPS-RFC-0004）|
+| `NIP-REPUTATION-GOSSIP-FORK` | `NPS-SERVER-INTERNAL` | 跨节点 STH 一致性检查失败；可能检测到 Merkle 树分叉 —— 见 NPS-RFC-0004 §4.5 |
+| `NIP-REPUTATION-GOSSIP-SIG-INVALID` | `NPS-CLIENT-BAD-FRAME` | gossip 交换中对端 STH 签名验证失败 —— 见 NPS-RFC-0004 §4.5 |
 | `NIP-CERT-FORMAT-INVALID` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.cert_chain` 不是 DER 编码 X.509，或 ASN.1 解析失败 —— 见 NPS-RFC-0002 §4.3 |
 | `NIP-CERT-EKU-MISSING` | `NPS-CLIENT-BAD-FRAME` | leaf 证书缺少必需的 NPS EKU（`agent-identity` 或 `node-identity`）或未标 critical —— 见 NPS-RFC-0002 §4.1 / §4.3 |
 | `NIP-CERT-SUBJECT-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | X.509 leaf 证书 subject CN / SAN URI 与 `IdentFrame.nid` 字段不一致 —— 见 NPS-RFC-0002 §4.3 |
@@ -118,6 +123,8 @@ NPS 采用两级错误体系：
 | `NDP-RESOLVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | 解析请求超时 |
 | `NDP-ANNOUNCE-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | AnnounceFrame 签名验证失�� |
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 中 NID 与签名证书不一致 |
+| `NDP-ANNOUNCE-ROLE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` 包含已移除的遗留值 `"gateway"`（NPS-CR-0001）；请改用 `"anchor"` 或 `"bridge"`。响应 SHOULD 携带指向 NPS-CR-0001 的 `hint` 字段。|
+| `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` 包含无法识别的值（非已知遗留移除值——遗留移除情况请用 `NDP-ANNOUNCE-ROLE-REMOVED`）。|
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame 序号不连续 |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry 暂��不可用 |
 

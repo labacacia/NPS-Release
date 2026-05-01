@@ -224,12 +224,13 @@ See [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md) for full design
 ┌───────────────┬───────────────┬───────────────────────┬──────────────┐
 │  Frame Type   │     Flags     │   Payload Length      │   Reserved   │
 │   (1 byte)    │   (1 byte)    │   (4 bytes, BE)       │  (2 bytes)   │
-└───────────────┴───────────────┴───────────────────────┘──────────────┘
+└───────────────┴───────────────┴───────────────────────┴──────────────┘
 ```
 
 - **Frame Type**: frame-type byte, see the frame namespace (§2.3).
 - **Flags**: control bits, see §3.2.
 - **Payload Length**: 2 bytes by default (max 65,535); 4 bytes in extended mode (max 4,294,967,295).
+- **Reserved**: 2 bytes (Byte 6–7, extended header only); senders MUST set to 0, receivers MUST ignore. The extended header is therefore 8 bytes: 1 (type) + 1 (flags) + 4 (length) + 2 (reserved).
 
 ### 3.2 Flags Field (Bit-level Definition)
 

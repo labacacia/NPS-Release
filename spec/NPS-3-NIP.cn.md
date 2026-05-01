@@ -171,6 +171,8 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 
 枚举**有序**：`anonymous < attested < verified`。请求等级低于 Node 要求时 MUST 返回 `NWP-AUTH-ASSURANCE-TOO-LOW`（`NPS-AUTH-FORBIDDEN`）。
 
+**向前兼容**：收到不在本枚举中的 `assurance_level` 值时，实现 MUST 将其视为协议错误并返回 `NIP-ASSURANCE-UNKNOWN`（`NPS-CLIENT-BAD-FRAME`）。实现 MUST NOT 静默降级为 `anonymous` —— 静默降级会为未来规范新增的更高保证等级留下安全漏洞。
+
 完整设计动机（含与 NPS-RFC-0002 协调的 X.509 critical extension 翻转计划）参见 [NPS-RFC-0003](rfcs/NPS-RFC-0003-agent-identity-assurance-levels.cn.md)。
 
 ---
