@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`spec/rfcs/NPS-RFC-0003` — critical-extension flip phase-gated**: RFC-0003 §4.2 previously stated unconditional MUST-check for the cert extension, while the revision history noted the flip is "NOT yet active" — a downgrade-attack window. Phase 1–2 (current): SHOULD-check, enforcement opt-in. Phase 3 (flag day ≥ 21-day notice, see §8.1): MUST-enforce. Same phase gate added to NPS-3-NIP §5.1.1.
+
 - **`spec/rfcs/NPS-RFC-0002` — provisional OID explicitly gated**: Added `WARNING: EXPERIMENTAL` block; Status line changed to `Draft — EXPERIMENTAL`; OQ-2 hardened to a list of MUST NOT constraints. Added conformance block note to `spec/NPS-3-NIP.md` §5.1.1 `"attested"` row: the provisional OID does not satisfy "RFC-0002-compliant" for conformance or production until IANA PEN is assigned.
 
 - **`spec/NPS-2-NWP.md` — ghost field `auth.min_assurance_level` removed**: NWP §4.1 prose promised a per-action assurance-level override via `auth.min_assurance_level` on individual `ActionSpec` entries (§4.6), but no such field appeared in the §4.6 ActionSpec table. Fixed: added `min_assurance_level: string (Optional)` directly to the §4.6 ActionSpec table; corrected §4.1 prose and §15 v0.6 changelog row to drop the erroneous `auth.` prefix. (NPS-RFC-0003)
