@@ -97,7 +97,7 @@ Agent identity declaration carrying the certificate. Sent as the handshake frame
 | `serial` | string | required | Certificate serial (globally unique per Org CA, hex) |
 | `signature` | string | required | CA's signature over this frame; format `{alg}:{base64url}` |
 | `metadata` | object | optional | Agent metadata — see below |
-| `assurance_level` | string | optional | One of `"anonymous"` / `"attested"` / `"verified"` (see §5.1.1). REQUIRED when the NID's certificate carries the `id-nid-assurance-level` extension. Receivers MUST treat an absent field as `"anonymous"` (backward compatibility with v1.0-alpha.2 publishers). MUST equal the cert extension value when both are present, else `NIP-ASSURANCE-MISMATCH`. (NPS-RFC-0003) |
+| `assurance_level` | string | optional | One of `"anonymous"` / `"attested"` / `"verified"` (see §5.1.1). REQUIRED when the NID's certificate carries the `id-nid-assurance-level` extension. Receivers MUST treat an absent field as `"anonymous"` (backward compatibility with v1.0-alpha.2 publishers). When both field and cert extension are present, they MUST carry the same value — **phase gate**: Phase 1–2 (current) enforcement is opt-in (SHOULD check, MAY enforce); starting Phase 3 flag day (see NPS-RFC-0003 §8.1) enforcement is MUST, violation returns `NIP-ASSURANCE-MISMATCH`. (NPS-RFC-0003) |
 
 **`metadata` fields (optional)**
 
@@ -159,7 +159,7 @@ The signature is computed over the canonical JSON of the IdentFrame with the `si
 
 ### 5.1.1 Assurance Levels (NPS-RFC-0003)
 
-NPS defines three **assurance levels** an Agent identity may carry, modelled on NIST SP 800-63 IAL and CA/B Forum DV/OV/EV. The level travels in `IdentFrame.assurance_level` and is the source of truth for Node policy decisions (`NWM.min_assurance_level`); when X.509 NID certificates are in use (NPS-RFC-0002), the cert MUST also carry the `id-nid-assurance-level` extension and the two MUST agree.
+NPS defines three **assurance levels** an Agent identity may carry, modelled on NIST SP 800-63 IAL and CA/B Forum DV/OV/EV. The level travels in `IdentFrame.assurance_level` and is the source of truth for Node policy decisions (`NWM.min_assurance_level`); when X.509 NID certificates are in use (NPS-RFC-0002), the cert MUST also carry the `id-nid-assurance-level` extension and the two MUST agree — **phase gate**: enforcement is opt-in in Phase 1–2 (current); mandatory starting Phase 3 flag day (see NPS-RFC-0003 §8.1).
 
 | Level | Enum value | Minimum CA criteria | Typical use |
 |-------|------------|---------------------|-------------|

@@ -99,20 +99,28 @@ make contract-grade claims about who it is interacting with.
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `assurance_level` | `enum { anonymous, attested, verified }` | yes | MUST match the critical X.509 extension `id-nid-assurance-level` from NPS-RFC-0002 §4.1 |
+| `assurance_level` | `enum { anonymous, attested, verified }` | yes | When the NID's cert carries the `id-nid-assurance-level` extension (NPS-RFC-0002 §4.1), this field MUST carry the same value. **Phase gate**: Phase 1–2 (current) — verifiers SHOULD check and log mismatches, but enforcement is opt-in. Enforcement becomes MUST and triggers `NIP-ASSURANCE-MISMATCH` starting Phase 3 (flag day — see §8.1). |
 
 The cert is the source of truth; `assurance_level` in `IdentFrame` is
 redundant convenience for servers that don't want to parse the cert
-just to route requests. Verifiers MUST still check the cert extension
-and MUST close the connection with `NIP-ASSURANCE-MISMATCH` if the two
-disagree.
+just to route requests.
 
-**X.509 extension promotion**: NPS-RFC-0002 defined
-`id-nid-assurance-level` (`1.3.6.1.4.1.<PEN>.2.1`) as **non-critical**.
-This RFC flips it to **critical** — old verifiers MUST reject certs
-that carry it as critical until they upgrade. That's intentional:
-a Node that enforces `min_assurance_level` MUST NOT silently accept a
-verifier that can't parse the extension.
+**Phase 1–2 (current)**: Verifiers SHOULD check the cert extension and
+log any mismatch, but MAY skip enforcement. Implementations that do
+enforce MUST close the connection with `NIP-ASSURANCE-MISMATCH`.
+
+**Phase 3 (flag day, see §8.1)**: Verifiers MUST check the cert
+extension and MUST close the connection with `NIP-ASSURANCE-MISMATCH`
+if the two disagree. This is the hard deadline for completing the
+upgrade.
+
+**X.509 extension promotion (Phase 3 — not yet active)**: NPS-RFC-0002
+defines `id-nid-assurance-level` (`1.3.6.1.4.1.<PEN>.2.1`) as
+**non-critical**. Starting Phase 3 flag day, this RFC promotes it to
+**critical** — old verifiers MUST reject certs that carry it as critical
+until they upgrade. That's intentional: a Node that enforces
+`min_assurance_level` MUST NOT silently accept a verifier that can't
+parse the extension. The promotion is NOT yet active in Phase 1–2.
 
 ### 4.3 Manifest / NWM Changes
 
@@ -266,7 +274,7 @@ Nodes enumerate accepted OIDs in NWM.
 |-------|-------|----------------|
 | 1 | .NET NIP parses cert extension; IdentFrame carries field; NWM parses `min_assurance_level`; enforcement optional | Unit tests green; the default behavior is unchanged |
 | 2 | All 6 SDKs + 6 CA servers; CA servers issue L1 certs via ACME; L2 issuance flow documented per CA | Cross-SDK interop: L0/L1/L2 matrix green |
-| 3 | `min_assurance_level` enforcement on by default when set in NWM; extension flipped to critical; 21-day notice | No regressions |
+| 3 | `min_assurance_level` enforcement on by default when set in NWM; extension `id-nid-assurance-level` promoted to critical. **Flag day**: announced via NPS-Dev GitHub Discussions with ≥ 21 calendar days notice before the activation date; after activation, `NIP-ASSURANCE-MISMATCH` enforcement is MUST and non-compliant implementations MUST NOT claim any NPS conformance level | No regressions; all 6 SDKs pass mismatch-enforcement tests |
 | 4 | Remove L0-default fast path from Nodes that opted in to stricter defaults | N/A — operators decide |
 
 ### 8.2 SDK Coverage Matrix
