@@ -303,7 +303,7 @@ NPS does not replace MCP — it adds an efficiency layer on top. MCP answers "ho
 | Phase 3 | 2027 Q1–Q2 | Ecosystem validation; NPS Cloud CA v1.0; industry PoCs |
 | Phase 4 | 2027 Q3+ | W3C / IETF standardization; NPS 1.0 freeze |
 
-Full roadmap: [NPS-Roadmap.md](./NPS-Roadmap.md).
+Full roadmap: [Roadmap](../docs/roadmap.md).
 
 ---
 
