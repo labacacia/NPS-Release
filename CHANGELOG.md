@@ -8,6 +8,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ---
 
+## [Unreleased]
+
+### Fixed
+
+- **`spec/error-codes.md` v0.9 → v1.0**: Four NWP topology error codes (`NWP-TOPOLOGY-UNAUTHORIZED`, `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`, `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`, `NWP-TOPOLOGY-FILTER-UNSUPPORTED`) were defined in NPS-2 NWP §13 and referenced by NPS-CR-0002 §3.5 but omitted from the error-codes registry during the alpha.4 spec sync. Registrations added; wording is consistent with NWP §13 definitions.
+
+---
+
 ## [1.0.0-alpha.4] — 2026-04-30
 
 ### Spec
