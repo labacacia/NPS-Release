@@ -12,6 +12,8 @@
 
 ### 修复
 
+- **`spec/rfcs/NPS-RFC-0003` — critical 扩展翻转加 phase gate**：RFC-0003 §4.2 原先对证书扩展写无条件 MUST，与修订历史"尚未生效"注释矛盾——降级攻击窗口。Phase 1–2（当前）：SHOULD 检查，强制可选；Phase 3（flag day ≥ 21 天公告，见 §8.1）：MUST 强制。同步修改 NPS-3-NIP §5.1.1。
+
 - **`spec/rfcs/NPS-RFC-0002` — 临时 OID 显式封锁**：RFC header 和正文顶部新增 `WARNING: EXPERIMENTAL` 警告块；Status 行改为 `Draft — EXPERIMENTAL`；OQ-2 强化为 MUST NOT 约束列表。`spec/NPS-3-NIP.md` §5.1.1 `"attested"` 行新增合规封锁说明：临时 OID 在 IANA PEN 分配前不满足合规或生产要求。
 
 - **`spec/NPS-2-NWP.md` — 幽灵字段 `auth.min_assurance_level` 修复**：NWP §4.1 散文承诺了通过 ActionSpec 上的 `auth.min_assurance_level` 做 per-action 保证级别覆盖，但 §4.6 ActionSpec 字段表未定义该字段。修复：新增 `min_assurance_level: string（可选）`平级字段；同步修正 §4.1 散文和 §15 v0.6 changelog 行。（NPS-RFC-0003）
