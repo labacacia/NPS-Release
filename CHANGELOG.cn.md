@@ -12,6 +12,8 @@
 
 ### 修复
 
+- **`spec/NPS-2-NWP.md` — 幽灵字段 `auth.min_assurance_level` 修复**：NWP §4.1 散文承诺了通过 ActionSpec 上的 `auth.min_assurance_level` 做 per-action 保证级别覆盖，但 §4.6 ActionSpec 字段表未定义该字段。修复：新增 `min_assurance_level: string（可选）`平级字段；同步修正 §4.1 散文和 §15 v0.6 changelog 行。（NPS-RFC-0003）
+
 - **`spec/error-codes.md` v0.9 → v1.0**：四个 NWP 拓扑错误码（`NWP-TOPOLOGY-UNAUTHORIZED`、`NWP-TOPOLOGY-UNSUPPORTED-SCOPE`、`NWP-TOPOLOGY-DEPTH-UNSUPPORTED`、`NWP-TOPOLOGY-FILTER-UNSUPPORTED`）已在 NPS-2 NWP §13 和 NPS-CR-0002 §3.5 中定义并引用，但 alpha.4 规范同步时漏写入 error-codes 注册表。本次补入注册，措辞与 NWP §13 定义保持一致。
 
 ---
