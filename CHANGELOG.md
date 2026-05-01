@@ -12,6 +12,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Fixed
 
+- **`spec/rfcs/NPS-RFC-0002` — provisional OID explicitly gated**: Added `WARNING: EXPERIMENTAL` block; Status line changed to `Draft — EXPERIMENTAL`; OQ-2 hardened to a list of MUST NOT constraints. Added conformance block note to `spec/NPS-3-NIP.md` §5.1.1 `"attested"` row: the provisional OID does not satisfy "RFC-0002-compliant" for conformance or production until IANA PEN is assigned.
+
 - **`spec/NPS-2-NWP.md` — ghost field `auth.min_assurance_level` removed**: NWP §4.1 prose promised a per-action assurance-level override via `auth.min_assurance_level` on individual `ActionSpec` entries (§4.6), but no such field appeared in the §4.6 ActionSpec table. Fixed: added `min_assurance_level: string (Optional)` directly to the §4.6 ActionSpec table; corrected §4.1 prose and §15 v0.6 changelog row to drop the erroneous `auth.` prefix. (NPS-RFC-0003)
 
 - **`spec/error-codes.md` v0.9 → v1.0**: Four NWP topology error codes (`NWP-TOPOLOGY-UNAUTHORIZED`, `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`, `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`, `NWP-TOPOLOGY-FILTER-UNSUPPORTED`) were defined in NPS-2 NWP §13 and referenced by NPS-CR-0002 §3.5 but omitted from the error-codes registry during the alpha.4 spec sync. Registrations added; wording is consistent with NWP §13 definitions.
