@@ -140,7 +140,7 @@ L2 = L1 + every "+" row in the L2 column of §2. Headline additions:
 - **Activation**: `resident` mode MUST be supported; `hybrid` MAY be supported.
 - **Observability**: Prometheus-style metrics endpoint MUST be exposed (frame counters, inbox depth, connection count, handshake latency histogram).
 
-Detailed requirement IDs (`N2-NCP-*` etc.) are TODO; tracked under [NPS-Roadmap Phase 2](../NPS-Roadmap.md).
+Detailed requirement IDs (`N2-NCP-*` etc.) are TODO; tracked under [Roadmap Phase 2](../../docs/roadmap.md).
 
 ---
 
@@ -162,7 +162,7 @@ process; the spawned process MUST receive its target frame within an implementat
 startup budget (recommended: ≤ 2 s for headless agents). The schema of `spawn_spec_ref`
 content is standardized at L3 in a future companion document (NPS-Daemon-Spec).
 
-Detailed requirement IDs (`N3-*`) are TODO; tracked under [NPS-Roadmap Phase 3](../NPS-Roadmap.md).
+Detailed requirement IDs (`N3-*`) are TODO; tracked under [Roadmap Phase 3](../../docs/roadmap.md).
 
 ---
 
@@ -189,8 +189,8 @@ The normative field definitions, JSON example, and backward-compatibility rules 
 | Level | Document | Reference suite |
 |-------|----------|-----------------|
 | L1 | [`conformance/NPS-Node-L1.md`](./conformance/NPS-Node-L1.md) | .NET 10 / xUnit (this release) |
-| L2 | `conformance/NPS-Node-L2.md` | TODO (NPS-Roadmap Phase 2) |
-| L3 | `conformance/NPS-Node-L3.md` | TODO (NPS-Roadmap Phase 3) |
+| L2 | `conformance/NPS-Node-L2.md` | TODO (Roadmap Phase 2) |
+| L3 | `conformance/NPS-Node-L3.md` | TODO (Roadmap Phase 3) |
 
 ### 7.2 Self-attestation
 

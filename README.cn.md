@@ -86,7 +86,7 @@ NPS 在协议层解决以上四个问题：一次性 Schema 锚点、Ed25519 身
 | [错误码](./spec/error-codes.cn.md) | 统一错误码命名空间 |
 | [状态码](./spec/status-codes.cn.md) | NPS 原生状态码 + HTTP 映射 |
 | [Token Budget](./spec/token-budget.cn.md) | NPT Token Budget 规范 |
-| [路线图](./spec/NPS-Roadmap.cn.md) | Phase 0–4 开发路线图 |
+| [路线图](./docs/roadmap.cn.md) | Phase 0–4 开发路线图 |
 
 ### 服务层规范
 
