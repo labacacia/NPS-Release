@@ -35,14 +35,14 @@
 
 - [x] `NPS-0-Overview.md` v0.3
 - [x] `NPS-1-NCP.md` v0.6（传输双模、可配帧大小、ErrorFrame）
-- [x] `NPS-2-NWP.md` v0.8（AnchorFrame Node 发布、NPT、拓扑查询）
+- [x] `NPS-2-NWP.md` v0.8（AnchorFrame Node 发布、CGN、拓扑查询）
 - [x] `NPS-3-NIP.md` v0.5（metadata 字段、NPS 状态码、X.509 NID 原型）
 - [x] `NPS-4-NDP.md` v0.5
 - [x] `NPS-5-NOP.md` v0.4
 - [x] `frame-registry.yaml` v0.9（含 ErrorFrame 0xFE）
 - [x] `error-codes.md` v1.0（含 NPS 状态码映射、NIP 证书错误码、NWP 拓扑错误码）
 - [x] `status-codes.md` v0.2（NPS 原生状态码 + HTTP 映射）
-- [x] `token-budget.md` v0.2（NPT 计量 + tokenizer 解析链）
+- [x] `token-budget.md` v0.2（CGN 计量 + tokenizer 解析链）
 - [x] `services/NPS-AaaS-Profile.md` v0.4（Anchor/Bridge Node、VPL、L1/L2/L3、NPS-CR-0002）
 - [x] `services/NPS-Node-Profile.md` v0.1（L1/L2/L3 + 激活模式）
 - [x] `services/conformance/NPS-Node-L1.md` v0.1（21 个 TC-N1-* 用例）
@@ -124,7 +124,7 @@
 - [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task 适配器（`LabAcacia.A2aIngress` v1.0.0-alpha.4）
 - [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC 适配器（`LabAcacia.GrpcIngress` v1.0.0-alpha.4）
 - [x] Tier-2 MsgPack 线路体积基准（聚合较 JSON 减少 63.6%）
-- [x] Token 节约基准（聚合较 REST 减少 45.0% NPT）
+- [x] Token 节约基准（聚合较 REST 减少 45.0% CGN）
 - [x] NOP Orchestrator 端到端执行 3 节点 DAG
 - [x] Claude Desktop 通过 `mcp-ingress` 访问 NWP Memory Node
 - [ ] `NDP.ResolveFrame` 通过 DNS TXT 解析 `nwp://` 到物理端点
@@ -142,7 +142,7 @@
 | **AaaS-Profile L2-09** — 默认 `reputation_policy` | SHOULD 要求；定义推荐最小策略 |
 | **`NWP-RESERVED-TYPE-UNSUPPORTED`** 在 AnchorNodeMiddleware | HTTP 501；规范新增 `NPS-SERVER-UNSUPPORTED` 状态码 |
 | **`topology:read` 能力门控** | `AnchorNodeOptions.RequireTopologyCapability`；`X-NWP-Capabilities` 头 |
-| **`npt_est` 每事件字段** | `TopologyEventEnvelope.NptEst` = UTF-8/4 估算 |
+| **`cgn_est` 每事件字段** | `TopologyEventEnvelope.CgnEst` = UTF-8/4 估算 |
 | **AssuranceLevel `from_wire("")` 修复** | Python / TypeScript / Java SDK |
 | **规范 CN 文档同步** | `error-codes.cn.md`、`RFC-0004.cn.md`、`status-codes.cn.md` 均已更新 |
 

@@ -168,7 +168,7 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 | `subscribe` | bool | Supports change subscriptions (DiffFrame push) |
 | `subscribe_filter` | bool | Supports subscriptions with filter conditions |
 | `vector_search` | bool | Supports vector similarity search |
-| `token_budget_hint` | bool | Supports trimming responses based on NPT budget |
+| `token_budget_hint` | bool | Supports trimming responses based on CGN budget |
 | `ext_frame` | bool | Supports extended frame header (large frame mode) |
 | `e2e_enc` | bool | Supports NCP E2E encryption (ENC=1, see NPS-1-NCP §7.4) |
 | `inline_anchor` | bool | Supports returning updated AnchorFrame inline in responses |
@@ -348,7 +348,7 @@ Used for structured data queries on Memory Nodes.
 | `cursor` | string | Optional | Pagination cursor from the previous response's `next_cursor` |
 | `order` | array | Optional | Sort rules, see §6.3 |
 | `vector_search` | object | Optional | Vector similarity search, see §6.4 |
-| `token_budget` | uint32 | Optional | NPT budget limit (native mode equivalent of `X-NWP-Budget`) |
+| `token_budget` | uint32 | Optional | CGN budget limit (native mode equivalent of `X-NWP-Budget`) |
 | `tokenizer` | string | Optional | Tokenizer identifier in use (native mode equivalent of `X-NWP-Tokenizer`) |
 | `depth` | uint8 | Optional | Node graph traversal depth, default 1, max 5 (native mode equivalent of `X-NWP-Depth`) |
 | `request_id` | string | Optional | UUID v4 for request tracing; echoed back by the node in response and logs |
@@ -692,7 +692,7 @@ data: [DiffFrame bytes, base64]
 | Header | Required | Description |
 |--------|----------|-------------|
 | `X-NWP-Agent` | Conditionally Required | Agent NID (required when auth.required=true) |
-| `X-NWP-Budget` | Optional | NPT budget limit (uint32) |
+| `X-NWP-Budget` | Optional | CGN budget limit (uint32) |
 | `X-NWP-Tokenizer` | Optional | Tokenizer identifier used by the Agent |
 | `X-NWP-Depth` | Optional | Node graph traversal depth, default 1, max 5 |
 | `X-NWP-Encoding` | Optional | Request encoding tier: `json`/`msgpack`, default `msgpack` |
@@ -705,7 +705,7 @@ data: [DiffFrame bytes, base64]
 | Header | Description |
 |--------|-------------|
 | `X-NWP-Schema` | anchor_id used in the response |
-| `X-NWP-Tokens` | Actual NPT consumed |
+| `X-NWP-Tokens` | Actual CGN consumed |
 | `X-NWP-Tokens-Native` | Native token consumption |
 | `X-NWP-Tokenizer-Used` | Tokenizer actually used |
 | `X-NWP-Cached` | `true` indicates a cache hit |
@@ -1061,7 +1061,7 @@ Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stre
 | 0.6 | 2026-04-25 | NWM gains optional top-level `min_assurance_level` field (`anonymous` / `attested` / `verified`), with `min_assurance_level` per-action override on individual ActionSpecs (§4.6). New error code `NWP-AUTH-ASSURANCE-TOO-LOW` (`NPS-AUTH-FORBIDDEN`). `Depends-On` upgraded to NCP v0.6 (NPS-RFC-0001) and NIP v0.4 (NPS-RFC-0003). See [NPS-RFC-0003](rfcs/NPS-RFC-0003-agent-identity-assurance-levels.md). |
 | 0.4 | 2026-04-14 | §3.2 added `/actions` sub-path; §4.1 NWM added `actions` field; §4.2 capabilities added stream_query and aggregate; §4.6 NWM Action Registry (ActionSpec, params_anchor/result_anchor/async/idempotent); QueryFrame §6.1 added `stream`, `aggregate`, `request_id`; §6.6 Streaming Query Protocol (StreamFrame sequence, estimated_total, early termination); §6.7 Aggregation queries (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT, group_by, having); ActionFrame §7.1 added `request_id`; SubscribeFrame §8.1 added `resume_from_seq`; §8.2 DiffFrame extension fields (monotonic seq, event_type, timestamp) and reconnection semantics; §9.1/9.2 added X-NWP-Request-ID; §9.4 HTTP mode error response format (application/nwp-error+json); §10 updated complete examples (including error response); §13.6 callback_url abuse prevention security section; 5 new error codes (AGGREGATE-UNSUPPORTED/-INVALID, STREAM-UNSUPPORTED, SUBSCRIBE-SEQ-TOO-OLD, task cancel series) |
 | 0.3 | 2026-04-14 | SubscribeFrame (0x12); auto_anchor; Filter $not/$exists/$regex; ActionFrame callback_url/priority; system.task.*; NWM min_agent_version/rate_limits; §14.4/14.5 security sections |
-| 0.2 | 2026-04-12 | Unified port 17433; AnchorFrame owned by Node; NPT metering; NPS status code mapping |
+| 0.2 | 2026-04-12 | Unified port 17433; AnchorFrame owned by Node; CGN metering; NPS status code mapping |
 | 0.1 | 2026-04-10 | Initial specification |
 
 ---

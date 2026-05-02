@@ -107,7 +107,7 @@ Agent identity declaration carrying the certificate. Sent as the handshake frame
 | `tokenizer` | string | Tokenizer identifier used by the agent, e.g. `"cl100k_base"` |
 | `runtime` | string | Agent runtime identifier, e.g. `"langchain/0.2"`, `"autogen/0.4"` |
 
-The `metadata` field is not included in the signature computation; an agent MAY set it at runtime. Nodes use the `tokenizer` in `metadata` to perform NPT auto-matching (see [token-budget.md](./token-budget.md)).
+The `metadata` field is not included in the signature computation; an agent MAY set it at runtime. Nodes use the `tokenizer` in `metadata` to perform CGN auto-matching (see [token-budget.md](./token-budget.md)).
 
 **Standard `capabilities` values**
 
@@ -210,7 +210,7 @@ A reputation entry is a signed JSON object that an issuer (typically an AaaS Anc
 | `rate-limit-violation` | Sustained violation of published rate limits. |
 | `tos-violation` | Violated an AaaS Anchor Node's published terms. |
 | `scraping-pattern` | Behavior matched scraper heuristics. |
-| `payment-default` | NPT or fiat default on a committed transaction. |
+| `payment-default` | CGN or fiat default on a committed transaction. |
 | `contract-dispute` | Unresolved contractual breach on an async NOP task. |
 | `impersonation-claim` | Third-party claim that `subject_nid` is impersonating them. |
 | `positive-attestation` | Explicit positive signal (e.g. independent audit passed). |

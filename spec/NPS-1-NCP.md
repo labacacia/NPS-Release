@@ -436,7 +436,7 @@ Encapsulates a full response body; the most common response frame. Also used for
 | `count` | uint32 | required | Length of `data`; MUST equal `len(data)` |
 | `data` | array | required | Data records; each conforms to the anchor_ref Schema |
 | `next_cursor` | string | optional | Next-page cursor, Base64-URL encoded; null = last page |
-| `token_est` | uint32 | optional | Estimated NPT consumption for this response (see [token-budget.md](./token-budget.md)) |
+| `token_est` | uint32 | optional | Estimated CGN consumption for this response (see [token-budget.md](./token-budget.md)) |
 | `tokenizer_used` | string | optional | Identifier of the tokenizer actually applied |
 | `cached` | bool | optional | `true` = response came from server-side cache |
 | `inline_anchor` | object | optional | Latest AnchorFrame included inline when the Schema has been updated, avoiding an extra RTT (see §5.4) |
@@ -760,7 +760,7 @@ Defaults: Tier-2 for production, Tier-1 for development.
 |---------|------|---------|
 | 0.6 | 2026-04-25 | Added §2.6.1 native-mode connection preamble (8-byte constant `b"NPS/1.0\n"`); reserved frame-type byte 0x4E in `frame-registry.yaml`; added error code `NCP-PREAMBLE-INVALID` and status code `NPS-PROTO-PREAMBLE-INVALID`. See [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md). |
 | 0.4 | 2026-04-14 | Added HelloFrame (0x06); new §2.6 handshake sequence & version-negotiation rules; anchor_id computation now explicitly references RFC 8785 JCS; DiffFrame gains `patch_format` (json_patch / binary_bitset); CapsFrame gains `inline_anchor`; StreamFrame flow control formalized (window_size protocol); §7.4 E2E encryption section (ENC flag, AES-256-GCM / ChaCha20-Poly1305, payload layout); §5.4 auto-anchor protocol (NCP-ANCHOR-STALE + inline_anchor); added error codes NCP-ANCHOR-STALE, NCP-DIFF-FORMAT-UNSUPPORTED, NCP-VERSION-INCOMPATIBLE, NCP-STREAM-WINDOW-OVERFLOW, NCP-ENC-NOT-NEGOTIATED, NCP-ENC-AUTH-FAILED |
-| 0.3 | 2026-04-12 | Dual transport (HTTP / native); unified port 17433; configurable frame size (EXT bit); ErrorFrame (0xFE); NPS status-code system; Tier-3 marked Reserved; AnchorFrame ownership clarified as Node-published; token estimation switched to NPT |
+| 0.3 | 2026-04-12 | Dual transport (HTTP / native); unified port 17433; configurable frame size (EXT bit); ErrorFrame (0xFE); NPS status-code system; Tier-3 marked Reserved; AnchorFrame ownership clarified as Node-published; token estimation switched to CGN |
 | 0.2 | 2026-04-10 | AnchorFrame / DiffFrame / StreamFrame / CapsFrame / AlignFrame definitions; bit-level Flags definition; AlignFrame marked Deprecated |
 | 0.1 | 2026-03-01 | Initial frame format and encoding tiers |
 

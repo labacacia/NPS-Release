@@ -26,7 +26,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 - **`spec/error-codes.md` — `NWP-RESERVED-TYPE-UNSUPPORTED`**: New error code added (`NPS-SERVER-UNSUPPORTED` → HTTP 501) for when a `QueryFrame`/`SubscribeFrame` `type` value is in the reserved namespace but not implemented by the node. Explicit disambiguation note vs `NWP-ACTION-NOT-FOUND` (404 for unknown `action_id`, not for unknown reserved types).
 
-- **`spec/token-budget.md` §7.2 — per-event `npt_est` field (SHOULD)**: Push streams SHOULD carry an `npt_est` field on each `TopologyEventEnvelope` (and similar envelope types) carrying the UTF-8/4 byte estimate of the event payload. This lets agents track live token consumption without counting bytes client-side.
+- **`spec/token-budget.md` §7.2 — per-event `cgn_est` field (SHOULD)**: Push streams SHOULD carry an `cgn_est` field on each `TopologyEventEnvelope` (and similar envelope types) carrying the UTF-8/4 byte estimate of the event payload. This lets agents track live token consumption without counting bytes client-side.
 
 ### .NET SDK
 
@@ -34,7 +34,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 - **`NPS.NWP.Anchor` — `topology:read` capability gate**: New `AnchorNodeOptions.RequireTopologyCapability` (default `false`). When `true`, both `/query` and `/subscribe` check the `X-NWP-Capabilities` request header for `"topology:read"` (case-insensitive, comma-separated); missing capability returns HTTP 403 / `NPS-AUTH-FORBIDDEN` / `NWP-TOPOLOGY-UNAUTHORIZED`. New `NwpHttpHeaders.Capabilities = "X-NWP-Capabilities"` constant added.
 
-- **`NPS.NWP.Anchor` — `npt_est` on `TopologyEventEnvelope`**: New nullable `npt_est: uint?` field on `TopologyEventEnvelope`, populated with `Math.Max(1, UTF8.GetByteCount(payload) / 4)` on every pushed event.
+- **`NPS.NWP.Anchor` — `cgn_est` on `TopologyEventEnvelope`**: New nullable `cgn_est: uint?` field on `TopologyEventEnvelope`, populated with `Math.Max(1, UTF8.GetByteCount(payload) / 4)` on every pushed event.
 
 - **`NPS.NIP` — `AssuranceLevels.FromWireOrAnonymous("")` fix**: Empty string `""` now returns `Anonymous` (consistent with `null`). Previously `null` returned Anonymous but `""` would throw or return Unknown depending on the call path. Python, TypeScript, and Java SDKs received the same fix.
 
@@ -194,7 +194,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
     - `daemons/npsd/` — `npsd` (`Npsd.csproj`, package `LabAcacia.NPS.Daemon.Npsd`). Listens on `127.0.0.1:17433`. L1 minimum: root Ed25519 keypair generation (PKCS#8, file mode `0600` so it satisfies NPS-Node-L1 `TC-N1-NIP-01`), `/.nwm` self-manifest, `/health`. Configurable via `NPSD_PORT` / `NPSD_HOST` / `NPSD_DATA_DIR`. NCP native-mode preamble runtime, inbox persistence, sub-NID issuance, and AnnounceFrame emission deferred to alpha.4.
     - `daemons/nps-runner/` — `nps-runner` (`NpsRunner.csproj`, package `LabAcacia.NPS.Daemon.Runner`). Phase 1 skeleton: Generic Host scaffolding with 30s heartbeat. Inbox watcher + `spawn_spec_ref` resolver + worker lifecycle land at L3 stage (alpha.5+).
   - **Layer 2 (network entry):**
-    - `daemons/nps-gateway/` — `nps-gateway` (`NpsGateway.csproj`, package `LabAcacia.NPS.Daemon.Gateway`). Phase 1 skeleton: public HTTP listener on `:8080` + `/health` documenting planned milestones. TLS termination, rate-limit, NeuronHub auth, NPT debit, NPS-RFC-0004 reputation lookup, and NPS-CR-0001 Anchor Node middleware wiring land alpha.4 → alpha.5.
+    - `daemons/nps-gateway/` — `nps-gateway` (`NpsGateway.csproj`, package `LabAcacia.NPS.Daemon.Gateway`). Phase 1 skeleton: public HTTP listener on `:8080` + `/health` documenting planned milestones. TLS termination, rate-limit, NeuronHub auth, CGN debit, NPS-RFC-0004 reputation lookup, and NPS-CR-0001 Anchor Node middleware wiring land alpha.4 → alpha.5.
     - `daemons/nps-registry/` — `nps-registry` (`NpsRegistry.csproj`, package `LabAcacia.NPS.Daemon.Registry`). Phase 1 skeleton: HTTP listener on the NDP optional-dedicated port `17436`; `Resolve`/`Graph`/`Announce` URL surface returns `NDP-REGISTRY-UNAVAILABLE` (HTTP 503) so consumers can wire and gracefully fall back. SQLite-backed real registration lands alpha.4.
   - **Layer 3 (trust anchor — NPS Cloud, 2027 Q1+):**
     - `daemons/nps-cloud-ca/` — `nps-cloud-ca` (`NpsCloudCa.csproj`, package `LabAcacia.NPS.Daemon.CloudCa`). Phase 1 deferral skeleton on the NIP optional-dedicated port `17435`; `/v1/issue`, `/v1/revoke`, `/v1/crl`, `/v1/ocsp` return `NIP-CA-NOT-READY` (HTTP 503) and point at the six per-language `tools/nip-ca-server*` OSS CAs already shipped at alpha.2. The daemon's own X.509 + ACME pipeline arrives with NPS-RFC-0002 in alpha.4.

@@ -173,7 +173,7 @@ frames:
     protocol_version: "0.4"
     status: draft
     supersedes: "0x05"
-    description: Directed task stream. Extends NCP AlignFrame with task DAG context (task_id + subtask_id), NID binding, Token-level backpressure (window_size in NPT), and error propagation field. Replaces deprecated AlignFrame (0x05).
+    description: Directed task stream. Extends NCP AlignFrame with task DAG context (task_id + subtask_id), NID binding, Token-level backpressure (window_size in CGN), and error propagation field. Replaces deprecated AlignFrame (0x05).
     fields_ref: "NPS-5-NOP.md#34-alignstream-0x43"
 
   # ── System / Reserved (0xF0–0xFF) ──���───────────────────────────

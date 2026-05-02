@@ -338,7 +338,7 @@ Directed task stream, replacing NCP AlignFrame (0x05). Carries DAG context and N
 | `seq` | uint64 | Required | Message sequence number, strictly increasing from 0 |
 | `payload_ref` | string | Optional | anchor_ref of the CapsFrame (intermediate result reference) |
 | `data` | object | Optional | Intermediate result data |
-| `window_size` | uint32 | Optional | Backpressure window size (unit: NPT Token count), see §3.4.1 |
+| `window_size` | uint32 | Optional | Backpressure window size (unit: CGN Token count), see §3.4.1 |
 | `is_final` | bool | Required | true indicates end of stream (final result frame) |
 | `sender_nid` | string | Required | Sender NID (receiver MUST verify it matches the connection identity) |
 | `error` | object | Optional | Error information (may be present when is_final=true, indicating subtask failure) |
@@ -353,9 +353,9 @@ Directed task stream, replacing NCP AlignFrame (0x05). Carries DAG context and N
 
 #### §3.4.1 Token-Level Backpressure
 
-`window_size` represents the maximum **NPT Token count** the receiver can currently process (not bytes), directly corresponding to the downstream inference endpoint's throughput capacity:
+`window_size` represents the maximum **CGN Token count** the receiver can currently process (not bytes), directly corresponding to the downstream inference endpoint's throughput capacity:
 
-- Before sending each `data` frame, the sender SHOULD estimate the NPT cost of the frame and check the current window balance
+- Before sending each `data` frame, the sender SHOULD estimate the CGN cost of the frame and check the current window balance
 - If the estimated cost exceeds the window balance, the sender SHOULD pause pushing and wait for the receiver to restore the window via a reverse AlignStream (only updating `window_size`)
 - Window acknowledgement: after consuming, the receiver sends an AlignStream frame with `data=null, window_size=N` (where N is the newly available capacity) to restore the window
 
@@ -366,7 +366,7 @@ Directed task stream, replacing NCP AlignFrame (0x05). Carries DAG context and N
 | Use case | General data streams (NWP query results, etc.) | Multi-Agent task collaboration intermediate results |
 | Context | None | Carries task_id + subtask_id |
 | Identity binding | None | sender_nid mandatory verification |
-| Backpressure unit | Bytes / frame count | NPT Token count |
+| Backpressure unit | Bytes / frame count | CGN Token count |
 | Error propagation | None | `error` field (task failure semantics) |
 
 ---
@@ -521,7 +521,7 @@ Orchestrator                              Worker B (Data)    Worker C (Inference
 | `NOP-SYNC-DEPENDENCY-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | A dependent subtask failed (and failure count exceeds K-of-N tolerance) |
 | `NOP-STREAM-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | AlignStream sequence number is non-contiguous |
 | `NOP-STREAM-NID-MISMATCH` | `NPS-AUTH-UNAUTHENTICATED` | AlignStream sender_nid does not match connection identity |
-| `NOP-RESOURCE-INSUFFICIENT` | `NPS-SERVER-UNAVAILABLE` | Pre-flight found one or more Worker Agents with insufficient resources (NPT / capability) |
+| `NOP-RESOURCE-INSUFFICIENT` | `NPS-SERVER-UNAVAILABLE` | Pre-flight found one or more Worker Agents with insufficient resources (CGN / capability) |
 | `NOP-CONDITION-EVAL-ERROR` | `NPS-CLIENT-BAD-PARAM` | DAG node condition expression evaluation failed (syntax error or reference to non-existent field) |
 | `NOP-INPUT-MAPPING-ERROR` | `NPS-CLIENT-UNPROCESSABLE` | input_mapping JSONPath could not be resolved or target field does not exist |
 

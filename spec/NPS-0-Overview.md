@@ -77,7 +77,7 @@ Existing Web protocols (HTTP, REST, GraphQL) were designed for human browsers. W
 Not a retrofit of existing protocols. Response structure directly matches LLM attention mechanisms; fields carry semantic type annotations so that models can reason directly.
 
 ### P2 — Token Economy First
-Three mechanisms minimize wasted tokens: frame-level Schema anchoring (AnchorFrame), incremental transmission (DiffFrame), and standardized NPS Token accounting.
+Three mechanisms minimize wasted tokens: frame-level Schema anchoring (AnchorFrame), incremental transmission (DiffFrame), and standardized Cognon accounting.
 
 ### P3 — Layered and Optional
 Each protocol layer is independently deployable. The minimum configuration is NCP + NWP; NIP / NDP / NOP are introduced only when needed.
@@ -166,9 +166,9 @@ All NPS protocol communication is carried in **frames**. The default frame has a
 
 A Node publishes an AnchorFrame containing the full Schema definition and a SHA-256 `anchor_id`. Once an Agent caches the AnchorFrame locally, all subsequent requests and responses carry only the `anchor_id` reference, eliminating repeated Schema transmission. Typical savings within a single session are 30–60% of tokens.
 
-### 4.3 NPS Token (NPT) and Token Budget
+### 4.3 Cognon (CGN) and Token Budget
 
-NPS introduces the **NPS Token (NPT)** as a standardized cross-model token accounting unit. An Agent declares its maximum NPT consumption per request via the `X-NWP-Budget` header. The Node determines the calculation method through the tokenizer resolution chain and truncates the response or rejects the request accordingly. See [token-budget.md](./token-budget.md).
+NPS introduces the **Cognon (CGN)** as a standardized cross-model token accounting unit. An Agent declares its maximum CGN consumption per request via the `X-NWP-Budget` header. The Node determines the calculation method through the tokenizer resolution chain and truncates the response or rejects the request accordingly. See [token-budget.md](./token-budget.md).
 
 ### 4.4 Node Types
 
@@ -332,11 +332,11 @@ Optional dedicated per-protocol ports: NWP 17434, NIP 17435, NDP 17436, NOP 1743
 | Header | Direction | Description |
 |--------|-----------|-------------|
 | `X-NWP-Agent` | Request | Agent NID |
-| `X-NWP-Budget` | Request | NPT budget ceiling |
+| `X-NWP-Budget` | Request | CGN budget ceiling |
 | `X-NWP-Tokenizer` | Request | Tokenizer identifier the Agent uses |
 | `X-NWP-Depth` | Request | Node-graph traversal depth (default 1, max 5) |
 | `X-NWP-Schema` | Response | anchor_id of the Schema used |
-| `X-NWP-Tokens` | Response | Actual NPT consumed |
+| `X-NWP-Tokens` | Response | Actual CGN consumed |
 | `X-NWP-Tokens-Native` | Response | Native-token consumption (if tokenizer is known) |
 | `X-NWP-Tokenizer-Used` | Response | Tokenizer actually applied |
 | `X-NWP-Cached` | Response | Whether the cache was hit |
@@ -346,7 +346,7 @@ Optional dedicated per-protocol ports: NWP 17434, NIP 17435, NDP 17436, NOP 1743
 | Document | Description |
 |----------|-------------|
 | [status-codes.md](./status-codes.md) | NPS native status codes and HTTP mapping |
-| [token-budget.md](./token-budget.md) | NPS Token Budget specification |
+| [token-budget.md](./token-budget.md) | Cognon Budget specification |
 | [error-codes.md](./error-codes.md) | Unified error-code namespace |
 | [frame-registry.yaml](./frame-registry.yaml) | Machine-readable frame registry |
 
@@ -364,11 +364,11 @@ Optional dedicated per-protocol ports: NWP 17434, NIP 17435, NDP 17436, NOP 1743
 | **NOP** | Neural Orchestration Protocol; multi-agent orchestration layer |
 | **NID** | Neural Identity Descriptor; unique identity for agents/nodes |
 | **NWM** | Neural Web Manifest; machine-readable node manifest |
-| **NPT** | NPS Token; standardized cross-model token unit |
+| **CGN** | Cognon; standardized cross-model token unit |
 | **AnchorFrame** | NCP frame type published by a Node for Schema anchoring |
 | **ErrorFrame** | The unified NPS error frame (0xFE), shared by all protocol layers |
 | **AlignStream** | NOP sub-specification; a directed task stream; replaces NCP AlignFrame |
-| **Token Budget** | The maximum NPT consumption the Agent declares for a single request |
+| **Token Budget** | The maximum CGN consumption the Agent declares for a single request |
 | **Trust Federation** | Mechanism for establishing trust chains across organizational CAs |
 | **Memory Node** | An NWP node type for data storage and retrieval |
 | **Action Node** | An NWP node type for operations and services |
@@ -380,7 +380,7 @@ Optional dedicated per-protocol ports: NWP 17434, NIP 17435, NDP 17436, NOP 1743
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.2 | 2026-04-12 | Unified port (17433); dual transport modes (HTTP / native); AnchorFrame ownership clarified as Node-published; NPS Token (NPT) accounting; NPS status-code system; ErrorFrame (0xFE); encoding Tier-3 marked Reserved; configurable frame size |
+| 0.2 | 2026-04-12 | Unified port (17433); dual transport modes (HTTP / native); AnchorFrame ownership clarified as Node-published; Cognon (CGN) accounting; NPS status-code system; ErrorFrame (0xFE); encoding Tier-3 marked Reserved; configurable frame size |
 | 0.1-draft | 2026-04-10 | Initial draft, integrating the NCP v0.2 design document |
 
 ---

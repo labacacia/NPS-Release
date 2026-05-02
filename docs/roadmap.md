@@ -31,7 +31,7 @@ All five protocols production-ready in six reference SDKs (.NET / Python / TypeS
 - NPS-RFC-0002 (X.509 NID + ACME) prototype across all six SDKs; promotion to Accepted pending IANA PEN
 - NPS-RFC-0004 (CT-style NID reputation ledger) Phase 1+2+3: SQLite + Merkle tree + STH + inclusion proofs + STH gossip federation
 - `npsd` L1 daemon with sub-NID issuance and per-NID inbox queues
-- Token-savings: **45.0 %** NPT reduction vs REST · Wire-size: **63.6 %** reduction vs JSON
+- Token-savings: **45.0 %** CGN reduction vs REST · Wire-size: **63.6 %** reduction vs JSON
 
 ---
 

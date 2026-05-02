@@ -133,7 +133,7 @@ Initial enum (extensible in follow-up RFCs):
 | `rate-limit-violation` | Sustained violation of published rate limits |
 | `tos-violation` | Violated AaaS gateway's published terms |
 | `scraping-pattern` | Observed behavior matched scraping heuristics |
-| `payment-default` | NPT / fiat payment default on committed transaction |
+| `payment-default` | CGN / fiat payment default on committed transaction |
 | `contract-dispute` | Contractual breach on an async NOP task, unresolved |
 | `impersonation-claim` | A third party claims subject_nid is impersonating them |
 | `positive-attestation` | Explicit positive signal (e.g., audit passed) |
@@ -484,7 +484,7 @@ None yet. Before `Accepted`:
 - Follow-up RFC: standardize automated scraping-pattern detection
   criteria so `scraping-pattern` entries are reproducible.
 - Follow-up RFC: monetary staking / bonding primitive — an `issuer_nid`
-  stakes NPT against an entry; slashed if entry proven false.
+  stakes CGN against an entry; slashed if entry proven false.
 - Follow-up RFC: log-operator accreditation tier.
 
 ---

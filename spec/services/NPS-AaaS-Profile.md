@@ -30,7 +30,7 @@ requiring consumers to understand internal implementation details.
 | Non-standard, unobservable internal orchestration | NOP DAG orchestration + OpenTelemetry tracing |
 | High token overhead for AI accessing traditional DBs | Vector Proxy Layer vectorization middleware |
 | No Agent identity/permission standard | NIP NID identity + scope delegation chain |
-| No service quality guarantees | NPT Token Budget + back-pressure control |
+| No service quality guarantees | CGN Token Budget + back-pressure control |
 
 ### 1.3 Architecture Overview
 
@@ -41,7 +41,7 @@ Consumer Agent
 ┌─────────────────────────────────┐
 │  Anchor Node (NWP type)         │  ← Service entry, external API
 │  • Authentication (NIP)         │
-│  • Routing / Rate limit / NPT  │
+│  • Routing / Rate limit / CGN  │
 │  • Service catalog (NWM)        │
 └──────────┬──────────────────────┘
            │ DelegateFrame (NOP)
@@ -89,7 +89,7 @@ NOP orchestration layer. A single Anchor Node MAY simultaneously declare other r
 | **Authentication** | NIP | Verify consumer NID, check scope |
 | **Service catalog** | NWP NWM | Expose available Actions via NWM manifest |
 | **Request routing** | NOP | Convert ActionFrame to TaskFrame, decompose DAG |
-| **Token metering** | NPT | Per-request Token Budget management |
+| **Token metering** | CGN | Per-request Token Budget management |
 | **Rate limiting** | NWP | NID-based rate limiting |
 | **Observability** | NOP Context | Inject trace_id/span_id for full-chain tracing |
 | **Cluster registry** *(optional at L1, mandatory at L2)* | NDP + NWP | Track member nodes registered via `Announce.cluster_anchor`; surface them through `topology.snapshot` / `topology.stream` (NPS-2 §12) |
@@ -117,7 +117,7 @@ NOP orchestration layer. A single Anchor Node MAY simultaneously declare other r
   "rate_limits": {
     "requests_per_minute": 60,
     "max_concurrent": 10,
-    "npt_per_hour": 100000
+    "cgn_per_hour": 100000
   },
   "auth": {
     "required": true,
@@ -333,7 +333,7 @@ only needs to implement this interface for seamless integration.
 |--------|-------------|----------|
 | L2-01 | MUST use NOP TaskFrame for internal task orchestration | NOP |
 | L2-02 | MUST inject OpenTelemetry trace in TaskFrame.context | NOP |
-| L2-03 | MUST support NPT Token Budget with token_est in responses | NPT |
+| L2-03 | MUST support CGN Token Budget with token_est in responses | CGN |
 | L2-04 | MUST support NOP preflight mechanism | NOP |
 | L2-05 | MUST implement NOP retry and timeout semantics | NOP |
 | L2-06 | SHOULD support async Actions (ActionFrame.async=true) | NWP |
@@ -372,7 +372,7 @@ Consumer Agent                Anchor Node               NOP              Vector 
      │                             │   │ fetch    │──→   │── DelegateFrame ──→ │                   │
      │                             │   │ analyze  │      │                      │── QueryFrame ──→ DB
      │                             │   │ summarize│      │                      │  (vector_search)  │
-     │                             │   └─────────┘      │  ←── CapsFrame ───── │  (top-K, 85 NPT) │
+     │                             │   └─────────┘      │  ←── CapsFrame ───── │  (top-K, 85 CGN) │
      │                             │                     │                      │                   │
      │                             │                     │── DelegateFrame ─────────────────────→  │
      │                             │                     │                                          │
@@ -380,11 +380,11 @@ Consumer Agent                Anchor Node               NOP              Vector 
      │                             │                     │                      │                   │
      │  ←── CapsFrame ──────────  │  ←── result ────── │                      │                   │
      │   (vectorized summary,      │                     │                      │                   │
-     │    85+50 NPT)               │                     │                      │                   │
+     │    85+50 CGN)               │                     │                      │                   │
 ```
 
-Traditional approach: fetch returns full row data ~500 NPT → analyze processes ~300 NPT = **800+ NPT**
-AaaS vectorized approach: fetch returns top-K vector summary ~85 NPT → analyze ~50 NPT = **~135 NPT**
+Traditional approach: fetch returns full row data ~500 CGN → analyze processes ~300 CGN = **800+ CGN**
+AaaS vectorized approach: fetch returns top-K vector summary ~85 CGN → analyze ~50 CGN = **~135 CGN**
 
 **Token savings ~83%**.
 
@@ -400,7 +400,7 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 NPT → analyze
 | Authentication | NIP v0.3 | No: reuses NID + scope |
 | Vector queries | NWP v0.5 §6.4 | No: reuses vector_search |
 | Vector Proxy | NWP + NCP | No: implementation-level middleware |
-| Token metering | NPT v0.1 | No: reuses token_est |
+| Token metering | CGN v0.1 | No: reuses token_est |
 | Audit trail | NOP v0.4 §8.3 | No: reuses context.trace_id |
 
 **Protocol changes required**: NWP NWM `node_type` enum must accept `"anchor"` and `"bridge"` (replacing the removed `"gateway"`); NDP AnnounceFrame gains `node_kind`/`cluster_anchor`/`bridge_protocols` fields. All additive at the wire layer except the `"gateway"` removal — see [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md).

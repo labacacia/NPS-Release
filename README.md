@@ -86,7 +86,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 | [Frame Registry](./spec/frame-registry.yaml) | Machine-readable frame type registry |
 | [Error Codes](./spec/error-codes.md) | Unified protocol error code namespace |
 | [Status Codes](./spec/status-codes.md) | NPS native status codes + HTTP mapping |
-| [Token Budget](./spec/token-budget.md) | NPT token budget specification |
+| [Token Budget](./spec/token-budget.md) | CGN token budget specification |
 | [Roadmap](./docs/roadmap.md) | Phase 0–4 development roadmap |
 
 ### Service Specifications
@@ -104,7 +104,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 | Default port | **17433** | Shared across all protocols; frame type routes internally |
 | Transport | HTTP overlay + native mode | Overlay: firewall-friendly; Native: low-latency |
 | Schema ownership | Node publishes AnchorFrame | Node owns its data model; agents reference by id |
-| Token metering | **NPT** (NPS Token) | Unified cross-model metering unit |
+| Token metering | **CGN** (Cognon) | Unified cross-model metering unit |
 | Primary signature | **Ed25519** | Performance-first for high-frequency agent verification |
 | Default encoding | **MsgPack** (Tier-2) | ~60% size reduction vs JSON in production |
 | Default frame size | 64 KB (EXT=0) | Extended: 4 GB (EXT=1) for large payloads |
