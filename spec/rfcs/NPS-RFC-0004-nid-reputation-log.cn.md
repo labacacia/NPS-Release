@@ -258,16 +258,6 @@ GET /v1/log/gossip/sth
 | `NIP-REPUTATION-GOSSIP-FORK` | `NPS-SERVER-INTERNAL` | 跨节点 STH 一致性检查失败；可能检测到分叉 |
 | `NIP-REPUTATION-GOSSIP-SIG-INVALID` | `NPS-CLIENT-BAD-FRAME` | gossip 交换中对端 STH 签名验证失败 |
 
-### 4.7 错误码
-
-`spec/error-codes.md` 新增：
-
-| 错误码 | NPS 状态 | 说明 |
-|--------|---------|------|
-| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | 声誉策略命中了 reject 规则 |
-| `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | 策略评估期间所需日志运营方不可达 |
-| `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | 条目签名无效或 canonical 形式畸形 |
-
 ### 4.6 状态机 / 流程
 
 声誉闸的准入：
@@ -287,6 +277,16 @@ Agent                      Node                         Log Operator
 热路径上，Node SHOULD 用短 TTL（默认 60 s）缓存日志结果并异步
 刷新。硬性 `reject_on: cert-revoked` SHOULD 每次连接都同步查，
 可以用 OCSP-stapling 风格的预取满足。
+
+### 4.7 错误码
+
+`spec/error-codes.md` 新增：
+
+| 错误码 | NPS 状态 | 说明 |
+|--------|---------|------|
+| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | 声誉策略命中了 reject 规则 |
+| `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | 策略评估期间所需日志运营方不可达 |
+| `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | 条目签名无效或 canonical 形式畸形 |
 
 ### 4.8 向后兼容性
 
