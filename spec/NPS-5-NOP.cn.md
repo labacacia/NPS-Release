@@ -393,7 +393,7 @@ Orchestrator                        Worker Agent(s)
 
 ```json
 {
-  "estimated_npt": 1500,
+  "cgn_est": 1500,
   "required_capabilities": ["nwp:invoke", "ml:inference"],
   "action": "nwp://ml.example.com/inference/invoke"
 }
