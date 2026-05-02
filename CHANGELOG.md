@@ -52,8 +52,8 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ### Tests
 
-- Test count: **629 → 655** (all passing).
-  - `GossipStateTests.cs` — 13 new tests: interval clamping, empty state invariants, `AcceptPeerSth` storage and update, `CurrentPeerSths` multi-peer, `ReceivedAt` timestamp, `FromEnvironment` parsing (no peers / valid JSON / pub_key / malformed fallback), NipSigner round-trip through cached STH.
+- Test count: **629 → 656** (all passing).
+  - `GossipStateTests.cs` — 14 new tests: interval clamping, empty state invariants, `AcceptPeerSth` storage and update, `CurrentPeerSths` multi-peer, `ReceivedAt` timestamp, `FromEnvironment` parsing (no peers / valid JSON / pub_key / malformed fallback), NipSigner round-trip through cached STH.
   - `AnchorTopologyTests.cs` — `TopologyQuery_UnknownReservedType_Returns501WithCorrectCode` (renamed + updated from 404→501 assertion); new `TopologySnapshot_MissingCapability_Returns403`.
   - `AssuranceLevelTests.cs` — `FromWireOrAnonymous_NullOrEmpty_ReturnsAnonymous` (replaces prior merged test); `FromWireOrAnonymous_UnknownNonEmpty_Throws` (new — verifies spec m6 enforcement).
 
