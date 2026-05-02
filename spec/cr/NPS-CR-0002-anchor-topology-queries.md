@@ -84,7 +84,7 @@ Fields:
   "members": [
     {
       "nid": "urn:nps:agent:labacacia:host-abc123-sess-aaa",
-      "node_kind": ["memory"],
+      "node_roles": ["memory"],
       "activation_mode": "ephemeral",
       "tags": ["dev", "library"],
       "joined_at": "2026-04-15T10:23:00Z",
@@ -92,7 +92,7 @@ Fields:
     },
     {
       "nid": "urn:nps:node:labacacia:host-def456",
-      "node_kind": ["anchor"],
+      "node_roles": ["anchor"],
       "child_anchor": true,
       "member_count": 7,
       "tags": ["sub-cluster", "training"]
@@ -117,7 +117,7 @@ Fields:
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `nid` | string | yes | Member NID. |
-| `node_kind` | array of strings | yes | Per CR-0001 `NodeKind` flags. |
+| `node_roles` | array of strings | yes | Per CR-0001 node role values. |
 | `activation_mode` | string | yes | Per existing NDP definition. |
 | `child_anchor` | bool | no | True if this member is itself an Anchor Node of a sub-cluster. Implies `member_count` field. |
 | `member_count` | integer | conditional | For sub-Anchor members, count of their direct members. |
@@ -144,7 +144,7 @@ Fields:
 | Field | Type | Required | Description |
 |---|---|---|---|
 | `scope` | string | yes | `"cluster"` (default for Anchor's own); future scopes reserved. |
-| `filter` | object | no | Reduces event volume. Supported keys: `tags_any` (array, match-any), `tags_all` (array, match-all), `node_kind` (array). Anchor Node MAY reject unsupported filter keys with an error. |
+| `filter` | object | no | Reduces event volume. Supported keys: `tags_any` (array, match-any), `tags_all` (array, match-all), `node_roles` (array). Anchor Node MAY reject unsupported filter keys with an error. |
 | `since_version` | integer | no | Resume from a previous version. Anchor Node MUST replay missed events when feasible; if the version is too old, MUST respond with a `resync_required` event and the client MUST issue a fresh `topology.snapshot`. |
 
 **Event types pushed by Anchor Node**:

@@ -277,16 +277,6 @@ Log operator configuration gains an optional `peers` list:
 | `NIP-REPUTATION-GOSSIP-FORK` | `NPS-SERVER-INTERNAL` | Cross-peer STH consistency check failed; possible fork detected |
 | `NIP-REPUTATION-GOSSIP-SIG-INVALID` | `NPS-CLIENT-BAD-FRAME` | Peer STH signature verification failed |
 
-### 4.7 Error Codes
-
-New entries in `spec/error-codes.md`:
-
-| Error Code | NPS Status | Description |
-|------------|------------|-------------|
-| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | Reputation policy matched a reject rule |
-| `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | Required log operator unreachable during policy evaluation |
-| `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | Entry signature invalid or canonical form malformed |
-
 ### 4.6 State Machines / Flows
 
 Reputation-gated admission:
@@ -307,6 +297,16 @@ For hot paths, Nodes SHOULD cache log results with a short TTL
 (default 60 s) and refresh asynchronously. A hard `reject_on: cert-revoked`
 SHOULD be checked synchronously on every connection but can be
 satisfied by OCSP-stapling-like pre-fetch.
+
+### 4.7 Error Codes
+
+New entries in `spec/error-codes.md`:
+
+| Error Code | NPS Status | Description |
+|------------|------------|-------------|
+| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | Reputation policy matched a reject rule |
+| `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | Required log operator unreachable during policy evaluation |
+| `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | Entry signature invalid or canonical form malformed |
 
 ### 4.8 Backward Compatibility
 
