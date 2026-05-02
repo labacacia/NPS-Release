@@ -12,7 +12,7 @@
 > 当前版本仅覆盖 [NPS-CR-0002](../../cr/NPS-CR-0002-anchor-topology-queries.md) 引入的
 > **L2-08 拓扑读取** 要求。
 >
-> 其余 L2 要求（L2-01 至 L2-07 —— NOP 编排、OpenTelemetry 追踪、NPT Token Budget、
+> 其余 L2 要求（L2-01 至 L2-07 —— NOP 编排、OpenTelemetry 追踪、CGN Token Budget、
 > 预检、重试 / 超时、异步 Action、AlignStream 背压）的测试用例由后续 CR 跟进，
 > **不在本文档范围**。后续 CR 将在本文件追加 §3.x 子节收录。
 

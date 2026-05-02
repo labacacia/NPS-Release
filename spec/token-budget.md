@@ -1,6 +1,6 @@
 English | [中文版](./token-budget.cn.md)
 
-# NPS Token Budget Specification
+# Cognon Budget Specification
 
 **Version**: 0.3  
 **Date**: 2026-05-01  
@@ -9,33 +9,33 @@ English | [中文版](./token-budget.cn.md)
 
 ## 1. Overview
 
-The NPS Token Budget mechanism lets an agent declare a maximum token-consumption cap for a given request. A node uses this cap to trim response fields, limit the number of records returned, or reject over-budget requests.
+The Cognon Budget mechanism lets an agent declare a maximum token-consumption cap for a given request. A node uses this cap to trim response fields, limit the number of records returned, or reject over-budget requests.
 
-To address the differences in how each LLM counts tokens, NPS introduces **NPS Token (NPT)** as a standardized unit of measure.
+To address the differences in how each LLM counts tokens, NPS introduces **Cognon (CGN)** as a standardized unit of measure.
 
 ---
 
-## 2. NPS Token (NPT)
+## 2. Cognon (CGN)
 
 ### 2.1 Definition
 
-NPT is the standard token-accounting unit inside the NPS protocol suite. Native tokens from each LLM are converted to NPT through exchange rates.
+CGN is the standard token-accounting unit inside the NPS protocol suite. Native tokens from each LLM are converted to CGN through exchange rates.
 
 ### 2.2 Default Calculation (Fallback)
 
 When the tokenizer cannot be determined, use the following formula as a default estimate:
 
 ```
-NPT = ceil(UTF-8_bytes / 4)
+CGN = ceil(UTF-8_bytes / 4)
 ```
 
 This formula reflects the average behavior of mainstream LLM tokenizers (≈ 4 bytes/token for English, ≈ 3 bytes/token for Chinese) and acts as the most conservative baseline.
 
-### 2.3 Exchange Rate Table (NPT Exchange Rates)
+### 2.3 Exchange Rate Table (CGN Exchange Rates)
 
-Node implementations SHOULD ship with built-in NPT exchange rates for common models:
+Node implementations SHOULD ship with built-in CGN exchange rates for common models:
 
-| Model family | Tokenizer | 1 native token ≈ NPT | Notes |
+| Model family | Tokenizer | 1 native token ≈ CGN | Notes |
 |--------------|-----------|-----------------------|-------|
 | OpenAI GPT-4 / GPT-4o | `cl100k_base` | 1.0 | Reference baseline |
 | Anthropic Claude | Claude tokenizer | 1.05 | Slightly higher than GPT-4 |
@@ -81,7 +81,7 @@ When either field is present in the IdentFrame, the node uses the matching token
 
 ### 3.3 Default Fallback
 
-When the tokenizer cannot be determined, use `ceil(UTF-8_bytes / 4)` to compute NPT.
+When the tokenizer cannot be determined, use `ceil(UTF-8_bytes / 4)` to compute CGN.
 
 ---
 
@@ -91,14 +91,14 @@ When the tokenizer cannot be determined, use `ceil(UTF-8_bytes / 4)` to compute 
 
 | Header | Required | Description |
 |--------|----------|-------------|
-| `X-NWP-Budget` | optional | Maximum NPT budget (uint32) |
+| `X-NWP-Budget` | optional | Maximum CGN budget (uint32) |
 | `X-NWP-Tokenizer` | optional | Tokenizer identifier used by the agent |
 
 ### 4.2 Response Headers
 
 | Header | Description |
 |--------|-------------|
-| `X-NWP-Tokens` | Actual NPT consumed by this response |
+| `X-NWP-Tokens` | Actual CGN consumed by this response |
 | `X-NWP-Tokens-Native` | Native token consumption for this response (when the tokenizer is known) |
 | `X-NWP-Tokenizer-Used` | Tokenizer identifier actually used by the node |
 
@@ -114,7 +114,7 @@ When the response would exceed `X-NWP-Budget`:
 
 ## 5. Token Estimate in CapsFrame
 
-The `token_est` field in a CapsFrame is in NPT:
+The `token_est` field in a CapsFrame is in CGN:
 
 ```json
 {
@@ -134,7 +134,7 @@ The `token_est` field in a CapsFrame is in NPT:
 - Node implementations SHOULD ship with at least the `cl100k_base` (GPT-4 family) tokenizer built in.
 - The exchange-rate table should be hot-reloadable configuration, not hard-coded.
 - For high-frequency scenarios, token estimation MAY be sampled rather than computed record-by-record.
-- NPT values are always uint32 — maximum 4,294,967,295.
+- CGN values are always uint32 — maximum 4,294,967,295.
 
 ---
 
@@ -146,7 +146,7 @@ The `X-NWP-Budget` cap applies to **synchronous request/response operations** (Q
 
 - `X-NWP-Budget` applies **per StreamFrame batch**, not to the total stream.
 - The node MUST trim or stop the batch if processing that batch would exceed the declared budget.
-- `X-NWP-Tokens` in the response header reports the NPT consumed by the current batch only.
+- `X-NWP-Tokens` in the response header reports the CGN consumed by the current batch only.
 - The Agent MAY choose to disconnect early once its cumulative budget is exhausted.
 
 ### 7.2 SubscribeFrame / Push Streams (topology.stream, event subscriptions)
@@ -156,8 +156,8 @@ Long-running push streams (e.g. `topology.stream` via SubscribeFrame) represent 
 | Aspect | Behavior |
 |--------|----------|
 | `X-NWP-Budget` enforcement | Not applied by the node; push events are generated independently of any per-request budget cap |
-| `X-NWP-Tokens` reporting | The node SHOULD include this header on each push event (DiffFrame) reporting the NPT for that event's payload |
-| Agent-side enforcement | The Agent is responsible for tracking cumulative NPT across events and disconnecting when its session budget is exhausted |
+| `X-NWP-Tokens` reporting | The node SHOULD include this header on each push event (DiffFrame) reporting the CGN for that event's payload |
+| Agent-side enforcement | The Agent is responsible for tracking cumulative CGN across events and disconnecting when its session budget is exhausted |
 
 > **Rationale**: Enforcing `X-NWP-Budget` on push streams would require the node to buffer future events, which is incompatible with real-time topology change delivery. Agent-side enforcement is the correct locus for subscription-stream budget control.
 

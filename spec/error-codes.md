@@ -149,7 +149,7 @@ NPS uses a two-level error system:
 | `NOP-SYNC-DEPENDENCY-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | Dependency subtask has failed (and failure count exceeds the K-of-N tolerance) |
 | `NOP-STREAM-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | AlignStream sequence numbers are not contiguous |
 | `NOP-STREAM-NID-MISMATCH` | `NPS-AUTH-UNAUTHENTICATED` | AlignStream `sender_nid` does not match the connection identity |
-| `NOP-RESOURCE-INSUFFICIENT` | `NPS-SERVER-UNAVAILABLE` | Preflight found one or more Worker Agents lack sufficient resources (NPT or capabilities) |
+| `NOP-RESOURCE-INSUFFICIENT` | `NPS-SERVER-UNAVAILABLE` | Preflight found one or more Worker Agents lack sufficient resources (CGN or capabilities) |
 | `NOP-CONDITION-EVAL-ERROR` | `NPS-CLIENT-BAD-PARAM` | DAG node `condition` expression failed to evaluate (syntax error or missing referenced field) |
 | `NOP-INPUT-MAPPING-ERROR` | `NPS-CLIENT-UNPROCESSABLE` | `input_mapping` JSONPath could not be resolved or target field is missing |
 

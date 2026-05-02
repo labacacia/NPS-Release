@@ -26,7 +26,7 @@
 
 - **`spec/error-codes.md` — `NWP-RESERVED-TYPE-UNSUPPORTED`**：新增错误码（`NPS-SERVER-UNSUPPORTED` → HTTP 501），用于 `QueryFrame`/`SubscribeFrame` 的 `type` 值在保留命名空间内但节点未实现时。含与 `NWP-ACTION-NOT-FOUND`（未知 `action_id`）的明确区分说明。
 
-- **`spec/token-budget.md` §7.2 — 每事件 `npt_est` 字段（SHOULD）**：推送流 SHOULD 在每个 `TopologyEventEnvelope`（及类似 envelope 类型）上携带 `npt_est` 字段，值为事件负载的 UTF-8/4 字节估算。允许 Agent 在不自行计数字节的情况下追踪 token 消耗。
+- **`spec/token-budget.md` §7.2 — 每事件 `cgn_est` 字段（SHOULD）**：推送流 SHOULD 在每个 `TopologyEventEnvelope`（及类似 envelope 类型）上携带 `cgn_est` 字段，值为事件负载的 UTF-8/4 字节估算。允许 Agent 在不自行计数字节的情况下追踪 token 消耗。
 
 ### .NET SDK
 
@@ -34,7 +34,7 @@
 
 - **`NPS.NWP.Anchor` — `topology:read` 能力门控**：新增 `AnchorNodeOptions.RequireTopologyCapability`（默认 `false`）。启用后，`/query` 和 `/subscribe` 均检查 `X-NWP-Capabilities` 请求头是否包含 `"topology:read"`（大小写不敏感，逗号分隔）；缺失时返回 HTTP 403 / `NPS-AUTH-FORBIDDEN` / `NWP-TOPOLOGY-UNAUTHORIZED`。新增 `NwpHttpHeaders.Capabilities = "X-NWP-Capabilities"` 常量。
 
-- **`NPS.NWP.Anchor` — `TopologyEventEnvelope` 上的 `npt_est`**：`TopologyEventEnvelope` 新增可空字段 `npt_est: uint?`，每次推送事件时以 `Math.Max(1, UTF8.GetByteCount(payload) / 4)` 填充。
+- **`NPS.NWP.Anchor` — `TopologyEventEnvelope` 上的 `cgn_est`**：`TopologyEventEnvelope` 新增可空字段 `cgn_est: uint?`，每次推送事件时以 `Math.Max(1, UTF8.GetByteCount(payload) / 4)` 填充。
 
 - **`NPS.NIP` — `AssuranceLevels.FromWireOrAnonymous("")` 修复**：空字符串 `""` 现在返回 `Anonymous`（与 `null` 一致）。Python、TypeScript 和 Java SDK 收到同样修复。
 
@@ -194,7 +194,7 @@
     - `daemons/npsd/` —— `npsd`（`Npsd.csproj`、包 `LabAcacia.NPS.Daemon.Npsd`）。监听 `127.0.0.1:17433`。L1 最小集：root Ed25519 keypair 生成（PKCS#8、文件权限 `0600`，满足 NPS-Node-L1 `TC-N1-NIP-01`）、`/.nwm` 自身 manifest、`/health`。可通过 `NPSD_PORT` / `NPSD_HOST` / `NPSD_DATA_DIR` 配置。NCP 原生模式前导 runtime、inbox 持久化、sub-NID 签发、AnnounceFrame 上发推迟到 alpha.4。
     - `daemons/nps-runner/` —— `nps-runner`（`NpsRunner.csproj`、包 `LabAcacia.NPS.Daemon.Runner`）。Phase 1 骨架：Generic Host 脚手架 + 30 秒 heartbeat。Inbox 监视 + `spawn_spec_ref` 解析 + worker 生命周期在 L3 阶段（alpha.5+）落地。
   - **第二层（接入网关）：**
-    - `daemons/nps-gateway/` —— `nps-gateway`（`NpsGateway.csproj`、包 `LabAcacia.NPS.Daemon.Gateway`）。Phase 1 骨架：公网 HTTP 监听 `:8080` + `/health`，端点本身记录后续里程碑。TLS termination、限速、NeuronHub 鉴权、NPT 扣款、NPS-RFC-0004 声誉查询、NPS-CR-0001 Anchor Node 中间件接入在 alpha.4 → alpha.5 落地。
+    - `daemons/nps-gateway/` —— `nps-gateway`（`NpsGateway.csproj`、包 `LabAcacia.NPS.Daemon.Gateway`）。Phase 1 骨架：公网 HTTP 监听 `:8080` + `/health`，端点本身记录后续里程碑。TLS termination、限速、NeuronHub 鉴权、CGN 扣款、NPS-RFC-0004 声誉查询、NPS-CR-0001 Anchor Node 中间件接入在 alpha.4 → alpha.5 落地。
     - `daemons/nps-registry/` —— `nps-registry`（`NpsRegistry.csproj`、包 `LabAcacia.NPS.Daemon.Registry`）。Phase 1 骨架：HTTP 监听 NDP 可选独立端口 `17436`；`Resolve`/`Graph`/`Announce` URL 已就位但返回 `NDP-REGISTRY-UNAVAILABLE`（HTTP 503），让消费方提前集成 + graceful fallback。SQLite 后端真实注册在 alpha.4 落地。
   - **第三层（信任锚点 —— NPS Cloud，2027 Q1+）：**
     - `daemons/nps-cloud-ca/` —— `nps-cloud-ca`（`NpsCloudCa.csproj`、包 `LabAcacia.NPS.Daemon.CloudCa`）。Phase 1 deferral 骨架，NIP 可选独立端口 `17435`；`/v1/issue`、`/v1/revoke`、`/v1/crl`、`/v1/ocsp` 返回 `NIP-CA-NOT-READY`（HTTP 503）+ 指针指向 alpha.2 已上线的六个多语言 `tools/nip-ca-server*` OSS CA。本 daemon 自己的 X.509 + ACME 流水线随 NPS-RFC-0002 在 alpha.4 落地。

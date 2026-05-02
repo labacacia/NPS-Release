@@ -13,7 +13,7 @@ English | [中文版](./NPS-Node-L2.cn.md)
 > introduced by [NPS-CR-0002](../../cr/NPS-CR-0002-anchor-topology-queries.md).
 >
 > The remaining L2 requirements (L2-01 through L2-07 — NOP orchestration, OpenTelemetry
-> tracing, NPT Token Budget, preflight, retry/timeout, async actions, AlignStream
+> tracing, CGN Token Budget, preflight, retry/timeout, async actions, AlignStream
 > back-pressure) have their conformance test cases tracked in follow-up CRs and are
 > **out of scope for this document**. A future CR will collect them under additional
 > §3.x sub-sections in this same file.

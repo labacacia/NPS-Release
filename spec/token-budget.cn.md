@@ -1,6 +1,6 @@
 [English Version](./token-budget.md) | 中文版
 
-# NPS Token Budget 规范
+# Cognon Budget 规范
 
 **Version**: 0.3  
 **Date**: 2026-05-01  
@@ -9,33 +9,33 @@
 
 ## 1. 概述
 
-NPS Token Budget 机制允许 Agent 在请求中声明本次操作的最大 token 消耗上限。Node 据此裁剪响应字段、限制返回条数或拒绝超预算请求。
+Cognon Budget 机制允许 Agent 在请求中声明本次操作的最大 token 消耗上限。Node 据此裁剪响应字段、限制返回条数或拒绝超预算请求。
 
-为解决不同 LLM 的 token 计算差异，NPS 引入 **NPS Token（NPT）** 作为标准化计量单位。
+为解决不同 LLM 的 token 计算差异，NPS 引入 **Cognon（CGN）** 作为标准化计量单位。
 
 ---
 
-## 2. NPS Token（NPT）
+## 2. Cognon（CGN）
 
 ### 2.1 定义
 
-NPS Token（NPT）是 NPS 协议族内部的标准 token 计量单位。各 LLM 的原生 token 通过汇率转换为 NPT。
+Cognon（CGN）是 NPS 协议族内部的标准 token 计量单位。各 LLM 的原生 token 通过汇率转换为 CGN。
 
 ### 2.2 默认计算方法（Fallback）
 
 当 tokenizer 无法确定时，使用以下公式作为默认估算：
 
 ```
-NPT = ceil(UTF-8_bytes / 4)
+CGN = ceil(UTF-8_bytes / 4)
 ```
 
 此公式基于主流 LLM tokenizer 的平均行为（英文约 4 bytes/token，中文约 3 bytes/token），作为最保守的估算基线。
 
-### 2.3 汇率表（NPT Exchange Rates）
+### 2.3 汇率表（CGN Exchange Rates）
 
-Node 实现 SHOULD 内置常见模型的 NPT 汇率：
+Node 实现 SHOULD 内置常见模型的 CGN 汇率：
 
-| 模型族 | Tokenizer | 1 原生 Token ≈ NPT | 说明 |
+| 模型族 | Tokenizer | 1 原生 Token ≈ CGN | 说明 |
 |--------|-----------|---------------------|------|
 | OpenAI GPT-4 / GPT-4o | `cl100k_base` | 1.0 | 基准参照 |
 | Anthropic Claude | Claude tokenizer | 1.05 | 略高于 GPT-4 |
@@ -81,7 +81,7 @@ Node 根据 IdentFrame 中的元数据推断 Agent 使用的模型族：
 
 ### 3.3 默认 Fallback
 
-无法确定 tokenizer 时，使用 `ceil(UTF-8_bytes / 4)` 计算 NPT。
+无法确定 tokenizer 时，使用 `ceil(UTF-8_bytes / 4)` 计算 CGN。
 
 ---
 
@@ -91,14 +91,14 @@ Node 根据 IdentFrame 中的元数据推断 Agent 使用的模型族：
 
 | 头 | 必填 | 描述 |
 |----|------|------|
-| `X-NWP-Budget` | 可选 | 最大 NPT 预算（uint32）|
+| `X-NWP-Budget` | 可选 | 最大 CGN 预算（uint32）|
 | `X-NWP-Tokenizer` | 可选 | Agent 使用的 tokenizer 标识 |
 
 ### 4.2 响应头
 
 | 头 | 描述 |
 |----|------|
-| `X-NWP-Tokens` | 本响应实际 NPT 消耗 |
+| `X-NWP-Tokens` | 本响应实际 CGN 消耗 |
 | `X-NWP-Tokens-Native` | 本响应原生 token 消耗（若已知 tokenizer） |
 | `X-NWP-Tokenizer-Used` | Node 实际使用的 tokenizer 标识 |
 
@@ -114,7 +114,7 @@ Node 根据 IdentFrame 中的元数据推断 Agent 使用的模型族：
 
 ## 5. CapsFrame 中的 token 估算
 
-CapsFrame 的 `token_est` 字段值为 NPT：
+CapsFrame 的 `token_est` 字段值为 CGN：
 
 ```json
 {
@@ -134,7 +134,7 @@ CapsFrame 的 `token_est` 字段值为 NPT：
 - Node 实现 SHOULD 内置至少 `cl100k_base`（GPT-4 系列）tokenizer
 - 汇率表建议作为可热更新配置，不硬编码
 - 高频场景可对 token 估算做采样而非逐条计算
-- NPT 值始终为 uint32，最大 4,294,967,295
+- CGN 值始终为 uint32，最大 4,294,967,295
 
 ---
 
@@ -146,7 +146,7 @@ CapsFrame 的 `token_est` 字段值为 NPT：
 
 - `X-NWP-Budget` 按**每个 StreamFrame 批次**执行，不针对整个流。
 - 若处理某批次会超出声明预算，节点 MUST 对该批次进行裁剪或终止。
-- 响应头 `X-NWP-Tokens` 仅报告当前批次消耗的 NPT。
+- 响应头 `X-NWP-Tokens` 仅报告当前批次消耗的 CGN。
 - Agent 可在累计预算耗尽后主动断开连接。
 
 ### 7.2 SubscribeFrame / 推送流（topology.stream、事件订阅）
@@ -156,8 +156,8 @@ CapsFrame 的 `token_est` 字段值为 NPT：
 | 方面 | 行为 |
 |------|------|
 | `X-NWP-Budget` 强制 | 节点不执行；推送事件的生成独立于任何请求级预算上限 |
-| `X-NWP-Tokens` 上报 | 节点 SHOULD 在每个推送事件（DiffFrame）中附带此响应头，报告该事件有效载荷的 NPT |
-| Agent 侧强制 | Agent 负责跨事件累计 NPT，并在会话预算耗尽时主动断开连接 |
+| `X-NWP-Tokens` 上报 | 节点 SHOULD 在每个推送事件（DiffFrame）中附带此响应头，报告该事件有效载荷的 CGN |
+| Agent 侧强制 | Agent 负责跨事件累计 CGN，并在会话预算耗尽时主动断开连接 |
 
 > **设计原因**：对推送流执行 `X-NWP-Budget` 将要求节点缓冲未来事件，与实时拓扑变更交付的设计目标不兼容。订阅流的预算控制应由 Agent 侧负责。
 

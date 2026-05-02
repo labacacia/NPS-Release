@@ -35,14 +35,14 @@ Each phase breaks into three segments:
 
 - [x] `NPS-0-Overview.md` v0.3
 - [x] `NPS-1-NCP.md` v0.6 (dual transport, configurable frame size, ErrorFrame)
-- [x] `NPS-2-NWP.md` v0.8 (Node-published AnchorFrame, NPT, topology queries)
+- [x] `NPS-2-NWP.md` v0.8 (Node-published AnchorFrame, CGN, topology queries)
 - [x] `NPS-3-NIP.md` v0.5 (metadata field, NPS status codes, X.509 NID prototype)
 - [x] `NPS-4-NDP.md` v0.5
 - [x] `NPS-5-NOP.md` v0.4
 - [x] `frame-registry.yaml` v0.9 (with ErrorFrame 0xFE)
 - [x] `error-codes.md` v1.0 (with NPS status-code mapping, NIP cert error codes, NWP topology error codes)
 - [x] `status-codes.md` v0.2 (NPS native status codes + HTTP mapping)
-- [x] `token-budget.md` v0.2 (NPT metering + tokenizer resolution chain)
+- [x] `token-budget.md` v0.2 (CGN metering + tokenizer resolution chain)
 - [x] `services/NPS-AaaS-Profile.md` v0.4 (Anchor/Bridge Node, VPL, L1/L2/L3, NPS-CR-0002)
 - [x] `services/NPS-Node-Profile.md` v0.1 (L1/L2/L3 + activation modes)
 - [x] `services/conformance/NPS-Node-L1.md` v0.1 (21 TC-N1-* test cases)
@@ -124,7 +124,7 @@ Each phase breaks into three segments:
 - [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.4)
 - [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC adapter (`LabAcacia.GrpcIngress` v1.0.0-alpha.4)
 - [x] Tier-2 MsgPack wire-size benchmark (aggregate 63.6 % reduction vs JSON)
-- [x] Token-savings benchmark (aggregate 45.0 % NPT reduction vs REST)
+- [x] Token-savings benchmark (aggregate 45.0 % CGN reduction vs REST)
 - [x] NOP orchestrator executes a 3-node DAG end-to-end
 - [x] Claude Desktop talks to an NWP Memory Node through `mcp-ingress`
 - [ ] `NDP.ResolveFrame` resolves `nwp://` to a physical endpoint via DNS TXT
@@ -142,7 +142,7 @@ Each phase breaks into three segments:
 | **AaaS-Profile L2-09** — default `reputation_policy` | SHOULD requirement; minimum recommended policy defined |
 | **`NWP-RESERVED-TYPE-UNSUPPORTED`** in AnchorNodeMiddleware | HTTP 501; `NPS-SERVER-UNSUPPORTED` status code added |
 | **`topology:read` capability gate** on AnchorNodeMiddleware | `AnchorNodeOptions.RequireTopologyCapability`; `X-NWP-Capabilities` header |
-| **`npt_est` per-event** on `TopologyEventEnvelope` | UTF-8/4 estimate per §7.2 (SHOULD) |
+| **`cgn_est` per-event** on `TopologyEventEnvelope` | UTF-8/4 estimate per §7.2 (SHOULD) |
 | **AssuranceLevel `from_wire("")`** fix | Python, TS, Java SDKs; `""` → Anonymous |
 | **Spec / doc CN sync** | `error-codes.cn.md`, `RFC-0004.cn.md`, `status-codes.cn.md` all up-to-date |
 

@@ -27,7 +27,7 @@ L2 requirements (L2-01..L2-07) are tracked in follow-up CRs.
 | Requirement | CR | Covered by this attestation |
 |-------------|----|----------------------------|
 | L2-08 — `topology.snapshot` / `topology.stream` on Anchor Nodes | [NPS-CR-0002](https://github.com/LabAcacia/nps/blob/main/spec/cr/NPS-CR-0002-anchor-topology-queries.md) | Yes |
-| L2-01..L2-07 — NOP / OTel / NPT / preflight / retry / async / AlignStream | TBD | No (future CR) |
+| L2-01..L2-07 — NOP / OTel / CGN / preflight / retry / async / AlignStream | TBD | No (future CR) |
 
 ---
 
