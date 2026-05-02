@@ -98,7 +98,7 @@ NOP orchestration layer. A single Anchor Node MAY simultaneously declare other r
 
 ```json
 {
-  "nwm_version": "0.7",
+  "nwm_version": "0.10",
   "node_type": "anchor",
   "node_id": "nwp://api.example.com/agent-service",
   "display_name": "Example AaaS Anchor",
