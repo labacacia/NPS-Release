@@ -1,0 +1,110 @@
+# NPS Suite Version Manifest
+# Single source of truth for the synchronized suite version.
+# Read by the NPS-Dev version-sync CI workflow (.github/workflows/version-sync.yml).
+#
+# Fields per repo entry:
+#   name          - GitHub repo slug (owner/repo)
+#   kind          - extraction strategy (see check-version-sync.py)
+#   expected      - "required" | "stub" | "skip"
+#   manifest_file - path to the version-bearing file inside the repo
+#   version_regex - optional override regex (group 1 must capture the version string)
+
+suite_version: "1.0.0-alpha.5"
+released_at: "2026-05-01"
+
+repos:
+  # ── Spec & dev ────────────────────────────────────────────────────────────
+  - name: labacacia/NPS-Release
+    kind: changelog
+    expected: required
+    manifest_file: CHANGELOG.md
+
+  - name: labacacia/NPS-Dev
+    kind: changelog
+    expected: required
+    manifest_file: CHANGELOG.md
+
+  # ── SDKs — shipped ────────────────────────────────────────────────────────
+  - name: labacacia/NPS-sdk-dotnet
+    kind: dotnet-csproj
+    expected: required
+    manifest_file: src/NPS.Core/NPS.Core.csproj
+
+  - name: labacacia/NPS-sdk-py
+    kind: pyproject
+    expected: required
+    manifest_file: pyproject.toml
+
+  - name: labacacia/NPS-sdk-ts
+    kind: npm-package
+    expected: required
+    manifest_file: package.json
+
+  - name: labacacia/NPS-sdk-java
+    kind: gradle-properties
+    expected: required
+    manifest_file: gradle.properties
+
+  - name: labacacia/NPS-sdk-rust
+    kind: cargo-toml
+    expected: required
+    manifest_file: Cargo.toml
+
+  - name: labacacia/NPS-sdk-go
+    kind: changelog
+    expected: required
+    manifest_file: CHANGELOG.md
+
+  # ── Compatibility ingresses ───────────────────────────────────────────────
+  - name: labacacia/NPS-mcp-ingress
+    kind: dotnet-csproj
+    expected: required
+    manifest_file: src/McpIngress/McpIngress.csproj
+
+  - name: labacacia/NPS-a2a-ingress
+    kind: dotnet-csproj
+    expected: required
+    manifest_file: src/A2aIngress/A2aIngress.csproj
+
+  - name: labacacia/NPS-grpc-ingress
+    kind: dotnet-csproj
+    expected: required
+    manifest_file: src/GrpcIngress/GrpcIngress.csproj
+
+  # ── Standalone tools ──────────────────────────────────────────────────────
+  - name: labacacia/nip-ca-server
+    kind: dotnet-csproj
+    expected: required
+    manifest_file: NPS.NipCaServer.csproj
+
+  - name: labacacia/nps-daemons
+    kind: changelog
+    expected: required
+    manifest_file: CHANGELOG.md
+
+  # ── Services (orchestrator) ───────────────────────────────────────────────
+  - name: orilynn-studio/nps-orchestrator
+    kind: dotnet-csproj
+    expected: required
+    manifest_file: src/NpsOrchestrator/NpsOrchestrator.csproj
+
+  # ── Stubs — placeholder repos (README must declare tracking line) ─────────
+  - name: labacacia/NPS-Studio
+    kind: stub
+    expected: stub
+    manifest_file: README.md
+
+  - name: labacacia/NPS-NWP-Manager
+    kind: stub
+    expected: stub
+    manifest_file: README.md
+
+  - name: labacacia/NPS-sdk-cpp
+    kind: stub
+    expected: stub
+    manifest_file: README.md
+
+  - name: labacacia/NPS-sdk-php
+    kind: stub
+    expected: stub
+    manifest_file: README.md
