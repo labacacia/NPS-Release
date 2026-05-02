@@ -109,7 +109,7 @@ NOP orchestration layer. A single Anchor Node MAY simultaneously declare other r
       "description": "Run a multi-step data analysis pipeline",
       "params_schema": { "$ref": "#/schemas/analysis_input" },
       "result_schema": { "$ref": "#/schemas/analysis_output" },
-      "estimated_npt": 2000,
+      "cgn_est": 2000,
       "timeout_ms": 120000,
       "async": true
     }
