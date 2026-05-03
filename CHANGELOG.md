@@ -10,7 +10,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
-## [Unreleased]
+## [1.0.0-alpha.5.2] — 2026-05-03
 
 ### Changed (Breaking)
 
