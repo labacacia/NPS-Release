@@ -1,6 +1,18 @@
 # NPS Suite Version Manifest
-# Single source of truth for the synchronized suite version.
-# Read by the NPS-Dev version-sync CI workflow (.github/workflows/version-sync.yml).
+#
+# ── AUTHORITATIVE ORACLE ─────────────────────────────────────────────────────
+# This file is the SINGLE machine-readable source of truth for the NPS suite
+# version.  CI tooling (check-version-sync.py, check-source-of-truth.py) reads
+# suite_version from HERE and ONLY HERE.
+#
+# Rules (see also docs/release-process.md §"Single source of truth"):
+#   1. Bumping suite_version here is the LAST step of a release.
+#   2. No other file (CHANGELOG, README, csproj, pyproject.toml …) may serve
+#      as the version oracle.  Those files MUST match this value, not vice versa.
+#   3. CHANGELOG.md files are the human notification medium; they must be
+#      updated as part of the same release commit but are never consulted by CI.
+#   4. Any protocol or package change bumps the whole-suite version uniformly —
+#      no per-package or per-protocol sub-versions (see NPS-Dev#25).
 #
 # Fields per repo entry:
 #   name          - GitHub repo slug (owner/repo)
@@ -8,9 +20,10 @@
 #   expected      - "required" | "stub" | "skip"
 #   manifest_file - path to the version-bearing file inside the repo
 #   version_regex - optional override regex (group 1 must capture the version string)
+# ─────────────────────────────────────────────────────────────────────────────
 
-suite_version: "1.0.0-alpha.5"
-released_at: "2026-05-01"
+suite_version: "1.0.0-alpha.5.2"
+released_at: "2026-05-03"
 
 repos:
   # ── Spec & dev ────────────────────────────────────────────────────────────
