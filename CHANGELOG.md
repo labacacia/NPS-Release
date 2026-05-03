@@ -12,6 +12,19 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ## [Unreleased]
 
+### Daemons
+
+- **Native OS packages**: Added `.deb` (Ubuntu/Debian amd64), `.rpm` (Fedora/RHEL x86_64),
+  and `.msi` (Windows x64) installers for all 4 OSS daemons (`npsd`, `nps-runner`,
+  `nps-gateway`, `nps-registry`). Each package ships a self-contained binary (no .NET
+  runtime dependency), a systemd service unit (Linux), or a Windows service registration
+  (MSI via NT SERVICE virtual account). Packages are uploaded to the
+  [nps-daemons GitHub Release](https://github.com/labacacia/nps-daemons/releases) alongside
+  the existing Docker images. Build scripts: `tools/packaging/build-linux-packages.sh`
+  (requires `dotnet`, `dpkg-deb`, `rpmbuild`) and `tools/packaging/build-win-packages.ps1`
+  (requires `dotnet`, WiX 4 `wix` tool). Triggered via `BUILD_PACKAGES=1` on
+  `sync-nps-daemons.sh`.
+
 ### Docs
 
 - **GitHub Pages restructured to 7 marketing pages**: `docs/sdks.md` narrowed to a

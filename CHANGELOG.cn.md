@@ -12,6 +12,18 @@
 
 ## [Unreleased]
 
+### Daemons
+
+- **原生 OS 安装包**：新增面向 4 个 OSS daemon（`npsd`、`nps-runner`、`nps-gateway`、
+  `nps-registry`）的 `.deb`（Ubuntu/Debian amd64）、`.rpm`（Fedora/RHEL x86_64）和
+  `.msi`（Windows x64）安装包。每个安装包包含自包含二进制（无需 .NET 运行时），
+  Linux 安装包附带 systemd service 单元文件，MSI 通过 NT SERVICE 虚拟账户注册为 Windows 服务。
+  安装包随 Docker 镜像一同上传到
+  [nps-daemons GitHub Release](https://github.com/labacacia/nps-daemons/releases)。
+  构建脚本：`tools/packaging/build-linux-packages.sh`（需要 `dotnet`、`dpkg-deb`、
+  `rpmbuild`）和 `tools/packaging/build-win-packages.ps1`（需要 `dotnet`、WiX 4 `wix`）。
+  通过在 `sync-nps-daemons.sh` 中设置 `BUILD_PACKAGES=1` 触发。
+
 ### 文档
 
 - **GitHub Pages 精简为 7 个营销页面**：`docs/sdks.md` 缩减为 6 语言矩阵 + Wiki 深度文档链接，
