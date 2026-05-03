@@ -10,6 +10,19 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
+## [Unreleased]
+
+### Docs
+
+- **GitHub Pages restructured to 7 marketing pages**: `docs/sdks.md` narrowed to a
+  6-language matrix with Wiki deep-dive links; removed inline install snippets and per-feature
+  code examples (content lives in the NPS Wiki). Added `docs/get-started.md`
+  (audience-based onboarding funnel) and `docs/who-uses-nps.md` (case studies placeholder).
+  Added "📖 see Wiki" footer callout to all Pages pages. Updated `docs/navigation.md`.
+  Closes [labacacia/NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26).
+
+---
+
 ## [1.0.0-alpha.5.2] — 2026-05-03
 
 ### Changed (Breaking)

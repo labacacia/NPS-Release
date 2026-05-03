@@ -142,3 +142,7 @@ Machine-readable registry: [frame-registry.yaml](https://github.com/labacacia/NP
 - [Status codes](https://github.com/labacacia/NPS-Release/blob/main/spec/status-codes.md) — NPS native status codes + HTTP mapping
 - [Token Budget](https://github.com/labacacia/NPS-Release/blob/main/spec/token-budget.md) — CGN metering specification
 - [AaaS Profile](https://github.com/labacacia/NPS-Release/blob/main/spec/services/NPS-AaaS-Profile.md) — Agent-as-a-Service compliance levels (L1 / L2 / L3)
+
+---
+
+📖 For tutorials, references, and operator guides, see the [NPS Wiki](https://github.com/labacacia/NPS-Release/wiki).

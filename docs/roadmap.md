@@ -76,3 +76,7 @@ Formal W3C / IETF standardization and NPS 1.0 spec freeze.
 - [Overview](overview.md) — what NPS is
 - [Protocols](protocols.md) — the five layers
 - [SDKs](sdks.md) — pick a language
+
+---
+
+📖 For tutorials, references, and operator guides, see the [NPS Wiki](https://github.com/labacacia/NPS-Release/wiki).

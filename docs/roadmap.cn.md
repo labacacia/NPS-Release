@@ -76,3 +76,7 @@ W3C / IETF 正式标准化与 NPS 1.0 规范冻结。
 - [总览](overview.cn.md) — NPS 是什么
 - [协议族](protocols.cn.md) — 五层协议
 - [SDK](sdks.cn.md) — 选一门语言
+
+---
+
+📖 教程、参考资料和运维指南，请访问 [NPS Wiki](https://github.com/labacacia/NPS-Release/wiki)。
