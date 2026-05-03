@@ -12,43 +12,17 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ## [Unreleased]
 
-### Daemons
-
-- **Native OS packages**: Added `.deb` (Ubuntu/Debian amd64), `.rpm` (Fedora/RHEL x86_64),
-  and `.msi` (Windows x64) installers for all 4 OSS daemons (`npsd`, `nps-runner`,
-  `nps-gateway`, `nps-registry`). Each package ships a self-contained binary (no .NET
-  runtime dependency), a systemd service unit (Linux), or a Windows service registration
-  (MSI via NT SERVICE virtual account). Packages are uploaded to the
-  [nps-daemons GitHub Release](https://github.com/labacacia/nps-daemons/releases) alongside
-  the existing Docker images. Build scripts: `tools/packaging/build-linux-packages.sh`
-  (requires `dotnet`, `dpkg-deb`, `rpmbuild`) and `tools/packaging/build-win-packages.ps1`
-  (requires `dotnet`, WiX 4 `wix` tool). Triggered via `BUILD_PACKAGES=1` on
-  `sync-nps-daemons.sh`.
-
-### Docs
-
-- **GitHub Pages restructured to 7 marketing pages**: `docs/sdks.md` narrowed to a
-  6-language matrix with Wiki deep-dive links; removed inline install snippets and per-feature
-  code examples (content lives in the NPS Wiki). Added `docs/get-started.md`
-  (audience-based onboarding funnel) and `docs/who-uses-nps.md` (case studies placeholder).
-  Added "📖 see Wiki" footer callout to all Pages pages. Updated `docs/navigation.md`.
-  Closes [labacacia/NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26).
-
 ---
 
-## [1.0.0-alpha.5.2] — 2026-05-03
+## [1.0.0-alpha.5] — 2026-05-03
 
 ### Changed (Breaking)
 
 - **wire field rename**: `AnchorActionSpec.estimated_npt` → `cgn_est`. Aligns with the
-  post-alpha.5 CGN naming convention and matches `TopologyEventEnvelope.cgn_est`.
+  CGN naming convention and matches `TopologyEventEnvelope.cgn_est`.
   **Wire breaking change** — clients pinning to the old key will see the field as null
   after upgrade. No alias retained.
   Closes [labacacia/NPS-Dev#17](https://github.com/labacacia/NPS-Dev/issues/17).
-
----
-
-## [1.0.0-alpha.5] — 2026-05-01
 
 ### Spec
 
@@ -73,6 +47,14 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 - **`NPS.NIP` — `AssuranceLevels.FromWireOrAnonymous("")` fix**: Empty string `""` now returns `Anonymous` (consistent with `null`). Previously `null` returned Anonymous but `""` would throw or return Unknown depending on the call path. Python, TypeScript, and Java SDKs received the same fix.
 
 ### Daemons
+
+- **Native OS packages**: Added `.deb` (Ubuntu/Debian amd64), `.rpm` (Fedora/RHEL x86_64),
+  and `.msi` (Windows x64) installers for all 4 OSS daemons (`npsd`, `nps-runner`,
+  `nps-gateway`, `nps-registry`). Each package ships a self-contained binary (no .NET
+  runtime dependency), a systemd service unit (Linux), or a Windows service registration
+  (MSI via NT SERVICE virtual account). Packages are uploaded to the
+  [nps-daemons GitHub Release](https://github.com/labacacia/nps-daemons/releases/tag/v1.0.0-alpha.5)
+  alongside the existing Docker images.
 
 - **`daemons/nps-ledger/` — Phase 3: STH Gossip**: New `GossipState` singleton holds the peer configuration (`NPSLEDGER_PEERS` JSON array of `{log_id, endpoint, pub_key?}`) and caches the most recently validated `SignedTreeHead` per peer. New `GossipService` (`BackgroundService`) runs the gossip push cycle on every tick (`NPSLEDGER_GOSSIP_INTERVAL_S`, default 30 s): fetches `GET {peer}/v1/log/gossip/sth`, verifies the Ed25519 signature when `pub_key` is configured (skips with a warning when absent — dev-only), enforces monotonicity, caches on acceptance. New endpoint `GET /v1/log/gossip/sth` returns `{own_sth, peer_sths}`. `/health` updated to `version: "1.0.0-alpha.5"`, `phase: 3`, `gossip_peers`, `gossip_interval_s`. New `NPSLEDGER_PEERS` and `NPSLEDGER_GOSSIP_INTERVAL_S` env vars. csproj version → `1.0.0-alpha.5`.
 
@@ -132,6 +114,15 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 - **M3 — RFC-0004 §4.3/§4.4 Phase 2 features incorrectly presented as Phase 1**: RFC-0004 §4.3 listed all four HTTP endpoints (`POST /v1/log/entries`, `GET /v1/log/entries`, `GET /v1/log/sth`, `GET /v1/log/proof`) in a single block, implying `/sth` and `/proof` are Phase 1. §4.4 described NWM `reputation_policy` and NDP `/.nid/reputation` in present tense without any deferral marker, also implying Phase 1. Per §8.1 phasing table and Appendix A, Merkle tree + STH + inclusion proofs + `/.nid/reputation` + `reputation_policy` are all Phase 2 (targeted v1.0-alpha.5). Fix: §4.3 split into `4.3.1 Phase 1 — Submit and Query (current)` and `4.3.2 [Phase 2] — Merkle Integrity Proofs (deferred)` with an explicit deferral block; §4.4 gains a `[Phase 2 — deferred]` block at the top; §7 Merkle/STH security paragraph tagged `[Phase 2]`; §8.3 test items 2 and 3 tagged `[Phase 2]`. Applies to both EN and CN versions.
 
 - **M1 — `node_kind` / `node_type` naming disambiguation**: `node_kind` (NDP `Announce`) and `node_type` (NWP NWM) had overlapping names but diverged semantics — `node_kind` was a multi-valued discovery-layer role list while `node_type` is a single operative role — with no documented cross-protocol constraint, creating a validation ambiguity. Fix: (1) `NPS-4-NDP.md` v0.5 → v0.6: `node_kind` renamed to `node_roles` (array-only; parsers MUST accept `node_kind` as alias through alpha.5); (2) `NPS-2-NWP.md` v0.8 → v0.9: new §2.1 *Node Role Resolution* table documenting the two-field design; `node_type` description updated — MUST be one of `node_roles` values; topology member table and `topology.filter` key renamed `node_roles`; §14.7 reference updated; (3) `spec/frame-registry.yaml` AnnounceFrame entry updated; (4) `spec/cr/NPS-CR-0001` §3.4 gains a historical migration note.
+
+### Docs
+
+- **GitHub Pages restructured to 7 marketing pages**: `docs/sdks.md` narrowed to a
+  6-language matrix with Wiki deep-dive links; removed inline install snippets and per-feature
+  code examples (content lives in the NPS Wiki). Added `docs/get-started.md`
+  (audience-based onboarding funnel) and `docs/who-uses-nps.md` (case studies placeholder).
+  Added "📖 see Wiki" footer callout to all Pages pages. Updated `docs/navigation.md`.
+  Closes [labacacia/NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26).
 
 ---
 
@@ -391,5 +382,8 @@ Initial public alpha. See [Release-v1.0.0-alpha.1](https://github.com/LabAcacia/
 
 ---
 
+[1.0.0-alpha.5]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.5
+[1.0.0-alpha.4]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.4
+[1.0.0-alpha.3]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.3
 [1.0.0-alpha.2]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.1
