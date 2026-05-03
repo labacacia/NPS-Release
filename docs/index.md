@@ -74,3 +74,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.5
 - [LICENSE](https://github.com/labacacia/NPS-Release/blob/main/LICENSE) · Apache 2.0
 
 Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source Lab.
+
+---
+
+📖 For tutorials, references, and operator guides, see the [NPS Wiki](https://github.com/labacacia/NPS-Release/wiki).

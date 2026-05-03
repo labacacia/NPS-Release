@@ -10,6 +10,18 @@
 
 ---
 
+## [Unreleased]
+
+### 文档
+
+- **GitHub Pages 精简为 7 个营销页面**：`docs/sdks.md` 缩减为 6 语言矩阵 + Wiki 深度文档链接，
+  移除了内联安装命令和功能代码示例（内容迁移到 NPS Wiki）。新增 `docs/get-started.md`
+  （按受众分流的引导页）和 `docs/who-uses-nps.md`（案例研究占位页）。所有 Pages
+  页面添加"📖 详见 Wiki"页脚。更新 `docs/navigation.md`。
+  Closes [labacacia/NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26)。
+
+---
+
 ## [1.0.0-alpha.5.2] —— 2026-05-03
 
 ### 变更（破坏性）

@@ -76,3 +76,7 @@ NPS is **not** a replacement for LLM APIs (OpenAI, Anthropic). It is the **netwo
 - [Protocols](protocols.md) — the five layers explained
 - [SDKs](sdks.md) — pick your language
 - [Roadmap](roadmap.md) — what's shipped and what's next
+
+---
+
+📖 For tutorials, references, and operator guides, see the [NPS Wiki](https://github.com/labacacia/NPS-Release/wiki).
