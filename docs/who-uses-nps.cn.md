@@ -8,7 +8,7 @@
 
 ## 当前状态
 
-NPS 目前处于 `v1.0.0-alpha.5.2` — 早期公开预览阶段。第一批生产采用者预计在 Phase 3（2027 Q1+）出现。如果你正在评估 NPS 的生产场景，欢迎在 [NPS-Release](https://github.com/labacacia/NPS-Release) 仓库开一个 GitHub Discussion。
+NPS 目前处于 `v1.0.0-alpha.5` — 早期公开预览阶段。第一批生产采用者预计在 Phase 3（2027 Q1+）出现。如果你正在评估 NPS 的生产场景，欢迎在 [NPS-Release](https://github.com/labacacia/NPS-Release) 仓库开一个 GitHub Discussion。
 
 ---
 

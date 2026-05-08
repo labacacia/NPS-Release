@@ -22,7 +22,7 @@
 #   version_regex - optional override regex (group 1 must capture the version string)
 # ─────────────────────────────────────────────────────────────────────────────
 
-suite_version: "1.0.0-alpha.5.2"
+suite_version: "1.0.0-alpha.5"
 released_at: "2026-05-03"
 
 repos:
