@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.5** — completes Phase 1 and makes significant progress on Phase 2. Notable additions since alpha.4: NWP error code parity across all six SDKs (30 constants), RFC-0004 Phase 3 STH gossip federation in `nps-ledger`, `NPS-SERVER-UNSUPPORTED` status code, and `AssuranceLevel` spec fixes in Python / TypeScript / Java.
+NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.6** — completes Phase 1 and makes significant progress on Phase 2. Notable additions since alpha.4: NWP error code parity across all six SDKs (30 constants), RFC-0004 Phase 3 STH gossip federation in `nps-ledger`, `NPS-SERVER-UNSUPPORTED` status code, and `AssuranceLevel` spec fixes in Python / TypeScript / Java.
 
 ---
 

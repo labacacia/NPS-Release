@@ -2,7 +2,7 @@
 
 > [English](roadmap.md) | 中文版
 
-NPS 的路径分为四个 Phase — 从草案规范走向正式标准。当前发布 — **v1.0.0-alpha.5** — 完成 Phase 1 并在 Phase 2 取得重大进展。与 alpha.4 相比的新增内容：全六种 SDK 的 NWP 错误码全集（30 个常量）、`nps-ledger` RFC-0004 Phase 3 STH gossip 联邦、`NPS-SERVER-UNSUPPORTED` 状态码，以及 Python / TypeScript / Java 三种 SDK 的 `AssuranceLevel` 规范修复。
+NPS 的路径分为四个 Phase — 从草案规范走向正式标准。当前发布 — **v1.0.0-alpha.6** — 完成 Phase 1 并在 Phase 2 取得重大进展。与 alpha.4 相比的新增内容：全六种 SDK 的 NWP 错误码全集（30 个常量）、`nps-ledger` RFC-0004 Phase 3 STH gossip 联邦、`NPS-SERVER-UNSUPPORTED` 状态码，以及 Python / TypeScript / Java 三种 SDK 的 `AssuranceLevel` 规范修复。
 
 ---
 
