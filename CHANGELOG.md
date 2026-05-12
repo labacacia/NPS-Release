@@ -10,7 +10,17 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
-## [Unreleased]
+## [1.0.0-alpha.6] — 2026-05-12
+
+### Spec
+
+- **NPS-Release spec tree synchronized from NPS-Dev** for the alpha.6 release boundary. This brings in the CR-0003 orchestrator group/session NID model, CR-0004 IANA PEN 65715 wire-in, CR-0005 NIP CA RA model draft, NIP v0.7/v0.8 updates, token-budget v0.5, transport profile docs, conformance template translations, and roadmap updates.
+
+- **NPS-CR-0004 — IANA PEN 65715 wire-in**: all NPS X.509 OIDs now anchor to assigned arc `1.3.6.1.4.1.65715`, replacing the prior provisional `1.3.6.1.4.1.99999` arc. Certificates minted under the provisional arc must be revoked and re-issued before claiming alpha.6 compliance.
+
+- **NPS-CR-0003 — Orchestrator group NIDs and short-lived session NIDs**: reserves `group-` and `session-` identifier prefixes, adds `IdentFrame.lineage`, defines parent/session revocation behavior, and specifies the CA endpoints for group registration, session issuance, revocation, and audit listing.
+
+- **Release discipline — alpha has no sub-versions**: active alpha labels advance only as `X.Y.Z-alpha.N` to `X.Y.Z-alpha.N+1`; post-alpha.5 release work folds into `1.0.0-alpha.6`, not `1.0.0-alpha.5.x`.
 
 ---
 

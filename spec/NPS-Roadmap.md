@@ -127,7 +127,7 @@ Each phase breaks into three segments:
 - [x] Token-savings benchmark (aggregate 45.0 % CGN reduction vs REST)
 - [x] NOP orchestrator executes a 3-node DAG end-to-end
 - [x] Claude Desktop talks to an NWP Memory Node through `mcp-ingress`
-- [ ] `NDP.ResolveFrame` resolves `nwp://` to a physical endpoint via DNS TXT
+- [x] `NDP.ResolveFrame` resolves `nwp://` to a physical endpoint via DNS TXT — `resolve_via_dns` / `resolveWithDns` / `ResolveViaDns` across all six SDKs; injectable `DnsTxtLookup` interface; system resolver per language
 - [ ] First reference product: **NPS Studio** (human visual debugger) + **NPS Probe** (Agent Coder conformance CLI)
 
 ---
@@ -150,22 +150,22 @@ Each phase breaks into three segments:
 
 | Item | Notes |
 |------|-------|
-| **NPS-CR-0002 Phase 2** — server-side Anchor middleware push of topology updates | alpha.4 shipped query API; push/notify leg deferred; needs new CR for authorization model |
+| **NPS-CR-0002 Phase 2** — server-side Anchor middleware push of topology updates | .NET reference push/notify now lands through `AnchorNodeMiddleware` + `IAnchorTopologyService`; non-.NET ports remain below |
 | Non-.NET port of NPS-CR-0002 `AnchorNodeClient` topology client | .NET reference done; Python/TS/Go/Java/Rust need port |
 | Non-.NET port of NPS-RFC-0004 reputation helpers (`ReputationLogClient`) | .NET reference done; port all six SDKs |
 | Non-.NET port of NPS-RFC-0003 assurance-level enforcement helpers | Wired in .NET; other SDKs have enum only, no enforcement helpers |
-| **NPS-RFC-0002** promotion Draft → Proposed/Accepted | Blocked on IANA PEN assignment for `nid-assurance-level`; currently uses provisional OID `1.3.6.1.4.1.99999` |
+| **NPS-RFC-0002** promotion Draft → Proposed/Accepted | Closed by NPS-CR-0004 (2026-05-08): IANA PEN **65715** assigned; OID arc `1.3.6.1.4.1.65715` replaces provisional `1.3.6.1.4.1.99999`; RFC-0002 promoted Draft → Proposed (wire-in lands in alpha.6) |
 
 ## alpha.6 Task Queue
 
-Tasks queued for v1.0.0-alpha.6 (not yet started):
+Tasks queued for v1.0.0-alpha.6:
 
 ### In-flight RFCs / CRs
 
 | Item | Notes |
 |------|-------|
-| **NPS-CR-0002 Phase 2** — server-side Anchor middleware push of topology updates | alpha.5 shipped query API; push/notify leg deferred |
-| **NPS-RFC-0002** promotion Draft → Proposed/Accepted | Blocked on IANA PEN assignment for `nid-assurance-level`; currently uses provisional OID `1.3.6.1.4.1.99999` |
+| **NPS-CR-0002 Phase 2** — server-side Anchor middleware push of topology updates | .NET reference complete; alpha.6 closes the `node_kind` compatibility window and requires `topology.filter.node_roles` |
+| **NPS-RFC-0002** promotion Draft → Proposed/Accepted | Closed by NPS-CR-0004 (2026-05-08): IANA PEN **65715** assigned; OID arc `1.3.6.1.4.1.65715` replaces provisional `1.3.6.1.4.1.99999`; RFC-0002 promoted Draft → Proposed (wire-in lands in alpha.6) |
 
 ### SDK parity gaps
 
@@ -179,7 +179,7 @@ Tasks queued for v1.0.0-alpha.6 (not yet started):
 
 | Item | Notes |
 |------|-------|
-| `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint) | Specified; not yet implemented in any SDK |
+| `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint) | ✅ Implemented in all six SDKs — `resolve_via_dns` / `resolveWithDns` / `ResolveViaDns`; injectable `DnsTxtLookup` |
 | `nps-gateway` L2 Internet ingress (`:8080`→`:443` termination, NCP over TLS) | Skeleton only at alpha.4; L2 conformance deferred |
 | `nps-runner` L3 FaaS task runtime | Skeleton only; full impl Phase 3 scope |
 

@@ -11,6 +11,8 @@ See spec/services/conformance/NPS-Node-L2.md for the test suite this template
 attests to. The L1 prerequisite is attested separately via NPS-NODE-L1-CERTIFIED.md.
 -->
 
+English | [中文版](./NPS-NODE-L2-CERTIFIED.cn.md)
+
 # NPS-AaaS Profile L2 — Certified
 
 This implementation attests to having passed the
@@ -58,17 +60,26 @@ L2 requirements (L2-01..L2-07) are tracked in follow-up CRs.
 | **Date** | _(ISO 8601 UTC, e.g., 2026-04-27T00:00:00Z)_ |
 | **Platform** | _(e.g., linux-x64, macos-arm64, win-x64)_ |
 | **Hardware** | _(e.g., 1 vCPU / 1 GB RAM)_ |
-| **NPS-AaaS Profile version** | 0.4 |
-| **Conformance suite version** | 0.1 |
+| **NPS-AaaS Profile version** | 0.5 |
+| **Conformance suite version** | 0.2 |
 
 ## Case Outcomes
 
-_Check each box that passed. There are no optional cases at the L2-08 scope._
+_Check each box that passed. There are no optional cases at the L2-08 scope. All 12 cases MUST pass to claim certification._
 
-### Anchor Topology — `topology.snapshot` / `topology.stream`
+### Anchor Topology — happy paths
 - [ ] `TC-N2-AnchorTopo-01` — Snapshot of a 3-member cluster
 - [ ] `TC-N2-AnchorTopo-02` — Version monotonicity across joins
 - [ ] `TC-N2-AnchorTopo-03` — Sub-Anchor member surfaces with `child_anchor` and `member_count`
+
+### Anchor Topology — required negative paths (MUST-reject)
+- [ ] `TC-N2-AnchorTopo-04` — No `topology:read` capability → `NWP-TOPOLOGY-UNAUTHORIZED`
+- [ ] `TC-N2-AnchorTopo-05` — `depth` exceeds Anchor max → `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`
+- [ ] `TC-N2-AnchorTopo-06` — Unknown `scope` → `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`
+- [ ] `TC-N2-AnchorTopo-07` — Unknown `filter` key → `NWP-TOPOLOGY-FILTER-UNSUPPORTED`
+- [ ] `TC-N2-AnchorTopo-08` — Unknown reserved `type` → `NWP-RESERVED-TYPE-UNSUPPORTED` (MUST NOT be `NWP-ACTION-NOT-FOUND`)
+
+### Anchor Stream
 - [ ] `TC-N2-AnchorStream-01` — `member_joined` on NDP Announce
 - [ ] `TC-N2-AnchorStream-02` — `member_left` on NDP TTL expiry
 - [ ] `TC-N2-AnchorStream-03` — Resume from `topology.since_version`

@@ -2,13 +2,13 @@ English | [中文版](./NPS-4-NDP.cn.md)
 
 # NPS-4: Neural Discovery Protocol (NDP)
 
-**Spec Number**: NPS-4  
-**Status**: Proposed  
-**Version**: 0.6  
-**Date**: 2026-05-01  
-**Port**: 17433 (default, shared) / 17436 (optional dedicated)  
-**Authors**: Ori Lynn / INNO LOTUS PTY LTD  
-**Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.4)  
+**Spec Number**: NPS-4
+**Status**: Proposed
+**Version**: 0.7
+**Date**: 2026-05-10
+**Port**: 17433 (default, shared) / 17436 (optional dedicated)
+**Authors**: Ori Lynn / INNO LOTUS PTY LTD
+**Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.8)
 
 ---
 
@@ -206,7 +206,11 @@ _nps-ca.mycompany.com.      IN TXT  "v=nps1 ca=https://ca.mycompany.com/.well-kn
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | NID in AnnounceFrame does not match the signing certificate |
 | `NDP-ANNOUNCE-ROLE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | `node_roles` contains the removed legacy value `"gateway"` (NPS-CR-0001); response SHOULD include a `hint` pointing to NPS-CR-0001 |
 | `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `node_roles` contains an unrecognized value (see `NDP-ANNOUNCE-ROLE-REMOVED` for the `"gateway"` case specifically) |
+| `NDP-ANNOUNCE-CONFLICT` | `NPS-CLIENT-CONFLICT` | Two AnnounceFrames share the same `nid` and `graph_seq` but differ in content (registry poisoning attempt) |
+| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `graph_seq` is less than or equal to the last value the receiver has accepted for this NID (rollback attempt) |
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame sequence numbers are not contiguous |
+| `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame issuer (signing CA) is not in the active registry profile's issuer allowlist |
+| `NDP-CA-ATTEST-REQUIRED` | `NPS-AUTH-UNAUTHENTICATED` | Active registry profile requires a CA-attested NID and the AnnounceFrame's certificate chain does not anchor in the configured trust roots |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry temporarily unavailable |
 
 HTTP-mode status mapping: see [status-codes.md](./status-codes.md).
@@ -221,12 +225,66 @@ Receivers MUST verify the `signature` on every AnnounceFrame to confirm the publ
 ### 7.2 Registry anti-pollution
 A centralized registry (NPS Cloud) MUST require a valid IdentFrame from the announcer and verify it through NIP CA before admitting an AnnounceFrame to the registry.
 
+### 7.3 Registry security profiles
+
+Every NDP Registry deployment MUST declare exactly one of three security profiles. The profile is configuration of the Registry, not of the AnnounceFrame: the profile determines which AnnounceFrames the Registry will accept, retain, and serve. Implementations MUST refuse to start without an explicit profile declaration (no implicit default).
+
+| Profile | Issuer allowlist | CA-attested NID | Replay window | Federation |
+|---------|------------------|-----------------|---------------|------------|
+| `local-dev` | not enforced | not required | `0` (replay defense disabled) | not allowed |
+| `org-private` | required (set of CA fingerprints) | SHOULD | `300s` | not allowed |
+| `public-federated` | enforced via CA trust chain | MUST | `300s` | allowed (with bilateral trust agreement, §7.6) |
+
+**`local-dev`**: Single-host or single-developer environments only. Registry MUST refuse to start in `local-dev` if it is reachable on any non-loopback interface unless an operator override flag is set; the override MUST be logged on every startup. Deployments MUST NOT use `local-dev` for any traffic-bearing service.
+
+**`org-private`**: A single organization's intranet registry. The operator configures an issuer allowlist as a non-empty set of CA certificate fingerprints; AnnounceFrames whose signing chain does not terminate in an allowlisted CA MUST be rejected with `NDP-ISSUER-NOT-ALLOWED`. CA-attested NIDs (NIDs whose ownership is attested by the org CA, see NPS-3 §6) SHOULD be required; if required and absent, reject with `NDP-CA-ATTEST-REQUIRED`. Cross-registry federation MUST be disabled.
+
+**`public-federated`**: Public-internet registries (e.g. NPS Cloud Registry). CA-attested NID MUST be required: Registry MUST reject any AnnounceFrame whose certificate chain does not anchor in a configured public trust root with `NDP-CA-ATTEST-REQUIRED`. The issuer allowlist is implicit in that trust root set. Cross-registry federation MAY be enabled per §7.6.
+
+### 7.4 AnnounceFrame anti-poisoning
+
+Independent of profile, every NDP Registry MUST enforce the following rules:
+
+1. **Signed scope**. The `signature` field MUST cover, at minimum, the tuple `(nid, graph_seq, timestamp)` plus the rest of the AnnounceFrame body. Receivers MUST verify the signature before any registry-side state mutation; signature verification MUST precede deduplication, conflict detection, and storage.
+2. **Replay defense**. Receivers MUST reject an AnnounceFrame whose `timestamp` is more than the profile's replay window in the past or in the future, with `NDP-ANNOUNCE-SIGNATURE-INVALID`. A replay window of `0` (the `local-dev` profile only) disables this check.
+3. **Duplicate suppression**. An AnnounceFrame whose `(nid, graph_seq)` exactly matches an entry already accepted MUST be silently dropped (no error, no state change). Byte-equal duplicates are normal in multicast environments.
+4. **Conflict rejection**. An AnnounceFrame whose `(nid, graph_seq)` matches an existing entry but whose covered content differs MUST be rejected with `NDP-ANNOUNCE-CONFLICT`. Both the rejected frame and the existing entry SHOULD be logged for operator review; conflicting frames are evidence of either a key compromise or a misconfigured publisher cluster.
+
+### 7.5 Graph sequence rollback defense
+
+The `graph_seq` field on an AnnounceFrame (and on the corresponding GraphFrame) is a per-NID monotonic counter. Receivers MUST track the highest `graph_seq` they have accepted for each NID. Any AnnounceFrame whose `graph_seq` is less than or equal to the tracked maximum for that NID MUST be rejected with `NDP-GRAPH-SEQ-ROLLBACK`. This prevents an attacker who captures an old AnnounceFrame from re-publishing it to demote a node's current state. The tracked maximum MUST persist across registry restarts at `org-private` and `public-federated` profile levels; `local-dev` MAY keep it in memory only.
+
+### 7.6 Cross-registry federation
+
+Federation — the import of AnnounceFrames from a peer registry — is permitted only in the `public-federated` profile. Federation between two registries requires a **bilateral trust agreement**:
+
+1. Both operators MUST exchange CA root certificate sets out of band; each side configures the other's roots as a federated-only trust set, distinct from its own native trust set.
+2. AnnounceFrames imported from a federated peer MUST be re-validated against the importing registry's local CA trust chain (native ∪ federated-only). An AnnounceFrame valid at the peer is not implicitly valid here.
+3. The federation channel itself MUST be authenticated (mutual TLS using NIP-issued certificates).
+4. Federated entries MUST be tagged with the originating registry identifier so that downstream consumers can apply per-source policy (e.g. ranking, filtering).
+5. Either party MAY revoke the agreement unilaterally; revocation MUST cause the importing registry to invalidate all federated entries from the revoked peer within one TTL window.
+
+Federation is never transitive: trust agreement A↔B and B↔C does not establish A↔C.
+
+### 7.7 Registry operator trust levels
+
+The profile a Registry runs under implies a corresponding operator-side trust level. Conformant deployments MUST satisfy the trust-level requirements for their declared profile.
+
+| Profile | Operator | CA scope | Audit requirement |
+|---------|----------|----------|-------------------|
+| `local-dev` | self (single developer / CI ephemeral) | none / self-signed | none |
+| `org-private` | named organization | organization CA | internal audit (annual review of issuer allowlist, signed configuration changes) |
+| `public-federated` | accountable legal entity (e.g. NPS Cloud) | public CA chain | external audit (independent third-party annual audit covering issuer allowlist provenance, federation agreements, key custody, and incident response) |
+
+A Registry MUST NOT advertise a profile whose operator trust requirements it cannot meet.
+
 ---
 
 ## 8. Change Log
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.7 | 2026-05-10 | New §7.3–§7.7 introduce three named registry security profiles (`local-dev` / `org-private` / `public-federated`), AnnounceFrame anti-poisoning rules (signed scope, replay defense, duplicate suppression, conflict rejection), graph-sequence rollback defense, cross-registry federation requirements, and an operator trust-level table. New error codes: `NDP-ANNOUNCE-CONFLICT`, `NDP-GRAPH-SEQ-ROLLBACK`, `NDP-ISSUER-NOT-ALLOWED`, `NDP-CA-ATTEST-REQUIRED`. (Issue #33) |
 | 0.6 | 2026-05-01 | **Breaking rename (pre-1.0)**: `node_kind` renamed to `node_roles` (array of strings only; single-string form retired). Parsers MUST accept `node_kind` as a parse-time alias through alpha.5 for backward compat. Constraint added: NWP NWM `node_type` MUST be one of the values in `node_roles` (see NWP §2.1 Node Role Resolution). Fixes M1 naming-disambiguation issue — `node_kind` (multi-role discovery field) and `node_type` (single operative role) were confusingly similar with no documented cross-protocol constraint. |
 | 0.5 | 2026-04-26 | AnnounceFrame (0x30) gains three additive fields supporting NPS-CR-0001 — `node_kind` (string OR array of strings; values `"memory"`/`"action"`/`"complex"`/`"anchor"`/`"bridge"`; legacy `"gateway"` rejected), `cluster_anchor` (NID — for non-Anchor members of a cluster), `bridge_protocols` (array of strings — for `"bridge"` nodes; standard values `"http"`/`"grpc"`/`"mcp"`/`"a2a"`). All additive and backward-compatible: pre-alpha.3 publishers omit `node_kind` and receivers fall back to `node_type`. Depends-On upgraded to NCP v0.6 (NPS-RFC-0001) + NIP v0.4 (NPS-RFC-0003). |
 | 0.4 | 2026-04-24 | AnnounceFrame (0x30) gains three additive fields — `activation_mode` (required for NPS-Node Profile L1+), `activation_endpoint` (required for `resident` / `hybrid`), `spawn_spec_ref` (L3, optional). New §3.1.1 Activation semantics with backward-compatibility rule for pre-alpha.3 publishers. `Depends-On` NCP version corrected to v0.5. |

@@ -334,10 +334,10 @@ None yet. Before `Accepted`, commit:
 - [ ] **OQ-2**: Should L2 certs carry a mandatory legal-entity name
   field (X.509 `O`, `jurisdictionOfIncorporation`)? Default position:
   yes; deferred to CA policy document.
-- [ ] **OQ-3**: Does Gateway Node (NPS-AaaS-Profile) promote the
+- [ ] **OQ-3**: Does Anchor Node (NPS-AaaS-Profile) promote the
   assurance level of the Agent it fronts, or require the backing
-  Action Node to enforce independently? Default: Gateway enforces;
-  backing Node trusts the Gateway's decision via `X-NPS-Authed-Nid`
+  Action Node to enforce independently? Default: Anchor enforces;
+  backing Node trusts the Anchor's decision via `X-NPS-Authed-Nid`
   header. Pending AaaS working-group sign-off.
 
 ---

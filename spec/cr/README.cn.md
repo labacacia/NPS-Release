@@ -47,6 +47,8 @@
 |---|---|---|---|
 | [NPS-CR-0001](./NPS-CR-0001-anchor-bridge-split.md) | 把 Gateway Node 拆为 Anchor Node + Bridge Node | v1.0-alpha.3 | Implemented（2026-04-26）|
 | [NPS-CR-0002](./NPS-CR-0002-anchor-topology-queries.md) | Anchor Node 标准拓扑查询类型（`topology.snapshot` / `topology.stream`） | v1.0-alpha.4 | Implemented（2026-04-27）|
+| [NPS-CR-0003](./NPS-CR-0003-orchestrator-group-session-nids.md) | 编排器 group NID 与短期 session NID | v1.0-alpha.6 | Draft |
+| [NPS-CR-0004](./NPS-CR-0004-pen-wirein.md) | 写入 IANA 已分配的 PEN 65715（替换临时 `1.3.6.1.4.1.99999`） | v1.0-alpha.6 | Implemented（2026-05-08）|
 
 ## 起草新 CR 的方法
 

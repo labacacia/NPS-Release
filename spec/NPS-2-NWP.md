@@ -2,13 +2,13 @@ English | [中文版](./NPS-2-NWP.cn.md)
 
 # NPS-2: Neural Web Protocol (NWP)
 
-**Spec Number**: NPS-2  
-**Status**: Proposed  
-**Version**: 0.10  
-**Date**: 2026-05-01  
-**Port**: 17433 (default, shared) / 17434 (optional dedicated)  
-**Authors**: Ori Lynn / INNO LOTUS PTY LTD  
-**Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6)  
+**Spec Number**: NPS-2
+**Status**: Proposed
+**Version**: 0.12
+**Date**: 2026-05-11
+**Port**: 17433 (default, shared) / 17434 (optional dedicated)
+**Authors**: Ori Lynn / INNO LOTUS PTY LTD
+**Depends-On**: NPS-1 (NCP v0.6), NPS-3 (NIP v0.8), NPS-4 (NDP v0.7)
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -157,6 +157,9 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 | `endpoints` | object | Required | URLs for each functional endpoint |
 | `graph` | object | Optional | Sub-node references (Complex Node only), see §11 |
 | `tokenizer_support` | array | Optional | List of tokenizers supported by the node (see [token-budget.md](token-budget.md)) |
+| `stability` | string | Optional | Lifecycle stage: `"experimental"` / `"stable"` / `"deprecated"`. Marketplace / NeuronHub discovery clients use this to filter or warn on non-stable services. Default: `"stable"` (backward-compatible — pre-0.11 manifests are treated as stable). Per-action override permitted via ActionSpec.stability (§4.6). |
+| `sla` | object | Optional | SLO commitments for the node, see §4.7. Advisory only; the protocol does not enforce these. Per-action override permitted via ActionSpec.sla (§4.6). |
+| `billing` | object | Optional | Commercial metadata for the node (metering profile + price hint), see §4.8. Advisory only; the protocol does not collect or settle charges. Per-action override permitted via ActionSpec.billing (§4.6). |
 
 ### 4.2 capabilities Field
 
@@ -192,6 +195,27 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 | `requests_per_day` | uint32 | Max requests per Agent per day |
 | `max_concurrent_streams` | uint32 | Max concurrent streams per Agent |
 | `max_subscriptions` | uint32 | Max concurrent subscriptions per Agent |
+
+### 4.4a sla Field
+
+Advisory SLO commitments. Clients (especially marketplace / NeuronHub aggregators) display or filter on these values; the protocol does not police them. All sub-fields are Optional.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `p95_latency_ms` | uint32 | Self-declared 95th-percentile end-to-end latency in milliseconds, measured at the node's `/.nwm` reference endpoint |
+| `availability` | string | Self-declared availability target as a decimal-fraction string, e.g. `"0.999"` for "three nines". Format: `0\.[0-9]+`; clients SHOULD interpret missing as "best effort". |
+| `sla_tier` | string | Optional named tier for marketplace listing: `"best-effort"` / `"standard"` / `"premium"`. Free-form strings outside this enum are reserved for future extension and SHOULD be ignored by current clients. |
+
+### 4.4b billing Field
+
+Advisory commercial metadata. The protocol does not authorize, meter, or settle charges; this field exists so marketplace listings, agent autoscalers, and budget gates can make informed decisions before invoking. All sub-fields are Optional.
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `metering_profile` | string | Identifier of the metering model: `"free"` / `"metered"` / `"flat-rate"`. Free-form values outside this enum are reserved and SHOULD be treated as `"metered"` by conservative clients. |
+| `billing_unit` | string | Unit string when `metering_profile = "metered"`, e.g. `"per-token"` / `"per-request"` / `"per-cgn"` / `"per-second"`. |
+| `price_hint` | string | Indicative price in ISO-4217 currency-prefixed decimal form, e.g. `"USD 0.0002"` per `billing_unit`. Hint only — the operator's external contract is authoritative. |
+| `currency` | string | ISO-4217 currency code (e.g. `"USD"`, `"EUR"`, `"CNY"`). Optional convenience field; `price_hint` already encodes the currency prefix. |
 
 ### 4.5 Complete NWM Example
 
@@ -235,6 +259,18 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
     "max_concurrent_streams": 10,
     "max_subscriptions": 5
   },
+  "stability": "stable",
+  "sla": {
+    "p95_latency_ms": 250,
+    "availability": "0.999",
+    "sla_tier": "standard"
+  },
+  "billing": {
+    "metering_profile": "metered",
+    "billing_unit": "per-request",
+    "price_hint": "USD 0.0002",
+    "currency": "USD"
+  },
   "actions": {
     "orders.create": {
       "description": "Create a new order",
@@ -244,7 +280,10 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
       "idempotent": true,
       "timeout_ms_default": 10000,
       "timeout_ms_max": 60000,
-      "required_capability": "nwp:invoke"
+      "required_capability": "nwp:invoke",
+      "stability": "stable",
+      "sla": { "p95_latency_ms": 800, "sla_tier": "premium" },
+      "billing": { "metering_profile": "metered", "billing_unit": "per-request", "price_hint": "USD 0.001" }
     },
     "orders.cancel": {
       "description": "Cancel an existing order",
@@ -254,7 +293,8 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
       "idempotent": true,
       "timeout_ms_default": 5000,
       "timeout_ms_max": 10000,
-      "required_capability": "nwp:invoke"
+      "required_capability": "nwp:invoke",
+      "stability": "experimental"
     }
   },
   "endpoints": {
@@ -275,7 +315,7 @@ Agents SHOULD cache the NWM and use `manifest_version` for conditional requests:
 
 ### 4.6 NWM Action Registry
 
-The `actions` field is an `{action_id: ActionSpec}` dictionary. Action/Complex/Gateway Nodes MUST declare all callable operations here.
+The `actions` field is an `{action_id: ActionSpec}` dictionary. Action/Complex/Anchor Nodes MUST declare all callable operations here.
 
 **ActionSpec Field Definitions**
 
@@ -290,6 +330,9 @@ The `actions` field is an `{action_id: ActionSpec}` dictionary. Action/Complex/G
 | `timeout_ms_max` | uint32 | Optional | Maximum allowed timeout in milliseconds |
 | `required_capability` | string | Optional | NIP capability required to invoke this operation, e.g. `"nwp:invoke"` |
 | `min_assurance_level` | string | Optional | Per-action assurance-level override: `"anonymous"` / `"attested"` / `"verified"`. When present, takes precedence over the top-level NWM `min_assurance_level` for requests targeting this action. Requests presenting a lower level MUST be rejected with `NWP-AUTH-ASSURANCE-TOO-LOW`. (NPS-RFC-0003) |
+| `stability` | string | Optional | Per-action lifecycle stage override (`"experimental"` / `"stable"` / `"deprecated"`). When present, takes precedence over the top-level NWM `stability` for this action. Marketplace clients SHOULD surface deprecated actions even when the node-level stability is `"stable"`. |
+| `sla` | object | Optional | Per-action SLO override; same shape as the top-level `sla` field (§4.4a). When present, fields supplied here override the matching top-level fields for this action only; unsupplied sub-fields fall through to the top-level. |
+| `billing` | object | Optional | Per-action commercial-metadata override; same shape as the top-level `billing` field (§4.4b). Field-level fallback semantics match `sla`. |
 
 **`/actions` Endpoint**
 
@@ -614,12 +657,13 @@ Used to establish change subscriptions on Memory Nodes. The server pushes increm
 
 Subscription-pushed DiffFrames (0x02) add the following to the standard fields:
 
-| Field | Type | Description |
-|-------|------|-------------|
-| `stream_id` | string | Associated subscription stream ID |
-| `seq` | uint64 | Monotonically increasing event sequence number (per-stream, starting from 1); Agents use this to detect dropped frames and support reconnection |
-| `event_type` | string | `"create"` / `"update"` / `"delete"` for default subscriptions. Reserved subscribe types (§12) MAY define additional values (e.g. topology event types per §12.2) |
-| `timestamp` | string | Time of change (ISO 8601) |
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `stream_id` | string | Required | Associated subscription stream ID |
+| `seq` | uint64 | Required | Monotonically increasing event sequence number (per-stream, starting from 1); Agents use this to detect dropped frames and support reconnection |
+| `event_type` | string | Required | `"create"` / `"update"` / `"delete"` for default subscriptions. Reserved subscribe types (§12) MAY define additional values (e.g. topology event types per §12.2) |
+| `timestamp` | string | Required | Time of change (ISO 8601) |
+| `cgn_est` | uint32 | Optional | Estimated CGN token cost of this push event's payload. Nodes SHOULD populate this field on each pushed DiffFrame so subscribers can perform Agent-side cumulative-budget accounting per [token-budget.md §7.2](token-budget.md). Absent means the node does not provide a per-event estimate; Agents MAY estimate locally via UTF-8/4 fallback |
 
 **Sequence Number Semantics**
 
@@ -938,8 +982,18 @@ For `type = "topology.stream"`, `topology.since_version` is the topology-scoped 
 | `member_joined` | NDP `Announce` from a node naming this Anchor as `cluster_anchor` | Full member object (§12.1) |
 | `member_left` | Member explicitly leaves OR exceeds NDP liveness TTL | `{ "nid": "urn:nps:..." }` |
 | `member_updated` | Existing member's metadata changes (tags, activation_mode, capabilities, etc.) | `{ "nid": "urn:nps:...", "changes": { "<field>": <new value>, ... } }` — field-level diff only; reassembly is the client's responsibility |
-| `anchor_state` | Rare. Anchor Node internal state change relevant to clients (e.g., version counter rebase after restart) | `{ "field": "version_rebased", "details": { ... } }` |
-| `resync_required` | Subscriber's `topology.since_version` is no longer replayable | `{ "reason": "version_too_old" }`. This event omits `seq` and the subscriber MUST issue a fresh `topology.snapshot` |
+| `anchor_state` | Anchor cluster status change relevant to subscribers. Payload carries a discriminator `field` selecting one of the sub-types below | `{ "field": "<sub-type>", "details": { ... } }` |
+| `resync_required` | Subscriber MUST tear down its local view and issue a fresh `topology.snapshot` followed by a new `topology.stream` subscription. Triggers: (a) `topology.since_version` is no longer replayable; (b) any `anchor_state` sub-type that invalidates the prior version counter (e.g. `version_rebased`); (c) server-side state loss requiring re-subscription | `{ "reason": "<version_too_old | anchor_rebased | server_state_lost>" }`. This event MAY omit `seq` and the subscriber MUST issue a fresh `topology.snapshot` |
+
+**`anchor_state` sub-types** (selected by the payload `field` discriminator):
+
+| `field` | Phase | Trigger | `details` shape |
+|---------|-------|---------|-----------------|
+| `version_rebased` | Phase 1–2 | Anchor restarted and reset its monotonic `version` counter (§12.3). Subscribers MUST treat as equivalent to `resync_required` | `{ "previous_version": <uint64>, "new_version": <uint64> }` |
+| `anchor_failover` | Phase 3 (reserved slot) | Active Anchor handed cluster ownership to a peer Anchor (multi-Anchor HA). Phase 1–2 implementations MUST NOT emit this sub-type; subscribers receiving it MAY ignore it | `{ "successor_nid": "urn:nps:..." }` (placeholder; finalised in Phase 3 CR) |
+| `anchor_quorum_lost` | Phase 3 (reserved slot) | Anchor cluster lost quorum and is operating in degraded read-only mode. Phase 1–2 implementations MUST NOT emit this sub-type | `{ "quorum_size": <uint32>, "available": <uint32> }` (placeholder; finalised in Phase 3 CR) |
+
+Implementations MUST treat unknown `anchor_state.field` values as forward-compatible and ignore them rather than tearing down the subscription, so future Phase 3 sub-types can be introduced without a wire break.
 
 Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "unsubscribe"`) operate unchanged.
 
@@ -965,9 +1019,15 @@ Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "un
 - **Cross-cluster federation queries**: Querying topology across multiple Anchor Nodes is an NPS-AaaS Profile L3 / NPS Cloud concern. This section is single-Anchor only.
 - **Authorization model — minimum binding (Phase 1–2)**: Anchor Nodes MUST enforce the following minimum before serving any `topology.*` request:
 
-  1. **Capability gate**: The requesting NID MUST declare `topology:read` in `IdentFrame.capabilities` (NPS-3 §5.1); absent capability MUST produce `NWP-TOPOLOGY-UNAUTHORIZED`. The IdentFrame is signed by the requester's private key, so the claim is integrity-protected but self-declared — it is not CA-attested at Phase 1–2.
+  1. **Capability gate (per surface)**: Phase 1–2 distinguishes two authorization surfaces:
+     - `topology.snapshot` (single-shot pull, §12.1): the requesting NID MUST declare `topology:read` in `IdentFrame.capabilities` (NPS-3 §5.1); absent capability MUST produce `NWP-TOPOLOGY-UNAUTHORIZED`.
+     - `topology.stream` (long-lived subscription, §12.2): the requester MUST declare `topology:read` AND SHOULD additionally declare `topology:subscribe` in `IdentFrame.capabilities`. Phase 2 Anchor Nodes SHOULD enforce the `topology:subscribe` capability (treating its absence as an authorization failure) so subscription privilege is separable from snapshot read; Anchor Nodes that do not yet enforce `topology:subscribe` MUST at minimum enforce `topology:read`. Phase 3 will upgrade `topology:subscribe` to a MUST.
+
+     The IdentFrame is signed by the requester's private key, so the claim is integrity-protected but self-declared — it is not CA-attested at Phase 1–2.
   2. **NDP role cross-check (defense-in-depth)**: The Anchor SHOULD additionally verify that the requester's last received `AnnounceFrame` (within TTL) declares `node_roles` containing `"anchor"`. A mismatch SHOULD produce `NWP-TOPOLOGY-UNAUTHORIZED` with a `hint`. An absent `AnnounceFrame` MUST NOT block a requester that has passed the capability gate.
-  3. **Phase 3 [RFC-0002 stable]**: Anchors SHOULD additionally verify a CA-attested `id-nps-node-roles` cert extension (to be defined in a follow-up RFC-0002 amendment) to close the self-declaration gap and bind the role claim to a CA-issued certificate.
+  3. **Mid-stream rejection (subscriptions only)**: For an established `topology.stream` subscription, if the Anchor revokes the requester's capability set (e.g. RevokeFrame received from the CA, NID expiry, or scope narrowing) the server MUST emit a terminal `NWP-TOPOLOGY-UNAUTHORIZED` event on the stream and then close the stream. The event carries the standard DiffFrame envelope with `event_type = "error"` and a payload of `{ "code": "NWP-TOPOLOGY-UNAUTHORIZED", "reason": "<revoked | expired | scope_narrowed>" }`. Anchor Nodes MUST NOT silently drop subscribers — a clean rejection event is required so clients can distinguish authorization loss from transport-level disconnects.
+  4. **Reputation interaction (NPS-RFC-0004 `reputation_policy`)**: When the receiving Anchor declares a `reputation_policy` (NWM Phase 2 field, see [NPS-RFC-0004 §4.4](rfcs/NPS-RFC-0004-nid-reputation-log.md)) and the requesting NID's reputation score drops below a configured threshold while a `topology.stream` subscription is active, the Anchor SHOULD emit a terminal event with `payload.code = "NWP-AUTH-REPUTATION-BLOCKED"` carrying the matching `incident`, `severity`, and ledger entry `seq` (per error code §13), then close the stream. For initial-handshake reputation rejection (request time), the standard synchronous `NWP-AUTH-REPUTATION-BLOCKED` error code applies and the subscription is never opened. Anchors without a `reputation_policy` declared have no obligation to evaluate reputation.
+  5. **Phase 3 [RFC-0002 stable]**: Anchors SHOULD additionally verify a CA-attested `id-nps-node-roles` cert extension (to be defined in a follow-up RFC-0002 amendment) to close the self-declaration gap and bind the role claim to a CA-issued certificate.
 
   Fine-grained per-cluster namespace or ACL policies remain implementation-defined and are tracked for a follow-up CR.
 - **Browser transport (WebSocket)**: Whether `npsd` exposes a WebSocket endpoint for browser clients is tracked separately. Topology query semantics here are transport-independent.
@@ -1054,6 +1114,8 @@ Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stre
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.12 | 2026-05-11 | NPS-CR-0002 Phase 2 spec gaps closed. §8.2 DiffFrame extension table gains optional `cgn_est` field (uint32) for per-event CGN reporting on push streams per [token-budget.md §7.2](token-budget.md); columns reformatted to include Required. §12.2 `topology.stream` events table: `anchor_state` row gains explicit sub-type discriminator schema (`version_rebased` defined for Phase 1–2; `anchor_failover` and `anchor_quorum_lost` reserved as Phase 3 placeholder slots — implementations MUST NOT emit Phase 3 sub-types pre-stable and MUST ignore unknown sub-types for forward compatibility); `resync_required` trigger and `reason` enum broadened (`version_too_old` / `anchor_rebased` / `server_state_lost`). §12.4 Phase 1–2 authorization model expanded: (a) capability gate split per surface — `topology.snapshot` requires `topology:read`; `topology.stream` requires `topology:read` AND SHOULD additionally require `topology:subscribe` in Phase 2 (MUST in Phase 3); (b) new mid-stream rejection rule — server MUST emit terminal `NWP-TOPOLOGY-UNAUTHORIZED` event then close the stream on capability revocation; (c) new reputation interaction — for active subscriptions, Anchors with a declared `reputation_policy` SHOULD emit terminal `NWP-AUTH-REPUTATION-BLOCKED` and close the stream when the subscriber's reputation drops below threshold. No new error codes; existing `NWP-TOPOLOGY-UNAUTHORIZED` and `NWP-AUTH-REPUTATION-BLOCKED` reused. No `Depends-On` change. See issue #41. |
+| 0.11 | 2026-05-10 | NWM gains optional top-level `stability` (`experimental`/`stable`/`deprecated`), `sla` (object: `p95_latency_ms`, `availability`, `sla_tier`), and `billing` (object: `metering_profile`, `billing_unit`, `price_hint`, `currency`) fields (§4.1, §4.4a, §4.4b). ActionSpec (§4.6) gains matching per-action `stability` / `sla` / `billing` overrides with field-level fallback to the top-level values. All fields are advisory (no protocol-level enforcement) and backward-compatible — pre-0.11 manifests are treated as `stability="stable"` with no SLO/billing metadata. Enables marketplace / NeuronHub clients to filter, warn, or rank services by lifecycle stage and commercial profile per AaaS-Profile discovery requirements. No new error codes; no `Depends-On` change. See issue #36. |
 | 0.10 | 2026-05-01 | §12.4 authorization model replaced "implementation-defined" with a Phase 1–2 minimum binding: Anchor Nodes MUST require `topology:read` in `IdentFrame.capabilities` (capability gate, self-declared but signed); SHOULD cross-check NDP `node_roles` contains `"anchor"` as defense-in-depth; Phase 3 [RFC-0002 stable] adds CA-attested `id-nps-node-roles` cert extension. §14.7 updated to reference §12.4 defined minimum instead of the previous hedging "SHOULD restrict" language. `Depends-On` NIP bumped to v0.6 (defines `topology:read` capability). |
 | 0.9 | 2026-05-01 | **Breaking rename (pre-1.0)**: Topology member object field `node_kind` renamed to `node_roles` (§12.1); topology stream filter key `node_kind` renamed to `node_roles` (§12.2). §2.1 updated: `node_kind` reference to `node_roles`. New §2.1 **Node Role Resolution** section: `node_roles` (NDP, discovery-layer, array) and `node_type` (NWM, service-layer, string) are distinct fields — `node_type` MUST be one of the values in `node_roles`; validators SHOULD verify against cached NDP data. §4.1 `node_type` description updated with the cross-protocol constraint and pointer to §2.1. §14.7 `node_kind` reference updated to `node_roles`. Depends-On NDP bumped to v0.6. Fixes M1 naming-disambiguation issue. |
 | 0.8 | 2026-04-27 | New §12 **Reserved Query Types** introducing the `topology.*` namespace mandatory at NPS-AaaS Profile L2: `topology.snapshot` (QueryFrame, `type="topology.snapshot"`) and `topology.stream` (SubscribeFrame, `type="topology.stream"`). Both QueryFrame §6.1 and SubscribeFrame §8.1 gain an optional top-level `type` field for opting into reserved types. DiffFrame §8.2 `event_type` enum extended via reserved subscribe types — `topology.stream` adds `member_joined` / `member_left` / `member_updated` / `anchor_state` / `resync_required`. Five new error codes: `NWP-TOPOLOGY-UNAUTHORIZED`, `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`, `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`, `NWP-TOPOLOGY-FILTER-UNSUPPORTED` (table §13). New §14.7 Topology Read-back security section. Existing §12 Error Codes / §13 Security / §14 Changelog renumbered to §13 / §14 / §15 to accommodate the new section. See [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md). |

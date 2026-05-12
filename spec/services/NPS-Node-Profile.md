@@ -6,7 +6,7 @@ English | [中文版](./NPS-Node-Profile.cn.md)
 **Version**: 0.2
 **Date**: 2026-05-01
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.10), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6)
+**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.11), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6)
 
 > Companion to [NPS-AaaS Profile](./NPS-AaaS-Profile.md). Where AaaS Profile defines what a
 > *service* must do to expose Agent capabilities, this profile defines what a *node host*

@@ -283,6 +283,9 @@ Schema-anchor frame, **published by a Node**, used to establish a global Schema 
 | `schema` | object | required | Schema definition object |
 | `schema.fields` | array | required | Field descriptors (see below) |
 | `ttl` | uint32 | optional | Cache validity in seconds; default 3600; `0` = do not cache |
+| `supersedes` | string | optional | `anchor_id` of the prior AnchorFrame this one replaces. Producers MAY set; consumers SHOULD prefer the newer frame when both are cached (see §5.5) |
+| `valid_from` | string | optional | ISO-8601 UTC timestamp marking the start of the temporal validity window (e.g. `2026-05-10T00:00:00Z`). Anchor MUST be treated as invalid before this instant (see §5.5) |
+| `valid_until` | string | optional | ISO-8601 UTC timestamp marking the end of the temporal validity window. Anchor MUST be treated as invalid after this instant (see §5.5) |
 
 **schema.fields element**
 
@@ -635,6 +638,45 @@ If the Agent references an `anchor_ref` the Node does not recognize (hand-crafte
 ```
 
 > **Note**: `NCP-ANCHOR-STALE` means the anchor exists but has been updated; `NCP-ANCHOR-NOT-FOUND` means the anchor was never registered at this Node.
+
+### 5.5 Schema Evolution
+
+Schemas evolve over time. NCP defines a compatibility-class taxonomy and the producer/consumer obligations that govern lifecycle of an AnchorFrame across versions. The optional `supersedes`, `valid_from`, and `valid_until` fields (see §4.1) carry the lineage and temporal-validity metadata used by this section.
+
+#### 5.5.1 Compatibility Classes
+
+Every Schema change MUST be classified into one of the following compatibility classes. Producers SHOULD record the class in their release notes; consumers MAY use the class to decide whether re-fetching the anchor is mandatory.
+
+| Class | Description | Backward-compatible |
+|-------|-------------|---------------------|
+| `additive_optional` | Adds an optional field (i.e. `nullable=true` or with a documented default) to `schema.fields` | yes |
+| `additive_required` | Adds a required field (no default) to `schema.fields` | no |
+| `type_widening` | Broadens an existing field's type without losing previously valid values (e.g. `uint32` → `uint64`, `string` enum → open `string`) | yes |
+| `type_narrowing` | Restricts an existing field's type or value domain (e.g. `string` → enum, `int64` → `uint32`) | no |
+| `semantic_change` | Identical wire shape but the meaning of an existing field changes (e.g. unit, currency, or referent) | case-by-case |
+| `field_remove` | Removes an existing field from `schema.fields` | no |
+
+Any change classified as `additive_required`, `type_narrowing`, or `field_remove` is a **breaking change** and MUST result in a new `anchor_id`. Producers MUST set `supersedes` on the new AnchorFrame to the old `anchor_id` so consumers can trace the lineage.
+
+For `semantic_change`, producers MUST treat the change as breaking unless they can demonstrate via out-of-band documentation that no consumer relies on the prior meaning.
+
+#### 5.5.2 Temporal Validity
+
+When `valid_from` and/or `valid_until` are set, an AnchorFrame is only valid within the half-open window `[valid_from, valid_until)`. Outside this window:
+
+- Consumers MUST NOT treat data referencing this anchor as fresh.
+- Consumers SHOULD evict the anchor from cache once `valid_until` has elapsed, regardless of remaining `ttl`.
+- Producers MUST return `NCP-ANCHOR-NOT-FOUND` for any `anchor_ref` whose anchor has expired and been evicted.
+
+If `valid_until` is set, producers **MUST** include an `inline_anchor` (carrying the successor AnchorFrame) on every CapsFrame whose response time falls within 60 seconds of expiry (`now ≥ valid_until − 60s`). This bounds the worst-case window in which a consumer is still using a soon-to-expire anchor and guarantees the successor reaches the consumer before the current anchor becomes invalid.
+
+#### 5.5.3 Producer / Consumer Obligations
+
+- **Producers MUST NOT** introduce a breaking change (`additive_required`, `type_narrowing`, `field_remove`, or unmitigated `semantic_change`) within the `ttl` window of the prior AnchorFrame. The successor's `valid_from` MUST be ≥ the prior anchor's `valid_until` (if set), or ≥ `prior_publish_time + prior.ttl` otherwise. This guarantees consumers caching the prior anchor cannot observe a breaking transition mid-window.
+- **Producers MUST** set `supersedes` on every AnchorFrame that replaces a prior version, regardless of compatibility class.
+- **Consumers MUST** tolerate `additive_optional` changes — i.e. unknown extra fields in payloads referencing a known anchor MUST NOT cause the consumer to fail, even if the consumer has not yet refreshed the anchor.
+- **Consumers SHOULD** prefer the newer AnchorFrame when both an anchor and its successor (linked via `supersedes`) are present in cache, and SHOULD eagerly evict the superseded entry.
+- **Consumers MUST** validate the temporal window on every reference: if `valid_until` has elapsed, the consumer MUST refresh before issuing a new request that references the anchor.
 
 ---
 

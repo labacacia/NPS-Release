@@ -342,6 +342,14 @@ All three OQ defaults from §10 were accepted at the author's recommendation:
 - 3 negative-path tests covering `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`, `NWP-TOPOLOGY-FILTER-UNSUPPORTED`, and unknown reserved-type rejection.
 - All 10 pass; full suite remains 602/602 green.
 
+**alpha.6 boundary update**:
+- The alpha.5 compatibility window for `topology.filter.node_kind` is closed.
+  `topology.stream` filters MUST use `node_roles`; `node_kind` is rejected with
+  `NWP-TOPOLOGY-FILTER-UNSUPPORTED`.
+- The .NET reference push/notify path is considered complete through
+  `AnchorNodeMiddleware` + `IAnchorTopologyService`. Remaining work is SDK
+  client parity and product/daemon adoption, not the reserved type itself.
+
 ### 11.3 Deferred work (tracked as follow-up)
 
 - **`nps-daemon` Anchor adoption.** `tools/daemons/npsd/` today is `node_type: "memory"`. Two possible paths: (a) extend npsd with an Anchor mode behind a config switch, (b) introduce a separate `nps-anchord` daemon. Either way the integration is mechanical now that `IAnchorTopologyService` + `AddInMemoryAnchorTopology(...)` exist; it is deferred to a follow-up branch to keep this PR's blast radius proportionate to the wire-contract change.

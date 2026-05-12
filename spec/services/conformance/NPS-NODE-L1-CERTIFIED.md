@@ -10,6 +10,8 @@ See spec/services/conformance/NPS-Node-L1.md for the test suite this template
 attests to.
 -->
 
+English | [中文版](./NPS-NODE-L1-CERTIFIED.cn.md)
+
 # NPS-Node Profile L1 — Certified
 
 This implementation attests to having passed the

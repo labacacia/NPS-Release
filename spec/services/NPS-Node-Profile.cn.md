@@ -6,7 +6,7 @@
 **Version**: 0.2
 **Date**: 2026-05-01
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6)、NPS-2 (NWP v0.10)、NPS-3 (NIP v0.6)、NPS-4 (NDP v0.6)
+**Depends-On**: NPS-1 (NCP v0.6)、NPS-2 (NWP v0.11)、NPS-3 (NIP v0.6)、NPS-4 (NDP v0.6)
 
 > 本规范是 [NPS-AaaS Profile](./NPS-AaaS-Profile.cn.md) 的姊妹篇。AaaS Profile 定义
 > *服务* 该做什么来暴露 Agent 能力；本规范定义 *节点宿主*（daemon、内嵌 SDK、runtime）

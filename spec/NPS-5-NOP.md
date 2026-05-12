@@ -2,14 +2,14 @@ English | [中文版](./NPS-5-NOP.cn.md)
 
 # NPS-5: Neural Orchestration Protocol (NOP)
 
-**Spec Number**: NPS-5  
-**Status**: Proposed  
-**Version**: 0.4  
-**Date**: 2026-04-19  
-**Port**: 17433 (default, shared) / 17437 (optional dedicated)  
-**Authors**: Ori Lynn / INNO LOTUS PTY LTD  
-**Depends-On**: NPS-1 (NCP v0.5), NPS-2 (NWP v0.5), NPS-3 (NIP v0.3)  
-**Supersedes**: NCP AlignFrame (0x05)  
+**Spec Number**: NPS-5
+**Status**: Proposed
+**Version**: 0.5
+**Date**: 2026-05-10
+**Port**: 17433 (default, shared) / 17437 (optional dedicated)
+**Authors**: Ori Lynn / INNO LOTUS PTY LTD
+**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.12), NPS-3 (NIP v0.8)
+**Supersedes**: NCP AlignFrame (0x05)
 
 > This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -74,6 +74,7 @@ The complete task definition submitted by the Orchestrator to its runtime or a c
 | `priority` | string | Optional | Task priority: `"low"` / `"normal"` (default) / `"high"` |
 | `callback_url` | string | Optional | Callback URL on task completion/failure (`https://`, see §8.4) |
 | `preflight` | bool | Optional | If true, perform a resource pre-flight check (§4) before execution, default false |
+| `compensation_policy` | string | Optional | Saga compensation policy: `"best_effort"` (default) or `"strict"`, see §3.1.6 |
 | `context` | object | Optional | Pass-through context, see §3.1.2 |
 | `request_id` | string | Optional | UUID v4 for request tracing |
 
@@ -93,6 +94,8 @@ A DAG consists of `nodes` (vertices) and `edges` (directed edges) describing sub
 | `timeout_ms` | uint32 | Optional | Per-node timeout (milliseconds); takes precedence over TaskFrame's global timeout_ms |
 | `retry_policy` | object | Optional | Per-node retry policy, see §3.1.4 |
 | `condition` | string | Optional | Condition expression (CEL subset); if false, this node is skipped (see §3.1.5) |
+| `compensate_action` | string | Optional | NID URI of the compensating action invoked if this node must be reversed (see §3.1.6) |
+| `compensate_params_mapping` | object | Optional | Maps this node's output field names to `compensate_action` input param names (see §3.1.6) |
 
 **DAG Validation Rules**
 - MUST be a Directed Acyclic Graph (no cycles; violation returns `NOP-TASK-DAG-CYCLE`)
@@ -174,7 +177,7 @@ Implementations SHOULD support OpenTelemetry W3C TraceContext format to enable v
 | `max_delay_ms` | uint32 | Maximum delay cap (milliseconds), default 30000 |
 | `retry_on` | array | Error codes that trigger a retry; if omitted, retry on all failures |
 
-Backoff formula: `delay = min(initial_delay_ms * backoff_factor^attempt, max_delay_ms)`  
+Backoff formula: `delay = min(initial_delay_ms * backoff_factor^attempt, max_delay_ms)`
 - `fixed`: factor=1; `linear`: factor=attempt; `exponential`: factor=2^attempt
 
 #### §3.1.5 condition Field
@@ -187,6 +190,51 @@ Backoff formula: `delay = min(initial_delay_ms * backoff_factor^attempt, max_del
 - String comparison and `in` operator
 
 When `condition` evaluates to `false`, the node is skipped (status marked `SKIPPED`). If a terminal node is skipped, the TaskFrame ends with `COMPLETED` (not FAILED).
+
+#### §3.1.6 Compensation Semantics (Saga)
+
+DAG nodes that have produced externally observable side effects (charges, bookings, provisioning, message dispatch) MAY declare a **compensating action** that semantically reverses those effects. When a downstream failure forces the orchestrator to roll back, the compensating actions of already-completed predecessor nodes are invoked in reverse topological order — implementing the saga pattern.
+
+**Per-Node Fields**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `compensate_action` | string | Optional | NID URI of the compensating action (`nwp://...`); if absent, the node is treated as non-reversible |
+| `compensate_params_mapping` | object | Optional | Maps this node's output field names → compensate_action input param names. Keys are `compensate_action` parameter names; values are JSONPath expressions rooted at this node's result (e.g. `"$.charge_id"`) |
+
+**TaskFrame-Level Field**
+
+`compensation_policy` controls how compensation failures are handled:
+
+| Value | Behavior |
+|-------|----------|
+| `"best_effort"` (default) | Compensation failures are logged; the orchestrator continues compensating remaining predecessors, then terminates the saga as FAILED |
+| `"strict"` | Any compensation failure terminates the entire saga immediately with `NOP-COMPENSATION-FAILED`; remaining predecessors are NOT compensated |
+
+**Saga Trigger**
+
+If a node `N` reaches `FAILED` (after exhausting `retry_policy.max_retries`) and `N` has predecessors that successfully reached `COMPLETED`, the orchestrator SHOULD invoke each such predecessor's `compensate_action` in **reverse topological order** (most recent successful predecessor first). The orchestrator MUST:
+
+1. Mark each compensating predecessor as `COMPENSATING` and dispatch a DelegateFrame with `action=compensate_action` and `params` derived from `compensate_params_mapping` applied to the predecessor's stored result.
+2. On compensation success, transition the predecessor to `COMPENSATED`.
+3. On compensation failure, transition the predecessor to `COMPENSATION_FAILED` and apply `compensation_policy` (above).
+4. Skip predecessors that have no `compensate_action`. If `compensation_policy="strict"` AND any failed-node predecessor lacks a `compensate_action`, the orchestrator MUST return `NOP-COMPENSATION-NOT-SUPPORTED` (terminal) and not invoke any compensations for that saga.
+
+Compensating actions MUST be idempotent — they MAY be retried per the predecessor's `retry_policy` and SHOULD use a stable `idempotency_key` derived from `<parent_task_id>:<node_id>:compensate`.
+
+**Compensation Example**
+
+```json
+{
+  "id": "charge",
+  "action": "nwp://payments.example.com/charge/invoke",
+  "agent": "urn:nps:agent:...:payments",
+  "compensate_action": "nwp://payments.example.com/refund/invoke",
+  "compensate_params_mapping": { "charge_id": "$.charge_id", "amount": "$.amount" }
+}
+```
+
+If a downstream `ship` node fails after `charge` has completed, the orchestrator dispatches `nwp://payments.example.com/refund/invoke` with `{ "charge_id": <captured>, "amount": <captured> }`, transitioning the `charge` node `COMPLETED → COMPENSATING → COMPENSATED`.
 
 **Complete TaskFrame Example**
 
@@ -393,7 +441,7 @@ When `action="preflight"`, `params` contains:
 
 ```json
 {
-  "cgn_est": 1500,
+  "estimated_npt": 1500,
   "required_capabilities": ["nwp:invoke", "ml:inference"],
   "action": "nwp://ml.example.com/inference/invoke"
 }
@@ -451,6 +499,22 @@ If `available: false`, the Orchestrator MUST abort the entire TaskFrame and retu
 ```
 
 Subtask states: `PENDING` → `RUNNING` → `COMPLETED` / `FAILED` / `CANCELLED` / `SKIPPED`
+
+A `COMPLETED` subtask MAY additionally transition into the saga-compensation lifecycle when a downstream failure triggers rollback (see §3.1.6):
+
+```
+COMPLETED ──→ COMPENSATING ──→ COMPENSATED          (success — reversal acknowledged)
+                  │
+                  └────────→ COMPENSATION_FAILED    (terminal — reversal returned an error)
+```
+
+| State | Meaning |
+|-------|---------|
+| `COMPENSATING` | The node's `compensate_action` has been dispatched; awaiting result |
+| `COMPENSATED` | The node was successfully reversed |
+| `COMPENSATION_FAILED` | Terminal — the `compensate_action` returned an error and was not retried successfully |
+
+`COMPENSATED` and `COMPENSATION_FAILED` are terminal saga states; they do NOT alter the parent TaskFrame's outcome (which remains `FAILED` once the original failure triggered the saga), but they MUST be reported in the final callback payload so callers can audit which side effects were reversed.
 
 ### 5.1 Retry Semantics
 
@@ -524,6 +588,8 @@ Orchestrator                              Worker B (Data)    Worker C (Inference
 | `NOP-RESOURCE-INSUFFICIENT` | `NPS-SERVER-UNAVAILABLE` | Pre-flight found one or more Worker Agents with insufficient resources (CGN / capability) |
 | `NOP-CONDITION-EVAL-ERROR` | `NPS-CLIENT-BAD-PARAM` | DAG node condition expression evaluation failed (syntax error or reference to non-existent field) |
 | `NOP-INPUT-MAPPING-ERROR` | `NPS-CLIENT-UNPROCESSABLE` | input_mapping JSONPath could not be resolved or target field does not exist |
+| `NOP-COMPENSATION-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | Terminal — a node's `compensate_action` returned an error during saga rollback (see §3.1.6) |
+| `NOP-COMPENSATION-NOT-SUPPORTED` | `NPS-CLIENT-UNPROCESSABLE` | Terminal — a predecessor that must be compensated has no `compensate_action` and `compensation_policy="strict"` |
 
 ---
 
@@ -563,6 +629,8 @@ Every delegation level must pass NIP CA verification that `delegated_scope` does
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.5 | 2026-05-10 | Compensation/saga semantics (issue #34): per-node `compensate_action` / `compensate_params_mapping`; TaskFrame-level `compensation_policy` (`best_effort` default / `strict`); subtask saga states `COMPENSATING` / `COMPENSATED` / `COMPENSATION_FAILED`; saga trigger in §3.1.6 (reverse-topological compensation of completed predecessors when a downstream node FAILED); 2 new error codes: `NOP-COMPENSATION-FAILED`, `NOP-COMPENSATION-NOT-SUPPORTED` |
+| 0.4 | 2026-04-19 | Status / Depends-On version bumps; minor editorial alignment with NCP v0.6 / NWP v0.10 / NIP v0.8 |
 | 0.3 | 2026-04-14 | DAG node granularity enhancements (per-node timeout/retry_policy/condition/input_mapping); §3.1.2 context supports OpenTelemetry W3C Trace (trace_id/span_id/trace_flags/baggage); §3.1.3 input_mapping JSONPath; §3.1.4 retry_policy (fixed/linear/exponential); §3.1.5 condition CEL subset; DelegateFrame adds idempotency_key/priority/context/node_id; SyncFrame adds min_required (K-of-N) and §3.3.1/§3.3.2 aggregation strategies; AlignStream adds subtask_id/error fields, §3.4.1 Token-level backpressure; §4 resource pre-flight protocol; §5 extended state machine (PREFLIGHT/SKIPPED) and task cancellation mechanism; §6 complete multi-Agent flow diagram; 5 new error codes (RESOURCE-INSUFFICIENT, CONDITION-EVAL-ERROR, INPUT-MAPPING-ERROR, DELEGATE-TIMEOUT, TASK-CANCELLED); §8.4 callback_url abuse prevention; Depends-On updated to NCP v0.5 / NWP v0.5 |
 | 0.2 | 2026-04-12 | Unified port 17433; error codes use NPS status code mapping; completed error code list |
 | 0.1 | 2026-04-10 | Initial spec: TaskFrame/DelegateFrame/SyncFrame/AlignStream, DAG execution model, supersedes NCP AlignFrame |

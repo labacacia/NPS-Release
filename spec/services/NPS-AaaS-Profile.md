@@ -3,10 +3,10 @@ English | [中文版](./NPS-AaaS-Profile.cn.md)
 # NPS-AaaS Profile: Agent-as-a-Service Compliance Specification
 
 **Status**: Proposed
-**Version**: 0.6
-**Date**: 2026-05-01
+**Version**: 0.7
+**Date**: 2026-05-09
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.10), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6), NPS-5 (NOP v0.4)
+**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.11), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6), NPS-5 (NOP v0.4), token-budget v0.5
 
 > This specification defines compliance requirements for building Agent-as-a-Service (AaaS)
 > platforms on the NPS protocol suite, covering three architectural layers: service entry,
@@ -30,7 +30,7 @@ requiring consumers to understand internal implementation details.
 | Non-standard, unobservable internal orchestration | NOP DAG orchestration + OpenTelemetry tracing |
 | High token overhead for AI accessing traditional DBs | Vector Proxy Layer vectorization middleware |
 | No Agent identity/permission standard | NIP NID identity + scope delegation chain |
-| No service quality guarantees | CGN Token Budget + back-pressure control |
+| No service quality guarantees | CGN-Estimate Token Budget + back-pressure control (CGN-Billing for commercial settlement, see [token-budget §2.1](../token-budget.md)) |
 
 ### 1.3 Architecture Overview
 
@@ -89,7 +89,7 @@ NOP orchestration layer. A single Anchor Node MAY simultaneously declare other r
 | **Authentication** | NIP | Verify consumer NID, check scope |
 | **Service catalog** | NWP NWM | Expose available Actions via NWM manifest |
 | **Request routing** | NOP | Convert ActionFrame to TaskFrame, decompose DAG |
-| **Token metering** | CGN | Per-request Token Budget management |
+| **Token metering** | CGN-Estimate (budget / quota) · CGN-Billing (settlement) | Per-request Token Budget management uses CGN-Estimate; commercial settlement records MUST use CGN-Billing per [token-budget §2.1](../token-budget.md) |
 | **Rate limiting** | NWP | NID-based rate limiting |
 | **Observability** | NOP Context | Inject trace_id/span_id for full-chain tracing |
 | **Cluster registry** *(optional at L1, mandatory at L2)* | NDP + NWP | Track member nodes registered via `Announce.cluster_anchor`; surface them through `topology.snapshot` / `topology.stream` (NPS-2 §12) |
@@ -109,7 +109,7 @@ NOP orchestration layer. A single Anchor Node MAY simultaneously declare other r
       "description": "Run a multi-step data analysis pipeline",
       "params_schema": { "$ref": "#/schemas/analysis_input" },
       "result_schema": { "$ref": "#/schemas/analysis_output" },
-      "cgn_est": 2000,
+      "estimated_npt": 2000,
       "timeout_ms": 120000,
       "async": true
     }
@@ -117,7 +117,8 @@ NOP orchestration layer. A single Anchor Node MAY simultaneously declare other r
   "rate_limits": {
     "requests_per_minute": 60,
     "max_concurrent": 10,
-    "cgn_per_hour": 100000
+    "cgn_per_hour": 100000,
+    "cgn_profile": "estimate"
   },
   "auth": {
     "required": true,
@@ -333,7 +334,7 @@ only needs to implement this interface for seamless integration.
 |--------|-------------|----------|
 | L2-01 | MUST use NOP TaskFrame for internal task orchestration | NOP |
 | L2-02 | MUST inject OpenTelemetry trace in TaskFrame.context | NOP |
-| L2-03 | MUST support CGN Token Budget with token_est in responses | CGN |
+| L2-03 | MUST support CGN-Estimate Token Budget with `token_est` in responses (budget / quota / telemetry surface only — see [token-budget §2.1](../token-budget.md)) | CGN-Estimate |
 | L2-04 | MUST support NOP preflight mechanism | NOP |
 | L2-05 | MUST implement NOP retry and timeout semantics | NOP |
 | L2-06 | SHOULD support async Actions (ActionFrame.async=true) | NWP |
@@ -352,6 +353,7 @@ only needs to implement this interface for seamless integration.
 | L3-05 | MUST implement scope delegation chain security (max 3 levels) | NIP + NOP |
 | L3-06 | SHOULD support automatic schema discovery (DB schema → AnchorFrame) | NWP |
 | L3-07 | SHOULD support hot vector index updates (incremental rebuild on data changes) | Vector Proxy |
+| L3-08 | MUST emit CGN-Billing records (not generic CGN / CGN-Estimate) for any commercial settlement flow, per [token-budget §2.1, §6.3](../token-budget.md). This implies `verified_tokenizer`-tier tokenizer resolution, NID-signed metering records, no sampling, no byte-size fallback, and audit-log integration sufficient for dispute / chargeback. The `X-NWP-Tokens-Profile`, `X-NWP-Billing-Record`, and `X-NWP-Billing-Tokenizer-Tier` response headers MUST appear on every billed response. | CGN-Billing + NIP + NPS-RFC-0004 |
 
 ---
 
@@ -400,7 +402,8 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 CGN → analyze
 | Authentication | NIP v0.3 | No: reuses NID + scope |
 | Vector queries | NWP v0.5 §6.4 | No: reuses vector_search |
 | Vector Proxy | NWP + NCP | No: implementation-level middleware |
-| Token metering | CGN v0.1 | No: reuses token_est |
+| Token metering — quota / budget | CGN-Estimate (token-budget v0.5) | No: reuses `token_est`, sampling-tolerant |
+| Token metering — commercial settlement | CGN-Billing (token-budget v0.5) | Adds: `verified_tokenizer` requirement (NIP §5.1), NID-signed metering records, audit-log persistence, billing response headers (issue #40 / L3-08) |
 | Audit trail | NOP v0.4 §8.3 | No: reuses context.trace_id |
 
 **Protocol changes required**: NWP NWM `node_type` enum must accept `"anchor"` and `"bridge"` (replacing the removed `"gateway"`); NDP AnnounceFrame gains `node_kind`/`cluster_anchor`/`bridge_protocols` fields. All additive at the wire layer except the `"gateway"` removal — see [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md).
@@ -411,6 +414,7 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 CGN → analyze
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.7 | 2026-05-09 | CGN profile split (issue #40). §1.2 row, §2.2 Token-metering row, and §2.3 NWM example clarified to mark budget / quota surfaces as **CGN-Estimate**. §4.3 L2-03 narrowed to CGN-Estimate (telemetry / quota only). New §4.4 **L3-08** requirement: any commercial settlement flow MUST emit CGN-Billing records (verified_tokenizer, NID-signed, no sampling / no byte-fallback, audit-log integrated, billing-class response headers). §6 protocol-relationship table split into Estimate / Billing rows and re-pointed at token-budget v0.5. Depends-On adds token-budget v0.5. |
 | 0.6 | 2026-05-01 | alpha.5 update. New L2-09 requirement (§4.3): SHOULD configure a `reputation_policy` and consult at least one NPS-RFC-0004-compliant log operator; recommended minimum policy defined. Depends-On bumped: NPS-RFC-0004 Phase 3 (STH gossip). |
 | 0.5 | 2026-05-01 | M8 cross-profile contract clarification. §4.3 L2-08 description extended: implementations claiming L2-08 MUST satisfy Node-Profile L1 for the Anchor host; active-registry Anchors SHOULD also satisfy Node-Profile L2. Depends-On bumped: NPS-2 (NWP v0.8 → v0.10), NPS-3 (NIP v0.4 → v0.6), NPS-4 (NDP v0.5 → v0.6). |
 | 0.4 | 2026-04-27 | New L2-08 requirement (§4.3) mandating `topology.snapshot` / `topology.stream` on Anchor Nodes that maintain a member registry, per [NPS-CR-0002](../cr/NPS-CR-0002-anchor-topology-queries.md) and [NPS-2 §12](../NPS-2-NWP.md). §2 intro placeholder ("reserved for v1.0-alpha.4") replaced with concrete L2 mandate. §2.2 cluster-registry row promoted from "optional" to "optional at L1, mandatory at L2". §6 protocol-relationship table re-pointed at NWP v0.8 to pick up the new §12 surface. Depends-On bumped: NPS-2 (NWP v0.7 → v0.8). |

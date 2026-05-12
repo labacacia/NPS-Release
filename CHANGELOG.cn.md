@@ -10,7 +10,7 @@
 
 ---
 
-## [Unreleased]
+## [1.0.0-alpha.6] —— 2026-05-12
 
 ### Daemons
 
@@ -31,6 +31,16 @@
   （按受众分流的引导页）和 `docs/who-uses-nps.md`（案例研究占位页）。所有 Pages
   页面添加"📖 详见 Wiki"页脚。更新 `docs/navigation.md`。
   Closes [labacacia/NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26)。
+
+### 规范
+
+- **NPS-Release spec tree 已从 NPS-Dev 同步到 alpha.6 发布边界**：包含 CR-0003 编排器 group/session NID 模型、CR-0004 IANA PEN 65715 wire-in、CR-0005 NIP CA RA 模型草案、NIP v0.7/v0.8 更新、token-budget v0.5、transport profile 文档、合规模板中文翻译以及 roadmap 更新。
+
+- **NPS-CR-0004 —— IANA PEN 65715 wire-in**：所有 NPS X.509 OID 现锚定到已分配 arc `1.3.6.1.4.1.65715`，替换此前临时 arc `1.3.6.1.4.1.99999`。在临时 arc 下签发的证书必须撤销并重签后，才可主张 alpha.6 合规。
+
+- **NPS-CR-0003 —— 编排器 group NID 与短生命周期 session NID**：保留 `group-` 与 `session-` 标识符前缀，新增 `IdentFrame.lineage`，定义父级/session 撤销行为，并规范 group 注册、session 签发、撤销与审计列表 CA 端点。
+
+- **发布纪律 —— alpha 没有小版本**：活跃 alpha 标签只能按 `X.Y.Z-alpha.N` 到 `X.Y.Z-alpha.N+1` 推进；alpha.5 之后的发布工作并入 `1.0.0-alpha.6`，不使用 `1.0.0-alpha.5.x`。
 
 ---
 

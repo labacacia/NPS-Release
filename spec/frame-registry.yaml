@@ -31,7 +31,7 @@ frames:
     protocol: NCP
     protocol_version: "0.6"
     status: stable
-    description: Incremental data frame. Supports json_patch (RFC 6902, Tier-1 default) and binary_bitset (Tier-2, 15–20% smaller) via patch_format field. NPS-CR-0002 (NWP §8.2) extends the event_type enum with topology-stream values — member_joined / member_left / member_updated; for topology.stream subscriptions seq carries the post-event topology version and payload carries event-specific data.
+    description: Incremental data frame. Supports json_patch (RFC 6902, Tier-1 default) and binary_bitset (Tier-2, 15–20% smaller) via patch_format field. NPS-CR-0002 (NWP §8.2) extends the event_type enum with the full topology-stream set — member_joined / member_left / member_updated / anchor_state / resync_required; for topology.stream subscriptions seq carries the post-event topology version and payload carries event-specific data. NPS-CR-0002 Phase 2 (NWP v0.12) adds the optional per-event cgn_est field (uint32, estimated CGN token cost of this push event's payload) for Agent-side cumulative-budget accounting per token-budget.md §7.2.
     fields_ref: "NPS-1-NCP.md#42-diffframe-0x02"
 
   - id: "0x03"
@@ -72,7 +72,7 @@ frames:
     name: QueryFrame
     protocol: NWP
     protocol_version: "0.8"
-    status: draft
+    status: proposed
     description: Structured data query for Memory Nodes. Supports filter ($eq/$ne/$lt/$lte/$gt/$gte/$in/$nin/$contains/$between/$exists/$regex/$and/$or/$not), field selection, cursor pagination, ordering, vector search, auto_anchor, native-mode budget/tokenizer/depth/request_id fields, streaming mode (stream:true → StreamFrame sequence), and aggregation (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT with group_by and having). NPS-CR-0002 (§12) adds optional type field for reserved query namespaces (topology.snapshot, topology.stream); absent means default per-anchor query semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED.
     fields_ref: "NPS-2-NWP.md#6-queryframe-0x10"
 
@@ -80,7 +80,7 @@ frames:
     name: ActionFrame
     protocol: NWP
     protocol_version: "0.5"
-    status: draft
+    status: proposed
     description: Operation invocation for Action and Complex Nodes. Supports sync/async execution, idempotency, callback_url, priority, request_id, and system-reserved actions (system.task.status / system.task.cancel). Action/Complex Nodes declare available operations in NWM actions registry (§4.6).
     fields_ref: "NPS-2-NWP.md#7-actionframe-0x11"
 
@@ -88,8 +88,8 @@ frames:
     name: SubscribeFrame
     protocol: NWP
     protocol_version: "0.8"
-    status: draft
-    description: Change subscription management for Memory Nodes. Actions: subscribe / unsubscribe / ping. Server pushes DiffFrame (0x02) updates with monotonic seq (per-stream, from 1), event_type, and timestamp. HTTP mode uses Server-Sent Events. Supports optional filter, heartbeat_interval, and resume_from_seq for lossless reconnection. NPS-CR-0002 (§12) adds optional type field for reserved subscribe namespaces (topology.stream); absent means default per-anchor subscribe semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED.
+    status: proposed
+    description: "Change subscription management for Memory Nodes. Actions: subscribe / unsubscribe / ping. Server pushes DiffFrame (0x02) updates with monotonic seq (per-stream, from 1), event_type, and timestamp. HTTP mode uses Server-Sent Events. Supports optional filter, heartbeat_interval, and resume_from_seq for lossless reconnection. NPS-CR-0002 (§12) adds the optional type field for opting into reserved subscribe namespaces — set type=\"topology.stream\" to receive the topology change feed defined in NPS-2-NWP.md §12.2 (cluster member_joined / member_left / member_updated / anchor_state / resync_required events with topology.* request fields); absent means default per-anchor subscribe semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED. CR-0002 Phase 2 (NWP v0.12) splits the per-surface capability gate: topology.stream subscriptions SHOULD additionally require topology:subscribe in IdentFrame.capabilities (separable from topology:read) per §12.4."
     fields_ref: "NPS-2-NWP.md#8-subscribeframe-0x12"
 
   # ── NIP (0x20–0x2F) ���──────────��────────────────────────────���───
@@ -97,23 +97,23 @@ frames:
     name: IdentFrame
     protocol: NIP
     protocol_version: "0.4"
-    status: draft
+    status: proposed
     description: Agent identity declaration and certificate. Carries NID, public key, capabilities, scope, optional metadata (model_family, tokenizer), and (NPS-RFC-0003) optional assurance_level — one of anonymous/attested/verified — that MUST agree with the cert id-nid-assurance-level extension when present. Used as connection handshake.
     fields_ref: "NPS-3-NIP.md#51-identframe-0x20"
 
   - id: "0x21"
     name: TrustFrame
     protocol: NIP
-    protocol_version: "0.3"
-    status: draft
-    description: Cross-CA trust chain delegation. Allows one organization CA to grant scoped trust to another CA.
+    protocol_version: "0.8"
+    status: proposed
+    description: Cross-CA trust chain delegation. One CA (grantor_nid) authorises another CA (grantee_ca) to issue IdentFrames whose capabilities (trust_scope subset of standard enum) and nodes patterns (nwp:// with */** wildcards) are honoured by Nodes that trust the grantor. Carries issued_at / expires_at / 16-hex-char serial / signer_nid; signed with Ed25519 or ECDSA P-256 over canonical JSON (signature field removed, keys sorted, no whitespace) per NPS-3 §5.2.
     fields_ref: "NPS-3-NIP.md#52-trustframe-0x21"
 
   - id: "0x22"
     name: RevokeFrame
     protocol: NIP
     protocol_version: "0.3"
-    status: draft
+    status: proposed
     description: NID or capability revocation. Takes immediate effect upon CA acknowledgment.
     fields_ref: "NPS-3-NIP.md#53-revokeframe-0x22"
 
@@ -123,7 +123,7 @@ frames:
     protocol: NDP
     protocol_version: "0.6"
     status: draft
-    description: Node or Agent presence broadcast. Announces NID, physical addresses, capabilities, TTL, and (NPS-Node Profile L1+) activation_mode — one of ephemeral/resident/hybrid — plus optional activation_endpoint (required for resident/hybrid push target) and spawn_spec_ref (L3, on-demand spawn). NPS-CR-0001 adds three additive fields — node_roles (array of strings; values memory/action/complex/anchor/bridge; legacy "gateway" rejected; renamed from node_kind in NDP v0.6 — parsers MUST accept node_kind as alias through alpha.5), cluster_anchor (NID, for non-Anchor cluster members), bridge_protocols (array, for "bridge" nodes; standard values http/grpc/mcp/a2a). Must be signed with IdentFrame private key. Receivers treat absent activation_mode as ephemeral and absent node_roles as falling back to node_type for backward compatibility with v1.0-alpha.2 publishers. Constraint: NWP NWM node_type MUST be one of the values in node_roles (see NWP §2.1 Node Role Resolution).
+    description: "Node or Agent presence broadcast. Announces NID, physical addresses, capabilities, TTL, and (NPS-Node Profile L1+) activation_mode — one of ephemeral/resident/hybrid — plus optional activation_endpoint (required for resident/hybrid push target) and spawn_spec_ref (L3, on-demand spawn). NPS-CR-0001 adds three additive fields — node_roles (array of strings; values memory/action/complex/anchor/bridge; legacy \"gateway\" rejected; renamed from node_kind in NDP v0.6 — parsers MUST accept node_kind as alias through alpha.5), cluster_anchor (NID, for non-Anchor cluster members), bridge_protocols (array, for \"bridge\" nodes; standard values http/grpc/mcp/a2a). Must be signed with IdentFrame private key. Constraint: NWP NWM node_type MUST be one of the values in node_roles (see NWP §2.1 Node Role Resolution). Receivers treat absent activation_mode as ephemeral and absent node_roles as falling back to node_type for backward compatibility with v1.0-alpha.2 publishers."
     fields_ref: "NPS-4-NDP.md#31-announceframe-0x30"
 
   - id: "0x31"

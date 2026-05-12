@@ -116,6 +116,8 @@ In `spec/NPS-2-NWP.md`:
 
 ### 3.4 Wire format changes
 
+> **Migration note (NDP v0.6 / NWP v0.9)**: The `node_kind` field introduced by this CR was renamed to `node_roles` (array-only form) as part of the M1 naming-disambiguation fix. Parsers MUST accept `node_kind` as an alias through alpha.5. References to `node_kind` below are historical and describe the state at the time this CR was implemented (NDP v0.5 / NWP v0.7).
+
 In NDP `Announce` frame, the `node_kind` field:
 
 | Old wire value | Status | New wire value(s) |
@@ -188,9 +190,19 @@ Deserializer MUST accept both string and array forms.
 
 For one alpha release window (alpha.3 only), the SDK SHOULD include:
 - `[Obsolete("Gateway Node has been split. Use AnchorNode for cluster control plane, BridgeNode for protocol translation. See NPS-CR-0001.")]` on a stub `GatewayNode` type that throws on instantiation.
-- A wire-level deserializer that, on encountering `"node_kind": "gateway"`, throws with a clear message referencing this CR.
+- A wire-level deserializer that, on encountering `"node_kind": "gateway"` (or `"node_roles": ["gateway"]` post-M1 rename), throws with a clear message referencing this CR.
 
 This stub is removed in alpha.4.
+
+**Error codes (M2 fix):**
+
+The wire-level rejection MUST use the specific error codes registered in `spec/error-codes.md` v1.1:
+- `node_roles: ["gateway"]` in NDP AnnounceFrame → `NDP-ANNOUNCE-ROLE-REMOVED`
+- `node_type: "gateway"` in NWP NWM → `NWP-MANIFEST-NODE-TYPE-REMOVED`
+- Any other unrecognized value in `node_roles` → `NDP-ANNOUNCE-ROLE-UNKNOWN`
+- Any other unrecognized value in `node_type` → `NWP-MANIFEST-NODE-TYPE-UNKNOWN`
+
+Both `-REMOVED` responses SHOULD include a `hint` field (string) containing a reference to NPS-CR-0001 and the migration guidance (`"gateway"` → `"anchor"` or `"bridge"`).
 
 ## 5. Conformance test changes
 

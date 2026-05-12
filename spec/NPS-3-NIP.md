@@ -2,13 +2,13 @@ English | [中文版](./NPS-3-NIP.cn.md)
 
 # NPS-3: Neural Identity Protocol (NIP)
 
-**Spec Number**: NPS-3  
-**Status**: Proposed  
-**Version**: 0.6  
-**Date**: 2026-05-01  
-**Port**: 17433 (default, shared) / 17435 (optional dedicated)  
-**Authors**: Ori Lynn / INNO LOTUS PTY LTD  
-**Depends-On**: NPS-1 (NCP v0.6)  
+**Spec Number**: NPS-3
+**Status**: Proposed
+**Version**: 0.8
+**Date**: 2026-05-11
+**Port**: 17433 (default, shared) / 17435 (optional dedicated)
+**Authors**: Ori Lynn / INNO LOTUS PTY LTD
+**Depends-On**: NPS-1 (NCP v0.6)
 
 ---
 
@@ -63,6 +63,17 @@ urn:nps:node:api.myapp.com:products                   ← NWP node
 urn:nps:org:mycompany.com                              ← Organization CA
 ```
 
+### 3.1 Reserved identifier prefixes (NPS-CR-0003)
+
+Two identifier prefixes are reserved on NIDs of `entity-type = agent` and signal a structural role within the orchestrator / session lineage model. Both follow the existing identifier ABNF (`1*(ALPHA / DIGIT / "-" / "_" / ".")`).
+
+| Prefix | Role | Example |
+|--------|------|---------|
+| `group-` | Orchestrator group NID — the trust anchor for a fleet of session NIDs issued by the CA on the group's behalf. Longer-lived (default 365 days) and revocable. | `urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01` |
+| `session-` | Short-lived session NID issued under a group. The portion after `session-` MUST be of the form `{unix-timestamp}-{random}` where `{random}` is at least 8 hex characters. Default validity 1 hour, max 24 hours. | `urn:nps:agent:ca.example.com:session-1714672800-f3a92c0b` |
+
+Identifiers without these prefixes continue to behave as ordinary agent NIDs. Receivers MUST NOT reject a NID solely on its prefix; the prefix is informational and the authoritative role is carried in the signed `IdentFrame.lineage.role` field (§5.1.3). The protocol-level `nop:orchestrate` capability (NPS-5) continues to express the *role* of being an orchestrator and is independent of this prefix convention.
+
 ---
 
 ## 4. Signature Algorithms
@@ -96,8 +107,11 @@ Agent identity declaration carrying the certificate. Sent as the handshake frame
 | `expires_at` | string | required | Expiration time (ISO 8601 UTC) |
 | `serial` | string | required | Certificate serial (globally unique per Org CA, hex) |
 | `signature` | string | required | CA's signature over this frame; format `{alg}:{base64url}` |
+| `cert_format` | string (enum) | required | Certificate encoding format. One of `"x509-der"` / `"raw-pubkey"`. Excluded from the signed canonical JSON (see §5.1.3 canonicalisation note). |
+| `cert_chain` | array of string | required when `cert_format = "x509-der"` | DER-encoded certificate chain, base64url-encoded, leaf first. Excluded from the signed canonical JSON (see §5.1.3 canonicalisation note). |
 | `metadata` | object | optional | Agent metadata — see below |
 | `assurance_level` | string | optional | One of `"anonymous"` / `"attested"` / `"verified"` (see §5.1.1). REQUIRED when the NID's certificate carries the `id-nid-assurance-level` extension. Receivers MUST treat an absent field as `"anonymous"` (backward compatibility with v1.0-alpha.2 publishers). When both field and cert extension are present, they MUST carry the same value — **phase gate**: Phase 1–2 (current) enforcement is opt-in (SHOULD check, MAY enforce); starting Phase 3 flag day (see NPS-RFC-0003 §8.1) enforcement is MUST, violation returns `NIP-ASSURANCE-MISMATCH`. (NPS-RFC-0003) |
+| `lineage` | object | optional | Signed lineage metadata. Present when the NID is an orchestrator group (`role = "group"`) or a short-lived session (`role = "session"`). See §5.1.3. (NPS-CR-0003) |
 
 **`metadata` fields (optional)**
 
@@ -108,6 +122,29 @@ Agent identity declaration carrying the certificate. Sent as the handshake frame
 | `runtime` | string | Agent runtime identifier, e.g. `"langchain/0.2"`, `"autogen/0.4"` |
 
 The `metadata` field is not included in the signature computation; an agent MAY set it at runtime. Nodes use the `tokenizer` in `metadata` to perform CGN auto-matching (see [token-budget.md](./token-budget.md)).
+
+**Trust boundary for unsigned `metadata` (normative — closes issue #39)**
+
+Because `metadata` is outside the signature, every value inside it is **agent-supplied and unverified**. Nodes MUST NOT use any field of `IdentFrame.metadata` (including but not limited to `model_family`, `tokenizer`, and `runtime`) as input to:
+
+1. **Billing or settlement** — actual CGN charged to a tenant or counted against a paid quota,
+2. **Quota elevation** — granting a larger token budget, higher concurrency, or any rate-limit tier above the default,
+3. **Reputation scoring** — any persisted trust signal that affects future routing or pricing,
+4. **Security or authorization decisions** — admittance to capability-gated endpoints, policy bypasses, or assurance-level checks.
+
+For these uses a Node MUST instead consume a **verified** signal — an attribute carried in the signed IdentFrame body, the X.509 NID certificate (NPS-RFC-0002 extensions), or a CA-attested side channel — or a Node-internal **observed** measurement. Treating unsigned metadata as authoritative is a conformance violation.
+
+**Three-tier tokenizer trust model**
+
+To make the boundary above operational for token accounting, NPS defines three distinct tokenizer signals. Implementations MUST keep them separable in code paths and logs.
+
+| Tier | Source | Trust | Permitted uses |
+|------|--------|-------|----------------|
+| `declared_tokenizer` | Agent-supplied via `IdentFrame.metadata.tokenizer` or the `X-NWP-Tokenizer` request header. **Unsigned.** | Agent self-claim only. | **Estimation hints only**: shaping pre-flight CGN estimates, cache-key disambiguation, telemetry. MUST NOT drive billing, quota elevation, reputation, or security. |
+| `verified_tokenizer` | CA-attested or platform-attested binding of a tokenizer identifier to the NID — e.g. an X.509 NID-cert extension, an AaaS-operator attestation under NPS-AaaS-Profile, or another signed channel agreed by the deployment. | Cryptographically verifiable. | Authoritative for policy, billing, quota tiers, and assurance-gated access. Settlement-grade flows MUST gate on this tier. |
+| `observed_tokenizer_profile` | Node-side statistical or behavioral inference (e.g. byte-length distributions, response-shape fingerprinting, sampled re-tokenization). | Node-internal measurement. | Abuse detection, drift alerts, anomaly scoring, and inputs to a Node's own reputation engine. MUST NOT be exported to peers as a verified claim. |
+
+When more than one tier is available the Node MUST prefer the highest-trust tier for any decision the boundary above restricts; lower tiers MAY be retained alongside for diagnostic comparison.
 
 **Standard `capabilities` values**
 
@@ -165,7 +202,7 @@ NPS defines three **assurance levels** an Agent identity may carry, modelled on 
 | Level | Enum value | Minimum CA criteria | Typical use |
 |-------|------------|---------------------|-------------|
 | L0 | `"anonymous"` | Self-signed, OR CA-signed without out-of-band identity binding | Hobbyist Agents, dev / test, free read-only endpoints |
-| L1 | `"attested"` | NID signed by an RFC-0002-compliant CA; CA attests possession of the NID private key (e.g. ACME `agent-01` challenge); contact email or domain verified. **Note**: "RFC-0002-compliant" requires RFC-0002 to be in Accepted status with a registered IANA OID. The prototype implementation using provisional OID `1.3.6.1.4.1.99999.1` does NOT satisfy this criterion for conformance or production purposes until the PEN is assigned (see NPS-RFC-0002 §10 OQ-2). | Most production Agents; default rate-limit tier |
+| L1 | `"attested"` | NID signed by an RFC-0002-compliant CA; CA attests possession of the NID private key (e.g. ACME `agent-01` challenge); contact email or domain verified. The `id-nid-assurance-level` X.509 extension uses IANA-assigned OID `1.3.6.1.4.1.65715.2.1`; the companion `id-nps-node-roles` extension uses `1.3.6.1.4.1.65715.2.2` (PEN 65715 assigned to LabAcacia 2026-05-08, NPS-CR-0004; see NPS-RFC-0002 §10 OQ-2). | Most production Agents; default rate-limit tier |
 | L2 | `"verified"` | L1 criteria **plus** CA binds the operator's legal identity (corporate registration for org-NIDs, signed AaaS-operator attestation for hosted Agents) | Regulated integrations, paid premium tiers, contract-grade orchestration |
 
 Default is `"anonymous"` — pre-RFC-0003 NIDs and any NID lacking the field are treated as L0. A Node demanding stricter levels declares `min_assurance_level` in its NWM (NPS-2 §4.1, §4.3).
@@ -229,19 +266,117 @@ Receivers MUST treat unknown `incident` values as opaque pass-through (forward c
 
 ---
 
+### 5.1.3 Lineage (NPS-CR-0003)
+
+`IdentFrame.lineage` carries the signed parent-chain metadata that links a short-lived session NID back to its orchestrator group NID, and that records who owns / authorised the group. The trust chain is:
+
+```
+human owner  →  Operator key (§2.1)  →  orchestrator group NID  →  short-lived session NID
+```
+
+`lineage` is part of the **signed** canonical JSON of the IdentFrame (unlike `metadata`, which is excluded). Modifying any sub-field invalidates the CA signature — this is what makes the chain *verifiable* end-to-end: a Node admitting a session NID can prove that `lineage.parent_nid` was authoritatively asserted by the CA at issuance time, not retro-fitted on the wire.
+
+**Field definitions**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `role` | enum (`"group"` / `"session"`) | required when `lineage` is present | Lineage role of this NID. |
+| `parent_nid` | string (NID) | required when `role = "session"` | Immediate parent NID. For a 1-level chain (group → session), equals `group_nid`. |
+| `group_nid` | string (NID) | required when `role = "session"` | Group NID at the root of the chain. Equals `parent_nid` for a 1-level chain; reserved for future deeper chains. |
+| `session_id` | string | required when `role = "session"` | Stable id of this execution; matches the `session-...` portion of the NID identifier (§3.1). Echoes back so consumers can index without parsing the URN. |
+| `purpose` | string (≤256 UTF-8 bytes) | optional | Free-form, human-readable label for what this execution is for, e.g. `"order-classification-job"`. |
+| `owner_user_id` | string | optional | Stable identifier of the human owner this group is acting on behalf of (e.g. internal user UUID). SHOULD be set when `role = "group"` and the deployment knows the owner. |
+| `owner_key_id` | string | optional | `kid` hint identifying the owner-key (Operator key, OIDC `sub`, hardware-token id) that authorised creation of the group. |
+
+**Group-NID example**
+
+```json
+"lineage": {
+  "role":          "group",
+  "owner_user_id": "user-7f3c9e1a",
+  "owner_key_id":  "op-kid-2026-04"
+}
+```
+
+**Session-NID example**
+
+```json
+"lineage": {
+  "role":          "session",
+  "parent_nid":    "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+  "group_nid":     "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+  "session_id":    "session-1714672800-f3a92c0b",
+  "purpose":       "data-extraction-job-42",
+  "owner_user_id": "user-7f3c9e1a",
+  "owner_key_id":  "op-kid-2026-04"
+}
+```
+
+**Backward compatibility**: pre-CR-0003 publishers omit `lineage`; pre-CR-0003 verifiers that strict-canonicalise (sort + omit `signature` / `metadata` / `cert_format` / `cert_chain`) will drop unknown fields if their DTO does not carry them, in which case signature verification of a CR-0003 frame fails. New senders aware of CR-0003 produce CR-0003 frames; old verifiers MUST be upgraded to verify them. Ordinary agent NIDs without `lineage` continue to verify exactly bit-compatibly.
+
+**Errors**
+
+| Code | When |
+|------|------|
+| `NIP-CA-GROUP-REVOKED` (`NPS-AUTH-FORBIDDEN`) | Cannot issue a session under a group that has been revoked. |
+| `NIP-CA-PARENT-NOT-FOUND` (`NPS-CLIENT-NOT-FOUND`) | The `parent_nid` / group NID referenced by a session-issue request does not exist. |
+| `NIP-CA-PARENT-NOT-GROUP` (`NPS-CLIENT-BAD-PARAM`) | The referenced parent NID exists but is not registered as `lineage.role = "group"`. |
+| `NIP-CA-SESSION-VALIDITY-INVALID` (`NPS-CLIENT-BAD-PARAM`) | Requested session validity below 60 seconds or above the CA's configured maximum. |
+| `NIP-CA-JWS-INVALID` (`NPS-AUTH-UNAUTHENTICATED`) | Group-JWS authorisation on a session-issue request fails signature, header, or shape validation. |
+| `NIP-CA-JWS-EXPIRED` (`NPS-AUTH-UNAUTHENTICATED`) | Group-JWS `iat` outside the CA's clock-skew window (default ±5 minutes). |
+| `NIP-CERT-PARENT-REVOKED` (`NPS-AUTH-UNAUTHENTICATED`) | A session NID's parent / group NID is revoked or expired (chain check, §7 step 3a). |
+
+See [NPS-CR-0003](cr/NPS-CR-0003-orchestrator-group-session-nids.md) for the full motivation, JWS shape, and migration impact.
+
+---
+
 ### 5.2 TrustFrame (0x21)
 
-Cross-CA trust-chain propagation and capability grant (commercial feature, NPS Cloud).
+Cross-CA trust-chain propagation and capability grant (commercial feature, NPS Cloud). A TrustFrame lets one CA (the **grantor**) authorise another CA (the **grantee**) to issue IdentFrames whose `capabilities` are accepted by Nodes that already trust the grantor — without the grantee being added to each Node's `trusted_issuers` list. The grant is scoped to a capability subset and a set of `nwp://` URL patterns; it is verifiable end-to-end via the grantor's signature.
+
+**Field definitions**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frame` | uint8 | required | Fixed `0x21`. |
+| `grantor_nid` | string (NID) | required | NID of the granting CA. MUST be in the verifying Node's `trusted_issuers` for the TrustFrame to take effect. |
+| `grantee_ca` | string (NID) | required | NID of the receiving CA. IdentFrames whose `issued_by` equals `grantee_ca` are admitted under the grant. |
+| `trust_scope` | array of string | required | Capability strings the trust covers. MUST be a subset of the standard `capabilities` enum defined in §5.1 (`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read`). A grantee MUST NOT issue downstream IdentFrames carrying capabilities outside this set. |
+| `nodes` | array of string | required | `nwp://` URL patterns this trust applies to. `*` matches a single path segment; `**` matches multiple segments. Empty array means the grant covers no nodes (effectively inert). |
+| `issued_at` | string (ISO 8601 UTC) | required | Issuance time. |
+| `expires_at` | string (ISO 8601 UTC) | required | Expiry time. After this instant the frame MUST be rejected with `NIP-TRUST-FRAME-EXPIRED`. |
+| `serial` | string (hex) | required | 16-character zero-padded hex serial number used for revocation tracking via RevokeFrame (§5.3). |
+| `signer_nid` | string (NID) | required | NID whose private key signs this frame. MUST be either `grantor_nid` itself or an operator NID under `grantor_nid`. |
+| `signature` | string | required | `{alg}:{base64url}` — `ed25519:` (Ed25519) or `ecdsa-p256:` (ECDSA P-256). |
+
+**Signature computation**
+
+The signature is computed over the canonical JSON of the TrustFrame with the `signature` field removed (keys sorted alphabetically, no whitespace) — same canonicalisation rule as IdentFrame in §5.1. Supported algorithms: Ed25519 (`ed25519:`) and ECDSA P-256 (`ecdsa-p256:`).
+
+**Errors**
+
+| Code | When |
+|------|------|
+| `NIP-TRUST-FRAME-INVALID` (`NPS-CLIENT-BAD-FRAME`) | TrustFrame is malformed (missing required field, signature verification fails, or canonical form is invalid). |
+| `NIP-TRUST-FRAME-EXPIRED` (`NPS-AUTH-UNAUTHENTICATED`) | Current time is past `expires_at`. |
+| `NIP-TRUST-FRAME-GRANTOR-REVOKED` (`NPS-AUTH-UNAUTHENTICATED`) | The `grantor_nid`'s own CA certificate is revoked or expired at verification time. |
+| `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR` (`NPS-AUTH-FORBIDDEN`) | `trust_scope` contains a capability that the grantor itself does not hold (no-scope-expansion principle, §10.3). |
+| `NIP-TRUST-FRAME-NODES-PATTERN-INVALID` (`NPS-CLIENT-BAD-FRAME`) | An entry in `nodes` is not a syntactically valid `nwp://` URL pattern, or uses wildcards in a position where they are not permitted. |
+
+**Full example**
 
 ```json
 {
   "frame":       "0x21",
   "grantor_nid": "urn:nps:org:org-a.com",
   "grantee_ca":  "urn:nps:org:org-b.com",
-  "trust_scope": ["nwp:query"],
-  "nodes":       ["nwp://api.org-a.com/public/*"],
+  "trust_scope": ["nwp:query", "nwp:action"],
+  "nodes":       ["nwp://api.org-a.com/public/**"],
+  "issued_at":   "2026-05-11T00:00:00Z",
   "expires_at":  "2026-12-31T00:00:00Z",
-  "signature":   "ed25519:..."
+  "serial":      "00000000000A3F9C",
+  "signer_nid":  "urn:nps:org:org-a.com",
+  "signature":   "ed25519:3045022100..."
 }
 ```
 
@@ -249,7 +384,48 @@ Cross-CA trust-chain propagation and capability grant (commercial feature, NPS C
 
 ### 5.3 RevokeFrame (0x22)
 
-Revokes an NID or a specific capability.
+Revokes an NID, all certificates issued under an NID, or a specific certificate identified by serial. RevokeFrames are emitted by an issuing CA (or by an authorised operator under that CA) and pushed to subscribed Nodes via the NIP push channel; receivers update their local cert / OCSP cache and reject subsequent requests authenticated under the revoked target. A RevokeFrame is **fire-and-forget** at the protocol layer (no response frame on success); receivers MUST emit an `ErrorFrame` only when the frame itself is malformed or unauthorised.
+
+**Field definitions**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frame` | uint8 | required | Fixed value `0x22`. |
+| `target_nid` | string (NID) | required | NID being revoked. MAY be an agent NID, node NID, group NID, or org NID. |
+| `serial` | string (hex) | optional | Specific certificate serial under `target_nid` to revoke. If present, MUST match the serial of a currently-issued cert for `target_nid`. If omitted, ALL currently-issued certs for `target_nid` are revoked (effectively revoking the NID itself). |
+| `reason` | string (enum) | required | One of the values defined in the reason table below. |
+| `revoked_at` | string (ISO 8601 UTC) | required | Wall-clock instant at which revocation takes effect. Receivers SHOULD reject any request whose IdentFrame `issued_at` is at or before `revoked_at`. |
+| `parent_nid` | string (NID) | conditional | REQUIRED when `reason = "parent_revoked"`; identifies the group NID whose cascade triggered this revocation (NPS-CR-0003). MUST be omitted for any other reason. |
+| `signer_nid` | string (NID) | required | NID of the CA or operator signing this revocation. MUST be either the issuing CA of `target_nid`, an operator under that CA holding the `nip:revoke` capability, or — for cascade revocations — the CA that issued `parent_nid`. |
+| `signature` | string | required | `{alg}:{base64url}` signature by `signer_nid`'s private key. Supported algorithms: `ed25519:` (Ed25519) or `ecdsa-p256:` (ECDSA P-256). |
+
+**`reason` enum**
+
+| Value | Description |
+|-------|-------------|
+| `key_compromise` | Agent / node private key is known or suspected to be compromised. Highest urgency. |
+| `ca_compromise` | The issuing CA's signing key is compromised; ALL certificates under that CA are implicitly revoked, and a per-NID RevokeFrame MAY be emitted for each affected child. |
+| `affiliation_changed` | Agent left the issuing organisation; ALL of its capabilities are revoked even if individual certs have not yet expired. |
+| `superseded` | Replaced by a re-issued certificate carrying the same NID (e.g. routine rotation that needs to invalidate the prior serial). The `serial` field SHOULD be set to identify the superseded cert. |
+| `cessation_of_operation` | Agent / node has been decommissioned and will never present credentials again. |
+| `parent_revoked` | (NPS-CR-0003) Cascade emitted by the CA on a session-NID whose group NID was revoked. The `parent_nid` field MUST be set to the group NID. Distinguishes ancestry-driven invalidation from a session revoked on its own merits. |
+
+**Forward compatibility**: receivers encountering a `reason` value not present in the table above MUST treat it as `key_compromise` (the most restrictive interpretation). Receivers MAY additionally log the unknown value for diagnostic purposes and MAY emit `NIP-REVOKE-FRAME-REASON-UNKNOWN` to the publishing CA over a side channel, but MUST NOT silently demote an unknown reason to a less restrictive one.
+
+**Signature computation**
+
+The signature is computed over the canonical JSON of the RevokeFrame with the `signature` field removed (keys sorted alphabetically, no whitespace) — same canonicalisation rule as IdentFrame in §5.1 (RFC 8785 JCS).
+
+**Errors**
+
+| Code | When |
+|------|------|
+| `NIP-REVOKE-FRAME-INVALID` (`NPS-CLIENT-BAD-FRAME`) | RevokeFrame is malformed (missing required field, signature verification fails, or canonical form is invalid). |
+| `NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER` (`NPS-AUTH-FORBIDDEN`) | `signer_nid` is not authorised to revoke `target_nid` (not the issuing CA of `target_nid`, not an operator under that CA holding `nip:revoke`, and — for `parent_revoked` — not the CA that issued `parent_nid`). |
+| `NIP-REVOKE-FRAME-SERIAL-MISMATCH` (`NPS-CLIENT-BAD-PARAM`) | `serial` is present but does not match any currently-issued cert for `target_nid`. |
+| `NIP-REVOKE-FRAME-REASON-UNKNOWN` (`NPS-CLIENT-BAD-FRAME`) | `reason` carries a value outside the defined enum. Receivers treat the revocation as `key_compromise` for safety (see Forward compatibility above); this code is reported back to the publishing CA so the publish can be corrected. |
+
+**Full example**
 
 ```json
 {
@@ -258,11 +434,26 @@ Revokes an NID or a specific capability.
   "serial":     "0x0A3F9C",
   "reason":     "key_compromise",
   "revoked_at": "2026-04-10T12:00:00Z",
+  "signer_nid": "urn:nps:org:ca.innolotus.com",
+  "signature":  "ed25519:3045022100..."
+}
+```
+
+**Cascade example (`parent_revoked`)**
+
+```json
+{
+  "frame":      "0x22",
+  "target_nid": "urn:nps:agent:ca.example.com:session-1714672800-f3a92c0b",
+  "reason":     "parent_revoked",
+  "revoked_at": "2026-04-10T12:00:00Z",
+  "parent_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+  "signer_nid": "urn:nps:org:ca.example.com",
   "signature":  "ed25519:..."
 }
 ```
 
-`reason` values: `key_compromise` / `ca_compromise` / `affiliation_changed` / `superseded` / `cessation_of_operation`.
+`parent_revoked` (NPS-CR-0003) is set by the CA on a session-NID `RevokeFrame` it emits as part of cascade revocation when the session's group NID was revoked. It distinguishes a session that was forcibly invalidated by ancestry from one revoked on its own merits.
 
 ---
 
@@ -290,11 +481,37 @@ Node receives IdentFrame
   ├─ 1. Check expires_at > now  (expired → NIP-CERT-EXPIRED)
   ├─ 2. Check issued_by is in NWM trusted_issuers  (not trusted → NIP-CERT-UNTRUSTED-ISSUER)
   ├─ 3. Verify signature with issued_by CA public key  (fail → NIP-CERT-SIGNATURE-INVALID)
+  ├─ 3a. (NPS-CR-0003) If lineage.parent_nid is present, OCSP-lookup the parent
+  │      (revoked or expired → NIP-CERT-PARENT-REVOKED)
   ├─ 4. OCSP lookup (when NWM configures ocsp_url) or local CRL check  (revoked → NIP-CERT-REVOKED)
   ├─ 5. Check capabilities contains what the node requires  (missing → NIP-CERT-CAPABILITY-MISSING)
   └─ 6. Check scope.nodes covers the target node path  (not covered → NWP-AUTH-NID-SCOPE-VIOLATION)
         All checks pass → authorize the request
 ```
+
+Step **3a** (chain check) is mandatory whenever `lineage.parent_nid` is present, regardless of whether the session NID itself is still inside its own validity window. Combined with the CA-side cascade documented in §5.3 (`parent_revoked` reason), it provides defense-in-depth: a misconfigured CA that fails to record the cascade still gets caught at the verifier; a CA that did record it still publishes the entries to the CRL for simple consumers.
+
+**Note on TrustFrame chains (§5.2)**: when the IdentFrame's `issued_by` is *not* in the Node's `trusted_issuers` directly, step 3 MAY still succeed via a TrustFrame chain. After step 3 (CA signature check), if the IdentFrame was issued by a `grantee_ca`, the Node SHOULD verify that a valid, unexpired TrustFrame exists from a matching `grantor_nid` (which IS in `trusted_issuers`) covering the requested capability and target node path. The TrustFrame itself MUST pass its own checks (§5.2 error table) — failure short-circuits admission with the corresponding `NIP-TRUST-FRAME-*` code instead of falling through to `NIP-CERT-UNTRUSTED-ISSUER`.
+
+**Inbound RevokeFrame handling (§5.3)**: RevokeFrames arrive asynchronously over the NIP push channel and are not part of the per-IdentFrame admission flow above. When a Node receives a RevokeFrame it MUST:
+
+```
+Node receives RevokeFrame (push channel)
+  │
+  ├─ R1. Parse the frame and verify signer_nid signature over canonical JSON
+  │      (fail → emit ErrorFrame NIP-REVOKE-FRAME-INVALID; do not apply)
+  ├─ R2. Verify signer_nid is authorised to revoke target_nid — see §5.3 signer_nid rules
+  │      (fail → emit ErrorFrame NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER; do not apply)
+  ├─ R3. If `serial` is present, verify it matches a known issued cert for target_nid
+  │      (mismatch → emit ErrorFrame NIP-REVOKE-FRAME-SERIAL-MISMATCH; do not apply)
+  ├─ R4. If `reason` is outside the defined enum, treat as `key_compromise` (most restrictive)
+  │      and emit ErrorFrame NIP-REVOKE-FRAME-REASON-UNKNOWN to the publisher
+  ├─ R5. Poison the local cert / OCSP cache for target_nid
+  │      (if `serial` present, scope to that cert; otherwise scope to all certs for target_nid)
+  └─ R6. No success response is sent — RevokeFrame is fire-and-forget at the protocol layer.
+```
+
+After R5 takes effect, any subsequent IdentFrame for `target_nid` (or for the specific `serial` if scoped) will fail step 4 of the IdentFrame verification flow above with `NIP-CERT-REVOKED`.
 
 ---
 
@@ -307,6 +524,10 @@ Node receives IdentFrame
 | POST | `/v1/agents/{nid}/revoke` | Operator Cert | Revoke an NID |
 | GET | `/v1/agents/{nid}/verify` | None | Verify NID validity (OCSP lookup) |
 | POST | `/v1/nodes/register` | Operator Cert | Register an NWP node; issues a Node Certificate |
+| POST | `/v1/orchestrators/groups/register` | Operator Cert | (NPS-CR-0003) Register an orchestrator group; returns IdentFrame with `lineage.role = "group"` |
+| POST | `/v1/orchestrators/groups/{group_nid}/sessions/issue` | Group JWS *or* Operator Cert | (NPS-CR-0003) Issue a short-lived session NID under the group |
+| POST | `/v1/orchestrators/groups/{group_nid}/revoke` | Operator Cert | (NPS-CR-0003) Revoke the group AND cascade-revoke every live session under it |
+| GET | `/v1/orchestrators/groups/{group_nid}/sessions` | Operator Cert | (NPS-CR-0003) List sessions issued under this group (audit) |
 | GET | `/v1/ca/cert` | None | CA public-key certificate |
 | GET | `/v1/crl` | None | Certificate revocation list |
 | GET | `/.well-known/nps-ca` | None | CA discovery endpoint |
@@ -326,10 +547,23 @@ Node receives IdentFrame
     "ocsp":     "https://ca.mycompany.com/ocsp",
     "crl":      "https://ca.mycompany.com/v1/crl"
   },
-  "capabilities": ["agent", "node", "operator"],
+  "capabilities": ["agent", "node", "operator", "orchestrator-group"],
   "max_cert_validity_days": 30
 }
 ```
+
+### 8.1 Registration Authority (RA) endpoints (NPS-CR-0005, stub)
+
+NPS-CR-0005 introduces a three-tier Registration Authority (RA) model that admits agents into the CA along policy-driven paths *in addition to* the Operator-credential `POST /v1/agents/register` flow above. The default tier remains `operator_only` — the new tiers are opt-in via `NipCaOptions.EnrollmentTier` and add the following endpoints:
+
+| Method | Path | Auth | Description |
+|--------|------|------|-------------|
+| POST | `/v1/enrollment/tokens` | Operator Cert | (NPS-CR-0005, Tier 2) Mint a single-use, NID-scoped bootstrap token. |
+| GET  | `/v1/enrollment/pending` | Operator Cert | (NPS-CR-0005, Tier 3) List registration requests awaiting admin decision. |
+| POST | `/v1/enrollment/pending/{id}/approve` | Operator Cert | (NPS-CR-0005, Tier 3) Approve a pending request and issue the IdentFrame. |
+| POST | `/v1/enrollment/pending/{id}/reject` | Operator Cert | (NPS-CR-0005, Tier 3) Reject a pending request with an operator-supplied reason. |
+
+The three tiers (allowlist / bootstrap token / pending queue), the new error codes (`NIP-RA-TOKEN-INVALID`, `NIP-RA-TOKEN-EXPIRED`, `NIP-RA-NID-NOT-ALLOWED`, `NIP-RA-PENDING-REJECTED`), and the `NipCaOptions.EnrollmentTier` selector are specified in full by **[NPS-CR-0005](./cr/NPS-CR-0005-nip-ca-ra-model.md)**. The body, request/response shapes, and verification flow for these endpoints will land in this section once CR-0005 reaches Implemented.
 
 ---
 
@@ -349,11 +583,26 @@ Node receives IdentFrame
 | `NIP-CA-RENEWAL-TOO-EARLY` | `NPS-CLIENT-BAD-PARAM` | Renewal window not yet open |
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | Requested scope exceeds the parent scope |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP service temporarily unavailable |
-| `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame signature or format is invalid |
+| `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame signature or format is invalid — see §5.2 |
+| `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` is in the past — see §5.2 |
+| `NIP-TRUST-FRAME-GRANTOR-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `grantor_nid`'s own CA certificate is revoked or expired — see §5.2 |
+| `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR` | `NPS-AUTH-FORBIDDEN` | TrustFrame `trust_scope` contains a capability the grantor itself does not hold (no-scope-expansion principle, §10.3) — see §5.2 |
+| `NIP-TRUST-FRAME-NODES-PATTERN-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame `nodes` entry is not a valid `nwp://` URL pattern — see §5.2 |
+| `NIP-REVOKE-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | RevokeFrame is malformed (missing required field, signature verification fails, or canonical form is invalid) — see §5.3 |
+| `NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER` | `NPS-AUTH-FORBIDDEN` | RevokeFrame `signer_nid` is not authorised to revoke `target_nid` — see §5.3 |
+| `NIP-REVOKE-FRAME-SERIAL-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | RevokeFrame `serial` is present but does not match any currently-issued cert for `target_nid` — see §5.3 |
+| `NIP-REVOKE-FRAME-REASON-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | RevokeFrame `reason` carries a value outside the defined enum; receivers treat it as `key_compromise` — see §5.3 |
 | `NIP-ASSURANCE-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.assurance_level` does not match the cert extension `id-nid-assurance-level` (downgrade-attack defense) — see §5.1.1 |
 | `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `assurance_level` carries a value outside the defined enum (`anonymous` / `attested` / `verified`) — see §5.1.1 |
 | `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | Reputation log entry signature fails verification or canonical form is malformed — see §5.1.2 (NPS-RFC-0004) |
 | `NIP-REPUTATION-LOG-UNREACHABLE` | `NPS-DOWNSTREAM-UNAVAILABLE` | A log operator referenced by a Node's `reputation_policy` cannot be reached during admission evaluation — see §5.1.2 (NPS-RFC-0004) |
+| `NIP-CA-GROUP-REVOKED` | `NPS-AUTH-FORBIDDEN` | Cannot issue a session under a group NID that has been revoked — see §5.1.3 (NPS-CR-0003) |
+| `NIP-CA-PARENT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | The `parent_nid` / group NID referenced by a session-issue request does not exist — see §5.1.3 (NPS-CR-0003) |
+| `NIP-CA-PARENT-NOT-GROUP` | `NPS-CLIENT-BAD-PARAM` | The referenced parent NID exists but is not registered as `lineage.role = "group"` — see §5.1.3 (NPS-CR-0003) |
+| `NIP-CA-SESSION-VALIDITY-INVALID` | `NPS-CLIENT-BAD-PARAM` | Requested session validity below 60 seconds or above the CA's configured maximum — see §5.1.3 (NPS-CR-0003) |
+| `NIP-CA-JWS-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | Group-JWS authorisation on a session-issue request fails signature, header, or shape validation — see §5.1.3 (NPS-CR-0003) |
+| `NIP-CA-JWS-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | Group-JWS `iat` outside the CA's clock-skew window (default ±5 minutes) — see §5.1.3 (NPS-CR-0003) |
+| `NIP-CERT-PARENT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | A session NID's parent / group NID is revoked or expired (chain check, §7 step 3a) — see §5.1.3 (NPS-CR-0003) |
 
 HTTP-mode status mapping: see [status-codes.md](./status-codes.md).
 
@@ -376,6 +625,8 @@ At every link in the delegation chain, scope MUST NOT exceed that of its parent.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.8 | 2026-05-11 | Expanded §5.2 TrustFrame: added full field definition table (10 fields, including new required `issued_at`, `serial`, and `signer_nid` for revocation/audit traceability), explicit signature-canonicalisation rule (matching §5.1 IdentFrame), error sub-table, and full example. Added TrustFrame verification note to §7 (admit IdentFrames whose `issued_by` is a `grantee_ca` when a valid TrustFrame from a trusted `grantor_nid` covers the request). Four new error codes (§9): `NIP-TRUST-FRAME-EXPIRED`, `NIP-TRUST-FRAME-GRANTOR-REVOKED`, `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`, `NIP-TRUST-FRAME-NODES-PATTERN-INVALID`. |
+| 0.7 | 2026-05-07 | **NPS-CR-0003**: Orchestrator group NIDs and short-lived session NIDs. New §3.1 reserves `group-` / `session-` identifier prefixes on `entity-type = agent`. New signed `IdentFrame.lineage` object with `role` / `parent_nid` / `group_nid` / `session_id` / `purpose` / `owner_user_id` / `owner_key_id` (§5.1.3). New revocation reason `parent_revoked` (§5.3). New verification step **3a** for chain-check (§7). Four new CA endpoints under `/v1/orchestrators/groups/...` (§8). Seven new error codes (§9): `NIP-CA-GROUP-REVOKED`, `NIP-CA-PARENT-NOT-FOUND`, `NIP-CA-PARENT-NOT-GROUP`, `NIP-CA-SESSION-VALIDITY-INVALID`, `NIP-CA-JWS-INVALID`, `NIP-CA-JWS-EXPIRED`, `NIP-CERT-PARENT-REVOKED`. Backward-compatible for ordinary single-NID flows; opt-in for orchestrators. |
 | 0.6 | 2026-05-01 | Added `topology:read` to the standard `capabilities` registry (§5.1 capabilities table). This capability is required by Anchor Nodes at Phase 1–2 to gate access to topology read operations (`topology.snapshot` / `topology.stream`) as defined by the NPS-2 §12.4 minimum authorization binding (M6). Self-declared and key-signed at Phase 1–2; CA-attested role binding (`id-nps-node-roles` cert extension) deferred to Phase 3 pending RFC-0002 stabilization. |
 | 0.5 | 2026-04-26 | Added §5.1.2 Reputation Log Entry — wire format for Certificate-Transparency-style append-only behavioral records about a `subject_nid`. Phase 1 ships the entry shape (12 fields including dual-signature requirements over JCS-canonicalised form), the initial 8-value `incident` enum (`cert-revoked` / `rate-limit-violation` / `tos-violation` / `scraping-pattern` / `payment-default` / `contract-dispute` / `impersonation-claim` / `positive-attestation`), and the 5-step `severity` enum. New error codes `NIP-REPUTATION-ENTRY-INVALID` and `NIP-REPUTATION-LOG-UNREACHABLE`. Merkle / STH / inclusion-proof surface deferred to Phase 2 per [NPS-RFC-0004](rfcs/NPS-RFC-0004-nid-reputation-log.md) §8.1. |
 | 0.4 | 2026-04-25 | Added §5.1.1 Assurance Levels (`anonymous` / `attested` / `verified`); IdentFrame gains optional `assurance_level` field with backward-compatible default `anonymous`; new error codes `NIP-ASSURANCE-MISMATCH` and `NIP-ASSURANCE-UNKNOWN`. See [NPS-RFC-0003](rfcs/NPS-RFC-0003-agent-identity-assurance-levels.md). `Depends-On` NCP version corrected to `v0.6` per NPS-RFC-0001. |

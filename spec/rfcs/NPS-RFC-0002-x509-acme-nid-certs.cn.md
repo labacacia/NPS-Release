@@ -3,7 +3,7 @@
 ---
 **RFC 编号**：NPS-RFC-0002
 **标题**：NID 证书改用 X.509 + ACME
-**状态**：Draft — **EXPERIMENTAL**（仅限原型；临时未注册 OID `1.3.6.1.4.1.99999.1` — 禁止用于合规测试或生产证书签发；推到 Proposed/Accepted 以 IANA PEN 分配为前提条件，见 §10 OQ-2）
+**状态**：Proposed
 **作者**：Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**：_待定——PR 开立时指派_
 **创建日期**：2026-04-21
@@ -15,17 +15,6 @@
 **影响的规范**：NPS-3 NIP、tools/nip-ca-server（所有语言版本）、spec/error-codes.md
 **影响的 SDK**：.NET、Python、TypeScript、Java、Rust、Go
 ---
-
-> **警告：EXPERIMENTAL — 禁止用于合规测试或生产环境**
->
-> 本 RFC 为 **Draft** 状态，使用**未注册**的临时 OID arc `1.3.6.1.4.1.99999.1`。该 OID 尚未由 IANA 分配，可能与其他机构的分配冲突。
->
-> 使用本 OID 的实现：
-> - 禁止用于任何合规级别的测试
-> - 禁止签发生产环境 NID 证书
-> - 禁止用于跨组织互通测试
->
-> 本 RFC 将在 LabAcacia IANA PEN 分配完成、临时 OID 全面替换后，才从 Draft 推进至 Proposed/Accepted。届时所有使用临时 OID 签发的证书需全部吊销并重新签发。详见 §10 OQ-2。
 
 # NPS-RFC-0002：NID 证书改用 X.509 + ACME
 
@@ -369,18 +358,13 @@ SDK 移植，把 ACME 一并合进同一个 acceptance 是更经济的做法。
   **2026-04-27 由 prototype 数据确认（详见 §9.3）**：一起做。.NET 上
   X.509 + ACME 合计 7 工作日；拆开会要做两轮 5 SDK × 2 阶段移植，
   把 ACME 在同一个 acceptance 内顺手合并明显更经济。
-- [ ] **OQ-2 — 晋级前置条件**：IANA Private Enterprise Number (PEN) ——
-  **尚未提交申请**。**这是 RFC-0002 从 Draft 推进至 Proposed/Accepted
-  的硬性前提条件。** 在真实 PEN 分配完成之前：
-  - 使用 `1.3.6.1.4.1.99999.1` 的实现 MUST 将所有已签发证书视为仅限原型
-    （PEN 下发后吊销并重新签发）
-  - 禁止将原型证书用于任何级别的合规测试
-  - 禁止将原型证书用于生产 NID 签发
-  - 禁止在跨组织互通测试中使用原型证书
-  - 临时 OID `1.3.6.1.4.1.99999.1` 仅为开发占位符，无任何法律或技术效力
-
-  PEN 下发后：全部 `NpsX509Oids` 常量在各 SDK 中 search-replace 替换；
-  所有原型证书吊销；RFC 进入 Proposed 进行 shepherd 评审。
+- [x] **OQ-2 —— IANA Private Enterprise Number (PEN)**：**2026-05-08
+  确认** —— IANA 已将 PEN **65715** 分配给 LabAcacia / Neuro Protocol
+  Suites Committee，落地路径为 NPS-CR-0004。原临时 arc
+  `1.3.6.1.4.1.99999` 已退役，全部 `NpsX509Oids` 常量改以
+  `1.3.6.1.4.1.65715` 为根。任何在 `1.3.6.1.4.1.99999.*` 下签发的证书
+  MUST 在被用于合规测试、生产 NID 签发或跨组织互通之前吊销并在新 arc
+  下重新签发。PEN 落定后，本 RFC 由 Draft 推进至 Proposed。
 - [ ] **OQ-3**：NIP CA 是否要和公共 CA（例如 Let's Encrypt）
   交叉签名？延后到后续 RFC。
 
