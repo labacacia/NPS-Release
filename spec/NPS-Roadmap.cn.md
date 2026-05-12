@@ -150,21 +150,21 @@
 
 | 事项 | 备注 |
 |------|------|
-| **NPS-CR-0002 Phase 2** — 服务端 Anchor 中间件推送拓扑更新 | alpha.5 交付查询 API；push/notify 推迟；需新 CR 定义授权模型 |
+| **NPS-CR-0002 Phase 2** — 服务端 Anchor 中间件推送拓扑更新 | .NET 参考实现已通过 `AnchorNodeMiddleware` + `IAnchorTopologyService` 落地 push/notify；非 .NET 移植仍见下方 |
 | 非 .NET SDK 移植 NPS-CR-0002 `AnchorNodeClient` 拓扑客户端 | .NET 参考已完成；Python/TS/Go/Java/Rust 待移植 |
 | 非 .NET SDK 移植 NPS-RFC-0004 声誉助手（`ReputationLogClient`）| .NET 参考已完成；全六 SDK 待移植 |
 | 非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手 | .NET 已接入；其他 SDK 只有枚举，无执行逻辑 |
-| **NPS-RFC-0002** 晋级 Draft → Proposed/Accepted | 阻塞于 IANA PEN 分配（`nid-assurance-level` 当前用临时 OID `1.3.6.1.4.1.99999`）|
+| **NPS-RFC-0002** 晋级 Draft → Proposed/Accepted | 已由 NPS-CR-0004（2026-05-08）关闭：IANA PEN **65715** 已分配；OID arc `1.3.6.1.4.1.65715` 替换临时 `1.3.6.1.4.1.99999`；RFC-0002 晋级 Draft → Proposed（wire-in 落地于 alpha.6）|
 
 ## alpha.6 任务队列
 
-v1.0.0-alpha.6 待开展任务（未启动）：
+v1.0.0-alpha.6 待开展任务：
 
 ### 进行中的 RFC / CR
 
 | 事项 | 备注 |
 |------|------|
-| **NPS-CR-0002 Phase 2** — 服务端 Anchor 中间件推送拓扑更新 | alpha.5 交付查询 API；push/notify 推迟 |
+| **NPS-CR-0002 Phase 2** — 服务端 Anchor 中间件推送拓扑更新 | .NET 参考实现完成；alpha.6 关闭 `node_kind` 兼容窗口，要求 `topology.filter.node_roles` |
 | **NPS-RFC-0002** 晋级 Draft → Proposed/Accepted | 阻塞于 IANA PEN 分配 |
 
 ### SDK 功能缺口

@@ -2,13 +2,13 @@
 
 # NPS-2: Neural Web Protocol (NWP)
 
-**Spec Number**: NPS-2  
-**Status**: Proposed  
-**Version**: 0.9  
-**Date**: 2026-05-01  
-**Port**: 17433（默认，共用）/ 17434（可选独立）  
-**Authors**: Ori Lynn / INNO LOTUS PTY LTD  
-**Depends-On**: NPS-1 (NCP v0.6)、NPS-3 (NIP v0.4)、NPS-4 (NDP v0.6)  
+**Spec Number**: NPS-2
+**Status**: Proposed
+**Version**: 0.9
+**Date**: 2026-05-01
+**Port**: 17433（默认，共用）/ 17434（可选独立）
+**Authors**: Ori Lynn / INNO LOTUS PTY LTD
+**Depends-On**: NPS-1 (NCP v0.6)、NPS-3 (NIP v0.8)、NPS-4 (NDP v0.7)
 
 > 本文档为 NWP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
 
@@ -153,7 +153,7 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `data_sources` | array | 可选 | 底层数据源标识列表 |
 | `auth` | object | 必填 | 认证要求，见 §4.3 |
 | `rate_limits` | object | 可选 | 频率限制声明，见 §4.4 |
-| `actions` | object | 条件必填 | Action/Complex/Gateway 节点 MUST 填写；操作注册表，见 §4.6 |
+| `actions` | object | 条件必填 | Action/Complex/Anchor 节点 MUST 填写；操作注册表，见 §4.6 |
 | `endpoints` | object | 必填 | 各功能端点 URL |
 | `graph` | object | 可选 | 子节点引用（Complex Node 专用），见 §11 |
 | `tokenizer_support` | array | 可选 | 节点支持的 tokenizer 列表（见 [token-budget.cn.md](token-budget.cn.md)）|

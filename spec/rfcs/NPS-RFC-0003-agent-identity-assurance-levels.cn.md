@@ -295,10 +295,10 @@ Agent (L0)                         Node
 - [ ] **OQ-2**：L2 证书是否必须携带法律实体名字段（X.509
   `O`、`jurisdictionOfIncorporation`）？默认立场：是；细则
   延后到 CA 策略文档。
-- [ ] **OQ-3**：Gateway Node（NPS-AaaS-Profile）是否可提升
+- [ ] **OQ-3**：Anchor Node（NPS-AaaS-Profile）是否可提升
   它所代理 Agent 的保证等级，还是要求后端 Action Node 独立
-  校验？默认：Gateway 校验，后端通过 `X-NPS-Authed-Nid` header
-  信任 Gateway 决策。待 AaaS working-group 签字。
+  校验？默认：Anchor 校验，后端通过 `X-NPS-Authed-Nid` header
+  信任 Anchor 决策。待 AaaS working-group 签字。
 
 ---
 

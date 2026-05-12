@@ -2,8 +2,8 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 1.2  
-**Date**: 2026-05-01  
+**Version**: 1.4
+**Date**: 2026-05-11
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -100,7 +100,15 @@ NPS 采用两级错误体系：
 | `NIP-CA-RENEWAL-TOO-EARLY` | `NPS-CLIENT-BAD-PARAM` | 距到期超过 7 天，尚未到续期窗口 |
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | 请求的 scope 超出父级 scope（委托链违规）|
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP 服务暂时不可用 |
-| `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame 签名或格式不合法 |
+| `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame 签名或格式不合法 —— 见 NPS-3 §5.2 |
+| `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` 已过期 —— 见 NPS-3 §5.2 |
+| `NIP-TRUST-FRAME-GRANTOR-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `grantor_nid` 自身的 CA 证书已被吊销或过期 —— 见 NPS-3 §5.2 |
+| `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR` | `NPS-AUTH-FORBIDDEN` | TrustFrame `trust_scope` 包含 grantor 自身不持有的能力（不可扩大 scope 原则）—— 见 NPS-3 §5.2 |
+| `NIP-TRUST-FRAME-NODES-PATTERN-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame `nodes` 数组某项不是合法的 `nwp://` URL 模式（如通配符位置错误）—— 见 NPS-3 §5.2 |
+| `NIP-REVOKE-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | RevokeFrame 不合法（缺必填字段、签名校验失败或规范化形式错误）—— 见 NPS-3 §5.3 |
+| `NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER` | `NPS-AUTH-FORBIDDEN` | RevokeFrame `signer_nid` 无权吊销 `target_nid` —— 见 NPS-3 §5.3 |
+| `NIP-REVOKE-FRAME-SERIAL-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | RevokeFrame `serial` 存在但与 `target_nid` 当前已颁发证书的 serial 都不匹配 —— 见 NPS-3 §5.3 |
+| `NIP-REVOKE-FRAME-REASON-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | RevokeFrame `reason` 取值不在定义的枚举中；接收方按 `key_compromise` 处理（最严格）—— 见 NPS-3 §5.3 |
 | `NIP-ASSURANCE-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.assurance_level` 与证书扩展 `id-nid-assurance-level` 不一致（防 downgrade 攻击）—— 见 NPS-3 §5.1.1（NPS-RFC-0003）|
 | `NIP-ASSURANCE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `assurance_level` 取值不在定义枚举（`anonymous` / `attested` / `verified`）—— 见 NPS-3 §5.1.1（NPS-RFC-0003）|
 | `NIP-REPUTATION-ENTRY-INVALID` | `NPS-CLIENT-BAD-FRAME` | 声誉日志条目签名校验失败或规范化（RFC 8785 JCS）形式不合法 —— 见 NPS-3 §5.1.2（NPS-RFC-0004）|
@@ -125,8 +133,12 @@ NPS 采用两级错误体系：
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 中 NID 与签名证书不一致 |
 | `NDP-ANNOUNCE-ROLE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` 包含已移除的遗留值 `"gateway"`（NPS-CR-0001）；请改用 `"anchor"` 或 `"bridge"`。响应 SHOULD 携带指向 NPS-CR-0001 的 `hint` 字段。|
 | `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` 包含无法识别的值（非已知遗留移除值——遗留移除情况请用 `NDP-ANNOUNCE-ROLE-REMOVED`）。|
+| `NDP-ANNOUNCE-CONFLICT` | `NPS-CLIENT-CONFLICT` | 两个 AnnounceFrame 共享相同 `nid` 与 `graph_seq` 但所覆盖内容不同（注册表投毒企图；见 NPS-4 §7.4）|
+| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 的 `graph_seq` 小于或等于该 NID 此前已接受的最高值（回滚企图；见 NPS-4 §7.5）|
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame 序号不连续 |
-| `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry 暂��不可用 |
+| `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame 的签发者（签名 CA）不在当前注册表 profile 的签发者白名单中（见 NPS-4 §7.3）|
+| `NDP-CA-ATTEST-REQUIRED` | `NPS-AUTH-UNAUTHENTICATED` | 当前注册表 profile 要求 CA 背书的 NID，但 AnnounceFrame 证书链未锚定到配置的信任根（见 NPS-4 §7.3）|
+| `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry 暂时不可用 |
 
 ---
 
@@ -152,6 +164,8 @@ NPS 采用两级错误体系：
 | `NOP-RESOURCE-INSUFFICIENT` | `NPS-SERVER-UNAVAILABLE` | 预检（preflight）发现一个或多个 Worker Agent 资源不足（CGN 不够或缺少能力）|
 | `NOP-CONDITION-EVAL-ERROR` | `NPS-CLIENT-BAD-PARAM` | DAG 节点 condition 表达式求值失败（语法错误或引用了不存在的字段）|
 | `NOP-INPUT-MAPPING-ERROR` | `NPS-CLIENT-UNPROCESSABLE` | input_mapping JSONPath 无法解析或目标字段不存在 |
+| `NOP-COMPENSATION-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | 终态——saga 回滚过程中节点的 `compensate_action` 返回错误 |
+| `NOP-COMPENSATION-NOT-SUPPORTED` | `NPS-CLIENT-UNPROCESSABLE` | 终态——存在需要补偿的前驱缺少 `compensate_action` 且 `compensation_policy="strict"` |
 
 ---
 
