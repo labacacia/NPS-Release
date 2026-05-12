@@ -2,7 +2,7 @@
 
 > English | [中文版](sdks.cn.md)
 
-Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — at suite version **1.0.0-alpha.5**.
+Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — at suite version **1.0.0-alpha.6**.
 
 ---
 
@@ -35,7 +35,7 @@ For operator guides and embedding options (SQLite vs PostgreSQL) see [Wiki: NIP-
 
 ## NPS Daemons
 
-Reference deployment binaries for the standard three-layer NPS topology, currently at `v1.0.0-alpha.5`.
+Reference deployment binaries for the standard three-layer NPS topology, currently at `v1.0.0-alpha.6`.
 
 | Repo | Daemons | Quickstart |
 |------|---------|------------|

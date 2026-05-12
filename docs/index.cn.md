@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — 为 AI Agent 和神经模型量身设计的完整互联网协议栈。
 >
-> 1.0.0-alpha.5 · Apache 2.0 · [English](index.md)
+> 1.0.0-alpha.6 · Apache 2.0 · [English](index.md)
 
 ---
 
@@ -35,19 +35,19 @@ NPS 在**协议层面**同时解决这四个问题：
 pip install nps-lib==1.0.0a5
 
 # TypeScript
-npm install @labacacia/nps-sdk@1.0.0-alpha.5
+npm install @labacacia/nps-sdk@1.0.0-alpha.6
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.5
+cargo add nps-sdk@=1.0.0-alpha.6
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.5
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.6
 
 # Java (Gradle)
-implementation("com.labacacia.nps:nps-java:1.0.0-alpha.5")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.6")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.5
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.6
 ```
 
 ---
@@ -63,7 +63,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.5
 
 ## 状态
 
-**v1.0.0-alpha.5** — NWP 错误码全集 + RFC-0004 Phase 3（STH gossip 联邦）。全 30 个 NWP wire 错误码现已作为常量在六种 SDK 中发布。`nps-ledger` 新增 STH gossip 联邦（`GET /v1/log/gossip/sth`），含签名验证与单调性检查。新增 `NPS-SERVER-UNSUPPORTED` 状态码（HTTP 501）。Python、TypeScript、Java 三种 SDK 修复 `AssuranceLevel.from_wire("")` / `fromWire("")` 的 spec §5.1.1 行为。规范：NCP v0.6、NWP v0.10、NIP v0.6、NDP v0.6、NOP v0.4。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。**NIP CA Server** 在 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-gateway` + `nps-registry` + `nps-ledger`）在 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)。Layer-3 信任锚 daemon `nps-cloud-ca` 在 `innolotus` 组织私有，跟 NPS Cloud GA 一起公开（2027 Q1+）。
+**v1.0.0-alpha.6** — NWP 错误码全集 + RFC-0004 Phase 3（STH gossip 联邦）。全 30 个 NWP wire 错误码现已作为常量在六种 SDK 中发布。`nps-ledger` 新增 STH gossip 联邦（`GET /v1/log/gossip/sth`），含签名验证与单调性检查。新增 `NPS-SERVER-UNSUPPORTED` 状态码（HTTP 501）。Python、TypeScript、Java 三种 SDK 修复 `AssuranceLevel.from_wire("")` / `fromWire("")` 的 spec §5.1.1 行为。规范：NCP v0.6、NWP v0.10、NIP v0.6、NDP v0.6、NOP v0.4。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。**NIP CA Server** 在 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-gateway` + `nps-registry` + `nps-ledger`）在 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)。Layer-3 信任锚 daemon `nps-cloud-ca` 在 `innolotus` 组织私有，跟 NPS Cloud GA 一起公开（2027 Q1+）。
 
 ---
 
