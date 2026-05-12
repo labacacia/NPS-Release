@@ -56,7 +56,8 @@ repos:
   - name: labacacia/NPS-sdk-java
     kind: gradle-properties
     expected: required
-    manifest_file: gradle.properties
+    manifest_file: build.gradle.kts
+    version_regex: '^version\s*=\s*"([^"]+)"'
 
   - name: labacacia/NPS-sdk-rust
     kind: cargo-toml
@@ -72,17 +73,17 @@ repos:
   - name: labacacia/NPS-mcp-ingress
     kind: dotnet-csproj
     expected: required
-    manifest_file: src/McpIngress/McpIngress.csproj
+    manifest_file: src/LabAcacia.McpIngress/LabAcacia.McpIngress.csproj
 
   - name: labacacia/NPS-a2a-ingress
     kind: dotnet-csproj
     expected: required
-    manifest_file: src/A2aIngress/A2aIngress.csproj
+    manifest_file: src/LabAcacia.A2aIngress/LabAcacia.A2aIngress.csproj
 
   - name: labacacia/NPS-grpc-ingress
     kind: dotnet-csproj
     expected: required
-    manifest_file: src/GrpcIngress/GrpcIngress.csproj
+    manifest_file: src/LabAcacia.GrpcIngress/LabAcacia.GrpcIngress.csproj
 
   # ── Standalone tools ──────────────────────────────────────────────────────
   - name: labacacia/nip-ca-server
@@ -99,7 +100,7 @@ repos:
   - name: orilynn-studio/nps-orchestrator
     kind: dotnet-csproj
     expected: required
-    manifest_file: src/NpsOrchestrator/NpsOrchestrator.csproj
+    manifest_file: nps-hub/NpsHub.csproj
 
   # ── Stubs — placeholder repos (README must declare tracking line) ─────────
   - name: labacacia/NPS-Studio
