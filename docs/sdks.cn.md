@@ -4,6 +4,8 @@
 
 六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP），当前套件版本 **1.0.0-alpha.6**。
 
+> npm 说明：TypeScript 源码/tag 是 `v1.0.0-alpha.6`，但 npm 上的 `@labacacia/nps-sdk@1.0.0-alpha.6` tarball 缺少 `dist/`，已 deprecated。当前请安装 `@labacacia/nps-sdk@alpha`；它临时解析到 `1.0.0-alpha.5`。
+
 ---
 
 ## 语言矩阵

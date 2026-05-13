@@ -32,10 +32,10 @@ NPS 在**协议层面**同时解决这四个问题：
 
 ```bash
 # Python
-pip install nps-lib==1.0.0a5
+pip install nps-lib==1.0.0a6
 
 # TypeScript
-npm install @labacacia/nps-sdk@1.0.0-alpha.6
+npm install @labacacia/nps-sdk@alpha
 
 # Rust
 cargo add nps-sdk@=1.0.0-alpha.6
@@ -49,6 +49,8 @@ implementation("com.labacacia.nps:nps-java:1.0.0-alpha.6")
 # .NET
 dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.6
 ```
+
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.6` 已 deprecated，因为发布到 npm 的 tarball 缺少 `dist/`。当前 `alpha` dist-tag 临时指向 `1.0.0-alpha.5`；需要 alpha.6 源码时请使用 GitHub `v1.0.0-alpha.6` tag，等待下一个 npm 预发布。
 
 ---
 
