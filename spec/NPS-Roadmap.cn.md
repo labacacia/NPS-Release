@@ -48,7 +48,7 @@
 - [x] `services/conformance/NPS-Node-L1.md` v0.1（21 个 TC-N1-* 用例）
 - [x] `services/conformance/NPS-Node-L2.md` v0.1（10 个 TC-N2-* 用例，拓扑查询）
 - [x] LabAcacia 仓库公开，Discussions 开启；`NPS-Dev` monorepo 按设计保持私有
-- [x] 已发布：alpha.1（2026-04-10）、alpha.2（2026-04-19）、alpha.3（2026-04-26）、alpha.4（2026-04-30）、alpha.5（2026-05-01）
+- [x] 已发布：alpha.1（2026-04-10）、alpha.2（2026-04-19）、alpha.3（2026-04-26）、alpha.4（2026-04-30）、alpha.5（2026-05-01）、alpha.6（2026-05-12）
 
 ---
 
@@ -60,12 +60,12 @@
 
 | 语言 | 包名 | 状态 |
 |------|------|------|
-| .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.5（655 tests）|
-| Python     | `nps-lib`（PyPI）                  | ✅ v1.0.0-alpha.5（211+ tests，≥97% coverage）|
-| TypeScript | `@labacacia/nps-sdk`（npm）        | ✅ v1.0.0-alpha.5（284+ tests）|
-| Java       | `com.labacacia.nps:nps-java`（Maven Central）| ✅ v1.0.0-alpha.5（112+ tests）|
-| Rust       | `nps-sdk` + 6 个同生态 crate（crates.io）| ✅ v1.0.0-alpha.4（109 tests）|
-| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.4（96 tests）|
+| .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.6（655 tests）|
+| Python     | `nps-lib`（PyPI）                  | ✅ v1.0.0-alpha.6（211+ tests，≥97% coverage）|
+| TypeScript | `@labacacia/nps-sdk`（npm）        | ⚠️ 源码/tag 为 v1.0.0-alpha.6；npm `1.0.0-alpha.6` 已 deprecated，`alpha` tag 暂回 `1.0.0-alpha.5` |
+| Java       | `com.labacacia.nps:nps-java`（Maven Central）| ✅ v1.0.0-alpha.6（112+ tests）|
+| Rust       | `nps-sdk` + 6 个同生态 crate（crates.io）| ✅ v1.0.0-alpha.6（109 tests）|
+| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.6（96 tests）|
 
 ### NIP CA Server（六语言参考部署）
 
@@ -97,7 +97,7 @@
 
 ### 常驻 Daemon
 
-| Daemon         | alpha.5 状态 |
+| Daemon         | alpha.6 状态 |
 |----------------|-------------|
 | `npsd`         | ✅ L1 + 子 NID 签发 + 每 NID 收件箱队列（17 integration tests）|
 | `nps-registry` | ✅ SQLite 持久化注册中心（SqliteNdpRegistry，10 tests）|
@@ -120,9 +120,9 @@
 
 **目标**：现有生态（MCP、A2A、gRPC）适配器，更丰富的 SDK 示例，Tier-2 MsgPack 生产硬化。
 
-- [x] `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 适配器（`LabAcacia.McpIngress` v1.0.0-alpha.4）
-- [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task 适配器（`LabAcacia.A2aIngress` v1.0.0-alpha.4）
-- [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC 适配器（`LabAcacia.GrpcIngress` v1.0.0-alpha.4）
+- [x] `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 适配器（`LabAcacia.McpIngress` v1.0.0-alpha.6）
+- [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task 适配器（`LabAcacia.A2aIngress` v1.0.0-alpha.6）
+- [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC 适配器（`LabAcacia.GrpcIngress` v1.0.0-alpha.6）
 - [x] Tier-2 MsgPack 线路体积基准（聚合较 JSON 减少 63.6%）
 - [x] Token 节约基准（聚合较 REST 减少 45.0% CGN）
 - [x] NOP Orchestrator 端到端执行 3 节点 DAG

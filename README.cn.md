@@ -169,7 +169,7 @@ nps/
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `@labacacia/nps-sdk` | 1.0.0-alpha.6 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，ESM + CJS 双输出，Ed25519 签名，284 测试，98.75% 覆盖率；`NwpErrorCodes`（30 个常量）；`NpsStatusCodes.NPS_SERVER_UNSUPPORTED`；`fromWire("")` 返回 ANONYMOUS 修复 |
+| `@labacacia/nps-sdk` | 1.0.0-alpha.6 | ⚠️ npm artifact 已弃用 | 源码/tag 为 alpha.6；npm 上 `1.0.0-alpha.6` tarball 缺少 `dist/`，已 deprecated。当前 `alpha` dist-tag 暂回 `1.0.0-alpha.5`；下一个 npm 预发布将带修复后的 pack 校验。 |
 
 ### Java（`impl/java/`）
 

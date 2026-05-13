@@ -32,10 +32,10 @@ NPS solves all four **at the wire level**:
 
 ```bash
 # Python
-pip install nps-lib==1.0.0a5
+pip install nps-lib==1.0.0a6
 
 # TypeScript
-npm install @labacacia/nps-sdk@1.0.0-alpha.6
+npm install @labacacia/nps-sdk@alpha
 
 # Rust
 cargo add nps-sdk@=1.0.0-alpha.6
@@ -49,6 +49,8 @@ implementation("com.labacacia.nps:nps-java:1.0.0-alpha.6")
 # .NET
 dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.6
 ```
+
+> npm note: `@labacacia/nps-sdk@1.0.0-alpha.6` is deprecated because its published tarball omitted `dist/`. The `alpha` dist-tag currently resolves to `1.0.0-alpha.5`; use the GitHub `v1.0.0-alpha.6` tag for source until the next npm prerelease.
 
 ---
 

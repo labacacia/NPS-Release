@@ -48,7 +48,7 @@ Each phase breaks into three segments:
 - [x] `services/conformance/NPS-Node-L1.md` v0.1 (21 TC-N1-* test cases)
 - [x] `services/conformance/NPS-Node-L2.md` v0.1 (10 TC-N2-* test cases, topology queries)
 - [x] LabAcacia repos public, Discussions enabled; `NPS-Dev` monorepo intentionally private
-- [x] Published: alpha.1 (2026-04-10), alpha.2 (2026-04-19), alpha.3 (2026-04-26), alpha.4 (2026-04-30), alpha.5 (2026-05-01)
+- [x] Published: alpha.1 (2026-04-10), alpha.2 (2026-04-19), alpha.3 (2026-04-26), alpha.4 (2026-04-30), alpha.5 (2026-05-01), alpha.6 (2026-05-12)
 
 ---
 
@@ -60,12 +60,12 @@ Each phase breaks into three segments:
 
 | Language   | Package                            | Status |
 |------------|------------------------------------|--------|
-| .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.5 (655 tests) |
-| Python     | `nps-lib` (PyPI)                   | ✅ v1.0.0-alpha.5 (211+ tests, ≥97% coverage) |
-| TypeScript | `@labacacia/nps-sdk` (npm)         | ✅ v1.0.0-alpha.5 (284+ tests) |
-| Java       | `com.labacacia.nps:nps-java` (Maven Central) | ✅ v1.0.0-alpha.5 (112+ tests) |
-| Rust       | `nps-sdk` + 6 sibling crates (crates.io) | ✅ v1.0.0-alpha.4 (109 tests) |
-| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.4 (96 tests) |
+| .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.6 (655 tests) |
+| Python     | `nps-lib` (PyPI)                   | ✅ v1.0.0-alpha.6 (211+ tests, ≥97% coverage) |
+| TypeScript | `@labacacia/nps-sdk` (npm)         | ⚠️ source/tag v1.0.0-alpha.6; npm `1.0.0-alpha.6` deprecated, `alpha` tag temporarily on `1.0.0-alpha.5` |
+| Java       | `com.labacacia.nps:nps-java` (Maven Central) | ✅ v1.0.0-alpha.6 (112+ tests) |
+| Rust       | `nps-sdk` + 6 sibling crates (crates.io) | ✅ v1.0.0-alpha.6 (109 tests) |
+| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.6 (96 tests) |
 
 ### NIP CA Server (six-language reference deployment)
 
@@ -97,7 +97,7 @@ Each phase breaks into three segments:
 
 ### Daemons
 
-| Daemon         | Status at alpha.5 |
+| Daemon         | Status at alpha.6 |
 |----------------|-------------------|
 | `npsd`         | ✅ L1 + sub-NID issuance + per-NID inbox queue (17 integration tests) |
 | `nps-registry` | ✅ SQLite-backed real registry (SqliteNdpRegistry, 10 tests) |
@@ -120,9 +120,9 @@ Each phase breaks into three segments:
 
 **Goal**: adapters to existing ecosystems (MCP, A2A, gRPC), richer SDK examples, Tier-2 MsgPack production hardening.
 
-- [x] `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpIngress` v1.0.0-alpha.4)
-- [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.4)
-- [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC adapter (`LabAcacia.GrpcIngress` v1.0.0-alpha.4)
+- [x] `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpIngress` v1.0.0-alpha.6)
+- [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.6)
+- [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC adapter (`LabAcacia.GrpcIngress` v1.0.0-alpha.6)
 - [x] Tier-2 MsgPack wire-size benchmark (aggregate 63.6 % reduction vs JSON)
 - [x] Token-savings benchmark (aggregate 45.0 % CGN reduction vs REST)
 - [x] NOP orchestrator executes a 3-node DAG end-to-end
