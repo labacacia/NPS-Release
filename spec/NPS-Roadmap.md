@@ -184,7 +184,7 @@ Tasks queued for v1.0.0-alpha.6:
 | Item | Notes |
 |------|-------|
 | `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint) | ✅ Implemented in all six SDKs — `resolve_via_dns` / `resolveWithDns` / `ResolveViaDns`; injectable `DnsTxtLookup` |
-| `nps-gateway` L2 Internet ingress (`:8080`→`:443` termination, NCP over TLS) | Skeleton only at alpha.4; L2 conformance deferred |
+| `nps-gateway` process-level L2 Internet ingress (`:8080`→`:443` termination, NCP over TLS) | Skeleton only at alpha.4; L2 conformance deferred |
 | `nps-runner` L3 FaaS task runtime | Skeleton only; full impl Phase 3 scope |
 
 ### Tooling
