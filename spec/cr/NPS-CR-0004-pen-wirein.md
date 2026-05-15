@@ -8,7 +8,8 @@ Licensed under the Apache License, Version 2.0
 
 **CR ID**: NPS-CR-0004
 **Target version**: v1.0-alpha.6
-**Status**: Draft
+**Status**: Implemented
+**Implemented**: 2026-05-08
 **Type**: Backward-incompatible OID change (every cert issued under the provisional arc MUST be revoked and re-issued)
 **Author**: Ori, LabAcacia
 **Affected components**: NIP spec (NPS-3), NPS-RFC-0002, NPS-Roadmap (R08), all 6 SDKs (`dotnet`, `typescript`, `python`, `java`, `go`, `rust`), `tools/nip-ca-server` and its frozen examples (`example/{ts,python,go,rust}`), top-level CHANGELOG / README / CLAUDE.md

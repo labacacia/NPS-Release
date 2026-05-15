@@ -2,8 +2,8 @@ English | [中文版](./token-budget.cn.md)
 
 # Cognon Budget Specification
 
-**Version**: 0.5
-**Date**: 2026-05-09
+**Version**: 0.6
+**Date**: 2026-05-14
 
 ---
 
@@ -61,22 +61,42 @@ This formula reflects the average behavior of mainstream LLM tokenizers (≈ 4 b
 
 The byte-size fallback MUST NOT be used for **CGN-Billing** under any circumstances. If a node cannot resolve a `verified_tokenizer` for a request that would be billed, it MUST refuse to issue a CGN-Billing record for that request and either (a) downgrade the surface to CGN-Estimate (non-billable telemetry only) or (b) reject the request with a billing-class error.
 
-### 2.3 Exchange Rate Table (CGN Exchange Rates)
+### 2.3 Canonical Conversion Profile (CGN v1)
 
-Node implementations SHOULD ship with built-in CGN exchange rates for common models:
+The canonical model-token conversion algorithm is `cgn.v1`:
 
-| Model family | Tokenizer | 1 native token ≈ CGN | Notes |
-|--------------|-----------|-----------------------|-------|
-| OpenAI GPT-4 / GPT-4o | `cl100k_base` | 1.0 | Reference baseline |
-| Anthropic Claude | Claude tokenizer | 1.05 | Slightly higher than GPT-4 |
-| Google Gemini | SentencePiece | 0.95 | Slightly lower than GPT-4 |
-| Meta LLaMA 3 | `llama3-tokenizer` | 1.02 | Near baseline |
-| Mistral | SentencePiece | 0.98 | Near baseline |
-| Default (unknown model) | UTF-8 / 4 | 1.0 | Fallback (CGN-Estimate only) |
+```
+CGN = ceil(((input_tokens * input_weight)
+          + (output_tokens * output_weight)
+          + (thinking_tokens * thinking_weight))
+          * model_coefficient / scale)
+```
 
-The table is maintained with NPS version updates. Implementations MAY override the built-in rates via configuration.
+All missing token classes are treated as `0`. The result is a `uint32`.
+The default weights are `input_weight = 1`, `output_weight = 4`,
+`thinking_weight = 2`, `scale = 1000`, and `model_coefficient = 1`.
 
-**Profile applicability.** The rates above are normative for **CGN-Estimate** and tolerate the documented ±5 % drift between table values and the model's native count. For **CGN-Billing**, both counterparties MUST agree on a specific table version (pinned at session-start time or earlier and recorded inside the signed metering record) and MUST use the matching `verified_tokenizer`-derived native count; the ±5 % envelope does NOT apply. The `Default (unknown model)` row applies only to CGN-Estimate; CGN-Billing has no fallback row.
+The machine-readable source of truth for provider/model coefficients,
+unknown-model behavior, and conformance vectors is
+[`cgn-profiles.yaml`](./cgn-profiles.yaml). It currently defines profiles
+for DeepSeek chat/reasoner, OpenAI general/reasoning models, Anthropic
+Haiku/Sonnet/Opus classes, Ollama-local models, and a default unknown
+fallback.
+
+Unknown providers or model identifiers MUST use `default.unknown` for
+CGN-Estimate, SHOULD emit `cgn_profile_defaulted` telemetry, and MUST NOT be
+used for CGN-Billing. Operators MAY override model-pattern mappings locally,
+but such overrides MUST carry a different profile id or version so
+counterparties can distinguish them from the canonical table.
+
+**Profile applicability.** `cgn.v1` and `cgn-profiles.yaml` are normative for
+**CGN-Estimate** and tolerate the documented ±5 % drift between table values
+and the model's native count. For **CGN-Billing**, both counterparties MUST
+agree on a specific profile version (pinned at session-start time or earlier
+and recorded inside the signed metering record) and MUST use the matching
+`verified_tokenizer`-derived native count; the ±5 % envelope does NOT apply.
+`default.unknown` applies only to CGN-Estimate; CGN-Billing has no fallback
+row.
 
 ---
 
