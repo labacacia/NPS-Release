@@ -1,0 +1,127 @@
+version: "cgn.v1"
+schema_version: "1"
+effective_date: "2026-05-14"
+status: proposed
+description: "Canonical CGN conversion profiles for model-token accounting across providers."
+
+formula:
+  id: cgn.v1
+  expression: "ceil(((input_tokens * input_weight) + (output_tokens * output_weight) + (thinking_tokens * thinking_weight)) * model_coefficient / scale)"
+  missing_token_class_value: 0
+  rounding:
+    mode: ceil
+    output_type: uint32
+  defaults:
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    scale: 1000
+    model_coefficient: 1
+
+unknown_model_policy:
+  profile_id: default.unknown
+  warn: true
+  telemetry_flag: cgn_profile_defaulted
+  billing_allowed: false
+  behavior: "Unknown models use default.unknown for CGN-Estimate. CGN-Billing has no unknown-model fallback."
+
+profiles:
+  - id: default.unknown
+    provider: default
+    model_patterns: ["*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 1
+    scale: 1000
+    billing_allowed: false
+
+  - id: ds.deepseek-chat
+    provider: ds
+    model_patterns: ["deepseek-chat", "deepseek-chat-*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 1
+    scale: 1000
+    billing_allowed: true
+
+  - id: ds.deepseek-reasoner
+    provider: ds
+    model_patterns: ["deepseek-reasoner", "deepseek-reasoner-*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 2
+    scale: 1000
+    billing_allowed: true
+
+  - id: oa.gpt-4o
+    provider: oa
+    model_patterns: ["gpt-4o", "gpt-4o-*", "gpt-4.1", "gpt-4.1-*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 1.5
+    scale: 1000
+    billing_allowed: true
+
+  - id: oa.reasoning
+    provider: oa
+    model_patterns: ["o1", "o1-*", "o3", "o3-*", "o4-mini", "o4-mini-*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 3
+    scale: 1000
+    billing_allowed: true
+
+  - id: an.claude-haiku
+    provider: an
+    model_patterns: ["claude-*-haiku-*", "*haiku*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 0.75
+    scale: 1000
+    billing_allowed: true
+
+  - id: an.claude-sonnet
+    provider: an
+    model_patterns: ["claude-*-sonnet-*", "*sonnet*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 2
+    scale: 1000
+    billing_allowed: true
+
+  - id: an.claude-opus
+    provider: an
+    model_patterns: ["claude-*-opus-*", "*opus*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 4
+    scale: 1000
+    billing_allowed: true
+
+  - id: ollama.default
+    provider: ollama
+    model_patterns: ["*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 1
+    scale: 1000
+    billing_allowed: false
+
+test_vectors:
+  - { profile_id: default.unknown, input_tokens: 1000, output_tokens: 100, thinking_tokens: 0, weighted_tokens: 1400, raw_cgn: 1.4, expected_cgn: 2 }
+  - { profile_id: ds.deepseek-chat, input_tokens: 2000, output_tokens: 500, thinking_tokens: 0, weighted_tokens: 4000, raw_cgn: 4, expected_cgn: 4 }
+  - { profile_id: ds.deepseek-reasoner, input_tokens: 2000, output_tokens: 500, thinking_tokens: 1200, weighted_tokens: 6400, raw_cgn: 12.8, expected_cgn: 13 }
+  - { profile_id: oa.gpt-4o, input_tokens: 1200, output_tokens: 300, thinking_tokens: 0, weighted_tokens: 2400, raw_cgn: 3.6, expected_cgn: 4 }
+  - { profile_id: oa.reasoning, input_tokens: 1200, output_tokens: 300, thinking_tokens: 800, weighted_tokens: 4000, raw_cgn: 12, expected_cgn: 12 }
+  - { profile_id: an.claude-haiku, input_tokens: 1000, output_tokens: 250, thinking_tokens: 0, weighted_tokens: 2000, raw_cgn: 1.5, expected_cgn: 2 }
+  - { profile_id: an.claude-sonnet, input_tokens: 1000, output_tokens: 250, thinking_tokens: 500, weighted_tokens: 3000, raw_cgn: 6, expected_cgn: 6 }
+  - { profile_id: an.claude-opus, input_tokens: 1000, output_tokens: 250, thinking_tokens: 500, weighted_tokens: 3000, raw_cgn: 12, expected_cgn: 12 }

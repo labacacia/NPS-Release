@@ -2,8 +2,8 @@
 
 # Cognon Budget 规范
 
-**Version**: 0.5
-**Date**: 2026-05-09
+**Version**: 0.6
+**Date**: 2026-05-14
 
 ---
 
@@ -61,22 +61,37 @@ CGN = ceil(UTF-8_bytes / 4)
 
 字节数 fallback 在任何情况下 MUST NOT 用于 **CGN-Billing**。若 Node 无法为某条将被计费的请求解析出 `verified_tokenizer`，MUST 拒绝为该请求发出 CGN-Billing 记录，并采取以下两种处理之一：(a) 将该路面降级为 CGN-Estimate（仅作不可计费遥测）；(b) 以计费类错误拒绝该请求。
 
-### 2.3 汇率表（CGN Exchange Rates）
+### 2.3 规范转换 Profile（CGN v1）
 
-Node 实现 SHOULD 内置常见模型的 CGN 汇率：
+规范的模型 token 转换算法为 `cgn.v1`：
 
-| 模型族 | Tokenizer | 1 原生 Token ≈ CGN | 说明 |
-|--------|-----------|---------------------|------|
-| OpenAI GPT-4 / GPT-4o | `cl100k_base` | 1.0 | 基准参照 |
-| Anthropic Claude | Claude tokenizer | 1.05 | 略高于 GPT-4 |
-| Google Gemini | SentencePiece | 0.95 | 略低于 GPT-4 |
-| Meta LLaMA 3 | `llama3-tokenizer` | 1.02 | 接近基准 |
-| Mistral | SentencePiece | 0.98 | 接近基准 |
-| Default（未知模型）| UTF-8 / 4 | 1.0 | Fallback（仅适用于 CGN-Estimate）|
+```
+CGN = ceil(((input_tokens * input_weight)
+          + (output_tokens * output_weight)
+          + (thinking_tokens * thinking_weight))
+          * model_coefficient / scale)
+```
 
-汇率表随 NPS 版本更新维护。实现 MAY 通过配置覆盖内置汇率。
+缺失的 token 类别均按 `0` 处理。结果类型为 `uint32`。默认权重为：
+`input_weight = 1`、`output_weight = 4`、`thinking_weight = 2`、
+`scale = 1000`、`model_coefficient = 1`。
 
-**Profile 适用范围。** 上表对 **CGN-Estimate** 是 normative 的，并允许表内值与模型原生计数之间存在文档化的 ±5 % 漂移。对 **CGN-Billing**，双方对端 MUST 互相 pin 定一个特定的表版本（在会话开始时刻或更早，并记录到签名计量记录中），且 MUST 使用与之匹配的、由 `verified_tokenizer` 得出的原生计数；±5 % 容差**不**适用。`Default（未知模型）` 行仅适用于 CGN-Estimate；CGN-Billing 没有 fallback 行。
+Provider / model 系数、未知模型行为和合规测试向量的机器可读权威源是
+[`cgn-profiles.yaml`](./cgn-profiles.yaml)。当前覆盖 DeepSeek chat/reasoner、
+OpenAI general/reasoning、Anthropic Haiku/Sonnet/Opus、Ollama 本地模型以及
+默认 unknown fallback。
+
+未知 provider 或模型 id MUST 使用 `default.unknown` 作为 CGN-Estimate，
+SHOULD 发出 `cgn_profile_defaulted` 遥测警告，且 MUST NOT 用于 CGN-Billing。
+运维 MAY 在本地覆盖 model-pattern 映射，但此类覆盖 MUST 使用不同的 profile
+id 或版本，以便对端能区分它们与规范表。
+
+**Profile 适用范围。** `cgn.v1` 与 `cgn-profiles.yaml` 对 **CGN-Estimate**
+是 normative 的，并允许表内值与模型原生计数之间存在文档化的 ±5 % 漂移。
+对 **CGN-Billing**，双方对端 MUST 互相 pin 定一个特定 profile 版本（在会话
+开始时刻或更早，并记录到签名计量记录中），且 MUST 使用与之匹配的、由
+`verified_tokenizer` 得出的原生计数；±5 % 容差**不**适用。`default.unknown`
+仅适用于 CGN-Estimate；CGN-Billing 没有 fallback 行。
 
 ---
 

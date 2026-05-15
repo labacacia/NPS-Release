@@ -96,7 +96,7 @@ frames:
   - id: "0x20"
     name: IdentFrame
     protocol: NIP
-    protocol_version: "0.4"
+    protocol_version: "0.8"
     status: proposed
     description: Agent identity declaration and certificate. Carries NID, public key, capabilities, scope, optional metadata (model_family, tokenizer), and (NPS-RFC-0003) optional assurance_level — one of anonymous/attested/verified — that MUST agree with the cert id-nid-assurance-level extension when present. Used as connection handshake.
     fields_ref: "NPS-3-NIP.md#51-identframe-0x20"
@@ -112,7 +112,7 @@ frames:
   - id: "0x22"
     name: RevokeFrame
     protocol: NIP
-    protocol_version: "0.3"
+    protocol_version: "0.8"
     status: proposed
     description: NID or capability revocation. Takes immediate effect upon CA acknowledgment.
     fields_ref: "NPS-3-NIP.md#53-revokeframe-0x22"
