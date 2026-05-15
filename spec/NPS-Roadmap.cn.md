@@ -106,6 +106,9 @@
 | `nps-gateway`  | Phase 1 骨架（Internet 入站网关推迟）|
 | `nps-cloud-ca` | 存根（2027 Q1+）|
 
+`nps-gateway` 是 Internet ingress 的进程级 daemon 名，不会重新引入已退役的
+NWP Gateway Node 角色；逻辑节点角色仍为 Anchor Node 和 Bridge Node。
+
 ### 完成标准
 
 - [x] 六语言 SDK 单元覆盖率 ≥ 90%

@@ -27,6 +27,10 @@ You need an **SDK**. Pick your language and follow the quickstart on the Wiki.
 
 You need the **NPS Daemons** bundle (`npsd` + `nps-runner` + `nps-gateway` + `nps-registry`).
 
+`nps-gateway` is a process-level Internet ingress daemon name, not the
+retired NWP **Gateway Node** logical role. CR-0001 replaced that logical
+role with **Anchor Node** and **Bridge Node**.
+
 → [Wiki: Operators-QuickStart](https://github.com/labacacia/NPS-Release/wiki/Operators-QuickStart)
 
 ---

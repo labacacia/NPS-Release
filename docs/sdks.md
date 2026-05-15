@@ -43,6 +43,10 @@ Reference deployment binaries for the standard three-layer NPS topology, current
 |------|---------|------------|
 | [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd` (L1, :17433) · `nps-runner` (L1 FaaS) · `nps-gateway` (L2, :8080) · `nps-registry` (L2 NDP, :17436) | `docker compose up -d` |
 
+`nps-gateway` is a process-level Internet ingress daemon name, not the
+retired NWP **Gateway Node** logical role. CR-0001 replaced that logical
+role with **Anchor Node** and **Bridge Node**.
+
 The Layer-3 trust-anchor daemons (`nps-cloud-ca` and `nps-ledger`) are private under the `innolotus` org and ship publicly with NPS Cloud GA (2027 Q1+). For operator and architecture detail see [Wiki: Operators-QuickStart](https://github.com/labacacia/NPS-Release/wiki/Operators-QuickStart).
 
 ---

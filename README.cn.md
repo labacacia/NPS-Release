@@ -56,6 +56,10 @@ NPS 在生产环境跑作 **三层、六个常驻服务** —— 完整设计见
 | 3（信任锚点）| [`nps-cloud-ca`](https://github.com/labacacia/NPS-Dev/blob/main/tools/daemons/nps-cloud-ca/)  | 17435 | Deferral 骨架（指向 [`tools/nip-ca-server`](https://github.com/labacacia/NPS-Dev/blob/main/tools/nip-ca-server/)）|
 | 3（信任锚点）| [`nps-ledger`](https://github.com/labacacia/NPS-Dev/blob/main/tools/daemons/nps-ledger/)      | 17440 | RFC-0004 Phase 3：SQLite + Merkle + STH + inclusion proof + STH gossip 联邦 |
 
+命名说明：`nps-gateway` 是当前进程级 Internet ingress daemon 名，不是规范层
+已退役的 **Gateway Node** 逻辑角色。CR-0001 已将该角色替换为
+**Anchor Node** 和 **Bridge Node**。
+
 ---
 
 ## 为什么需要 NPS？

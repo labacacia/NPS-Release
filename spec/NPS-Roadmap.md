@@ -106,6 +106,10 @@ Each phase breaks into three segments:
 | `nps-gateway`  | Phase 1 skeleton (Internet ingress deferred) |
 | `nps-cloud-ca` | Stubbed (2027 Q1+) |
 
+`nps-gateway` is a process-level daemon name for Internet ingress. It does
+not reintroduce the retired NWP Gateway Node role; logical node roles remain
+Anchor Node and Bridge Node.
+
 ### Completion bar
 
 - [x] SDK unit coverage ≥ 90 % across all six languages
