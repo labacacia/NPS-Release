@@ -24,6 +24,10 @@ English | [中文版](./README.cn.md)
 | [nip-ca-server](https://github.com/labacacia/nip-ca-server) | NIP Certificate Authority — single-Docker self-hostable CA for issuing NID certificates | C# / .NET 10 + PostgreSQL |
 | [nps-daemons](https://github.com/labacacia/nps-daemons) | Reference deployment binaries — `npsd`, `nps-runner`, `nps-gateway`, `nps-registry` (Layer 1 + Layer 2 of the standard NPS topology) | C# / .NET 10 |
 
+Naming note: `nps-gateway` is the current process-level Internet ingress
+daemon name. It is separate from the retired NWP **Gateway Node** logical
+role; CR-0001 replaced that role with **Anchor Node** and **Bridge Node**.
+
 The .NET SDK ships the underlying CA library (`LabAcacia.NPS.NIP`); the
 standalone [`nip-ca-server`](https://github.com/labacacia/nip-ca-server)
 repo wraps it as a deployable service. Five frozen reference ports

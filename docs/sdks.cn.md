@@ -43,6 +43,10 @@
 |------|--------|----------|
 | [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd`（L1，:17433）· `nps-runner`（L1 FaaS）· `nps-gateway`（L2，:8080）· `nps-registry`（L2 NDP，:17436）| `docker compose up -d` |
 
+`nps-gateway` 是进程级 Internet ingress daemon 名，不是 NWP 中已退役的
+**Gateway Node** 逻辑角色。CR-0001 已将该逻辑角色替换为 **Anchor Node**
+和 **Bridge Node**。
+
 Layer-3 信任锚 daemon（`nps-cloud-ca` 和 `nps-ledger`）在 `innolotus` 组织私有仓库，随 NPS Cloud GA 公开发布（2027 Q1+）。运维和架构详情请参阅 [Wiki: Operators-QuickStart](https://github.com/labacacia/NPS-Release/wiki/Operators-QuickStart)。
 
 ---

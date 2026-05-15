@@ -27,6 +27,10 @@ NPS 是一套多层协议族，从哪里开始取决于你在构建什么。
 
 你需要 **NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-gateway` + `nps-registry`）。
 
+`nps-gateway` 是进程级 Internet ingress daemon 名，不是 NWP 中已退役的
+**Gateway Node** 逻辑角色。CR-0001 已将该逻辑角色替换为 **Anchor Node**
+和 **Bridge Node**。
+
 → [Wiki: Operators-QuickStart](https://github.com/labacacia/NPS-Release/wiki/Operators-QuickStart)
 
 ---
