@@ -60,7 +60,7 @@ The conflation produces concrete harm even at alpha stage:
 - **Implementation ambiguity**: An implementer reading "Gateway Node" cannot tell whether a stateful cluster registry is required, or only stateless translation logic. The two have radically different complexity, failure semantics, and resource profiles.
 - **Deployment confusion**: A `Gateway Node` doing protocol translation is per-request scalable; one acting as cluster control plane is a singleton with HA concerns. Operators cannot reason about scale-out without the role being specified.
 - **Conformance untestable**: Profile L1/L2/L3 cannot meaningfully require "Gateway Node support" because the two underlying capabilities are independent — an implementation might support one without the other.
-- **Naming collision with deployment layer**: A separate naming registry (`docs/services.md`) is introducing a process named `nps-gateway` for Internet ingress duty. With `Gateway Node` retired, this collision is preempted.
+- **Naming collision with deployment layer**: A separate naming registry (`docs/services.md`) originally introduced a process named `nps-gateway` for Internet ingress duty. That process-level daemon has since been renamed to `nps-ingress`, keeping the deployment name aligned with the retired Gateway Node terminology.
 
 The cost of fixing this now (alpha.3, no production users) is near zero. The cost of fixing it after v1.0 freeze would be measured in deprecation cycles, downstream SDK breakage, and ecosystem confusion.
 
@@ -237,7 +237,7 @@ To prevent scope creep, the following are explicitly NOT part of this CR:
 
 - **Anchor Node HA / consensus protocol** — deferred to a future CR aligned with NPS-AaaS Profile L3 work. This CR specifies the role; HA is implementation-defined for now.
 - **Bridge Node protocol adapter specifications** — only protocol names are reserved here. Detailed bridging semantics for each protocol (HTTP, gRPC, MCP, A2A) live in separate CRs or annexes.
-- **Process-level naming** — the `nps-gateway` process name in `docs/services.md` is a separate decision tracked in a different document. Anchor Node and `nps-gateway` are orthogonal layers (logical role vs deployment form) and may co-locate in a single process or be split across processes; that is a deployment concern, not a spec concern.
+- **Process-level naming** — the Internet ingress process name is now `nps-ingress` (formerly `nps-gateway`) and remains a deployment-layer decision. Anchor Node and `nps-ingress` are orthogonal layers (logical role vs deployment form) and may co-locate in a single process or be split across processes; that is a deployment concern, not a spec concern.
 - **NDP Discovery semantics** — Anchor Node maintains cluster-internal topology; cross-cluster discovery remains NDP's responsibility. This CR does not modify NDP discovery semantics beyond the `Announce` field additions in §3.4.
 
 ## 8. Acceptance criteria

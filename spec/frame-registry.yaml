@@ -2,8 +2,8 @@
 # 机器可读帧注册表，CI 强制校验用
 # 归属：LabAcacia / INNO LOTUS PTY LTD · Apache 2.0
 
-version: "0.10"
-date: "2026-05-01"
+version: "0.11"
+date: "2026-05-14"
 
 # 统一端口：17433（全协议族共用，通过帧类型码路由）
 # 各协议可选独立端口：NWP 17434、NIP 17435、NDP 17436、NOP 17437

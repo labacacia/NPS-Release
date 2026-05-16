@@ -12,25 +12,59 @@
 
 ## [1.0.0-alpha.6] —— 2026-05-12
 
+---
+
+## [1.0.0-alpha.6] —— 2026-05-14
+
+### 规范
+
+- **token-budget v0.5 —— CGN-Estimate 与 CGN-Billing 两档配置**：`spec/token-budget.md` §2.1 定义两个命名 Profile。**CGN-Estimate**：预算 / 配额 / 遥测，允许采样和字节回退，±5% 漂移可接受。**CGN-Billing**：商业结算，要求 `verified_tokenizer` 级 NID 签名计量记录，不允许采样，汇率表版本锁定。AaaS-Profile 升至 **v0.7**，新增 L3-08 要求。
+
+- **NPS-CR-0004 —— IANA PEN 65715 wire-in**：IANA 于 2026-05-08 向 *Neuro Protocol Suites Committee* 分配 PEN **65715**，替换临时 arc `1.3.6.1.4.1.99999`。所有 NPS X.509 OID 锚定至 `1.3.6.1.4.1.65715`。**NPS-RFC-0002** 晋级 Draft → Proposed（移除 EXPERIMENTAL 横幅，OQ-2 已关闭），NIP 版本升至 **0.8**。**破坏性变更**：`1.3.6.1.4.1.99999.*` 下签发的证书 MUST 撤销并重签。
+
+- **NPS-CR-0003 —— Orchestrator 组 NID 与短时 session NID**（已接受，2026-05-11）：为 `urn:nps:agent:...` NID 保留 `group-` 和 `session-` 前缀；新增签名 `IdentFrame.lineage` 对象；新增 `parent_revoked` 撤销原因；`/v1/orchestrators/groups/...` 下四个新 CA 端点；七个新错误码。对单 NID 流程向后兼容，编排器可选接入。参考实现：.NET。
+
+- **NPS-CR-0002 Phase 2 规范完成（NWP v0.12）**：`DiffFrame` 新增 `cgn_est` 字段；注册 `anchor_state` 和 `resync_required` 事件类型；授权模型引入 `topology:subscribe` 能力。
+
+- **NPS-3-NIP §5.2 TrustFrame —— 完整规范**：十字段表；Ed25519/JCS 规范化；五个新错误码（含 `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`）。
+
+- **NPS-3-NIP §5.3 RevokeFrame —— 完整规范**：含 `parent_nid` 的字段表；reason 枚举附向后兼容性策略；四个新错误码。
+
+- **NPS-3-NIP §5.1 IdentFrame —— `cert_chain` + `cert_format`**：新增 DER 证书链和编码格式字段。
+
+- **`spec/frame-registry.yaml` —— 六个帧 draft → proposed**：NWP `0x10`–`0x12` 与 NIP `0x20`–`0x22` 全部晋级为 `status: proposed`。
+
+- **合规测试向量**：NWP 套件 +49 向量；NIP 套件 +23 向量（TrustFrame + RevokeFrame）。
+
+### .NET SDK
+
+- **`NPS.NWP.Anchor` —— Phase 2 alpha.6 边界**：`topology.filter.node_kind` 兼容窗口已关闭，客户端必须发送 `topology.filter.node_roles`。
+
+- **`NPS.NIP` —— 组 / 会话 NID 签发**：`NipCaService` 新增 `RegisterGroupAsync`、`IssueSessionAsync`、`ListSessionsAsync`。`RevokeAsync` 级联撤销存活会话。`VerifyAsync` 执行 §7 步骤 3a 链式检查。存储层新增 `nid_role` / `parent_nid` / `lineage_json` 列；PostgreSQL 迁移脚本 `db/002_orchestrator_session.sql`。
+
+### NIP CA Server
+
+- **`/v1/orchestrators/groups/...` 端点上线**：`register`、`revoke`、`sessions/issue`、`sessions` 审计列表。从 v1.0-alpha.5 升级前需应用 `db/002_orchestrator_session.sql`。
+
 ### Daemons
 
-- **原生 OS 安装包**：新增面向 4 个 OSS daemon（`npsd`、`nps-runner`、`nps-gateway`、
-  `nps-registry`）的 `.deb`（Ubuntu/Debian amd64）、`.rpm`（Fedora/RHEL x86_64）和
-  `.msi`（Windows x64）安装包。每个安装包包含自包含二进制（无需 .NET 运行时），
-  Linux 安装包附带 systemd service 单元文件，MSI 通过 NT SERVICE 虚拟账户注册为 Windows 服务。
-  安装包随 Docker 镜像一同上传到
-  [nps-daemons GitHub Release](https://github.com/labacacia/nps-daemons/releases)。
-  构建脚本：`tools/packaging/build-linux-packages.sh`（需要 `dotnet`、`dpkg-deb`、
-  `rpmbuild`）和 `tools/packaging/build-win-packages.ps1`（需要 `dotnet`、WiX 4 `wix`）。
-  通过在 `sync-nps-daemons.sh` 中设置 `BUILD_PACKAGES=1` 触发。
+- **运维端点基线**：`npsd` 和 `nip-ca-server` 均新增 `/healthz`（存活）、`/readyz`（就绪）、`/metrics`（Prometheus）端点。`SIGTERM` 触发 30 秒优雅关停。
+
+- **`nip-ca-server` —— `/metrics` 限制至管理端口 17436**：公共 CA 端口（17435）不再暴露 `/metrics`，管理端口（17436，默认仅限本机）提供 `/metrics`、`/healthz`、`/readyz`。
+
+- **原生 OS 安装包**：新增面向 4 个 OSS daemon（`npsd`、`nps-runner`、`nps-gateway`、`nps-registry`）的 `.deb`、`.rpm` 和 `.msi` 安装包。
 
 ### 文档
 
-- **GitHub Pages 精简为 7 个营销页面**：`docs/sdks.md` 缩减为 6 语言矩阵 + Wiki 深度文档链接，
-  移除了内联安装命令和功能代码示例（内容迁移到 NPS Wiki）。新增 `docs/get-started.md`
-  （按受众分流的引导页）和 `docs/who-uses-nps.md`（案例研究占位页）。所有 Pages
-  页面添加"📖 详见 Wiki"页脚。更新 `docs/navigation.md`。
-  Closes [labacacia/NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26)。
+- **GitHub Pages 精简为 7 个营销页面**：`docs/sdks.md` 缩减为 6 语言矩阵 + Wiki 深度文档链接。新增 `docs/get-started.md` 和 `docs/who-uses-nps.md`。关联 [NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26)。
+
+### Ops
+
+- **`deploy/docker-compose/`**：新增 `docker-compose.yml` 与 `.env.example`，支持一条命令启动完整 NPS daemon 栈。
+
+- **`deploy/systemd/`**：新增 `npsd` 与 `nip-ca-server` 的 systemd unit 文件，附 `install.sh` 安装脚本。
+
+- **`Makefile`**：新增顶层目标 `up`、`down`、`install-systemd`。
 
 ### 规范
 
