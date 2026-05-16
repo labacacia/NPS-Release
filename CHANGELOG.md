@@ -24,6 +24,54 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
+## [1.0.0-alpha.6] — 2026-05-14
+
+### Spec
+
+- **token-budget v0.5 — split CGN into CGN-Estimate and CGN-Billing profiles**: `spec/token-budget.md` §2.1 now defines two named profiles with non-overlapping conformance requirements. **CGN-Estimate** covers budgets / quota / telemetry — sampling permitted, byte-size fallback permitted, ±5 % drift acceptable, no signing requirement. **CGN-Billing** covers commercial settlement — `verified_tokenizer`-tier (NIP §5.1) required, NID-signed metering records, no sampling, no byte-size fallback, audit-log integration, exchange-rate table version pinned inside the signed record. §4.2 adds three new response headers (`X-NWP-Tokens-Profile`, `X-NWP-Billing-Record`, `X-NWP-Billing-Tokenizer-Tier`); silence on the wire defaults to CGN-Estimate. AaaS-Profile bumped to **v0.7** with new **L3-08** requirement.
+
+- **NPS-CR-0004 — IANA PEN 65715 wire-in**: IANA assigned PEN **65715** to the *Neuro Protocol Suites Committee* on 2026-05-08, replacing the provisional arc `1.3.6.1.4.1.99999`. All NPS X.509 OIDs now anchor to `1.3.6.1.4.1.65715`. **NPS-RFC-0002** promoted Draft → Proposed (EXPERIMENTAL banner removed; OQ-2 closed). NIP version bumped to **0.8**. **Backwards-incompatible**: certs minted under `1.3.6.1.4.1.99999.*` MUST be revoked and re-issued.
+
+- **NPS-CR-0003 — Orchestrator group NIDs and short-lived session NIDs** (Accepted 2026-05-11): Reserves `group-` and `session-` prefixes on `urn:nps:agent:...` NIDs; adds signed `IdentFrame.lineage` object; adds `parent_revoked` revocation reason; four new CA endpoints under `/v1/orchestrators/groups/...`; seven new error codes. Backward-compatible for single-NID flows; opt-in for orchestrators. Reference impl: .NET.
+
+- **NPS-CR-0002 Phase 2 spec complete (NWP v0.12)**: `cgn_est` field on `DiffFrame`; `anchor_state` and `resync_required` event types; `topology:subscribe` capability in authorization model.
+
+- **NPS-3-NIP §5.2 TrustFrame — complete spec**: Ten-field table; Ed25519/JCS canonicalization; five new error codes including `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`.
+
+- **NPS-3-NIP §5.3 RevokeFrame — complete spec**: Field table with `parent_nid`; reason enum with forward-compatibility policy; four new error codes.
+
+- **NPS-3-NIP §5.1 IdentFrame — `cert_chain` + `cert_format`**: New fields for DER certificate chain and encoding format.
+
+- **`spec/frame-registry.yaml` — six frames promoted draft → proposed**: NWP `0x10`–`0x12` and NIP `0x20`–`0x22` moved from `status: draft` to `status: proposed`.
+
+- **Conformance vectors**: NWP suite +49 vectors; NIP suite +23 vectors (TrustFrame + RevokeFrame).
+
+### .NET SDK
+
+- **`NPS.NWP.Anchor` — Phase 2 alpha.6 boundary**: `topology.filter.node_kind` compatibility window closed; clients must send `topology.filter.node_roles`.
+
+- **`NPS.NIP` — group / session NID issuance**: `NipCaService` gains `RegisterGroupAsync`, `IssueSessionAsync`, `ListSessionsAsync`. `RevokeAsync` cascades to live sessions. `VerifyAsync` performs §7 step 3a chain check. Storage grows `nid_role` / `parent_nid` / `lineage_json` columns; PostgreSQL migration `db/002_orchestrator_session.sql`.
+
+### NIP CA Server
+
+- **`/v1/orchestrators/groups/...` endpoints live**: `register`, `revoke`, `sessions/issue`, `sessions` listing. Apply `db/002_orchestrator_session.sql` before upgrading from v1.0-alpha.5.
+
+### Daemons
+
+- **Operability baseline**: Both `npsd` and `nip-ca-server` now expose `/healthz` (liveness), `/readyz` (readiness), and `/metrics` (Prometheus) endpoints. `SIGTERM` triggers graceful shutdown with a 30-second drain window.
+
+- **`nip-ca-server` — `/metrics` restricted to management port 17436**: The public CA port (17435) no longer exposes `/metrics`. A dedicated management port (17436, host-local by default) serves `/metrics`, `/healthz`, and `/readyz`.
+
+### Ops
+
+- **`deploy/docker-compose/`**: New `docker-compose.yml` plus `.env.example` enabling one-command startup of the full NPS daemon stack.
+
+- **`deploy/systemd/`**: New systemd unit files for `npsd` and `nip-ca-server` with `install.sh`.
+
+- **`Makefile`**: New top-level targets `up`, `down`, and `install-systemd`.
+
+---
+
 ## [1.0.0-alpha.5] — 2026-05-03
 
 ### Changed (Breaking)

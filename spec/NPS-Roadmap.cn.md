@@ -103,7 +103,7 @@
 | `nps-registry` | ✅ SQLite 持久化注册中心（SqliteNdpRegistry，10 tests）|
 | `nps-ledger`   | ✅ Phase 3：SQLite + Merkle + STH + 包含证明 + STH gossip（33 tests）|
 | `nps-runner`   | Phase 1 骨架（L3 运行时推迟）|
-| `nps-gateway`  | Phase 1 骨架（Internet 入站网关推迟）|
+| `nps-ingress`  | Phase 1 骨架（Internet 入站网关推迟）|
 | `nps-cloud-ca` | 存根（2027 Q1+）|
 
 `nps-gateway` 是 Internet ingress 的进程级 daemon 名，不会重新引入已退役的
@@ -183,7 +183,7 @@ v1.0.0-alpha.6 待开展任务：
 | 事项 | 备注 |
 |------|------|
 | `NDP.ResolveFrame` DNS TXT 解析（`nwp://` → 物理端点）| 已规范化；所有 SDK 尚未实现 |
-| `nps-gateway` 进程级 L2 Internet 入站网关（`:8080`→`:443` TLS 终止，NCP over TLS）| alpha.5 仅骨架；L2 合规推迟 |
+| `nps-ingress` L2 Internet 入站网关（`:8080`→`:443` TLS 终止，NCP over TLS）| alpha.5 仅骨架；L2 合规推迟 |
 | `nps-runner` L3 FaaS 任务运行时 | 仅骨架；完整实现在 Phase 3 范围 |
 
 ### 工具链

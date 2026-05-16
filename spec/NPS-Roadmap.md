@@ -103,7 +103,7 @@ Each phase breaks into three segments:
 | `nps-registry` | ✅ SQLite-backed real registry (SqliteNdpRegistry, 10 tests) |
 | `nps-ledger`   | ✅ Phase 3: SQLite + Merkle + STH + inclusion proofs + STH gossip (33 tests) |
 | `nps-runner`   | Phase 1 skeleton (L3 runtime deferred) |
-| `nps-gateway`  | Phase 1 skeleton (Internet ingress deferred) |
+| `nps-ingress`  | Phase 1 skeleton (Internet ingress deferred) |
 | `nps-cloud-ca` | Stubbed (2027 Q1+) |
 
 `nps-gateway` is a process-level daemon name for Internet ingress. It does
@@ -184,7 +184,7 @@ Tasks queued for v1.0.0-alpha.6:
 | Item | Notes |
 |------|-------|
 | `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint) | ✅ Implemented in all six SDKs — `resolve_via_dns` / `resolveWithDns` / `ResolveViaDns`; injectable `DnsTxtLookup` |
-| `nps-gateway` process-level L2 Internet ingress (`:8080`→`:443` termination, NCP over TLS) | Skeleton only at alpha.4; L2 conformance deferred |
+| `nps-ingress` L2 Internet ingress (`:8080`→`:443` termination, NCP over TLS) | Skeleton only at alpha.4; L2 conformance deferred |
 | `nps-runner` L3 FaaS task runtime | Skeleton only; full impl Phase 3 scope |
 
 ### Tooling
