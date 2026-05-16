@@ -48,7 +48,7 @@ Each phase breaks into three segments:
 - [x] `services/conformance/NPS-Node-L1.md` v0.1 (21 TC-N1-* test cases)
 - [x] `services/conformance/NPS-Node-L2.md` v0.1 (10 TC-N2-* test cases, topology queries)
 - [x] LabAcacia repos public, Discussions enabled; `NPS-Dev` monorepo intentionally private
-- [x] Published: alpha.1 (2026-04-10), alpha.2 (2026-04-19), alpha.3 (2026-04-26), alpha.4 (2026-04-30), alpha.5 (2026-05-01), alpha.6 (2026-05-12)
+- [x] Published: alpha.1 (2026-04-10), alpha.2 (2026-04-19), alpha.3 (2026-04-26), alpha.4 (2026-04-30), alpha.5 (2026-05-01)
 
 ---
 
@@ -60,12 +60,12 @@ Each phase breaks into three segments:
 
 | Language   | Package                            | Status |
 |------------|------------------------------------|--------|
-| .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.6 (655 tests) |
-| Python     | `nps-lib` (PyPI)                   | ✅ v1.0.0-alpha.6 (211+ tests, ≥97% coverage) |
-| TypeScript | `@labacacia/nps-sdk` (npm)         | ⚠️ source/tag v1.0.0-alpha.6; npm `1.0.0-alpha.6` deprecated, `alpha` tag temporarily on `1.0.0-alpha.5` |
-| Java       | `com.labacacia.nps:nps-java` (Maven Central) | ✅ v1.0.0-alpha.6 (112+ tests) |
-| Rust       | `nps-sdk` + 6 sibling crates (crates.io) | ✅ v1.0.0-alpha.6 (109 tests) |
-| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.6 (96 tests) |
+| .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.5 (655 tests) |
+| Python     | `nps-lib` (PyPI)                   | ✅ v1.0.0-alpha.5 (211+ tests, ≥97% coverage) |
+| TypeScript | `@labacacia/nps-sdk` (npm)         | ✅ v1.0.0-alpha.5 (284+ tests) |
+| Java       | `com.labacacia.nps:nps-java` (Maven Central) | ✅ v1.0.0-alpha.5 (112+ tests) |
+| Rust       | `nps-sdk` + 6 sibling crates (crates.io) | ✅ v1.0.0-alpha.4 (109 tests) |
+| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.4 (96 tests) |
 
 ### NIP CA Server (six-language reference deployment)
 
@@ -97,7 +97,7 @@ Each phase breaks into three segments:
 
 ### Daemons
 
-| Daemon         | Status at alpha.6 |
+| Daemon         | Status at alpha.5 |
 |----------------|-------------------|
 | `npsd`         | ✅ L1 + sub-NID issuance + per-NID inbox queue (17 integration tests) |
 | `nps-registry` | ✅ SQLite-backed real registry (SqliteNdpRegistry, 10 tests) |
@@ -105,10 +105,6 @@ Each phase breaks into three segments:
 | `nps-runner`   | Phase 1 skeleton (L3 runtime deferred) |
 | `nps-ingress`  | Phase 1 skeleton (Internet ingress deferred) |
 | `nps-cloud-ca` | Stubbed (2027 Q1+) |
-
-`nps-gateway` is a process-level daemon name for Internet ingress. It does
-not reintroduce the retired NWP Gateway Node role; logical node roles remain
-Anchor Node and Bridge Node.
 
 ### Completion bar
 
@@ -124,9 +120,9 @@ Anchor Node and Bridge Node.
 
 **Goal**: adapters to existing ecosystems (MCP, A2A, gRPC), richer SDK examples, Tier-2 MsgPack production hardening.
 
-- [x] `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpIngress` v1.0.0-alpha.6)
-- [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.6)
-- [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC adapter (`LabAcacia.GrpcIngress` v1.0.0-alpha.6)
+- [x] `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 adapter (`LabAcacia.McpIngress` v1.0.0-alpha.4)
+- [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task adapter (`LabAcacia.A2aIngress` v1.0.0-alpha.4)
+- [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC adapter (`LabAcacia.GrpcIngress` v1.0.0-alpha.4)
 - [x] Tier-2 MsgPack wire-size benchmark (aggregate 63.6 % reduction vs JSON)
 - [x] Token-savings benchmark (aggregate 45.0 % CGN reduction vs REST)
 - [x] NOP orchestrator executes a 3-node DAG end-to-end
@@ -176,8 +172,8 @@ Tasks queued for v1.0.0-alpha.6:
 | Item | Notes |
 |------|-------|
 | Non-.NET port of NPS-CR-0002 `AnchorNodeClient` topology client | .NET reference done; Python/TS/Go/Java/Rust need port |
-| Non-.NET port of NPS-RFC-0004 reputation helpers (`ReputationLogClient`) | .NET reference done; port all six SDKs |
-| Non-.NET port of NPS-RFC-0003 assurance-level enforcement helpers | Wired in .NET; other SDKs have enum only, no enforcement helpers |
+| Non-.NET port of NPS-RFC-0004 reputation helpers (`ReputationLogClient`) | .NET has Phase 1 data types only (no client); all six SDKs need full client |
+| ~~Non-.NET port of NPS-RFC-0003 assurance-level enforcement helpers~~ | ✅ Done — all six SDKs have full `AssuranceLevel` enum + enforcement logic |
 
 ### Protocol / spec items
 
@@ -193,6 +189,35 @@ Tasks queued for v1.0.0-alpha.6:
 |------|-------|
 | **NPS Studio** — visual debugger for NPS frame streams | Phase 2 target; not yet started |
 | **NPS Probe** — Agent Coder conformance CLI | Phase 2 target; not yet started |
+
+---
+
+## alpha.7 Task Queue
+
+Tasks queued for v1.0.0-alpha.7:
+
+### SDK parity (carry-over from alpha.6 — hard release gate)
+
+Every SDK release MUST ship all six languages at the same feature level. The following
+items were deferred from alpha.6 and MUST be completed before alpha.7 can be tagged.
+
+| Item | Scope | Notes |
+|------|-------|-------|
+| NPS-CR-0002 `AnchorNodeClient` | Python / TypeScript / Go / Java / Rust | .NET reference: `NPS-sdk-dotnet/src/NPS.NWP.Anchor/Client/`; ports need `GetSnapshotAsync` + `SubscribeAsync` + topology data types |
+| NPS-RFC-0004 `ReputationLogClient` | All six SDKs (incl. .NET) | .NET has Phase 1 data types only; full client (Phase 2 Merkle / STH / inclusion proofs) needed across all SDKs |
+
+### New spec / implementation
+
+| Item | Notes |
+|------|-------|
+| **NPS-CR-0005** — NIP CA RA model | Spec completion (Draft → Proposed) + .NET reference impl (three enrollment tiers: allowlist / bootstrap-token / approval-queue) + PostgreSQL migration |
+| **#51 CGN Profile换算规范** | Complete `cgn-profiles.yaml` with per-model token-per-CGN conversion tables; add protocol binding in `token-budget.md` |
+
+### In-flight CRs / RFCs
+
+| Item | Notes |
+|------|-------|
+| **NPS-RFC-0002** promotion Proposed → Accepted | Shepherd review; gated on no open OQs |
 
 ---
 
