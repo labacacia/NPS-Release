@@ -204,7 +204,7 @@ items were deferred from alpha.6 and MUST be completed before alpha.7 can be tag
 | Item | Scope | Notes |
 |------|-------|-------|
 | NPS-CR-0002 `AnchorNodeClient` | Python / TypeScript / Go / Java / Rust | .NET reference: `NPS-sdk-dotnet/src/NPS.NWP.Anchor/Client/`; ports need `GetSnapshotAsync` + `SubscribeAsync` + topology data types |
-| NPS-RFC-0004 `ReputationLogClient` | All six SDKs (incl. .NET) | .NET has Phase 1 data types only; full client (Phase 2 Merkle / STH / inclusion proofs) needed across all SDKs |
+| ~~NPS-RFC-0004 `ReputationLogClient`~~ | ~~All six SDKs (incl. .NET)~~ | ✅ Done (2026-05-17) — all six SDKs ship `ReputationLogEntry`, `SignedTreeHead`, `InclusionProof`, full `ReputationLogClient` (submit / query / STH / proof / gossip-STH), `VerifyInclusion` (RFC 9162 Merkle fold), and comprehensive regression tests |
 
 ### New spec / implementation
 
