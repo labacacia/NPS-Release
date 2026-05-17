@@ -204,7 +204,7 @@ v1.0.0-alpha.7 待开展任务：
 | 事项 | 范围 | 备注 |
 |------|------|------|
 | NPS-CR-0002 `AnchorNodeClient` | Python / TypeScript / Go / Java / Rust | .NET 参考：`NPS-sdk-dotnet/src/NPS.NWP.Anchor/Client/`；各端口需实现 `GetSnapshotAsync` + `SubscribeAsync` + 拓扑数据类型 |
-| NPS-RFC-0004 `ReputationLogClient` | 全六 SDK（含 .NET）| .NET 仅有 Phase 1 数据类型；需完整客户端（Phase 2 Merkle / STH / 包含证明）覆盖所有 SDK |
+| ~~NPS-RFC-0004 `ReputationLogClient`~~ | ~~全六 SDK（含 .NET）~~ | ✅ 已完成（2026-05-17）—— 全六 SDK 均已实现 `ReputationLogEntry`、`SignedTreeHead`、`InclusionProof`、完整 `ReputationLogClient`（submit / query / STH / proof / gossip-STH）、`VerifyInclusion`（RFC 9162 Merkle fold）及完整回归测试 |
 
 ### 新规范 / 实现
 
