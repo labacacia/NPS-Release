@@ -2,8 +2,8 @@ English | [中文版](./NPS-Roadmap.cn.md)
 
 # NPS Roadmap
 
-**Version**: 0.4  
-**Date**: 2026-04-30  
+**Version**: 0.5  
+**Date**: 2026-05-17  
 **Owner**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -218,6 +218,45 @@ items were deferred from alpha.6 and MUST be completed before alpha.7 can be tag
 | Item | Notes |
 |------|-------|
 | **NPS-RFC-0002** promotion Proposed → Accepted | Shepherd review; gated on no open OQs |
+
+---
+
+## alpha.8 Task Queue
+
+Tasks queued for v1.0.0-alpha.8:
+
+### SDK parity (carry-over from alpha.7 — hard release gate)
+
+| Item | Scope | Notes |
+|------|-------|-------|
+| NPS-CR-0002 `AnchorNodeClient` | Python / Go / Java / Rust | TypeScript reference shipped in alpha.7 (`src/nwp/anchor-client.ts`); remaining four languages need `GetSnapshot` + `Subscribe` + topology data types + integration tests |
+
+### NIP identity hardening
+
+| Item | Notes |
+|------|-------|
+| **NPS-RFC-0002 OID wire-in** | Replace provisional arc `1.3.6.1.4.1.99999` with assigned IANA PEN `1.3.6.1.4.1.65715` in all six SDKs and `nip-ca-server`; update ACME `agent-01` challenge OID and all X.509 extension OID constants |
+| **NPS-CR-0005 non-.NET CA server ports** | Port the RA model (allowlist / bootstrap-token / approval-queue tiers) to Python / TypeScript / Go / Java / Rust CA servers; parity with the .NET reference impl shipped in alpha.7 |
+| **NPS-CR-0005 spec promotion** | `NPS-CR-0005.md` Draft → Proposed; shepherd review; mark Accepted when no open OQs |
+
+### New spec / protocol
+
+| Item | Notes |
+|------|-------|
+| **NPS-RFC-0005** — Reputation Policy Enforcement | Define wire format for `reputation_policy` in `AnchorNodeOptions` and `IdentFrame.metadata`; enforcement decision lifecycle (accept / throttle / reject); builds on RFC-0003 assurance levels + RFC-0004 reputation log |
+| **#51 CGN Profile换算规范** | Finalize `cgn-profiles.yaml` with per-model token-per-CGN conversion tables; add protocol binding in `token-budget.md`; wire `cgn_limit` enforcement into `AnchorNodeMiddleware` |
+
+### Tooling
+
+| Item | Notes |
+|------|-------|
+| **NPS Probe v0.1** — protocol conformance CLI | CLI that smoke-tests an NPS endpoint: NCP preamble handshake, NWP topology query/stream, NIP identity verification; first Phase-2 tooling milestone |
+
+### In-flight CRs / RFCs
+
+| Item | Notes |
+|------|-------|
+| **NPS-RFC-0002** promotion Proposed → Accepted | Shepherd review; gated on OID wire-in landing and no open OQs |
 
 ---
 
