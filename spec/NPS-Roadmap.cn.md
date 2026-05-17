@@ -2,8 +2,8 @@
 
 # NPS 路线图
 
-**Version**: 0.4  
-**Date**: 2026-04-30  
+**Version**: 0.5  
+**Date**: 2026-05-17  
 **归属**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -218,6 +218,45 @@ v1.0.0-alpha.7 待开展任务：
 | 事项 | 备注 |
 |------|------|
 | **NPS-RFC-0002** 晋级 Proposed → Accepted | Shepherd 审查；以无未解 OQ 为前提 |
+
+---
+
+## alpha.8 任务队列
+
+v1.0.0-alpha.8 待开展任务：
+
+### SDK 一致性（alpha.7 遗留项 —— 发版硬门槛）
+
+| 事项 | 范围 | 备注 |
+|------|------|------|
+| NPS-CR-0002 `AnchorNodeClient` | Python / Go / Java / Rust | TypeScript 参考实现已在 alpha.7 完成（`src/nwp/anchor-client.ts`）；其余四种语言需实现 `GetSnapshot` + `Subscribe` + 拓扑数据类型 + 集成测试 |
+
+### NIP 身份认证强化
+
+| 事项 | 备注 |
+|------|------|
+| **NPS-RFC-0002 OID 写入** | 将所有六 SDK 及 `nip-ca-server` 中的临时弧 `1.3.6.1.4.1.99999` 替换为已分配的 IANA PEN `1.3.6.1.4.1.65715`；同步更新 ACME `agent-01` 挑战 OID 常量及所有 X.509 扩展 OID |
+| **NPS-CR-0005 非 .NET CA 服务器移植** | 将 RA 模型（allowlist / bootstrap-token / approval-queue 三级授权）移植至 Python / TypeScript / Go / Java / Rust CA 服务器；与 alpha.7 交付的 .NET 参考实现保持一致 |
+| **NPS-CR-0005 规范晋升** | `NPS-CR-0005.md` Draft → Proposed；Shepherd 评审；无悬留 OQ 后标记为 Accepted |
+
+### 新规范 / 协议
+
+| 事项 | 备注 |
+|------|------|
+| **NPS-RFC-0005** —— 声誉策略执行 | 定义附加于 `AnchorNodeOptions` 和 `IdentFrame.metadata` 的 `reputation_policy` wire 格式；执行决策生命周期（accept / throttle / reject）；基于 RFC-0003 保证等级 + RFC-0004 声誉日志构建 |
+| **#51 CGN Profile 换算规范** | 完善 `cgn-profiles.yaml`，补充主流模型的 token-per-CGN 换算表；在 `token-budget.md` 中增加协议绑定；将 `cgn_limit` 执行逻辑接入 `AnchorNodeMiddleware` |
+
+### 工具链
+
+| 事项 | 备注 |
+|------|------|
+| **NPS Probe v0.1** —— 协议合规 CLI | 命令行工具，用于测试 NPS 端点的协议合规性：NCP 握手前导、NWP 拓扑查询 / 订阅、NIP 身份验证；Phase-2 工具链首个里程碑 |
+
+### 进行中的 CR / RFC
+
+| 事项 | 备注 |
+|------|------|
+| **NPS-RFC-0002** 晋级 Proposed → Accepted | Shepherd 评审；以 OID 写入落地且无悬留 OQ 为前提 |
 
 ---
 
