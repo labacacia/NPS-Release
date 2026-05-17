@@ -229,13 +229,13 @@ v1.0.0-alpha.8 待开展任务：
 
 | 事项 | 范围 | 备注 |
 |------|------|------|
-| NPS-CR-0002 `AnchorNodeClient` | Python / Go / Java / Rust | TypeScript 参考实现已在 alpha.7 完成（`src/nwp/anchor-client.ts`）；其余四种语言需实现 `GetSnapshot` + `Subscribe` + 拓扑数据类型 + 集成测试 |
+| ~~NPS-CR-0002 `AnchorNodeClient`~~ | ~~Python / TypeScript / Go / Java / Rust~~ | ✅ 已完成（2026-05-17）—— 五语言全部完成，测试套件完整（Python 25、TS 24、Go 21、Java 25、Rust 25）；顺带修复 Java subscribe 迭代器 bug |
 
 ### NIP 身份认证强化
 
 | 事项 | 备注 |
 |------|------|
-| **NPS-RFC-0002 OID 写入** | 将所有六 SDK 及 `nip-ca-server` 中的临时弧 `1.3.6.1.4.1.99999` 替换为已分配的 IANA PEN `1.3.6.1.4.1.65715`；同步更新 ACME `agent-01` 挑战 OID 常量及所有 X.509 扩展 OID |
+| ~~**NPS-RFC-0002 OID 写入**~~ | ✅ 已完成 —— 六 SDK 自 alpha.6 起已全部使用 `1.3.6.1.4.1.65715`（IANA PEN 65715）；全量扫描未发现任何临时 OID |
 | **NPS-CR-0005 非 .NET CA 服务器移植** | 将 RA 模型（allowlist / bootstrap-token / approval-queue 三级授权）移植至 Python / TypeScript / Go / Java / Rust CA 服务器；与 alpha.7 交付的 .NET 参考实现保持一致 |
 | **NPS-CR-0005 规范晋升** | `NPS-CR-0005.md` Draft → Proposed；Shepherd 评审；无悬留 OQ 后标记为 Accepted |
 

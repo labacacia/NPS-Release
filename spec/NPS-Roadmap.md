@@ -229,13 +229,13 @@ Tasks queued for v1.0.0-alpha.8:
 
 | Item | Scope | Notes |
 |------|-------|-------|
-| NPS-CR-0002 `AnchorNodeClient` | Python / Go / Java / Rust | TypeScript reference shipped in alpha.7 (`src/nwp/anchor-client.ts`); remaining four languages need `GetSnapshot` + `Subscribe` + topology data types + integration tests |
+| ~~NPS-CR-0002 `AnchorNodeClient`~~ | ~~Python / TypeScript / Go / Java / Rust~~ | ✅ Done (2026-05-17) — all five ports complete with full test suites (Python 25, TS 24, Go 21, Java 25, Rust 25); Java iterator bug fixed |
 
 ### NIP identity hardening
 
 | Item | Notes |
 |------|-------|
-| **NPS-RFC-0002 OID wire-in** | Replace provisional arc `1.3.6.1.4.1.99999` with assigned IANA PEN `1.3.6.1.4.1.65715` in all six SDKs and `nip-ca-server`; update ACME `agent-01` challenge OID and all X.509 extension OID constants |
+| ~~**NPS-RFC-0002 OID wire-in**~~ | ✅ Done — all six SDKs already carried `1.3.6.1.4.1.65715` (IANA PEN 65715) since alpha.6; no provisional OID found in any SDK or `nip-ca-server` |
 | **NPS-CR-0005 non-.NET CA server ports** | Port the RA model (allowlist / bootstrap-token / approval-queue tiers) to Python / TypeScript / Go / Java / Rust CA servers; parity with the .NET reference impl shipped in alpha.7 |
 | **NPS-CR-0005 spec promotion** | `NPS-CR-0005.md` Draft → Proposed; shepherd review; mark Accepted when no open OQs |
 
