@@ -10,6 +10,40 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
+## [1.0.0-alpha.7] — 2026-05-17
+
+### SDKs
+
+- **RFC-0004 Phase 2 — `ReputationLogClient`** lands across all six language SDKs
+  (.NET, Python, TypeScript, Go, Java, Rust). CT-style reputation log client with
+  dual Ed25519 signatures; `SignedTreeHead` + `InclusionProof` + RFC 9162 Merkle fold
+  (`SHA256(0x00‖leaf)`, `SHA256(0x01‖left‖right)`); leaf canonical JSON includes the
+  `signature` field. Full test coverage in each language.
+
+- **SDK parity gate — AnchorNodeClient test coverage** (alpha.7 hard gate):
+  Python, Go, Java, and Rust `AnchorNodeClient` implementations each gain a
+  complete test suite (21–25 tests per language) covering all five topology event
+  types (`member_joined`, `member_left`, `member_updated`, `anchor_state`,
+  `resync_required`), stream cancellation, mid-stream error propagation, event
+  filtering, and URL normalization. TypeScript reference tests shipped in alpha.6.
+
+### NIP CA Server
+
+- **CR-0005 RA model — `db/003_ra_model.sql`**: Idempotent migration adds
+  `nip_bootstrap_tokens` (single-use Tier 2 enrollment tokens, SHA-256 hashed) and
+  `nip_pending_registrations` (Tier 3 operator-approval queue) tables. Apply before
+  upgrading if using RA-gated enrollment.
+
+### Roadmap
+
+- **NPS-Roadmap v0.5**: RFC-0004 `ReputationLogClient` marked ✅ Done (2026-05-17);
+  AnchorNodeClient parity and IANA PEN 65715 OID wire-in marked ✅ Done.
+  Alpha.8 task queue added: NPS-RFC-0005 Reputation Policy Enforcement, #51 CGN
+  Profile conversion spec, NPS Probe v0.1 conformance CLI, NPS-CR-0005 non-.NET
+  CA ports.
+
+---
+
 ## [1.0.0-alpha.6] — 2026-05-12
 
 ### Spec
@@ -440,6 +474,8 @@ Initial public alpha. See [Release-v1.0.0-alpha.1](https://github.com/LabAcacia/
 
 ---
 
+[1.0.0-alpha.7]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.7
+[1.0.0-alpha.6]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.6
 [1.0.0-alpha.5]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.5
 [1.0.0-alpha.4]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.4
 [1.0.0-alpha.3]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.3

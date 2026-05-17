@@ -10,6 +10,24 @@
 
 ---
 
+## [1.0.0-alpha.7] —— 2026-05-17
+
+### SDK
+
+- **RFC-0004 Phase 2 —— `ReputationLogClient`**：六语言 SDK（.NET、Python、TypeScript、Go、Java、Rust）全部落地 CT 式声誉日志客户端，双 Ed25519 签名；`SignedTreeHead`、`InclusionProof`、RFC 9162 Merkle 折叠（`SHA256(0x00‖leaf)`、`SHA256(0x01‖left‖right)`）；叶规范 JSON 含签名字段。各语言均有完整测试覆盖。
+
+- **SDK 一致性硬门槛 —— AnchorNodeClient 测试覆盖**（alpha.7 门槛）：Python、Go、Java、Rust 四语言 `AnchorNodeClient` 各新增完整测试套件（每语言 21–25 个测试），覆盖五种 topology 事件类型（`member_joined`、`member_left`、`member_updated`、`anchor_state`、`resync_required`）、流取消、中途错误传播、事件过滤和 URL 规范化。TypeScript 参考测试已于 alpha.6 发布。
+
+### NIP CA Server
+
+- **CR-0005 RA 模型 —— `db/003_ra_model.sql`**：幂等迁移脚本，新增 `nip_bootstrap_tokens`（单次使用 Tier 2 注册 token，SHA-256 哈希）和 `nip_pending_registrations`（Tier 3 操作员审批队列）两张表。如需使用 RA 门控注册，请在升级前执行。
+
+### 路线图
+
+- **NPS-Roadmap v0.5**：RFC-0004 `ReputationLogClient` 标记 ✅ 已完成（2026-05-17）；AnchorNodeClient 一致性与 IANA PEN 65715 OID wire-in 标记 ✅ 已完成。新增 alpha.8 任务队列：NPS-RFC-0005 声誉策略执行、#51 CGN Profile 转换规范、NPS Probe v0.1 合规 CLI、NPS-CR-0005 非 .NET CA 移植。
+
+---
+
 ## [1.0.0-alpha.6] —— 2026-05-12
 
 ---
@@ -419,5 +437,10 @@
 
 ---
 
+[1.0.0-alpha.7]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.7
+[1.0.0-alpha.6]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.6
+[1.0.0-alpha.5]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.5
+[1.0.0-alpha.4]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.4
+[1.0.0-alpha.3]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.3
 [1.0.0-alpha.2]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.1
