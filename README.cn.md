@@ -8,10 +8,10 @@
 [![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
 [![Release](https://img.shields.io/badge/release-v1.0.0--alpha.7-orange.svg)](CHANGELOG.cn.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.6-5b8cff.svg)]()
-[![NWP](https://img.shields.io/badge/NWP-v0.10-4af0b0.svg)]()
-[![NIP](https://img.shields.io/badge/NIP-v0.6-7b61ff.svg)]()
-[![NDP](https://img.shields.io/badge/NDP-v0.6-f0a050.svg)]()
-[![NOP](https://img.shields.io/badge/NOP-v0.4-ff8c42.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.12-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.8-7b61ff.svg)]()
+[![NDP](https://img.shields.io/badge/NDP-v0.7-f0a050.svg)]()
+[![NOP](https://img.shields.io/badge/NOP-v0.5-ff8c42.svg)]()
 
 NPS 是面向 AI Agent 和模型的完整 Web 基础协议族，由五个子协议组成，覆盖 AI 通信、Web 访问、身份认证、节点发现与多 Agent 编排。
 
