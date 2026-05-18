@@ -173,7 +173,7 @@ nps/
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `@labacacia/nps-sdk` | 1.0.0-alpha.7 | ⚠️ npm artifact 已弃用 | 源码/tag 为 alpha.7；npm 上 `1.0.0-alpha.7` tarball 缺少 `dist/`，已 deprecated。当前 `alpha` dist-tag 暂回 `1.0.0-alpha.5`；下一个 npm 预发布将带修复后的 pack 校验。 |
+| `@labacacia/nps-sdk` | 1.0.0-alpha.7 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，ESM + CJS 双格式，271 测试；alpha.7 新增 `ReputationLogClient`（RFC-0004 Ph2）。 |
 
 ### Java（`impl/java/`）
 
