@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — a complete internet protocol stack purpose-built for AI agents and neural models.
 >
-> Version 1.0.0-alpha.6 · Apache 2.0 · [中文版](index.cn.md)
+> Version 1.0.0-alpha.7 · Apache 2.0 · [中文版](index.cn.md)
 
 ---
 
@@ -32,25 +32,24 @@ NPS solves all four **at the wire level**:
 
 ```bash
 # Python
-pip install nps-lib==1.0.0a6
+pip install nps-lib==1.0.0a7
 
 # TypeScript
 npm install @labacacia/nps-sdk@alpha
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.6
+cargo add nps-sdk@=1.0.0-alpha.7
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.6
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.7
 
 # Java (Gradle)
-implementation("com.labacacia.nps:nps-java:1.0.0-alpha.6")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.7")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.6
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.7
 ```
 
-> npm note: `@labacacia/nps-sdk@1.0.0-alpha.6` is deprecated because its published tarball omitted `dist/`. The `alpha` dist-tag currently resolves to `1.0.0-alpha.5`; use the GitHub `v1.0.0-alpha.6` tag for source until the next npm prerelease.
 
 ---
 
@@ -65,7 +64,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.6
 
 ## Status
 
-**v1.0.0-alpha.6** — NWP error code completeness + RFC-0004 Phase 3 (STH gossip). All 30 NWP wire error codes are now published as constants across all six SDKs. `nps-ledger` ships STH gossip federation (`GET /v1/log/gossip/sth`) with signature verification and monotonicity checks. `NPS-SERVER-UNSUPPORTED` status code (HTTP 501) added. `AssuranceLevel.from_wire("")` / `fromWire("")` spec fix applied across Python, TypeScript, and Java SDKs. Spec at NCP v0.6, NWP v0.10, NIP v0.6, NDP v0.6, NOP v0.4. Reference implementations in **.NET**, **Python**, **TypeScript**, **Java**, **Rust**, **Go** — full NCP + NWP + NIP + NDP + NOP coverage. **NIP CA Server** at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server). **NPS Daemons** bundle (`npsd` + `nps-runner` + process-level Internet ingress `nps-gateway` + `nps-registry` + `nps-ledger`) at [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons). Layer-3 trust-anchor daemon `nps-cloud-ca` is private under the `innolotus` org and ships publicly with NPS Cloud GA (2027 Q1+).
+**v1.0.0-alpha.7** — `ReputationLogClient` (RFC-0004 Phase 2) across all six SDKs; AnchorNodeClient test parity for Python / Go / Java / Rust (21–25 tests each); NIP CA Server CR-0005 RA model migration (`db/003_ra_model.sql`) adding three-tier enrollment (AllowList / BootstrapToken / ApprovalQueue). Spec at NCP v0.6, NWP v0.10, NIP v0.6, NDP v0.6, NOP v0.4. Reference implementations in **.NET**, **Python**, **TypeScript**, **Java**, **Rust**, **Go** — full NCP + NWP + NIP + NDP + NOP coverage. **NIP CA Server** at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server). **NPS Daemons** bundle (`npsd` + `nps-runner` + process-level Internet ingress `nps-gateway` + `nps-registry` + `nps-ledger`) at [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons). Layer-3 trust-anchor daemon `nps-cloud-ca` is private under the `innolotus` org and ships publicly with NPS Cloud GA (2027 Q1+).
 
 ---
 

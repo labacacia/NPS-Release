@@ -8,7 +8,7 @@ Case studies, production deployments, and public integrations will be published 
 
 ## Status
 
-NPS is currently at `v1.0.0-alpha.6` — an early public preview. The first wave of production adopters is expected in Phase 3 (2027 Q1+). If you are evaluating NPS for a production use case, open a GitHub Discussion in the [NPS-Release](https://github.com/labacacia/NPS-Release) repository.
+NPS is currently at `v1.0.0-alpha.7` — an early public preview. The first wave of production adopters is expected in Phase 3 (2027 Q1+). If you are evaluating NPS for a production use case, open a GitHub Discussion in the [NPS-Release](https://github.com/labacacia/NPS-Release) repository.
 
 ---
 
