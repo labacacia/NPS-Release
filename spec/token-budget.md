@@ -215,7 +215,61 @@ The `token_est` field in a CapsFrame is in CGN:
 
 ---
 
-## 7. Streaming and Subscription Budget Policy
+## 7. Node-Operator CGN Limit (`cgn_limit`)
+
+While `X-NWP-Budget` is an agent-declared per-request cap, `cgn_limit` is the
+node operator's server-side cap on the CGN a single request may consume. Both
+caps exist independently; the effective budget for any request is:
+
+```
+effective_budget = min(cgn_limit, X-NWP-Budget)   // 0 means unlimited
+```
+
+If `X-NWP-Budget` is absent, `effective_budget = cgn_limit`. If `cgn_limit` is
+`0` (the default), only the agent-supplied `X-NWP-Budget` applies.
+
+### 7.1 NWM declaration
+
+Nodes that set `cgn_limit > 0` MUST publish it in the NWM under
+`token_budget.cgn_limit` so agents can discover the cap before sending requests:
+
+```json
+{
+  "token_budget": {
+    "cgn_limit": 5000,
+    "profile": "cgn.v1"
+  }
+}
+```
+
+### 7.2 Enforcement in `AnchorNodeMiddleware`
+
+`AnchorNodeOptions.CgnLimit` (uint32, default `0`) sets the per-request node cap.
+The middleware enforces it by:
+
+1. Reading `X-NWP-Budget` from the request header (agent cap, may be absent).
+2. Computing `effective_budget = cgn_limit > 0 ? min(cgn_limit, x_nwp_budget_or_max) : x_nwp_budget_or_max`.
+3. Passing `effective_budget` to the response builder and CGN-Estimate accumulator.
+4. If the CGN tally of the response would exceed `effective_budget`: trim first
+   (fewer fields / records); if trimming is impossible, return
+   `NWP-CGN-LIMIT-EXCEEDED` (HTTP 400, NPS status `NPS-CLIENT-REQUEST-TOO-LARGE`).
+
+### 7.3 CGN-Estimate vs. CGN-Billing enforcement
+
+| Profile | `cgn_limit` behaviour |
+|---------|-----------------------|
+| CGN-Estimate | Advisory: node SHOULD trim; MAY exceed if trimming is impossible and the overage is flagged in `X-NWP-Tokens`. |
+| CGN-Billing | Strict: node MUST NOT emit a response that exceeds `effective_budget`; `NWP-CGN-LIMIT-EXCEEDED` is mandatory on overage. |
+
+### 7.4 Error code
+
+| Error Code | HTTP Status | NPS Status | Description |
+|------------|-------------|------------|-------------|
+| `NWP-CGN-LIMIT-EXCEEDED` | 400 | `NPS-CLIENT-REQUEST-TOO-LARGE` | Response would exceed the effective CGN budget (`min(cgn_limit, X-NWP-Budget)`); trimming was not possible. Response body SHOULD include `effective_budget` and `estimated_cgn`. |
+
+---
+
+## 8. Streaming and Subscription Budget Policy
 
 The `X-NWP-Budget` cap applies to **synchronous request/response operations** (QueryFrame → CapsFrame / StreamFrame batch). The following continuous-push operations are subject to modified rules:
 

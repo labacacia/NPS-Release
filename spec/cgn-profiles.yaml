@@ -106,6 +106,96 @@ profiles:
     scale: 1000
     billing_allowed: true
 
+  - id: go.gemini-flash
+    provider: go
+    model_patterns: ["gemini-*-flash*", "gemini-2.0-flash*", "gemini-2.5-flash*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 0.75
+    scale: 1000
+    billing_allowed: true
+
+  - id: go.gemini-pro
+    provider: go
+    model_patterns: ["gemini-*-pro*", "gemini-1.5-pro*", "gemini-2.5-pro*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 2
+    scale: 1000
+    billing_allowed: true
+
+  - id: go.gemini-ultra
+    provider: go
+    model_patterns: ["gemini-ultra*", "gemini-2.0-ultra*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 4
+    scale: 1000
+    billing_allowed: true
+
+  - id: meta.llama-small
+    provider: meta
+    model_patterns: ["llama-3*-8b*", "llama-3*-8b*", "llama3*8b*", "llama-3.2*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 0.5
+    scale: 1000
+    billing_allowed: true
+
+  - id: meta.llama-mid
+    provider: meta
+    model_patterns: ["llama-3*-70b*", "llama3*70b*", "llama-3.1-70b*", "llama-3.3*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 1
+    scale: 1000
+    billing_allowed: true
+
+  - id: meta.llama-large
+    provider: meta
+    model_patterns: ["llama-3*-405b*", "llama3*405b*", "llama-3.1-405b*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 2
+    scale: 1000
+    billing_allowed: true
+
+  - id: mistral.small
+    provider: mistral
+    model_patterns: ["mistral-small*", "mistral-7b*", "open-mistral-7b*", "ministral*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 0.5
+    scale: 1000
+    billing_allowed: true
+
+  - id: mistral.medium
+    provider: mistral
+    model_patterns: ["mistral-medium*", "mistral-8x7b*", "mixtral*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 1
+    scale: 1000
+    billing_allowed: true
+
+  - id: mistral.large
+    provider: mistral
+    model_patterns: ["mistral-large*", "mistral-2*", "codestral*"]
+    input_weight: 1
+    output_weight: 4
+    thinking_weight: 2
+    model_coefficient: 1.5
+    scale: 1000
+    billing_allowed: true
+
   - id: ollama.default
     provider: ollama
     model_patterns: ["*"]
