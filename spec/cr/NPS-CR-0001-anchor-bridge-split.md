@@ -33,7 +33,7 @@ Implementation notes (corrections to the framing in §1/§2 below):
 
 **CR ID**: NPS-CR-0001
 **Target version**: v1.0-alpha.3
-**Status**: Draft, pending review
+**Status**: Implemented (v1.0.0-alpha.3, 2026-04-26)
 **Type**: Breaking change (spec-level role split)
 **Author**: Ori, LabAcacia
 **Affected components**: NWP spec, .NET SDK, conformance tests, public docs
@@ -285,12 +285,18 @@ informative errors on legacy usage to aid migration.
 
 ## 10. Open questions
 
-These are noted for reviewer attention; CR can merge with reasonable defaults but discussion welcome:
+*All three OQs resolved at implementation time (v1.0-alpha.3):*
 
-1. **Should `node_kind` array form be the canonical form going forward, with single-string accepted only as a parsing courtesy?** — Argues for: cleaner spec long-term, avoids two equally-valid forms. Argues against: most nodes carry one role, single-string is more readable in human-facing JSON.
+1. **`node_kind` array vs. single-string** — Resolved: array form is canonical; single-string accepted as a parse-time alias. In NDP v0.6 (alpha.6) the field was further renamed from `node_kind` to `node_roles`, with `node_kind` retained as a backward-compatibility alias through alpha.5.
 
-2. **Should `cluster_anchor` field be mandatory for non-standalone nodes, or optional with implicit "no cluster" default?** — Affects whether single-node deployments must declare anything special.
+2. **`cluster_anchor` mandatory vs. optional** — Resolved: optional with implicit standalone default. Single-node deployments omit the field.
 
-3. **Should Bridge Node's `bridge_protocols` be open-ended or restricted to a registered enum?** — Open-ended allows third-party protocol adapters without spec changes; enum gives stronger conformance guarantees.
+3. **`bridge_protocols` open-ended vs. enum** — Resolved: open-ended with reserved standard values (`"http"`, `"grpc"`, `"mcp"`, `"a2a"`). Third-party adapters may register additional values via future CRs.
 
-Default proposal in this CR: array form is canonical (single-string accepted), `cluster_anchor` is optional with implicit standalone, `bridge_protocols` is open-ended with reserved standard values. Reviewer may overrule.
+## 11. Implementation notes
+
+Shipped in **v1.0.0-alpha.3** (2026-04-26). Corrections to the framing in §1/§2:
+
+- `Gateway Node` was historically the *cluster entry point + NOP routing* role — what §1.1 calls "cluster control plane and external entrypoint". Accordingly, the existing implementation was renamed Gateway → **Anchor**.
+- `Bridge Node` is a genuinely new role (NPS ↔ non-NPS protocol translation). Phase 1 shipped only the spec definition and a skeleton `NPS.NWP.Bridge` package; concrete adapters per protocol were deferred to follow-up CRs (HTTP adapter shipped in alpha.7 via `NPS.NWP.Bridge.HttpBridgeDispatcher`; gRPC / MCP / A2A deferred).
+- The pre-existing `compat/{mcp,a2a,grpc}-bridge` packages carry the inverse direction (external → NPS) and were renamed `compat/{mcp,a2a,grpc}-ingress` to free the "Bridge" label; sibling GitHub/Gitee repos renamed accordingly.
