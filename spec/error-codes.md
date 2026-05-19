@@ -47,7 +47,10 @@ NPS uses a two-level error system:
 | `NWP-AUTH-NID-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | NID issuer is not in `trusted_issuers` |
 | `NWP-AUTH-NID-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Agent is missing a capability required by the node (e.g., `nwp:query`) |
 | `NWP-AUTH-ASSURANCE-TOO-LOW` | `NPS-AUTH-FORBIDDEN` | Agent's assurance level is below the node's `min_assurance_level` (NPS-2 §4.1) or per-action override (§4.6); response SHOULD include a `hint` pointing to a CA enrolment URL (NPS-RFC-0003) |
-| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | Reputation policy on the receiving Node matched a `reject_on` rule against the requesting `subject_nid`; response SHOULD include the matching `incident` + `severity` + log entry `seq` for traceability (NPS-RFC-0004) |
+| `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | **Deprecated** (RFC-0005): use `NWP-REPUTATION-REJECTED` / `NWP-REPUTATION-BANNED` instead. Retained as alias for one alpha cycle. |
+| `NWP-REPUTATION-THROTTLED` | `NPS-CLIENT-RATE-LIMITED` | Request rate-limited by reputation policy (`throttle_on` rule matched). Response includes `Retry-After: 60` header (NPS-RFC-0005) |
+| `NWP-REPUTATION-REJECTED` | `NPS-AUTH-FORBIDDEN` | Request rejected by reputation policy (`reject_on` rule matched). Response body includes `matched_incident` + `matched_severity` (NPS-RFC-0005) |
+| `NWP-REPUTATION-BANNED` | `NPS-AUTH-FORBIDDEN` | Request rejected and NID temporarily banned (`ban_on` rule matched or active ban cache entry). Response SHOULD include `X-NWP-Ban-Expires` Unix timestamp (NPS-RFC-0005) |
 | `NWP-QUERY-FILTER-INVALID` | `NPS-CLIENT-BAD-PARAM` | Filter syntax is invalid or nests deeper than 8 levels |
 | `NWP-QUERY-FIELD-UNKNOWN` | `NPS-CLIENT-BAD-PARAM` | `fields` references an unknown field |
 | `NWP-QUERY-CURSOR-INVALID` | `NPS-CLIENT-BAD-PARAM` | Cursor cannot be decoded or has expired |
