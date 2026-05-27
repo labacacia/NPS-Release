@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0
 
 **CR ID**: NPS-CR-0005
 **Target version**: v1.0-alpha.6
-**Status**: Draft
+**Status**: Implemented (2026-05-27)
 **Type**: Backward-compatible extension (new CA endpoints, new options, new error codes; Operator-credential registration unchanged)
 **Author**: Ori, LabAcacia
 **Affected components**: NIP spec (NPS-3) §8 / §9, `spec/error-codes.md`, `.NET` SDK (`NPS.NIP.Ca`), `tools/nip-ca-server`, conformance docs, top-level CHANGELOG / README

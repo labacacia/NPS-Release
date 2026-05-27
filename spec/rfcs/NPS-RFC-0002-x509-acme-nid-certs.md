@@ -3,12 +3,12 @@ English | [中文版](./NPS-RFC-0002-x509-acme-nid-certs.cn.md)
 ---
 **RFC Number**: NPS-RFC-0002
 **Title**: Adopt X.509 + ACME for NID certificates
-**Status**: Proposed
+**Status**: Accepted
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: _TBD — assigned on PR open_
 **Created**: 2026-04-21
-**Last-Updated**: 2026-04-27
-**Accepted**: _(set on merge to `dev`)_
+**Last-Updated**: 2026-05-27
+**Accepted**: 2026-05-27
 **Activated**: _(set when first reference SDK ships)_
 **Supersedes**: _none_
 **Superseded-By**: _none_
