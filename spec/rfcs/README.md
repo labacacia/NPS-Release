@@ -118,9 +118,10 @@ follow-up PR once at least one reference SDK ships the change.
 | Number | Title | Status | Accepted | Supersedes |
 |--------|-------|--------|----------|------------|
 | [0001](./NPS-RFC-0001-ncp-connection-preamble.md) | Add NCP connection preamble for native-mode traffic identification | Draft | _—_ | _—_ |
-| [0002](./NPS-RFC-0002-x509-acme-nid-certs.md) | Adopt X.509 + ACME for NID certificates | Draft | _—_ | _—_ |
+| [0002](./NPS-RFC-0002-x509-acme-nid-certs.md) | Adopt X.509 + ACME for NID certificates | Accepted | 2026-05-27 | _—_ |
 | [0003](./NPS-RFC-0003-agent-identity-assurance-levels.md) | Three-tier Agent identity assurance levels for anti-scraping / trust gating | Draft | _—_ | _—_ |
 | [0004](./NPS-RFC-0004-nid-reputation-log.md) | Append-only NID reputation log (Certificate Transparency for Agents) | Draft | _—_ | _—_ |
+| [0005](./NPS-RFC-0005-reputation-policy-enforcement.md) | Reputation Policy Enforcement | Accepted | 2026-05-27 | _—_ |
 
 ---
 
