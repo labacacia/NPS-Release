@@ -10,6 +10,65 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
+## [1.0.0-alpha.11] — 2026-05-28
+
+### Spec
+
+- **NCP v0.7** — `max_concurrent_streams` negotiation via HelloFrame/CapsFrame (uint16,
+  default 32; overflow → `NCP-STREAM-LIMIT-EXCEEDED`); QUIC stream mapping (one bidirectional
+  stream per NCP channel, HelloFrame on stream 0); rekeying at 2^32 frames or 24 h
+  (`EXT rekey: true`, `NCP-REKEY-REQUIRED`); mid-stream ErrorFrame MAY→MUST.
+
+- **NWP v0.13** — §13 SubscribeFrame formal specification (CR-0006 Accepted): `subscription_id`
+  UUID v4, QueryFrame-compatible filter, `heartbeat_interval_ms`, `max_events`, opaque `cursor`
+  for lossless resume. `topology:subscribe` SHOULD→MUST in §12.4. NWM `trust_anchors`
+  (CA NID URN array). `bridge_target` schema standardized (`protocol`, `endpoint`, `headers`).
+
+- **NIP v0.9** — `IdentFrame.ocsp_staple` (base64url DER OCSP response); X.509 extension OID
+  table: `id-nps-node-roles` (65715.2.2, ASN.1 SEQUENCE OF UTF8String), `id-nps-capabilities`
+  (65715.2.3); Phase 3 flag day at v1.0.0-beta.1 (`NIP-OCSP-STAPLE-EXPIRED` error code).
+
+- **NDP v0.8** — GraphFrame (0x32) rewritten to §5 topology-snapshot format: `graph_id`,
+  `nodes` (nid/cluster_anchor/node_roles), `edges` (from_nid/to_nid/latency_ms/protocol),
+  `ttl`, `metadata`; max 256 nodes / 1024 edges (`NDP-GRAPH-INVALID`, `NDP-GRAPH-TOO-LARGE`).
+  §9 federation forwarding: `public-federated` registries MUST forward AnnounceFrames;
+  `ndp-forwarded-by` loop detection max 3 hops; `NDP-FEDERATION-LOOP`.
+
+- **NOP v0.6** — AlignStream ack/NAK protocol (`window_size=16`, `ack_seq`/`nak_seq`,
+  `NOP-STREAM-NAK`); `weighted_first_k` + `merge_all` aggregate strategies; DelegateFrame
+  `target_cluster_anchor` for cross-cluster routing; webhook HMAC signing (`callback_secret`,
+  `X-NPS-Signature: sha256=…`, `NOP-CALLBACK-HMAC-MISSING`).
+
+- **CR-0006** (Accepted 2026-05-28) — SubscribeFrame §13 formal spec.
+- **RFC-0006** (Draft) — NCP native-mode transport binding: TCP length-prefix framing, QUIC
+  stream mapping, `max_concurrent_streams`, rekeying protocol.
+
+### SDKs
+
+- **All six SDKs** (Python/TypeScript/Go/Java/Rust/.NET) updated to alpha.11 feature set:
+  NOP saga compensation (`CompensationPolicy`, `DagNode.compensate_action`, `TaskState`
+  COMPENSATING/COMPENSATED); NOP cross-cluster (`DelegateFrame.target_cluster_anchor`);
+  NOP AlignStream ack/NAK (`ack_seq`/`nak_seq`, `weighted_first_k`, `merge_all`); NIP
+  `IdentFrame.ocsp_staple`; NIP `IdNpsCapabilities` OID constant (65715.2.3); NDP security
+  profiles (`SecurityProfile` LOCAL_DEV/ORG_PRIVATE/PUBLIC_FEDERATED); NDP `AnnounceFrame`
+  alpha.11 fields (`node_roles`, `cluster_anchor`, etc.); NDP GraphFrame §5 format;
+  NWP `SubscribeFrame` CR-0006 format; NWP `MemoryNodeOptions.trust_anchors`; NWM `trust_anchors`
+  emission.
+
+- **NuGet packages published** — `LabAcacia.NPS.*` 10 packages at `1.0.0-alpha.11`.
+
+### Daemons
+
+- **nps-ledger v1.0.0-alpha.11** — `POST /v1/log/federation/push`: batch reputation-entry push
+  from peer ledgers with `X-NPS-Forwarded-By` loop detection (NDP §9, max 3 hops,
+  `NDP-FEDERATION-LOOP`).
+- **nps-probe v0.2** — Check 5: NWM `trust_anchors` validation (NWP v0.13 §4.1).
+- **nps-orchestrator v1.0.0-alpha.11** — version bump and CHANGELOG backfill for alpha.9/10/11.
+- **NPS-NWP-Manager v0.1** — initial stub: `GET /health`, `GET /v1/nodes` (NWM fetch/cache),
+  `GET /v1/nodes/list`. Placeholder flipped to runnable .NET 10 minimal API.
+
+---
+
 ## [1.0.0-alpha.7] — 2026-05-17
 
 ### SDKs
