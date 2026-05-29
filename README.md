@@ -2,14 +2,14 @@ English | [中文版](./README.cn.md)
 
 # Neural Protocol Suite (NPS) — Protocol Specification
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.7-orange.svg)](CHANGELOG.md)
-[![NCP](https://img.shields.io/badge/NCP-v0.6-5b8cff.svg)]()
-[![NWP](https://img.shields.io/badge/NWP-v0.12-4af0b0.svg)]()
-[![NIP](https://img.shields.io/badge/NIP-v0.8-7b61ff.svg)]()
-[![NDP](https://img.shields.io/badge/NDP-v0.7-f0a050.svg)]()
-[![NOP](https://img.shields.io/badge/NOP-v0.5-ff8c42.svg)]()
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.11-orange.svg)](CHANGELOG.md)
+[![NCP](https://img.shields.io/badge/NCP-v0.7-5b8cff.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.13-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.9-7b61ff.svg)]()
+[![NDP](https://img.shields.io/badge/NDP-v0.8-f0a050.svg)]()
+[![NOP](https://img.shields.io/badge/NOP-v0.6-ff8c42.svg)]()
 
-> **Version:** 1.0.0-alpha.7 | **Status:** Proposed | **License:** Apache 2.0
+> **Version:** 1.0.0-alpha.11 | **Status:** Proposed | **License:** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 
@@ -67,11 +67,11 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 | Protocol | Analogue | Version | Summary |
 |----------|----------|---------|---------|
-| **NCP** — Neural Communication Protocol | Wire / Framing | v0.6 | Binary frame format, dual-tier codec (JSON / MsgPack), streaming |
-| **NWP** — Neural Web Protocol | HTTP | v0.10 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Anchor / Bridge nodes |
-| **NIP** — Neural Identity Protocol | TLS / PKI | v0.6 | Ed25519 identity, certificate lifecycle, CA, OCSP, CRL |
-| **NDP** — Neural Discovery Protocol | DNS | v0.6 | Node announcement, signed records, graph traversal |
-| **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.4 | DAG task orchestration, delegation, streaming results |
+| **NCP** — Neural Communication Protocol | Wire / Framing | v0.7 | Binary frame format, dual-tier codec (JSON / MsgPack), streaming; `max_concurrent_streams` negotiation; QUIC stream mapping; rekeying protocol |
+| **NWP** — Neural Web Protocol | HTTP | v0.13 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Anchor / Bridge nodes; SubscribeFrame §13 (CR-0006); NWM `trust_anchors` |
+| **NIP** — Neural Identity Protocol | TLS / PKI | v0.9 | Ed25519 identity, certificate lifecycle, CA, OCSP, CRL; `ocsp_staple`; OIDs 65715.2.2/2.3; RA three-tier enrollment |
+| **NDP** — Neural Discovery Protocol | DNS | v0.8 | Node announcement, signed records, GraphFrame §5 topology snapshot; §9 federation forwarding with loop detection |
+| **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.6 | DAG task orchestration, delegation, streaming results; AlignStream ack/NAK; saga compensation; webhook HMAC |
 
 **Dependency chain:** `NCP ← NWP ← NIP ← NDP` / `NCP + NWP + NIP ← NOP`
 
@@ -131,7 +131,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 | Range | Protocol | Frames |
 |-------|----------|--------|
 | `0x01–0x0F` | **NCP** | Anchor(0x01), Diff(0x02), Stream(0x03), Caps(0x04), Align(0x05, deprecated), Hello(0x06) |
-| `0x10–0x1F` | **NWP** | Query(0x10), Action(0x11) |
+| `0x10–0x1F` | **NWP** | Query(0x10), Action(0x11), Subscribe(0x12) |
 | `0x20–0x2F` | **NIP** | Ident(0x20), Trust(0x21), Revoke(0x22) |
 | `0x30–0x3F` | **NDP** | Announce(0x30), Resolve(0x31), Graph(0x32) |
 | `0x40–0x4F` | **NOP** | Task(0x40), Delegate(0x41), Sync(0x42), AlignStream(0x43) |
