@@ -2,8 +2,9 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP），当前套件版本 **1.0.0-alpha.7**。
+六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP），当前套件版本 **1.0.0-alpha.11**。
 
+> npm 说明：TypeScript 源码/tag 是 `v1.0.0-alpha.11`，但 npm 上的 `@labacacia/nps-sdk@1.0.0-alpha.11` tarball 缺少 `dist/`，已 deprecated。当前请安装 `@labacacia/nps-sdk@alpha`；它临时解析到 `1.0.0-alpha.11`。
 
 ---
 
@@ -24,7 +25,7 @@
 
 ## NIP CA Server
 
-可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构，自 `v1.0.0-alpha.3` 起从 SDK 拆出独立发布。
+可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构，自 `v1.0.0-alpha.11` 起从 SDK 拆出独立发布。
 
 | 仓库 | 技术栈 | 快速开始 |
 |------|--------|----------|
@@ -36,7 +37,7 @@
 
 ## NPS Daemons
 
-标准三层 NPS 拓扑的参考部署二进制，当前版本 `v1.0.0-alpha.7`。
+标准三层 NPS 拓扑的参考部署二进制，当前版本 `v1.0.0-alpha.11`。
 
 | 仓库 | Daemon | 快速开始 |
 |------|--------|----------|

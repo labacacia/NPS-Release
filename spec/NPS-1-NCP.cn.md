@@ -4,7 +4,7 @@
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.6  
+**Version**: 0.7
 **Date**: 2026-04-25  
 **Port**: 17433（默认，全协议族共用）  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
@@ -146,7 +146,7 @@ Client (Agent)                        Server (Node)
 
 ### 2.6.1 连接前导（原生模式）
 
-> **状态**：必选（NCP v0.6 起，由 [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.cn.md) 引入）。
+> **状态**：必选（NCP v0.7 起，由 [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.cn.md) 引入）。
 
 原生模式下，每条 NCP 连接 MUST 在传输层（TCP / QUIC）握手完成之后、首个 `HelloFrame` 发出之前，由客户端发出一段 **8 字节常量前导**。HTTP 模式不受影响（`Content-Type: application/nwp-frame` 头部承担同样的识别职责）。
 
@@ -485,8 +485,8 @@ NCP 提供应用层语义背压，补充 TCP/QUIC 传输层流量控制：
 
 ### 4.5 AlignFrame (0x05) — Deprecated
 
-> ⚠️ AlignFrame 已在 NCP v0.2 中标记为 **Deprecated**。  
-> 请使用 NOP AlignStream (0x43)，见 [NPS-5-NOP.cn.md](NPS-5-NOP.cn.md)。  
+> ⚠️ AlignFrame 已在 NCP v0.7 中标记为 **Deprecated**。
+> 请使用 NOP AlignStream (0x43)，见 [NPS-5-NOP.cn.md](NPS-5-NOP.cn.md)。
 > AlignFrame 将在 NPS v1.0 中移除。
 
 ---

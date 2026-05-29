@@ -6,7 +6,7 @@
 **Version**: 0.2
 **Date**: 2026-05-01
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6)、NPS-2 (NWP v0.11)、NPS-3 (NIP v0.6)、NPS-4 (NDP v0.6)
+**Depends-On**: NPS-1 (NCP v0.7)、NPS-2 (NWP v0.13)、NPS-3 (NIP v0.9)、NPS-4 (NDP v0.8)
 
 > 本规范是 [NPS-AaaS Profile](./NPS-AaaS-Profile.cn.md) 的姊妹篇。AaaS Profile 定义
 > *服务* 该做什么来暴露 Agent 能力；本规范定义 *节点宿主*（daemon、内嵌 SDK、runtime）
@@ -164,7 +164,7 @@ L3 引入 **spawn-on-demand** 要求。节点 MUST 能从 `spawn_spec_ref`（见
 
 ## 6. NDP Wire Δ（informative）
 
-本规范依赖 NPS-4 NDP v0.4 AnnounceFrame (0x30) 的三个新增字段：
+本规范依赖 NPS-4 NDP v0.8 AnnounceFrame (0x30) 的三个新增字段：
 
 | 字段 | 必填 | 用于 |
 |------|------|------|
@@ -216,7 +216,7 @@ Anchor MUST 同时满足 Node-Profile L2。
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 0.2 | 2026-05-01 | M8 跨 Profile 契约澄清。§4 NWP 条目扩展：L2 Anchor Node MUST 实现 `topology.snapshot` / `topology.stream`（NPS-2 §12；新增 AaaS L2-08 引用）。§8 关系段落：Anchor 宿主 Node-Profile L1 由 SHOULD 升为 MUST；声明 AaaS L2-08 的 Anchor MUST 同时满足 Node-Profile L2。Depends-On 升级：NCP v0.5 → v0.6，新增 NPS-2（NWP v0.10），NIP v0.3 → v0.6，NDP v0.4 → v0.6。 |
+| 0.2 | 2026-05-01 | M8 跨 Profile 契约澄清。§4 NWP 条目扩展：L2 Anchor Node MUST 实现 `topology.snapshot` / `topology.stream`（NPS-2 §12；新增 AaaS L2-08 引用）。§8 关系段落：Anchor 宿主 Node-Profile L1 由 SHOULD 升为 MUST；声明 AaaS L2-08 的 Anchor MUST 同时满足 Node-Profile L2。Depends-On 升级：NCP v0.7 → v0.6，新增 NPS-2（NWP v0.13），NIP v0.9 → v0.6，NDP v0.8 → v0.6。 |
 | 0.1 | 2026-04-24 | 初稿：三级节点合规（L1/L2/L3）、`activation_mode` 模型、L1 详细 req ID、L1 conformance 套件引用、与 AaaS Profile 的关系 |
 
 ---

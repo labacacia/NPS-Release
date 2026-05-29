@@ -32,7 +32,7 @@
 | 项 | 值 |
 |----|----|
 | 网络 | 仅 loopback；用例不要求外部 DNS 或跨机路由 |
-| Peer | 任一 L1 合规实现（推荐：`NPS.Core` + `NPS.NDP` + `NPS.NIP` + `NPS.NWP` NPS v1.0.0-alpha.3 或更高） |
+| Peer | 任一 L1 合规实现（推荐：`NPS.Core` + `NPS.NDP` + `NPS.NIP` + `NPS.NWP` NPS v1.0.0-alpha.11 或更高） |
 | 时钟 | 与 peer 墙钟偏差 ≤ ±5 秒（ISO 8601 UTC） |
 | 文件系统 | IUT 密钥库与 inbox 持久化可写目录 |
 | Wire 编码 | Tier-1 JSON MUST 覆盖；Tier-2 MsgPack 用例推迟到 L2 |
@@ -238,7 +238,7 @@ Peer 再 pull `A`。
   },
   "peer": {
     "name": "nps-dotnet-reference",
-    "version": "1.0.0-alpha.3"
+    "version": "1.0.0-alpha.11"
   },
   "run": {
     "date": "2026-04-24T00:00:00Z",

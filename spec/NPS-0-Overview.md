@@ -214,7 +214,7 @@ urn:nps:org:mycompany.com
 
 ```
 NPS/0.2     Suite version
-NCP/0.3     Sub-protocol version
+NCP/0.7     Sub-protocol version
 ```
 
 ---
@@ -232,7 +232,7 @@ All NPS frames share a single byte namespace, partitioned by protocol. See [fram
 | 0x40–0x4F | NOP | TaskFrame(0x40), DelegateFrame(0x41), SyncFrame(0x42), AlignStream(0x43) |
 | 0xF0–0xFF | System | ErrorFrame(0xFE); others reserved |
 
-† AlignFrame(0x05) was marked Deprecated in NCP v0.2 and is replaced by NOP AlignStream(0x43).
+† AlignFrame(0x05) was marked Deprecated in NCP v0.7 and is replaced by NOP AlignStream(0x43).
 
 ---
 
@@ -381,7 +381,7 @@ Optional dedicated per-protocol ports: NWP 17434, NIP 17435, NDP 17436, NOP 1743
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.2 | 2026-04-12 | Unified port (17433); dual transport modes (HTTP / native); AnchorFrame ownership clarified as Node-published; Cognon (CGN) accounting; NPS status-code system; ErrorFrame (0xFE); encoding Tier-3 marked Reserved; configurable frame size |
-| 0.1-draft | 2026-04-10 | Initial draft, integrating the NCP v0.2 design document |
+| 0.1-draft | 2026-04-10 | Initial draft, integrating the NCP v0.7 design document |
 
 ---
 

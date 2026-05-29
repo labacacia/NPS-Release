@@ -50,7 +50,7 @@ L2 requirements (L2-01..L2-07) are tracked in follow-up CRs.
 | Field | Value |
 |-------|-------|
 | **Name** | _(e.g., nps-dotnet-reference)_ |
-| **Version** | _(e.g., 1.0.0-alpha.4)_ |
+| **Version** | _(e.g., 1.0.0-alpha.11)_ |
 | **Source** | _(URL or package reference)_ |
 
 ## Run Environment

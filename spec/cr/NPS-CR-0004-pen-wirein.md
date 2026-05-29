@@ -23,7 +23,7 @@ IANA assigned **Private Enterprise Number 65715** to *Neuro Protocol Suites Comm
 The change:
 
 - New OID root: `1.3.6.1.4.1.65715`. All NPS-defined sub-OIDs move under this arc with their existing semantics preserved.
-- New cert-extension OID `id-nps-node-roles = 1.3.6.1.4.1.65715.2.2` is **reserved** here for the node-roles certificate extension referenced (without an OID) in the NIP v0.6 changelog. No consumer is required to populate it yet — this CR only fixes the namespace.
+- New cert-extension OID `id-nps-node-roles = 1.3.6.1.4.1.65715.2.2` is **reserved** here for the node-roles certificate extension referenced (without an OID) in the NIP v0.9 changelog. No consumer is required to populate it yet — this CR only fixes the namespace.
 - NIP spec version bump **0.7 → 0.8** (front matter and version block of `spec/NPS-3-NIP.md` and `spec/NPS-3-NIP.cn.md`).
 - NPS-RFC-0002 promotion **Draft → Proposed**, since the only blocker (PEN assignment) is resolved.
 - Roadmap R08 (the row tracking RFC-0002 promotion) closes with a pointer to this CR.
@@ -59,7 +59,7 @@ Sub-tree map (semantics of each existing sub-arc are **preserved verbatim** — 
 | `1.3.6.1.4.1.65715.1.3` | `EkuCaIntermediateAgent` | EKU — CA may sign `agent-identity` certs (NPS-RFC-0002 §4.1) |
 | `1.3.6.1.4.1.65715.2` | `ExtensionArc` | NPS custom certificate extensions |
 | `1.3.6.1.4.1.65715.2.1` | `NidAssuranceLevel` | Cert ext — encodes assurance level (0=anonymous, 1=attested, 2=verified) per NPS-RFC-0003 / NIP §5.1.1 |
-| `1.3.6.1.4.1.65715.2.2` | `IdNpsNodeRoles` | **(NEW — reserved by this CR)** Cert ext — node-roles encoding referenced by the NIP v0.6 changelog. No OID was previously assigned. Reserved here so SDK constants land alongside `.2.1`; no consumer is mandated by this CR |
+| `1.3.6.1.4.1.65715.2.2` | `IdNpsNodeRoles` | **(NEW — reserved by this CR)** Cert ext — node-roles encoding referenced by the NIP v0.9 changelog. No OID was previously assigned. Reserved here so SDK constants land alongside `.2.1`; no consumer is mandated by this CR |
 
 Standard X.509 / Ed25519 OIDs (notably `1.3.101.112` from RFC 8410) are unaffected and MUST NOT be touched.
 
@@ -134,7 +134,7 @@ To prevent scope creep, the following are explicitly NOT part of this CR:
 
 - **Rebrand of the `nps-purpose` JWS claim**. The string `"nps-purpose"` continues to be used as documented in NIP §8 and NPS-CR-0003 §3.5. Any naming review for this claim is a separate decision outside this CR.
 - **Rebrand of the `urn:nps:` NID namespace**. The `urn:nps:agent:...` / `urn:nps:node:...` URN prefix is unaffected by the PEN assignment and remains the canonical NID namespace per NIP §3. A future URN registration (RFC 8141) would be a separate workstream.
-- **Cert extension semantics for `id-nps-node-roles`**. This CR only *reserves* the OID at `.2.2`. The wire format of the extension's ASN.1 value, who emits it, and who consumes it are not specified here — they remain whatever the NIP v0.6 changelog documented and any future CR may further constrain them.
+- **Cert extension semantics for `id-nps-node-roles`**. This CR only *reserves* the OID at `.2.2`. The wire format of the extension's ASN.1 value, who emits it, and who consumes it are not specified here — they remain whatever the NIP v0.9 changelog documented and any future CR may further constrain them.
 - **Any change to `1.3.101.112` (Ed25519 / RFC 8410)**. That OID is owned by IETF and unaffected.
 - **Existing test fixtures under `impl/dotnet/tests/` that hardcode `99999` for unrelated reasons** (e.g. integer clamp tests). Constant replacement is scoped to OID literals only — see Task 2 for the exact grep contract.
 

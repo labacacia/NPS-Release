@@ -6,7 +6,7 @@ English | [中文版](./transport-profile.cn.md)
 **Version**: 0.1  
 **Status**: Draft  
 **Date**: 2026-05-10  
-**Depends-On**: NPS-1-NCP v0.6
+**Depends-On**: NPS-1-NCP v0.7
 
 ---
 

@@ -2,8 +2,8 @@
 
 # NPS 路线图
 
-**Version**: 0.5  
-**Date**: 2026-05-17  
+**Version**: 0.4  
+**Date**: 2026-04-30  
 **归属**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -48,7 +48,7 @@
 - [x] `services/conformance/NPS-Node-L1.md` v0.1（21 个 TC-N1-* 用例）
 - [x] `services/conformance/NPS-Node-L2.md` v0.1（10 个 TC-N2-* 用例，拓扑查询）
 - [x] LabAcacia 仓库公开，Discussions 开启；`NPS-Dev` monorepo 按设计保持私有
-- [x] 已发布：alpha.1（2026-04-10）、alpha.2（2026-04-19）、alpha.3（2026-04-26）、alpha.4（2026-04-30）、alpha.5（2026-05-01）
+- [x] 已发布：alpha.1（2026-04-10）、alpha.2（2026-04-19）、alpha.3（2026-04-26）、alpha.4（2026-04-30）、alpha.5（2026-05-01）、alpha.6（2026-05-12）
 
 ---
 
@@ -60,12 +60,12 @@
 
 | 语言 | 包名 | 状态 |
 |------|------|------|
-| .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.5（655 tests）|
-| Python     | `nps-lib`（PyPI）                  | ✅ v1.0.0-alpha.5（211+ tests，≥97% coverage）|
-| TypeScript | `@labacacia/nps-sdk`（npm）        | ✅ v1.0.0-alpha.5（284+ tests）|
-| Java       | `com.labacacia.nps:nps-java`（Maven Central）| ✅ v1.0.0-alpha.5（112+ tests）|
-| Rust       | `nps-sdk` + 6 个同生态 crate（crates.io）| ✅ v1.0.0-alpha.4（109 tests）|
-| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.4（96 tests）|
+| .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.11（655 tests）|
+| Python     | `nps-lib`（PyPI）                  | ✅ v1.0.0-alpha.11（211+ tests，≥97% coverage）|
+| TypeScript | `@labacacia/nps-sdk`（npm）        | ⚠️ 源码/tag 为 v1.0.0-alpha.11；npm `1.0.0-alpha.11` 已 deprecated，`alpha` tag 暂回 `1.0.0-alpha.11` |
+| Java       | `com.labacacia.nps:nps-java`（Maven Central）| ✅ v1.0.0-alpha.11（112+ tests）|
+| Rust       | `nps-sdk` + 6 个同生态 crate（crates.io）| ✅ v1.0.0-alpha.11（109 tests）|
+| Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.11（96 tests）|
 
 ### NIP CA Server（六语言参考部署）
 
@@ -97,14 +97,17 @@
 
 ### 常驻 Daemon
 
-| Daemon         | alpha.5 状态 |
+| Daemon         | alpha.6 状态 |
 |----------------|-------------|
 | `npsd`         | ✅ L1 + 子 NID 签发 + 每 NID 收件箱队列（17 integration tests）|
 | `nps-registry` | ✅ SQLite 持久化注册中心（SqliteNdpRegistry，10 tests）|
 | `nps-ledger`   | ✅ Phase 3：SQLite + Merkle + STH + 包含证明 + STH gossip（33 tests）|
 | `nps-runner`   | Phase 1 骨架（L3 运行时推迟）|
-| `nps-ingress`  | Phase 1 骨架（Internet 入站网关推迟）|
+| `nps-gateway`  | Phase 1 骨架（Internet 入站网关推迟）|
 | `nps-cloud-ca` | 存根（2027 Q1+）|
+
+`nps-gateway` 是 Internet ingress 的进程级 daemon 名，不会重新引入已退役的
+NWP Gateway Node 角色；逻辑节点角色仍为 Anchor Node 和 Bridge Node。
 
 ### 完成标准
 
@@ -120,9 +123,9 @@
 
 **目标**：现有生态（MCP、A2A、gRPC）适配器，更丰富的 SDK 示例，Tier-2 MsgPack 生产硬化。
 
-- [x] `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 适配器（`LabAcacia.McpIngress` v1.0.0-alpha.4）
-- [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task 适配器（`LabAcacia.A2aIngress` v1.0.0-alpha.4）
-- [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC 适配器（`LabAcacia.GrpcIngress` v1.0.0-alpha.4）
+- [x] `compat/mcp-ingress/` — NWP Memory/Action/Complex Node ↔ MCP 2024-11-05 适配器（`LabAcacia.McpIngress` v1.0.0-alpha.11）
+- [x] `compat/a2a-ingress/` — NOP `TaskFrame` ↔ A2A Task 适配器（`LabAcacia.A2aIngress` v1.0.0-alpha.11）
+- [x] `compat/grpc-ingress/` — NWP Memory/Action/Complex Node ↔ gRPC 适配器（`LabAcacia.GrpcIngress` v1.0.0-alpha.11）
 - [x] Tier-2 MsgPack 线路体积基准（聚合较 JSON 减少 63.6%）
 - [x] Token 节约基准（聚合较 REST 减少 45.0% CGN）
 - [x] NOP Orchestrator 端到端执行 3 节点 DAG
@@ -158,7 +161,7 @@
 
 ## alpha.6 任务队列
 
-v1.0.0-alpha.6 待开展任务：
+v1.0.0-alpha.11 待开展任务：
 
 ### 进行中的 RFC / CR
 
@@ -172,15 +175,15 @@ v1.0.0-alpha.6 待开展任务：
 | 事项 | 备注 |
 |------|------|
 | 非 .NET SDK 移植 NPS-CR-0002 `AnchorNodeClient` 拓扑客户端 | .NET 参考已完成；Python/TS/Go/Java/Rust 待移植 |
-| 非 .NET SDK 移植 NPS-RFC-0004 声誉助手（`ReputationLogClient`）| .NET 仅有 Phase 1 数据类型，无客户端；全六 SDK 需完整客户端 |
-| ~~非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手~~ | ✅ 已完成 —— 全六 SDK 均有完整 `AssuranceLevel` 枚举 + 执行逻辑 |
+| 非 .NET SDK 移植 NPS-RFC-0004 声誉助手（`ReputationLogClient`）| .NET 参考已完成；全六 SDK 待移植 |
+| 非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手 | .NET 已接入；其他 SDK 只有枚举，无执行逻辑 |
 
 ### 协议 / 规范事项
 
 | 事项 | 备注 |
 |------|------|
 | `NDP.ResolveFrame` DNS TXT 解析（`nwp://` → 物理端点）| 已规范化；所有 SDK 尚未实现 |
-| `nps-ingress` L2 Internet 入站网关（`:8080`→`:443` TLS 终止，NCP over TLS）| alpha.5 仅骨架；L2 合规推迟 |
+| `nps-gateway` 进程级 L2 Internet 入站网关（`:8080`→`:443` TLS 终止，NCP over TLS）| alpha.5 仅骨架；L2 合规推迟 |
 | `nps-runner` L3 FaaS 任务运行时 | 仅骨架；完整实现在 Phase 3 范围 |
 
 ### 工具链
@@ -189,74 +192,6 @@ v1.0.0-alpha.6 待开展任务：
 |------|------|
 | **NPS Studio** — NPS 帧流可视化调试器 | Phase 2 目标；尚未开始 |
 | **NPS Probe** — Agent Coder 合规检查 CLI | Phase 2 目标；尚未开始 |
-
----
-
-## alpha.7 任务队列
-
-v1.0.0-alpha.7 待开展任务：
-
-### SDK 功能缺口（alpha.6 遗留 —— 发布硬性门槛）
-
-每次 SDK 发布必须保证六种语言在同一功能水位上。以下条目从 alpha.6 延续，
-必须在 alpha.7 打标签前全部完成。
-
-| 事项 | 范围 | 备注 |
-|------|------|------|
-| NPS-CR-0002 `AnchorNodeClient` | Python / TypeScript / Go / Java / Rust | .NET 参考：`NPS-sdk-dotnet/src/NPS.NWP.Anchor/Client/`；各端口需实现 `GetSnapshotAsync` + `SubscribeAsync` + 拓扑数据类型 |
-| ~~NPS-RFC-0004 `ReputationLogClient`~~ | ~~全六 SDK（含 .NET）~~ | ✅ 已完成（2026-05-17）—— 全六 SDK 均已实现 `ReputationLogEntry`、`SignedTreeHead`、`InclusionProof`、完整 `ReputationLogClient`（submit / query / STH / proof / gossip-STH）、`VerifyInclusion`（RFC 9162 Merkle fold）及完整回归测试 |
-
-### 新规范 / 实现
-
-| 事项 | 备注 |
-|------|------|
-| **NPS-CR-0005** — NIP CA RA 注册授权模型 | 规范完成（Draft → Proposed）+ .NET 参考实现（三级登记授权：allowlist / bootstrap-token / approval-queue）+ PostgreSQL 迁移脚本 |
-| **#51 CGN Profile 换算规范** | 完善 `cgn-profiles.yaml`，补充主流模型的 token-per-CGN 换算表；在 `token-budget.md` 中增加协议绑定 |
-
-### 进行中的 CR / RFC
-
-| 事项 | 备注 |
-|------|------|
-| **NPS-RFC-0002** 晋级 Proposed → Accepted | Shepherd 审查；以无未解 OQ 为前提 |
-
----
-
-## alpha.8 任务队列
-
-v1.0.0-alpha.8 待开展任务：
-
-### SDK 一致性（alpha.7 遗留项 —— 发版硬门槛）
-
-| 事项 | 范围 | 备注 |
-|------|------|------|
-| ~~NPS-CR-0002 `AnchorNodeClient`~~ | ~~Python / TypeScript / Go / Java / Rust~~ | ✅ 已完成（2026-05-17）—— 五语言全部完成，测试套件完整（Python 25、TS 24、Go 21、Java 25、Rust 25）；顺带修复 Java subscribe 迭代器 bug |
-
-### NIP 身份认证强化
-
-| 事项 | 备注 |
-|------|------|
-| ~~**NPS-RFC-0002 OID 写入**~~ | ✅ 已完成 —— 六 SDK 自 alpha.6 起已全部使用 `1.3.6.1.4.1.65715`（IANA PEN 65715）；全量扫描未发现任何临时 OID |
-| **NPS-CR-0005 非 .NET CA 服务器移植** | 将 RA 模型（allowlist / bootstrap-token / approval-queue 三级授权）移植至 Python / TypeScript / Go / Java / Rust CA 服务器；与 alpha.7 交付的 .NET 参考实现保持一致 |
-| **NPS-CR-0005 规范晋升** | `NPS-CR-0005.md` Draft → Proposed；Shepherd 评审；无悬留 OQ 后标记为 Accepted |
-
-### 新规范 / 协议
-
-| 事项 | 备注 |
-|------|------|
-| **NPS-RFC-0005** —— 声誉策略执行 | 定义附加于 `AnchorNodeOptions` 和 `IdentFrame.metadata` 的 `reputation_policy` wire 格式；执行决策生命周期（accept / throttle / reject）；基于 RFC-0003 保证等级 + RFC-0004 声誉日志构建 |
-| **#51 CGN Profile 换算规范** | 完善 `cgn-profiles.yaml`，补充主流模型的 token-per-CGN 换算表；在 `token-budget.md` 中增加协议绑定；将 `cgn_limit` 执行逻辑接入 `AnchorNodeMiddleware` |
-
-### 工具链
-
-| 事项 | 备注 |
-|------|------|
-| **NPS Probe v0.1** —— 协议合规 CLI | 命令行工具，用于测试 NPS 端点的协议合规性：NCP 握手前导、NWP 拓扑查询 / 订阅、NIP 身份验证；Phase-2 工具链首个里程碑 |
-
-### 进行中的 CR / RFC
-
-| 事项 | 备注 |
-|------|------|
-| **NPS-RFC-0002** 晋级 Proposed → Accepted | Shepherd 评审；以 OID 写入落地且无悬留 OQ 为前提 |
 
 ---
 

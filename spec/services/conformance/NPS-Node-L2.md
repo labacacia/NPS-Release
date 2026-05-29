@@ -47,7 +47,7 @@ is targeted for L3 in 2027 Q1+ and is out of scope here.
 | Requirement | Value |
 |-------------|-------|
 | Network | Loopback only; cases do not require external DNS or inter-host routing |
-| Peer | Any L2-passing NPS implementation (reference: `NPS.NWP.Anchor` + `NPS.NDP` at NPS v1.0.0-alpha.4 or later) |
+| Peer | Any L2-passing NPS implementation (reference: `NPS.NWP.Anchor` + `NPS.NDP` at NPS v1.0.0-alpha.11 or later) |
 | Clock | Wall clock within ±5 s of the peer (ISO 8601 UTC timestamps) |
 | File system | Writable directory for the IUT's key store and (if applicable) topology persistence |
 | Wire encoding | Tier-1 JSON MUST be exercised; Tier-2 MsgPack SHOULD be exercised |
@@ -226,7 +226,7 @@ manifest is embedded into [`NPS-NODE-L2-CERTIFIED.md`](./NPS-NODE-L2-CERTIFIED.m
   },
   "peer": {
     "name": "nps-dotnet-reference",
-    "version": "1.0.0-alpha.4"
+    "version": "1.0.0-alpha.11"
   },
   "run": {
     "date": "2026-04-27T00:00:00Z",

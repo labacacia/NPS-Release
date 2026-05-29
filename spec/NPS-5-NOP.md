@@ -4,11 +4,11 @@ English | [中文版](./NPS-5-NOP.cn.md)
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.5
+**Version**: 0.6
 **Date**: 2026-05-10
 **Port**: 17433 (default, shared) / 17437 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.12), NPS-3 (NIP v0.8)
+**Depends-On**: NPS-1 (NCP v0.7), NPS-2 (NWP v0.13), NPS-3 (NIP v0.9)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
@@ -630,8 +630,8 @@ Every delegation level must pass NIP CA verification that `delegated_scope` does
 | Version | Date | Changes |
 |---------|------|---------|
 | 0.5 | 2026-05-10 | Compensation/saga semantics (issue #34): per-node `compensate_action` / `compensate_params_mapping`; TaskFrame-level `compensation_policy` (`best_effort` default / `strict`); subtask saga states `COMPENSATING` / `COMPENSATED` / `COMPENSATION_FAILED`; saga trigger in §3.1.6 (reverse-topological compensation of completed predecessors when a downstream node FAILED); 2 new error codes: `NOP-COMPENSATION-FAILED`, `NOP-COMPENSATION-NOT-SUPPORTED` |
-| 0.4 | 2026-04-19 | Status / Depends-On version bumps; minor editorial alignment with NCP v0.6 / NWP v0.10 / NIP v0.8 |
-| 0.3 | 2026-04-14 | DAG node granularity enhancements (per-node timeout/retry_policy/condition/input_mapping); §3.1.2 context supports OpenTelemetry W3C Trace (trace_id/span_id/trace_flags/baggage); §3.1.3 input_mapping JSONPath; §3.1.4 retry_policy (fixed/linear/exponential); §3.1.5 condition CEL subset; DelegateFrame adds idempotency_key/priority/context/node_id; SyncFrame adds min_required (K-of-N) and §3.3.1/§3.3.2 aggregation strategies; AlignStream adds subtask_id/error fields, §3.4.1 Token-level backpressure; §4 resource pre-flight protocol; §5 extended state machine (PREFLIGHT/SKIPPED) and task cancellation mechanism; §6 complete multi-Agent flow diagram; 5 new error codes (RESOURCE-INSUFFICIENT, CONDITION-EVAL-ERROR, INPUT-MAPPING-ERROR, DELEGATE-TIMEOUT, TASK-CANCELLED); §8.4 callback_url abuse prevention; Depends-On updated to NCP v0.5 / NWP v0.5 |
+| 0.4 | 2026-04-19 | Status / Depends-On version bumps; minor editorial alignment with NCP v0.7 / NWP v0.13 / NIP v0.9 |
+| 0.3 | 2026-04-14 | DAG node granularity enhancements (per-node timeout/retry_policy/condition/input_mapping); §3.1.2 context supports OpenTelemetry W3C Trace (trace_id/span_id/trace_flags/baggage); §3.1.3 input_mapping JSONPath; §3.1.4 retry_policy (fixed/linear/exponential); §3.1.5 condition CEL subset; DelegateFrame adds idempotency_key/priority/context/node_id; SyncFrame adds min_required (K-of-N) and §3.3.1/§3.3.2 aggregation strategies; AlignStream adds subtask_id/error fields, §3.4.1 Token-level backpressure; §4 resource pre-flight protocol; §5 extended state machine (PREFLIGHT/SKIPPED) and task cancellation mechanism; §6 complete multi-Agent flow diagram; 5 new error codes (RESOURCE-INSUFFICIENT, CONDITION-EVAL-ERROR, INPUT-MAPPING-ERROR, DELEGATE-TIMEOUT, TASK-CANCELLED); §8.4 callback_url abuse prevention; Depends-On updated to NCP v0.7 / NWP v0.13 |
 | 0.2 | 2026-04-12 | Unified port 17433; error codes use NPS status code mapping; completed error code list |
 | 0.1 | 2026-04-10 | Initial spec: TaskFrame/DelegateFrame/SyncFrame/AlignStream, DAG execution model, supersedes NCP AlignFrame |
 

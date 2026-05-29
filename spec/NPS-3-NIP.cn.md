@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.8
+**Version**: 0.9
 **Date**: 2026-05-11
 **Port**: 17433（默认，共用）/ 17435（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6)
+**Depends-On**: NPS-1 (NCP v0.7)
 
 ---
 

@@ -32,7 +32,7 @@ Self-certification is sufficient at this release. Third-party certification (NPS
 | Requirement | Value |
 |-------------|-------|
 | Network | Loopback only; cases do not require external DNS or inter-host routing |
-| Peer | Any L1-passing NPS implementation (reference: `NPS.Core` + `NPS.NDP` + `NPS.NIP` + `NPS.NWP` at NPS v1.0.0-alpha.3 or later) |
+| Peer | Any L1-passing NPS implementation (reference: `NPS.Core` + `NPS.NDP` + `NPS.NIP` + `NPS.NWP` at NPS v1.0.0-alpha.11 or later) |
 | Clock | Wall clock within ±5 s of the peer (ISO 8601 UTC timestamps) |
 | File system | Writable directory for the IUT's key store and inbox persistence |
 | Wire encoding | Tier-1 JSON MUST be exercised; Tier-2 MsgPack cases are deferred to L2 |
@@ -234,7 +234,7 @@ A conformance run produces a manifest (JSON) summarizing per-case outcomes. The 
   },
   "peer": {
     "name": "nps-dotnet-reference",
-    "version": "1.0.0-alpha.3"
+    "version": "1.0.0-alpha.11"
   },
   "run": {
     "date": "2026-04-24T00:00:00Z",

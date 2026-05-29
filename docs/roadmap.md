@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.7** — completes Phase 1 and makes significant progress on Phase 2. Notable additions at alpha.7: `ReputationLogClient` (RFC-0004 Phase 2) across all six SDKs; AnchorNodeClient test parity for Python / Go / Java / Rust; NIP CA Server CR-0005 RA model database migration.
+NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.11** — completes Phase 1 and makes significant progress on Phase 2. Notable additions since alpha.4: NWP error code parity across all six SDKs (30 constants), RFC-0004 Phase 3 STH gossip federation in `nps-ledger`, `NPS-SERVER-UNSUPPORTED` status code, and `AssuranceLevel` spec fixes in Python / TypeScript / Java.
 
 ---
 
@@ -39,7 +39,7 @@ All five protocols production-ready in six reference SDKs (.NET / Python / TypeS
 
 Adapters to MCP, A2A, and gRPC ecosystems; Tier-2 MsgPack production hardening; reference tooling.
 
-- ✅ MCP, A2A, and gRPC ingress adapters available on NuGet at v1.0.0-alpha.7
+- ✅ MCP, A2A, and gRPC ingress adapters available on NuGet at v1.0.0-alpha.11
 - ✅ Tier-2 MsgPack and token-savings benchmarks published
 - ✅ NOP orchestrator executes multi-node DAGs; Claude Desktop integration via `mcp-ingress` verified
 - ✅ `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint) — all six SDKs

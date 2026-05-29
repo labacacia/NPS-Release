@@ -6,7 +6,7 @@ English | [中文版](./NPS-Node-Profile.cn.md)
 **Version**: 0.2
 **Date**: 2026-05-01
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.6), NPS-2 (NWP v0.11), NPS-3 (NIP v0.6), NPS-4 (NDP v0.6)
+**Depends-On**: NPS-1 (NCP v0.7), NPS-2 (NWP v0.13), NPS-3 (NIP v0.9), NPS-4 (NDP v0.8)
 
 > Companion to [NPS-AaaS Profile](./NPS-AaaS-Profile.md). Where AaaS Profile defines what a
 > *service* must do to expose Agent capabilities, this profile defines what a *node host*
@@ -168,7 +168,7 @@ Detailed requirement IDs (`N3-*`) are TODO; tracked under [NPS-Roadmap Phase 3](
 
 ## 6. NDP Wire Δ (informative)
 
-This profile depends on three additive fields on NPS-4 NDP v0.4 AnnounceFrame (0x30):
+This profile depends on three additive fields on NPS-4 NDP v0.8 AnnounceFrame (0x30):
 
 | Field | Required | Used by |
 |-------|----------|---------|
@@ -223,7 +223,7 @@ Node-Profile L2.
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.2 | 2026-05-01 | M8 cross-profile contract clarification. §4 NWP bullet extended: Anchor Nodes at L2 MUST implement `topology.snapshot` / `topology.stream` (NPS-2 §12; AaaS L2-08 reference added). §8 relationship paragraph: SHOULD → MUST for Node-Profile L1 on Anchor hosts; explicit MUST for Node-Profile L2 when claiming AaaS L2-08. Depends-On bumped: NCP v0.5 → v0.6, added NPS-2 (NWP v0.10), NIP v0.3 → v0.6, NDP v0.4 → v0.6. |
+| 0.2 | 2026-05-01 | M8 cross-profile contract clarification. §4 NWP bullet extended: Anchor Nodes at L2 MUST implement `topology.snapshot` / `topology.stream` (NPS-2 §12; AaaS L2-08 reference added). §8 relationship paragraph: SHOULD → MUST for Node-Profile L1 on Anchor hosts; explicit MUST for Node-Profile L2 when claiming AaaS L2-08. Depends-On bumped: NCP v0.7 → v0.6, added NPS-2 (NWP v0.13), NIP v0.9 → v0.6, NDP v0.8 → v0.6. |
 | 0.1 | 2026-04-24 | Initial draft: three-level node compliance (L1/L2/L3), `activation_mode` model, L1 detailed requirement IDs, L1 conformance suite reference, AaaS Profile relationship |
 
 ---

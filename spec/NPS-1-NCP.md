@@ -4,7 +4,7 @@ English | [中文版](./NPS-1-NCP.cn.md)
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.6  
+**Version**: 0.7
 **Date**: 2026-04-25  
 **Port**: 17433 (default, shared across the protocol suite)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
@@ -146,7 +146,7 @@ If the handshake fails (incompatible version, empty capability set, etc.), Serve
 
 ### 2.6.1 Connection Preamble (Native Mode)
 
-> **Status**: Mandatory (added in NCP v0.6 by [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md)).
+> **Status**: Mandatory (added in NCP v0.7 by [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md)).
 
 In native mode, every NCP connection MUST begin with an **8-byte constant preamble** sent by the client immediately after the transport (TCP / QUIC) handshake completes and before the first `HelloFrame`. HTTP mode is unaffected (the `Content-Type: application/nwp-frame` header serves the same identification role).
 
@@ -486,8 +486,8 @@ During native-mode connection setup, the Node returns its negotiated capabilitie
 
 ### 4.5 AlignFrame (0x05) — Deprecated
 
-> ⚠️ AlignFrame was marked **Deprecated** in NCP v0.2.  
-> Use NOP AlignStream (0x43) instead, see [NPS-5-NOP.md](NPS-5-NOP.md).  
+> ⚠️ AlignFrame was marked **Deprecated** in NCP v0.7.
+> Use NOP AlignStream (0x43) instead, see [NPS-5-NOP.md](NPS-5-NOP.md).
 > AlignFrame will be removed in NPS v1.0.
 
 ---

@@ -116,7 +116,7 @@ In `spec/NPS-2-NWP.md`:
 
 ### 3.4 Wire format changes
 
-> **Migration note (NDP v0.6 / NWP v0.9)**: The `node_kind` field introduced by this CR was renamed to `node_roles` (array-only form) as part of the M1 naming-disambiguation fix. Parsers MUST accept `node_kind` as an alias through alpha.5. References to `node_kind` below are historical and describe the state at the time this CR was implemented (NDP v0.5 / NWP v0.7).
+> **Migration note (NDP v0.8 / NWP v0.13)**: The `node_kind` field introduced by this CR was renamed to `node_roles` (array-only form) as part of the M1 naming-disambiguation fix. Parsers MUST accept `node_kind` as an alias through alpha.5. References to `node_kind` below are historical and describe the state at the time this CR was implemented (NDP v0.8 / NWP v0.13).
 
 In NDP `Announce` frame, the `node_kind` field:
 

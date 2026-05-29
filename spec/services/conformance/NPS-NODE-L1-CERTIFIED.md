@@ -36,7 +36,7 @@ under the conditions recorded below.
 | Field | Value |
 |-------|-------|
 | **Name** | _(e.g., nps-dotnet-reference)_ |
-| **Version** | _(e.g., 1.0.0-alpha.3)_ |
+| **Version** | _(e.g., 1.0.0-alpha.11)_ |
 | **Source** | _(URL or package reference)_ |
 
 ## Run Environment

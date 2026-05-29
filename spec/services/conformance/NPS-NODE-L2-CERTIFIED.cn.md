@@ -48,7 +48,7 @@ L2 合规。
 | 字段 | 值 |
 |------|----|
 | **Name** | _(例如：nps-dotnet-reference)_ |
-| **Version** | _(例如：1.0.0-alpha.4)_ |
+| **Version** | _(例如：1.0.0-alpha.11)_ |
 | **Source** | _(URL 或包引用)_ |
 
 ## Run Environment（运行环境）
