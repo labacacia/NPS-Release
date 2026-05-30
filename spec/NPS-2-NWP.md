@@ -5,7 +5,7 @@ English | [中文版](./NPS-2-NWP.cn.md)
 **Spec Number**: NPS-2
 **Status**: Proposed
 **Version**: 0.13
-**Date**: 2026-05-11
+**Date**: 2026-05-28
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
 **Depends-On**: NPS-1 (NCP v0.7), NPS-3 (NIP v0.9), NPS-4 (NDP v0.8)
@@ -75,7 +75,7 @@ Anchor Nodes that maintain a member registry MUST expose it via the reserved que
 
 A Bridge Node MUST:
 
-1. Accept inbound NWP frames carrying a `bridge_target` parameter that identifies the external protocol and endpoint (concrete schema for `bridge_target` is implementation-defined in this CR; standardization is deferred to a follow-up CR per protocol).
+1. Accept inbound NWP frames carrying a `bridge_target` parameter that identifies the external protocol and endpoint. The `bridge_target` object has the following standard fields: `protocol` (string, required — one of `"http"`, `"grpc"`, `"mcp"`, `"a2a"`); `endpoint` (string URL, required); `headers` (object string→string, optional — extra HTTP headers the bridge passes to the upstream). Third-party adapters MAY extend with additional fields; unknown fields MUST be ignored by consumers.
 2. Produce outbound requests in the target protocol's format.
 3. Translate target-protocol responses back into NWP frames (typically `CapsFrame`).
 
@@ -160,6 +160,7 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 | `stability` | string | Optional | Lifecycle stage: `"experimental"` / `"stable"` / `"deprecated"`. Marketplace / NeuronHub discovery clients use this to filter or warn on non-stable services. Default: `"stable"` (backward-compatible — pre-0.11 manifests are treated as stable). Per-action override permitted via ActionSpec.stability (§4.6). |
 | `sla` | object | Optional | SLO commitments for the node, see §4.7. Advisory only; the protocol does not enforce these. Per-action override permitted via ActionSpec.sla (§4.6). |
 | `billing` | object | Optional | Commercial metadata for the node (metering profile + price hint), see §4.8. Advisory only; the protocol does not collect or settle charges. Per-action override permitted via ActionSpec.billing (§4.6). |
+| `trust_anchors` | array of strings | Optional | NIDs of CA nodes the Anchor accepts as IdentFrame issuers (e.g. `["urn:nps:agent:ca.example.com:root"]`). Consumers SHOULD use this to pre-validate their issuer before connecting. When absent, the node accepts any CA trusted by the NIP verification chain. |
 
 ### 4.2 capabilities Field
 
@@ -736,6 +737,7 @@ data: [DiffFrame bytes, base64]
 | Header | Required | Description |
 |--------|----------|-------------|
 | `X-NWP-Agent` | Conditionally Required | Agent NID (required when auth.required=true) |
+| `Authorization` | Conditionally Required | HTTP bearer credential when `auth.identity_type = "bearer"`. Not used in native mode; native authentication is session-bound via NCP/NIP IdentFrame. |
 | `X-NWP-Budget` | Optional | CGN budget limit (uint32) |
 | `X-NWP-Tokenizer` | Optional | Tokenizer identifier used by the Agent |
 | `X-NWP-Depth` | Optional | Node graph traversal depth, default 1, max 5 |
@@ -764,7 +766,7 @@ data: [DiffFrame bytes, base64]
 
 | HTTP Header | QueryFrame Field | ActionFrame Field |
 |-------------|-----------------|-------------------|
-| `X-NWP-Agent` | — (declared in HelloFrame `agent_id` handshake) | Same |
+| `X-NWP-Agent` | — (declared as HelloFrame `agent_id` hint; authenticated identity is the session-bound NIP IdentFrame) | Same |
 | `X-NWP-Budget` | `token_budget` | — |
 | `X-NWP-Tokenizer` | `tokenizer` | — |
 | `X-NWP-Depth` | `depth` | — |
@@ -1021,12 +1023,12 @@ Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "un
 
   1. **Capability gate (per surface)**: Phase 1–2 distinguishes two authorization surfaces:
      - `topology.snapshot` (single-shot pull, §12.1): the requesting NID MUST declare `topology:read` in `IdentFrame.capabilities` (NPS-3 §5.1); absent capability MUST produce `NWP-TOPOLOGY-UNAUTHORIZED`.
-     - `topology.stream` (long-lived subscription, §12.2): the requester MUST declare `topology:read` AND SHOULD additionally declare `topology:subscribe` in `IdentFrame.capabilities`. Phase 2 Anchor Nodes SHOULD enforce the `topology:subscribe` capability (treating its absence as an authorization failure) so subscription privilege is separable from snapshot read; Anchor Nodes that do not yet enforce `topology:subscribe` MUST at minimum enforce `topology:read`. Phase 3 will upgrade `topology:subscribe` to a MUST.
+     - `topology.stream` (long-lived subscription, §12.2): the requester MUST declare `topology:read` AND `topology:subscribe` in `IdentFrame.capabilities`. Phase 2 Anchor Nodes MUST enforce the `topology:subscribe` capability (treating its absence as an authorization failure) so subscription privilege is separable from snapshot read; Anchor Nodes that do not yet enforce `topology:subscribe` MUST at minimum enforce `topology:read`. Nodes that cannot enforce `topology:subscribe` MUST document non-enforcement explicitly in the NWM `stability` metadata.
 
      The IdentFrame is signed by the requester's private key, so the claim is integrity-protected but self-declared — it is not CA-attested at Phase 1–2.
   2. **NDP role cross-check (defense-in-depth)**: The Anchor SHOULD additionally verify that the requester's last received `AnnounceFrame` (within TTL) declares `node_roles` containing `"anchor"`. A mismatch SHOULD produce `NWP-TOPOLOGY-UNAUTHORIZED` with a `hint`. An absent `AnnounceFrame` MUST NOT block a requester that has passed the capability gate.
   3. **Mid-stream rejection (subscriptions only)**: For an established `topology.stream` subscription, if the Anchor revokes the requester's capability set (e.g. RevokeFrame received from the CA, NID expiry, or scope narrowing) the server MUST emit a terminal `NWP-TOPOLOGY-UNAUTHORIZED` event on the stream and then close the stream. The event carries the standard DiffFrame envelope with `event_type = "error"` and a payload of `{ "code": "NWP-TOPOLOGY-UNAUTHORIZED", "reason": "<revoked | expired | scope_narrowed>" }`. Anchor Nodes MUST NOT silently drop subscribers — a clean rejection event is required so clients can distinguish authorization loss from transport-level disconnects.
-  4. **Reputation interaction (NPS-RFC-0004 `reputation_policy`)**: When the receiving Anchor declares a `reputation_policy` (NWM Phase 2 field, see [NPS-RFC-0004 §4.4](rfcs/NPS-RFC-0004-nid-reputation-log.md)) and the requesting NID's reputation score drops below a configured threshold while a `topology.stream` subscription is active, the Anchor SHOULD emit a terminal event with `payload.code = "NWP-AUTH-REPUTATION-BLOCKED"` carrying the matching `incident`, `severity`, and ledger entry `seq` (per error code §13), then close the stream. For initial-handshake reputation rejection (request time), the standard synchronous `NWP-AUTH-REPUTATION-BLOCKED` error code applies and the subscription is never opened. Anchors without a `reputation_policy` declared have no obligation to evaluate reputation.
+  4. **Reputation interaction (NPS-RFC-0004 `reputation_policy`)**: When the receiving Anchor declares a `reputation_policy` (NWM Phase 2 field, see [NPS-RFC-0004 §4.4](rfcs/NPS-RFC-0004-nid-reputation-log.md)) and the requesting NID's reputation score drops below a configured threshold while a `topology.stream` subscription is active, the Anchor SHOULD emit a terminal event with `payload.code = "NWP-AUTH-REPUTATION-BLOCKED"` carrying the matching `incident`, `severity`, and ledger entry `seq` (per error code §14), then close the stream. For initial-handshake reputation rejection (request time), the standard synchronous `NWP-AUTH-REPUTATION-BLOCKED` error code applies and the subscription is never opened. Anchors without a `reputation_policy` declared have no obligation to evaluate reputation.
   5. **Phase 3 [RFC-0002 stable]**: Anchors SHOULD additionally verify a CA-attested `id-nps-node-roles` cert extension (to be defined in a follow-up RFC-0002 amendment) to close the self-declaration gap and bind the role claim to a CA-issued certificate.
 
   Fine-grained per-cluster namespace or ACL policies remain implementation-defined and are tracked for a follow-up CR.
@@ -1034,7 +1036,40 @@ Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "un
 
 ---
 
-## 13. Error Codes
+## 13. SubscribeFrame (0x12) — Formal Specification
+
+SubscribeFrame opens a server-push subscription on a Memory or Anchor Node. The server streams matching events as DiffFrame messages until the subscription is closed.
+
+### 13.1 Request fields
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `subscription_id` | string | Required | Client-generated UUID; used to correlate events and cancel the subscription |
+| `filter` | object | Optional | Same filter syntax as QueryFrame `filter` (§6); if absent, all events match |
+| `heartbeat_interval_ms` | uint32 | Optional | If set, server MUST emit a heartbeat DiffFrame (empty payload, `event_type = "heartbeat"`) at this interval; default 0 (no heartbeat) |
+| `max_events` | uint32 | Optional | Server closes the subscription after delivering this many events; 0 = unlimited |
+| `cursor` | string | Optional | Resume from a prior position; if the cursor is expired the server MUST return `NWP-SUBSCRIBE-SEQ-TOO-OLD` |
+
+### 13.2 Lifecycle
+
+1. Client sends SubscribeFrame → server responds with CapsFrame (`subscription_id` echoed, `status = "open"`)
+2. Server streams DiffFrame events; each carries the `subscription_id` in an EXT header
+3. Client cancels by sending an ErrorFrame with `NWP-SUBSCRIBE-STREAM-NOT-FOUND` — or the server closes when `max_events` is reached
+4. On server-side error, server MUST send a terminal ErrorFrame with the appropriate `NWP-SUBSCRIBE-*` code before closing
+
+### 13.3 Error codes
+
+The following error codes (defined in §14) apply to SubscribeFrame operations:
+
+- `NWP-SUBSCRIBE-STREAM-NOT-FOUND` — subscription_id unknown
+- `NWP-SUBSCRIBE-LIMIT-EXCEEDED` — server's concurrent subscription limit reached
+- `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` — filter expression not supported by this node
+- `NWP-SUBSCRIBE-INTERRUPTED` — server-side interruption
+- `NWP-SUBSCRIBE-SEQ-TOO-OLD` — cursor position is no longer available
+
+---
+
+## 14. Error Codes
 
 | Error Code | NPS Status Code | Description |
 |-----------|----------------|-------------|
@@ -1081,39 +1116,40 @@ Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "un
 
 ---
 
-## 14. Security Considerations
+## 15. Security Considerations
 
-### 14.1 Scope Enforcement
+### 15.1 Scope Enforcement
 Nodes MUST validate the Agent NID's scope on every request. Requests exceeding scope MUST return `NWP-AUTH-NID-SCOPE-VIOLATION` and MUST NOT return any data.
 
-### 14.2 SSRF Protection
+### 15.2 SSRF Protection
 When Complex Nodes resolve sub-node references, they MUST maintain an allowlist of permitted node URL prefixes and MUST NOT access internal network addresses (RFC 1918).
 
-### 14.3 Token Budget Enforcement
+### 15.3 Token Budget Enforcement
 When the budget is exceeded, nodes SHOULD prefer trimming response content (field reduction → summary → record truncation); if trimming is not possible, they MUST return `NWP-BUDGET-EXCEEDED` and MUST NOT silently truncate data. See [token-budget.md §4.3](token-budget.md).
 
-### 14.4 Rate Limiting
+### 15.4 Rate Limiting
 Nodes SHOULD enforce per-Agent NID rate limiting. On limit exceeded, return `NWP-RATE-LIMIT-EXCEEDED` with an `X-NWP-Rate-Reset` header. Unauthenticated requests SHOULD be limited by IP.
 
-### 14.5 Filter Injection Protection
+### 15.5 Filter Injection Protection
 - Field names MUST contain only letters/digits/underscores/dots, length ≤ 128 characters
 - `$regex` patterns MUST undergo ReDoS detection; filter nesting depth ≤ 8
 - Nodes MUST use parameterized queries; string concatenation is prohibited
 
-### 14.6 callback_url Abuse Prevention
+### 15.6 callback_url Abuse Prevention
 - ActionFrame `callback_url` MUST use the `https://` scheme
 - Nodes SHOULD perform SSRF checks on callback URLs (internal network addresses prohibited)
 - Nodes SHOULD apply exponential backoff retries for failed callback deliveries (max 3 attempts), then abandon and mark the task as `COMPLETED` rather than retrying indefinitely
 
-### 14.7 Topology Read-back
+### 15.7 Topology Read-back
 Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stream` as authenticated surfaces. The minimum authorization binding is defined in §12.4: at Phase 1–2, the requesting NID MUST declare `topology:read` in `IdentFrame.capabilities` (primary gate); NDP `node_roles` cross-check is a defense-in-depth SHOULD. Unauthorized callers MUST receive `NWP-TOPOLOGY-UNAUTHORIZED` rather than silent empty responses to prevent oracle attacks against cluster membership.
 
 ---
 
-## 15. Changelog
+## 16. Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.13 | 2026-05-28 | §13 SubscribeFrame (0x12) formal specification (closes CR-0006): field table (subscription_id, filter, heartbeat_interval_ms, max_events, cursor), lifecycle (open→active→heartbeat→close), error code reference. §12.4 `topology:subscribe` enforcement promoted SHOULD → MUST; nodes that cannot enforce MUST document non-enforcement in NWM stability metadata. NWM gains optional `trust_anchors` field (array of CA NID URNs). BridgeNode `bridge_target` object schema standardized (protocol + endpoint + headers). |
 | 0.12 | 2026-05-11 | NPS-CR-0002 Phase 2 spec gaps closed. §8.2 DiffFrame extension table gains optional `cgn_est` field (uint32) for per-event CGN reporting on push streams per [token-budget.md §7.2](token-budget.md); columns reformatted to include Required. §12.2 `topology.stream` events table: `anchor_state` row gains explicit sub-type discriminator schema (`version_rebased` defined for Phase 1–2; `anchor_failover` and `anchor_quorum_lost` reserved as Phase 3 placeholder slots — implementations MUST NOT emit Phase 3 sub-types pre-stable and MUST ignore unknown sub-types for forward compatibility); `resync_required` trigger and `reason` enum broadened (`version_too_old` / `anchor_rebased` / `server_state_lost`). §12.4 Phase 1–2 authorization model expanded: (a) capability gate split per surface — `topology.snapshot` requires `topology:read`; `topology.stream` requires `topology:read` AND SHOULD additionally require `topology:subscribe` in Phase 2 (MUST in Phase 3); (b) new mid-stream rejection rule — server MUST emit terminal `NWP-TOPOLOGY-UNAUTHORIZED` event then close the stream on capability revocation; (c) new reputation interaction — for active subscriptions, Anchors with a declared `reputation_policy` SHOULD emit terminal `NWP-AUTH-REPUTATION-BLOCKED` and close the stream when the subscriber's reputation drops below threshold. No new error codes; existing `NWP-TOPOLOGY-UNAUTHORIZED` and `NWP-AUTH-REPUTATION-BLOCKED` reused. No `Depends-On` change. See issue #41. |
 | 0.11 | 2026-05-10 | NWM gains optional top-level `stability` (`experimental`/`stable`/`deprecated`), `sla` (object: `p95_latency_ms`, `availability`, `sla_tier`), and `billing` (object: `metering_profile`, `billing_unit`, `price_hint`, `currency`) fields (§4.1, §4.4a, §4.4b). ActionSpec (§4.6) gains matching per-action `stability` / `sla` / `billing` overrides with field-level fallback to the top-level values. All fields are advisory (no protocol-level enforcement) and backward-compatible — pre-0.11 manifests are treated as `stability="stable"` with no SLO/billing metadata. Enables marketplace / NeuronHub clients to filter, warn, or rank services by lifecycle stage and commercial profile per AaaS-Profile discovery requirements. No new error codes; no `Depends-On` change. See issue #36. |
 | 0.10 | 2026-05-01 | §12.4 authorization model replaced "implementation-defined" with a Phase 1–2 minimum binding: Anchor Nodes MUST require `topology:read` in `IdentFrame.capabilities` (capability gate, self-declared but signed); SHOULD cross-check NDP `node_roles` contains `"anchor"` as defense-in-depth; Phase 3 [RFC-0002 stable] adds CA-attested `id-nps-node-roles` cert extension. §14.7 updated to reference §12.4 defined minimum instead of the previous hedging "SHOULD restrict" language. `Depends-On` NIP bumped to v0.6 (defines `topology:read` capability). |

@@ -72,13 +72,13 @@ Consumer Agent
 **Anchor Node** is an NWP node type serving as the unified entry point for AaaS
 services. It does not handle business logic directly but routes requests to the internal
 NOP orchestration layer. A single Anchor Node MAY simultaneously declare other roles
-(e.g. `Memory Node`) via NDP `Announce.node_kind` array form (NPS-4 §3.1).
+(e.g. `Memory Node`) via NDP `Announce.node_roles` array form (NPS-4 §3.1).
 
 | Property | Value |
 |----------|-------|
 | Node type | `anchor` |
 | NWM node_type | `"anchor"` |
-| NDP node_kind | `"anchor"` (or array form including `"anchor"`) |
+| NDP node_roles | `["anchor"]` (or array form including `"anchor"`) |
 | Frame entry | ActionFrame (0x11) |
 | Internal conversion | ActionFrame → NOP TaskFrame (0x40) |
 
@@ -159,7 +159,7 @@ Consumer                    Anchor Node                    NOP Orchestrator
 |----------|-------|
 | Node type | `bridge` |
 | NWM node_type | `"bridge"` |
-| NDP node_kind | `"bridge"` (or array form including `"bridge"`) |
+| NDP node_roles | `["bridge"]` (or array form including `"bridge"`) |
 | NDP bridge_protocols | array of supported targets, e.g. `["http", "grpc"]` |
 | Frame entry | ActionFrame (0x11) carrying `bridge_target` |
 
@@ -406,7 +406,7 @@ AaaS vectorized approach: fetch returns top-K vector summary ~85 CGN → analyze
 | Token metering — commercial settlement | CGN-Billing (token-budget v0.5) | Adds: `verified_tokenizer` requirement (NIP §5.1), NID-signed metering records, audit-log persistence, billing response headers (issue #40 / L3-08) |
 | Audit trail | NOP v0.6 §8.3 | No: reuses context.trace_id |
 
-**Protocol changes required**: NWP NWM `node_type` enum must accept `"anchor"` and `"bridge"` (replacing the removed `"gateway"`); NDP AnnounceFrame gains `node_kind`/`cluster_anchor`/`bridge_protocols` fields. All additive at the wire layer except the `"gateway"` removal — see [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md).
+**Protocol changes required**: NWP NWM `node_type` enum must accept `"anchor"` and `"bridge"` (replacing the removed `"gateway"`); NDP AnnounceFrame gains `node_roles`/`cluster_anchor`/`bridge_protocols` fields. All additive at the wire layer except the `"gateway"` removal — see [NPS-CR-0001](../cr/NPS-CR-0001-anchor-bridge-split.md). Legacy `node_kind` remains a parse-time alias during the alpha compatibility window only.
 
 ---
 

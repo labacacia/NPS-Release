@@ -2,8 +2,8 @@
 # 机器可读帧注册表，CI 强制校验用
 # 归属：LabAcacia / INNO LOTUS PTY LTD · Apache 2.0
 
-version: "0.11"
-date: "2026-05-14"
+version: "0.13"
+date: "2026-05-28"
 
 # 统一端口：17433（全协议族共用，通过帧类型码路由）
 # 各协议可选独立端口：NWP 17434、NIP 17435、NDP 17436、NOP 17437
@@ -72,7 +72,7 @@ frames:
     name: QueryFrame
     protocol: NWP
     protocol_version: "0.8"
-    status: proposed
+    status: stable
     description: Structured data query for Memory Nodes. Supports filter ($eq/$ne/$lt/$lte/$gt/$gte/$in/$nin/$contains/$between/$exists/$regex/$and/$or/$not), field selection, cursor pagination, ordering, vector search, auto_anchor, native-mode budget/tokenizer/depth/request_id fields, streaming mode (stream:true → StreamFrame sequence), and aggregation (COUNT/SUM/AVG/MIN/MAX/COUNT_DISTINCT with group_by and having). NPS-CR-0002 (§12) adds optional type field for reserved query namespaces (topology.snapshot, topology.stream); absent means default per-anchor query semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED.
     fields_ref: "NPS-2-NWP.md#6-queryframe-0x10"
 
@@ -80,17 +80,17 @@ frames:
     name: ActionFrame
     protocol: NWP
     protocol_version: "0.5"
-    status: proposed
+    status: stable
     description: Operation invocation for Action and Complex Nodes. Supports sync/async execution, idempotency, callback_url, priority, request_id, and system-reserved actions (system.task.status / system.task.cancel). Action/Complex Nodes declare available operations in NWM actions registry (§4.6).
     fields_ref: "NPS-2-NWP.md#7-actionframe-0x11"
 
   - id: "0x12"
     name: SubscribeFrame
     protocol: NWP
-    protocol_version: "0.8"
-    status: proposed
-    description: "Change subscription management for Memory Nodes. Actions: subscribe / unsubscribe / ping. Server pushes DiffFrame (0x02) updates with monotonic seq (per-stream, from 1), event_type, and timestamp. HTTP mode uses Server-Sent Events. Supports optional filter, heartbeat_interval, and resume_from_seq for lossless reconnection. NPS-CR-0002 (§12) adds the optional type field for opting into reserved subscribe namespaces — set type=\"topology.stream\" to receive the topology change feed defined in NPS-2-NWP.md §12.2 (cluster member_joined / member_left / member_updated / anchor_state / resync_required events with topology.* request fields); absent means default per-anchor subscribe semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED. CR-0002 Phase 2 (NWP v0.13) splits the per-surface capability gate: topology.stream subscriptions SHOULD additionally require topology:subscribe in IdentFrame.capabilities (separable from topology:read) per §12.4."
-    fields_ref: "NPS-2-NWP.md#8-subscribeframe-0x12"
+    protocol_version: "0.13"
+    status: stable
+    description: "Change subscription management for Memory and Anchor Nodes. The stable CR-0006 wire shape uses subscription_id, filter, heartbeat_interval_ms, max_events, and opaque cursor; servers push DiffFrame (0x02) events until cancellation or closure. HTTP mode uses Server-Sent Events. NPS-CR-0002 (§12) adds the optional type field for opting into reserved subscribe namespaces — set type=\"topology.stream\" to receive the topology change feed defined in NPS-2-NWP.md §12.2 (cluster member_joined / member_left / member_updated / anchor_state / resync_required events with topology.* request fields); absent means default per-anchor subscribe semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED. NWP v0.13 requires topology.stream subscriptions to carry both topology:read and topology:subscribe in IdentFrame.capabilities per §12.4."
+    fields_ref: "NPS-2-NWP.md#13-subscribeframe-0x12--formal-specification"
 
   # ── NIP (0x20–0x2F) ���──────────��────────────────────────────���───
   - id: "0x20"
@@ -146,32 +146,32 @@ frames:
   - id: "0x40"
     name: TaskFrame
     protocol: NOP
-    protocol_version: "0.5"
-    status: proposed
-    description: Task definition and dispatch. Defines a DAG of subtasks with per-node timeout/retry_policy/condition/input_mapping. Supports preflight resource check, OpenTelemetry context (trace_id/span_id/baggage), callback_url for long-running tasks, priority, and per-node saga compensation (compensate_action/compensate_params_mapping/compensation_policy).
+    protocol_version: "0.4"
+    status: draft
+    description: Task definition and dispatch. Defines a DAG of subtasks with per-node timeout/retry_policy/condition/input_mapping. Supports preflight resource check, OpenTelemetry context (trace_id/span_id/baggage), callback_url for long-running tasks, and priority.
     fields_ref: "NPS-5-NOP.md#31-taskframe-0x40"
 
   - id: "0x41"
     name: DelegateFrame
     protocol: NOP
-    protocol_version: "0.5"
-    status: proposed
+    protocol_version: "0.4"
+    status: draft
     description: Subtask delegation to a Worker Agent. Carries a carved-down scope (MUST NOT exceed parent scope). Adds node_id, idempotency_key, priority, context propagation. Also used for preflight probe (action="preflight") and cancellation (action="cancel").
     fields_ref: "NPS-5-NOP.md#32-delegateframe-0x41"
 
   - id: "0x42"
     name: SyncFrame
     protocol: NOP
-    protocol_version: "0.5"
-    status: proposed
+    protocol_version: "0.4"
+    status: draft
     description: Multi-Agent synchronization barrier. Supports K-of-N semantics (min_required), aggregation strategies (merge/first/all/fastest_k), and per-barrier timeout.
     fields_ref: "NPS-5-NOP.md#33-syncframe-0x42"
 
   - id: "0x43"
     name: AlignStream
     protocol: NOP
-    protocol_version: "0.5"
-    status: proposed
+    protocol_version: "0.4"
+    status: draft
     supersedes: "0x05"
     description: Directed task stream. Extends NCP AlignFrame with task DAG context (task_id + subtask_id), NID binding, Token-level backpressure (window_size in CGN), and error propagation field. Replaces deprecated AlignFrame (0x05).
     fields_ref: "NPS-5-NOP.md#34-alignstream-0x43"

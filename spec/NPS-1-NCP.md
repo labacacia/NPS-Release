@@ -130,6 +130,13 @@ Client (Agent)                        Server (Node)
 - The negotiated encoding = best intersection of `client.supported_encodings ∩ server.supported_encodings` (Tier-2 preferred).
 - The negotiated `max_frame_payload` = `min(client.max_frame_payload, server.max_frame_payload)`.
 
+**Identity and authorization binding**
+
+- `HelloFrame` is a transport/session capability negotiation frame only. It MUST NOT carry bearer tokens, authorization scopes, or other credentials beyond the optional `agent_id` routing hint.
+- In native mode, when the selected higher-layer protocol requires authentication, the client MUST present a NIP `IdentFrame` once per connection after the server's handshake `CapsFrame` and before the first authenticated NWP/NOP frame. The server binds the verified NID, capabilities, scope, and assurance level from that `IdentFrame` to the NCP session.
+- NWP `QueryFrame`, `ActionFrame`, and `SubscribeFrame` do not contain per-message auth-token fields. Authorization for native-mode messages is evaluated against the session-bound identity plus any per-message target/scope data.
+- HTTP/Overlay mode does not use `HelloFrame`; deployments that use bearer credentials present them in the HTTP transport envelope (for example `Authorization: Bearer ...`) alongside the NWP request headers. Bearer credentials are not embedded inside NWP frame payloads.
+
 **Error handling**
 
 If the handshake fails (incompatible version, empty capability set, etc.), Server MUST return:
