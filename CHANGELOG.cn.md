@@ -10,6 +10,56 @@
 
 ---
 
+## [1.0.0-alpha.11] —— 2026-05-31
+
+### 规范
+
+- **NCP v0.7** — `max_concurrent_streams` 协商（HelloFrame/CapsFrame，uint16，默认 32；溢出 → `NCP-STREAM-LIMIT-EXCEEDED`）；QUIC 流映射；重新密钥机制（2^32 帧或 24 小时）；mid-stream ErrorFrame MAY→MUST。
+- **NWP v0.13** — §13 SubscribeFrame 正式规范（CR-0006 Accepted）：`subscription_id` UUID v4、`heartbeat_interval_ms`、`max_events`、不透明 `cursor`；§12.4 `topology:subscribe` SHOULD→MUST；NWM `trust_anchors` CA NID URN 数组；`bridge_target` schema 标准化。
+- **NIP v0.9** — `IdentFrame.ocsp_staple`；X.509 扩展 OID `id-nps-capabilities`（65715.2.3）。
+- **NDP v0.8** — GraphFrame §5 拓扑快照格式重写；§9 联邦转发（public-federated 注册表 MUST 转发 AnnounceFrame，最多 3 跳防环）。
+- **NOP v0.6** — AlignStream ack/NAK；`weighted_first_k`/`merge_all` 聚合策略；`DelegateFrame.target_cluster_anchor` 跨集群路由；Webhook HMAC 签名。
+- **CR-0006**（Accepted）/ **RFC-0006**（Draft）—— SubscribeFrame §13 / NCP 原生模式传输绑定。
+
+### SDK
+
+- **全部六个 SDK** 更新至 alpha.11 功能集：NOP Saga 补偿、NOP 跨集群路由、NOP AlignStream ack/NAK、NIP `ocsp_staple`、NDP `SecurityProfile`、NDP GraphFrame §5、NWP `SubscribeFrame` CR-0006、NWM `trust_anchors`。
+- **NuGet 包发布** —— `LabAcacia.NPS.*` 10 个包发布至 `1.0.0-alpha.11`。
+- **`.NET SDK` — NCP 原生模式传输**：`NcpNativeClient` + `NcpServer` + `NcpSession` + `NcpServerConnection` 加入 `NPS.Core`。
+
+### 守护进程
+
+- **nps-ledger v1.0.0-alpha.11** — 联邦声誉条目推送（`POST /v1/log/federation/push`，防环最多 3 跳）。
+- **nps-probe v0.2** — 检查 5：NWM `trust_anchors` 校验。
+- **nps-orchestrator v1.0.0-alpha.11** — 版本号更新。
+- **NPS-NWP-Manager v0.1** — 初始 stub：`GET /health`、`GET /v1/nodes`、`GET /v1/nodes/list`。
+
+---
+
+## [1.0.0-alpha.10] —— 2026-05-28
+
+### SDK
+
+- **全部六个 SDK** 新增 NOP Saga 补偿类型（`CompensationPolicy`、`DagNode`）、NDP `SecurityProfile`、NIP `IdentReputationPolicyHint`/`IdentMetadata`。
+
+---
+
+## [1.0.0-alpha.9] —— 2026-05-28
+
+### SDK
+
+- **全部六个 SDK** 新增 NWP `SubscribeFrame`（0x12）初始版本（pre-CR-0006）；NIP `IdentFrame` 保证级别提取改进。
+
+---
+
+## [1.0.0-alpha.8] —— 2026-05-28
+
+### SDK
+
+- **全部六个 SDK** 新增 RFC-0005 声誉策略类型、Bridge Node 描述符、CGN 估算助手。
+
+---
+
 ## [1.0.0-alpha.7] —— 2026-05-17
 
 ### SDK

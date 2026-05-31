@@ -10,7 +10,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
-## [1.0.0-alpha.11] — 2026-05-28
+## [1.0.0-alpha.11] — 2026-05-31
 
 ### Spec
 
@@ -56,6 +56,8 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
   emission.
 
 - **NuGet packages published** — `LabAcacia.NPS.*` 10 packages at `1.0.0-alpha.11`.
+
+- **`.NET SDK` — NCP native-mode transport** (NPS-1 §4.6 / RFC-0006): `NcpNativeClient` + `NcpServer` + `NcpSession` + `NcpServerConnection` in `NPS.Core`. Client sends preamble + `HelloFrame`, reads `NcpHandshakeCapsFrame`, returns negotiated `NcpSession` with agreed encoding tier. Server accepts TCP connections, validates preamble, deserialises `HelloFrame`, exposes `NcpServerConnection` for application-layer accept/reject. `NcpHandshakeException` carries the wire error code.
 
 ### Daemons
 
