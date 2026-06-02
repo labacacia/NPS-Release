@@ -31,7 +31,7 @@ frames:
     protocol: NCP
     protocol_version: "0.6"
     status: stable
-    description: Incremental data frame. Supports json_patch (RFC 6902, Tier-1 default) and binary_bitset (Tier-2, 15–20% smaller) via patch_format field. NPS-CR-0002 (NWP §8.2) extends the event_type enum with the full topology-stream set — member_joined / member_left / member_updated / anchor_state / resync_required; for topology.stream subscriptions seq carries the post-event topology version and payload carries event-specific data. NPS-CR-0002 Phase 2 (NWP v0.13) adds the optional per-event cgn_est field (uint32, estimated CGN token cost of this push event's payload) for Agent-side cumulative-budget accounting per token-budget.md §7.2.
+    description: Incremental data frame. Supports json_patch (RFC 6902, Tier-1 default) and binary_bitset (Tier-2, 15–20% smaller) via patch_format field. NPS-CR-0002 / CR-0006 (NWP §13.2) extends the event_type enum with the full topology-stream set — member_joined / member_left / member_updated / anchor_state / resync_required; for topology.stream subscriptions subscription_id identifies the stream, seq carries the post-event topology version, and payload carries event-specific data. NPS-CR-0002 Phase 2 (NWP v0.13) adds the optional per-event cgn_est field (uint32, estimated CGN token cost of this push event's payload) for Agent-side cumulative-budget accounting per token-budget.md §7.2.
     fields_ref: "NPS-1-NCP.md#42-diffframe-0x02"
 
   - id: "0x03"

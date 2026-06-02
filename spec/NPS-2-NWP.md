@@ -495,7 +495,7 @@ For streaming queries, the first frame (seq=0) SHOULD include metadata:
 **Pagination vs. Streaming**
 
 - Streaming queries do not use `cursor`; records are pushed continuously per `order` until `limit × frames` or full push completes
-- To terminate early, the Agent sends a SubscribeFrame (`action="unsubscribe"`, `stream_id` equals QueryFrame's `request_id`) or disconnects. **Note**: reusing SubscribeFrame for streaming-query cancellation is intentional — it is the protocol-wide stream-cancellation signal; nodes route it by `stream_id` regardless of whether the stream originated from a QueryFrame or a SubscribeFrame.
+- To terminate early, the Agent sends an ErrorFrame referencing the QueryFrame's `request_id`, or disconnects. Nodes route the cancellation by `request_id` and MUST NOT require a SubscribeFrame-shaped cancel message for streaming queries.
 - The node MUST stop pushing after the connection is closed
 
 ### 6.7 Aggregation Queries
@@ -637,82 +637,13 @@ All nodes supporting async Actions MUST implement:
 
 ---
 
-## 8. SubscribeFrame (0x12)
+## 8. SubscribeFrame Overview (0x12)
 
-Used to establish change subscriptions on Memory Nodes. The server pushes incremental updates via DiffFrame (0x02).
+Used to establish change subscriptions on Memory and Anchor Nodes. The authoritative v0.13 wire shape is defined in §13 (CR-0006): `subscription_id`, `filter`, `heartbeat_interval_ms`, `max_events`, and opaque `cursor`.
 
-### 8.1 Field Definitions
+Earlier alpha drafts used `action`, `stream_id`, `heartbeat_interval`, and `resume_from_seq`. Those names are retired for NWP v0.13 and MUST NOT be emitted by conformant alpha.11+ producers. Consumers MAY accept them only as a pre-alpha.11 compatibility fallback, but MUST normalize internally to the §13 fields.
 
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `frame` | uint8 | Required | Fixed value `0x12` |
-| `action` | string | Required | `"subscribe"` / `"unsubscribe"` / `"ping"` |
-| `type` | string | Optional | Reserved subscribe type identifier per §12. When set, type-specific fields apply and `anchor_ref` semantics are defined by the type. Absent: per-anchor subscribe behavior below |
-| `stream_id` | string | Required | Client-generated UUID v4 |
-| `anchor_ref` | string | Conditionally Required | anchor_id of the subscribed data (required when `action="subscribe"` and `type` is absent or the reserved type requires an anchor) |
-| `filter` | object | Optional | Filter conditions (same as §6.2); requires `capabilities.subscribe_filter=true` |
-| `heartbeat_interval` | uint32 | Optional | Heartbeat interval in seconds, 0 = disabled, default 30 |
-| `resume_from_seq` | uint64 | Optional | Provided on reconnection; replays events after this sequence number (inclusive); node returns `NWP-SUBSCRIBE-SEQ-TOO-OLD` if it cannot satisfy the request |
-
-### 8.2 DiffFrame Subscription Extension Fields
-
-Subscription-pushed DiffFrames (0x02) add the following to the standard fields:
-
-| Field | Type | Required | Description |
-|-------|------|----------|-------------|
-| `stream_id` | string | Required | Associated subscription stream ID |
-| `seq` | uint64 | Required | Monotonically increasing event sequence number (per-stream, starting from 1); Agents use this to detect dropped frames and support reconnection |
-| `event_type` | string | Required | `"create"` / `"update"` / `"delete"` for default subscriptions. Reserved subscribe types (§12) MAY define additional values (e.g. topology event types per §12.2) |
-| `timestamp` | string | Required | Time of change (ISO 8601) |
-| `cgn_est` | uint32 | Optional | Estimated CGN token cost of this push event's payload. Nodes SHOULD populate this field on each pushed DiffFrame so subscribers can perform Agent-side cumulative-budget accounting per [token-budget.md §7.2](token-budget.md). Absent means the node does not provide a per-event estimate; Agents MAY estimate locally via UTF-8/4 fallback |
-
-**Sequence Number Semantics**
-
-- Each `stream_id` maintains its own independent `seq`, starting from 1 and monotonically increasing
-- When the Agent detects a `seq` gap, it SHOULD re-subscribe using `resume_from_seq`
-- Nodes SHOULD buffer recent N events (recommended: 10 minutes or 10,000 events, whichever comes first)
-- If `resume_from_seq` is outside the buffer range, the node MUST return `NWP-SUBSCRIBE-SEQ-TOO-OLD` (Agent must do a full re-query before re-subscribing)
-
-### 8.3 Subscription Flow
-
-```
-Agent                                  Node
-  │                                       │
-  │── SubscribeFrame(subscribe, sid) ───→ │  Establish subscription
-  │  ←─────────────────── CapsFrame(ack) │  Confirm (stream_id, status="subscribed")
-  │                                       │
-  │  ←─── DiffFrame(seq=1, event) ──────  │  Change push
-  │  ←─── DiffFrame(seq=2, event) ──────  │
-  │  ←─── DiffFrame(seq=N, ping) ───────  │  Heartbeat (patch=[])
-  │                                       │
-  │  [ Connection interrupted ]           │
-  │── SubscribeFrame(subscribe, sid,      │  Reconnection with resume
-  │      resume_from_seq=N) ───────────→  │
-  │  ←─────────────────── CapsFrame(ack) │  Confirm (status="subscribed", resumed=true)
-  │  ←─── DiffFrame(seq=N+1, ...) ──────  │  Replay from breakpoint
-```
-
-**Subscription Acknowledgement CapsFrame**
-
-```json
-{
-  "frame": "0x04",
-  "anchor_ref": "nps:system:subscribe:ack",
-  "count": 1,
-  "data": [{
-    "stream_id": "550e8400-...",
-    "status": "subscribed",
-    "resumed": false,
-    "last_seq": 0,
-    "effective_filter": {}
-  }]
-}
-```
-
-- `last_seq`: The latest event seq the node currently knows (0 for new subscriptions, or the most recent buffered event's seq for resumptions)
-- `resumed`: true indicates this is a reconnection resumption
-
-### 8.4 Subscription in HTTP Mode (SSE)
+### 8.1 Subscription in HTTP Mode (SSE)
 
 ```
 POST /nwp/orders/subscribe HTTP/1.1
@@ -864,7 +795,7 @@ Agents control traversal depth via the `X-NWP-Depth` header (HTTP mode) or the Q
 
 ## 12. Reserved Query Types
 
-The `type` field on `QueryFrame` (§6.1) and `SubscribeFrame` (§8.1) opts a request into a **reserved query type** with specification-defined semantics. Identifiers in the `topology.*` namespace are reserved for cluster topology operations on Anchor Nodes; all reserved namespaces below are **mandatory** for the node roles indicated.
+The `type` field on `QueryFrame` (§6.1) and `SubscribeFrame` (§13.1) opts a request into a **reserved query type** with specification-defined semantics. Identifiers in the `topology.*` namespace are reserved for cluster topology operations on Anchor Nodes; all reserved namespaces below are **mandatory** for the node roles indicated.
 
 | Namespace | Owning role | Mandatory at | Operations |
 |-----------|-------------|--------------|------------|
@@ -963,21 +894,23 @@ Continuous topology change feed for an Anchor Node's cluster.
 |----------|-------|
 | Frame | SubscribeFrame (0x12) with `type = "topology.stream"` |
 | Required of | All Anchor Nodes (mandatory at NPS-AaaS Profile L2 and above) |
-| Cancelable | Yes — via standard `SubscribeFrame.action = "unsubscribe"` |
+| Cancelable | Yes — by closing the subscription transport or receiving/sending a terminal ErrorFrame |
 
-**Request fields** (top-level on SubscribeFrame, supplementing §8.1):
+**Request fields** (top-level on SubscribeFrame, supplementing §13.1):
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
 | `type` | string | Required | Constant `"topology.stream"` |
+| `subscription_id` | string | Required | Client-generated UUID v4 used to correlate the topology stream and pushed DiffFrames |
+| `cursor` | string | Optional | Opaque server-issued resume cursor from a previous subscription. When present, `cursor` takes precedence over `topology.since_version` |
 | `topology` | object | Required | Container for topology-specific parameters per below |
 | `topology.scope` | string | Required | `"cluster"` (default for Anchor's own cluster); future scopes reserved |
 | `topology.filter` | object | Optional | Reduces event volume. Supported keys: `tags_any` (array, match-any), `tags_all` (array, match-all), `node_roles` (array — filter by role, matches members whose `node_roles` intersects the given values). Anchor Nodes MUST reject unsupported filter keys with `NWP-TOPOLOGY-FILTER-UNSUPPORTED` |
-| `topology.since_version` | uint64 | Optional | Resume from a previous version. Anchor Node MUST replay missed events when feasible; if the version is outside the retention window, MUST emit a `resync_required` event and the client MUST issue a fresh `topology.snapshot` |
+| `topology.since_version` | uint64 | Optional | Topology-specific initial resume hint for clients that have a snapshot `version` but do not yet have an opaque `cursor`. Anchor Node MUST replay missed events when feasible; if the version is outside the retention window, MUST emit a `resync_required` event and the client MUST issue a fresh `topology.snapshot` |
 
-For `type = "topology.stream"`, `topology.since_version` is the topology-scoped synonym of `SubscribeFrame.resume_from_seq` (§8.1). When both fields are present, `topology.since_version` takes precedence.
+For `type = "topology.stream"`, `cursor` is the canonical v0.13 resume mechanism. `topology.since_version` is accepted only as a topology-specific bootstrap hint when no cursor is available; when both fields are present, `cursor` takes precedence.
 
-**Events** are pushed as `DiffFrame (0x02)` with the §8.2 extension fields. For `topology.stream` subscriptions, `event_type` carries one of the topology event types below (extending the default `"create" / "update" / "delete"` enum), `seq` is the post-event topology version (§12.3), and `payload` carries the event-specific data.
+**Events** are pushed as `DiffFrame (0x02)` with the §13.2 subscription event envelope. For `topology.stream` subscriptions, `subscription_id` identifies the stream, `event_type` carries one of the topology event types below (extending the default `"create" / "update" / "delete"` enum), `seq` is the post-event topology version (§12.3), and `payload` carries the event-specific data.
 
 | `event_type` | Trigger | `payload` shape |
 |--------------|---------|-----------------|
@@ -997,7 +930,7 @@ For `type = "topology.stream"`, `topology.since_version` is the topology-scoped 
 
 Implementations MUST treat unknown `anchor_state.field` values as forward-compatible and ignore them rather than tearing down the subscription, so future Phase 3 sub-types can be introduced without a wire break.
 
-Standard SubscribeFrame heartbeats (§8.2) and unsubscribe (§8.1, `action = "unsubscribe"`) operate unchanged.
+Standard SubscribeFrame heartbeats (§13.2) operate unchanged. Cancellation is transport-level for v0.13: either side MAY close the subscription stream after emitting a terminal ErrorFrame when an error reason is available.
 
 ### 12.3 Versioning and Consistency Model
 
@@ -1044,7 +977,10 @@ SubscribeFrame opens a server-push subscription on a Memory or Anchor Node. The 
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `subscription_id` | string | Required | Client-generated UUID; used to correlate events and cancel the subscription |
+| `frame` | uint8 | Required | Fixed value `0x12` |
+| `subscription_id` | string | Required | Client-generated UUID v4; used to correlate events and cancel the subscription |
+| `type` | string | Optional | Reserved subscribe type identifier per §12. When set, type-specific fields apply and `anchor_ref` semantics are defined by the type. Absent: per-anchor subscribe behavior below |
+| `anchor_ref` | string | Conditionally Required | anchor_id of the subscribed data. Required for default per-anchor subscriptions; omitted when a reserved `type` defines its own target semantics (for example `topology.stream`) |
 | `filter` | object | Optional | Same filter syntax as QueryFrame `filter` (§6); if absent, all events match |
 | `heartbeat_interval_ms` | uint32 | Optional | If set, server MUST emit a heartbeat DiffFrame (empty payload, `event_type = "heartbeat"`) at this interval; default 0 (no heartbeat) |
 | `max_events` | uint32 | Optional | Server closes the subscription after delivering this many events; 0 = unlimited |
@@ -1053,15 +989,33 @@ SubscribeFrame opens a server-push subscription on a Memory or Anchor Node. The 
 ### 13.2 Lifecycle
 
 1. Client sends SubscribeFrame → server responds with CapsFrame (`subscription_id` echoed, `status = "open"`)
-2. Server streams DiffFrame events; each carries the `subscription_id` in an EXT header
-3. Client cancels by sending an ErrorFrame with `NWP-SUBSCRIBE-STREAM-NOT-FOUND` — or the server closes when `max_events` is reached
+2. Server streams DiffFrame events; each carries the `subscription_id` in an EXT header or equivalent transport metadata
+3. Client cancels by closing the subscription transport; server MAY also close when `max_events` is reached
 4. On server-side error, server MUST send a terminal ErrorFrame with the appropriate `NWP-SUBSCRIBE-*` code before closing
+
+Subscription-pushed DiffFrames add the following event-envelope fields to the standard DiffFrame fields:
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `subscription_id` | string | Required | Associated subscription ID |
+| `seq` | uint64 | Required except terminal `resync_required` | Monotonically increasing event sequence number within the subscription; reserved subscribe types MAY bind this to a domain-specific version, such as topology version (§12.3) |
+| `event_type` | string | Required | `"create"` / `"update"` / `"delete"` / `"heartbeat"` / `"error"` for default subscriptions. Reserved subscribe types (§12) MAY define additional values |
+| `timestamp` | string | Optional | Time of change (ISO 8601) |
+| `payload` | object | Optional | Event-specific payload. Heartbeats use an empty payload |
+| `cgn_est` | uint32 | Optional | Estimated CGN token cost of this push event's payload. Nodes SHOULD populate this field on each pushed DiffFrame so subscribers can perform Agent-side cumulative-budget accounting per [token-budget.md §7.2](token-budget.md). Absent means the node does not provide a per-event estimate; Agents MAY estimate locally via UTF-8/4 fallback |
+
+**Cursor semantics**
+
+- Cursor values are opaque server-generated strings. Clients MUST NOT parse, compare, or synthesize them.
+- When the Agent detects a `seq` gap, it SHOULD re-subscribe with the latest server-issued `cursor` it has received.
+- Nodes SHOULD retain recent cursor positions (recommended: 10 minutes or 10,000 events, whichever comes first).
+- If `cursor` is outside the retention window, the node MUST return `NWP-SUBSCRIBE-SEQ-TOO-OLD` or emit a reserved-type-specific terminal resync event (for example `topology.stream` `resync_required`).
 
 ### 13.3 Error codes
 
 The following error codes (defined in §14) apply to SubscribeFrame operations:
 
-- `NWP-SUBSCRIBE-STREAM-NOT-FOUND` — subscription_id unknown
+- `NWP-SUBSCRIBE-STREAM-NOT-FOUND` — subscription_id unknown or already closed
 - `NWP-SUBSCRIBE-LIMIT-EXCEEDED` — server's concurrent subscription limit reached
 - `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` — filter expression not supported by this node
 - `NWP-SUBSCRIBE-INTERRUPTED` — server-side interruption
@@ -1095,11 +1049,11 @@ The following error codes (defined in §14) apply to SubscribeFrame operations:
 | `NWP-TASK-ALREADY-CANCELLED` | `NPS-CLIENT-CONFLICT` | Task has already been cancelled |
 | `NWP-TASK-ALREADY-COMPLETED` | `NPS-CLIENT-CONFLICT` | Task has already completed; cannot cancel |
 | `NWP-TASK-ALREADY-FAILED` | `NPS-CLIENT-CONFLICT` | Task has already failed; cannot cancel |
-| `NWP-SUBSCRIBE-STREAM-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | stream_id referenced in unsubscribe does not exist |
+| `NWP-SUBSCRIBE-STREAM-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | `subscription_id` referenced by a subscription operation does not exist or is already closed |
 | `NWP-SUBSCRIBE-LIMIT-EXCEEDED` | `NPS-LIMIT-EXCEEDED` | Exceeded maximum concurrent subscriptions |
 | `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node does not support filtered subscriptions |
 | `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | Subscription stream terminated due to underlying data source interruption |
-| `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | resume_from_seq is outside the node's buffer range; full re-query required |
+| `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | `cursor` is outside the node's retention window; full re-query or reserved-type resync required |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | Response would exceed the token budget |
 | `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | depth exceeds the node's allowed max_depth |
 | `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | Node graph contains a circular reference |
