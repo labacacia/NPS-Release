@@ -10,6 +10,22 @@
 
 ---
 
+## [1.0.0-alpha.12] —— 2026-06-03
+
+### 规范
+
+- **NCP v0.8** — `NopFrame`（0x07）：零负载保活/心跳帧，握手后双方均可发送。`HelloFrame.ping_interval_ms` uint32（0 = 禁用）；死节点阈值 3 × 间隔。错误码 `NCP-KEEPALIVE-TIMEOUT` → `NPS-SERVER-TIMEOUT`，`NCP-REKEY-REQUIRED` → `NPS-CLIENT-BAD-FRAME`。
+- **NWP v0.14** — manifest schema 新增 `manifest_version` uint32 单调计数器和 `manifest_updated_at` ISO 8601 时间戳；HTTP 响应头 `X-NWM-Version` 用于缓存失效。
+- **NIP v0.10** — `IdentFrame.node_roles` string[] 自声明节点角色标签（Phase 1–2），不计入 Ed25519 签名负载（与 `cert_format`/`cert_chain` 相同的排除模式）。错误码 `NIP-CERT-NODE-ROLES-MISMATCH` → `NPS-AUTH-FORBIDDEN`。
+- **NDP v0.9** — `AnnounceFrame.spawn_spec_ref` 类型由 URI 字符串改为结构化 schema 对象；`heartbeat_interval_ms` uint32 默认 60 000 ms。错误码 `NDP-ANNOUNCE-STALE` → `NPS-CLIENT-NOT-FOUND`。
+- **NOP v0.7** — `TaskFrame.result_ttl_seconds` uint32 默认 3 600 秒，等于默认值时省略传输。错误码 `NOP-TASK-RESULT-EXPIRED` → `NPS-CLIENT-NOT-FOUND`，`NOP-STREAM-NAK-UNRESOLVABLE` → `NPS-STREAM-SEQ-GAP`。
+
+### SDK
+
+- **全部六个 SDK** 更新至 alpha.12 功能集：NCP NopFrame + `ping_interval_ms`；NIP `node_roles`；NDP `spawn_spec_ref` schema 对象 + `heartbeat_interval_ms`；NOP `result_ttl_seconds`；NWP `X-NWM-Version` 常量 / `manifest_version` + `manifest_updated_at` 字段。
+
+---
+
 ## [1.0.0-alpha.11] —— 2026-05-31
 
 ### 规范

@@ -10,6 +10,27 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
+## [1.0.0-alpha.12] — 2026-06-03
+
+### Spec
+
+- **NCP v0.8** — `NopFrame` (0x07): zero-payload keepalive/heartbeat. Both peers MAY send after handshake. `HelloFrame.ping_interval_ms` uint32 (0 = disabled); dead-peer threshold 3 × interval. Error codes `NCP-KEEPALIVE-TIMEOUT` → `NPS-SERVER-TIMEOUT`, `NCP-REKEY-REQUIRED` → `NPS-CLIENT-BAD-FRAME`.
+
+- **NWP v0.14** — `manifest_version` uint32 monotonic counter, `manifest_updated_at` ISO 8601 timestamp in manifest schema. `X-NWM-Version` HTTP response header for cache busting.
+
+- **NIP v0.10** — `IdentFrame.node_roles` string[] self-declared node-role tags (Phase 1–2). Excluded from the Ed25519 signed payload (same exclusion pattern as `cert_format`/`cert_chain`). Error code `NIP-CERT-NODE-ROLES-MISMATCH` → `NPS-AUTH-FORBIDDEN`.
+
+- **NDP v0.9** — `AnnounceFrame.spawn_spec_ref` type changed from URI string to structured schema object. `AnnounceFrame.heartbeat_interval_ms` uint32, default 60 000 ms (0 = disabled). Error code `NDP-ANNOUNCE-STALE` → `NPS-CLIENT-NOT-FOUND`.
+
+- **NOP v0.7** — `TaskFrame.result_ttl_seconds` uint32, default 3 600 s; omitted from wire at default. Error codes `NOP-TASK-RESULT-EXPIRED` → `NPS-CLIENT-NOT-FOUND`, `NOP-STREAM-NAK-UNRESOLVABLE` → `NPS-STREAM-SEQ-GAP`.
+
+### SDKs
+
+- **All six SDKs** (Python/TypeScript/Go/Java/Rust/.NET) updated to alpha.12 feature set:
+  NCP NopFrame + `ping_interval_ms`; NIP `node_roles`; NDP `spawn_spec_ref` schema object + `heartbeat_interval_ms`; NOP `result_ttl_seconds`; NWP `X-NWM-Version` constant / `manifest_version` + `manifest_updated_at` fields.
+
+---
+
 ## [1.0.0-alpha.11] — 2026-05-31
 
 ### Spec
