@@ -10,7 +10,11 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
-## [1.0.0-alpha.12] — 2026-06-03
+## [1.0.0-alpha.13] — 2026-06-13
+
+> **Supersedes the withdrawn `1.0.0-alpha.12`.** alpha.12 NuGet packages shipped early
+> with a vulnerable `MessagePack 3.0.300` (NU1903) and a native-mode handshake bug, before
+> the release review completed; they are deprecated. alpha.13 is the corrected release.
 
 ### Spec
 
@@ -26,7 +30,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ### SDKs
 
-- **All six SDKs** (Python/TypeScript/Go/Java/Rust/.NET) updated to alpha.12 feature set:
+- **All six SDKs** (Python/TypeScript/Go/Java/Rust/.NET) updated to alpha.13 feature set:
   NCP NopFrame + `ping_interval_ms`; NIP `node_roles`; NDP `spawn_spec_ref` schema object + `heartbeat_interval_ms`; NOP `result_ttl_seconds`; NWP `X-NWM-Version` constant / `manifest_version` + `manifest_updated_at` fields.
 
 ---

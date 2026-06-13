@@ -10,7 +10,7 @@
 
 ---
 
-## [1.0.0-alpha.12] —— 2026-06-03
+## [1.0.0-alpha.13] —— 2026-06-03
 
 ### 规范
 
@@ -22,7 +22,7 @@
 
 ### SDK
 
-- **全部六个 SDK** 更新至 alpha.12 功能集：NCP NopFrame + `ping_interval_ms`；NIP `node_roles`；NDP `spawn_spec_ref` schema 对象 + `heartbeat_interval_ms`；NOP `result_ttl_seconds`；NWP `X-NWM-Version` 常量 / `manifest_version` + `manifest_updated_at` 字段。
+- **全部六个 SDK** 更新至 alpha.13 功能集：NCP NopFrame + `ping_interval_ms`；NIP `node_roles`；NDP `spawn_spec_ref` schema 对象 + `heartbeat_interval_ms`；NOP `result_ttl_seconds`；NWP `X-NWM-Version` 常量 / `manifest_version` + `manifest_updated_at` 字段。
 
 ---
 

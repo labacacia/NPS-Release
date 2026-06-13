@@ -68,7 +68,7 @@ Each phase breaks into three segments:
 | Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.11 (96 tests) |
 
 > **Official complete-SDK set = these six languages** (.NET / Python / TypeScript / Java / Rust / Go).
-> **C++ and PHP are de-scoped** as of alpha.12: tracked as *planned* placeholder stubs (`expected: stub` in `NPS-Release/version.yaml`), **not** part of the "all SDKs feature-aligned" claim and **not** a release gate. They re-enter scope only when source + tests exist. Public docs MUST NOT list C++/PHP among shipped SDKs.
+> **C++ and PHP are de-scoped** as of alpha.13: tracked as *planned* placeholder stubs (`expected: stub` in `NPS-Release/version.yaml`), **not** part of the "all SDKs feature-aligned" claim and **not** a release gate. They re-enter scope only when source + tests exist. Public docs MUST NOT list C++/PHP among shipped SDKs.
 
 ### NIP CA Server (six-language reference deployment)
 
@@ -132,7 +132,7 @@ Each phase breaks into three segments:
 - [x] Claude Desktop talks to an NWP Memory Node through `mcp-ingress`
 - [x] `NDP.ResolveFrame` resolves `nwp://` to a physical endpoint via DNS TXT — `resolve_via_dns` / `resolveWithDns` / `ResolveViaDns` across all six SDKs; injectable `DnsTxtLookup` interface; system resolver per language
 - [x] **NPS Probe** (Agent Coder conformance CLI) — shipped v0.1 (alpha.10), v0.2 (alpha.11); 5 checks
-- [ ] **NPS Studio** (human visual debugger) — not started; deferred to a later cycle (not in alpha.12 scope)
+- [ ] **NPS Studio** (human visual debugger) — not started; deferred to a later cycle (not in alpha.13 scope)
 
 ---
 
@@ -242,7 +242,7 @@ Each phase breaks into three segments:
 
 ---
 
-## alpha.12 — 🚧 next (target 2026-06)
+## alpha.13 — 🚧 next (target 2026-06)
 
 > **Theme**: *Parity & Edge* — bring the six reference SDKs to true **functional** parity (not just source presence), advance all five protocol specs, and stand up the L2/L3 daemon edge.
 >

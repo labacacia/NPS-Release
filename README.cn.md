@@ -6,7 +6,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.12-orange.svg)](CHANGELOG.cn.md)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.13-orange.svg)](CHANGELOG.cn.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.7-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.13-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.9-7b61ff.svg)]()

@@ -2,14 +2,14 @@ English | [中文版](./README.cn.md)
 
 # Neural Protocol Suite (NPS) — Protocol Specification
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.12-orange.svg)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.13-orange.svg)](CHANGELOG.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.7-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.13-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.9-7b61ff.svg)]()
 [![NDP](https://img.shields.io/badge/NDP-v0.8-f0a050.svg)]()
 [![NOP](https://img.shields.io/badge/NOP-v0.6-ff8c42.svg)]()
 
-> **Version:** 1.0.0-alpha.12 | **Status:** Proposed | **License:** Apache 2.0
+> **Version:** 1.0.0-alpha.13 | **Status:** Proposed | **License:** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 

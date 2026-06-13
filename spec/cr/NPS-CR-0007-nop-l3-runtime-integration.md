@@ -7,7 +7,7 @@ Licensed under the Apache License, Version 2.0
 # NPS Change Request: NOP ↔ L3 Runtime Integration (nps-runner)
 
 **CR ID**: NPS-CR-0007
-**Target version**: v1.0.0-alpha.12
+**Target version**: v1.0.0-alpha.13
 **Status**: Proposed
 **Type**: Backward-compatible addition (new NOP §8, `spawn_spec_ref` content-schema standardization, 4 new error codes, new L3 conformance suite)
 **Author**: Ori, LabAcacia
@@ -43,14 +43,14 @@ No existing wire format changes; all additions are backward compatible.
 ## 2. Motivation
 
 `nps-runner` shipped as a Phase-1 skeleton (alpha.4) with L3 deferred. Standing up the L3
-runtime for alpha.12 requires a canonical contract so that:
+runtime for alpha.13 requires a canonical contract so that:
 
 1. Multiple runner replicas can compete for the same inbox safely (no double-execution).
 2. `spawn_spec_ref` is interoperable across runner implementations rather than per-vendor.
 3. Idle / max-runtime semantics are uniform, so cost and liveness behave predictably.
 4. An L3 deployment can be conformance-tested (`TC-N3-*`) the way L1/L2 already are.
 
-This CR also unblocks daemon work item 2 of the alpha.12 roadmap (`nps-runner` L3 FaaS runtime).
+This CR also unblocks daemon work item 2 of the alpha.13 roadmap (`nps-runner` L3 FaaS runtime).
 
 ---
 
@@ -176,7 +176,7 @@ fields and error-code constants:
 | Language | `SpawnSpec` type + claim fields | 4 new error constants |
 |----------|--------------------------------|-----------------------|
 | .NET | reference | reference |
-| Python / TypeScript / Go / Java / Rust | alpha.12 | alpha.12 |
+| Python / TypeScript / Go / Java / Rust | alpha.13 | alpha.13 |
 
 ---
 
