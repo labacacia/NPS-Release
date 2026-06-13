@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-4
 **Status**: Proposed
-**Version**: 0.8
+**Version**: 0.9
 **Date**: 2026-05-10
 **Port**: 17433（默认，共用）/ 17436（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.7)、NPS-3 (NIP v0.9)
+**Depends-On**: NPS-1 (NCP v0.8)、NPS-3 (NIP v0.10)
 
 ---
 
@@ -284,6 +284,7 @@ Registry MUST NOT 声明其无法满足相应运营方信任要求的 profile。
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.9 | 2026-06-12 | AnnounceFrame (0x30) 新增两个可选 liveness 字段 —— `health`（`healthy`/`degraded`/`draining`，缺省 ⇒ `healthy`）和 `last_seen`（ISO 8601 心跳时间）。新增 §3.2.1 **解析时陈旧检查**：当被解析条目的新鲜度截止 `(last_seen ?? timestamp) + ttl` 已过期时，Registry MUST 返回 `NDP-RESOLVE-STALE` 而非提供已失效端点；resolved 对象 SHOULD 回显 `health`。1 个新错误码 `NDP-RESOLVE-STALE`。向后兼容（两字段均可选）。（正文中文翻译待补，见 version-matrix translation_lag）|
 | 0.7 | 2026-05-10 | 新增 §7.3–§7.7：三个具名注册表安全 profile（`local-dev` / `org-private` / `public-federated`）、AnnounceFrame 防投毒规则（签名覆盖、重放防御、重复抑制、冲突拒绝）、graph_seq 回滚防御、跨注册表联邦要求、运营方信任级别表。新增错误码：`NDP-ANNOUNCE-CONFLICT`、`NDP-GRAPH-SEQ-ROLLBACK`、`NDP-ISSUER-NOT-ALLOWED`、`NDP-CA-ATTEST-REQUIRED`。（Issue #33）|
 | 0.6 | 2026-05-01 | **破坏性更名（pre-1.0）**：`node_kind` 更名为 `node_roles`（仅接受 string 数组；废弃单字符串形式）。解析器 MUST 在 alpha.5 之前把 `node_kind` 当别名接受以保持向后兼容。新增约束：NWP NWM `node_type` MUST 为 `node_roles` 中的一项（见 NWP §2.1 节点角色解析）。修复 M1 命名消歧问题——`node_kind`（多角色发现字段）与 `node_type`（单运营角色）名字相近但语义分叉，且无跨协议约束文档。|
 | 0.5 | 2026-04-26 | AnnounceFrame (0x30) 新增三个 additive 字段以支撑 NPS-CR-0001 —— `node_kind`（string 或 string 数组；取值 `"memory"` / `"action"` / `"complex"` / `"anchor"` / `"bridge"`；遗留 `"gateway"` 拒绝）、`cluster_anchor`（NID —— 标识非-Anchor 集群成员注册到的 Anchor）、`bridge_protocols`（string 数组 —— 给 `"bridge"` 节点；标准值 `"http"` / `"grpc"` / `"mcp"` / `"a2a"`）。全部 additive 且向后兼容：alpha.3 之前的发布者不发 `node_kind`，接收方回退到 `node_type`。Depends-On 升级为 NCP v0.7（NPS-RFC-0001）+ NIP v0.9（NPS-RFC-0003）。|

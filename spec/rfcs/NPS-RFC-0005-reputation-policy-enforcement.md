@@ -3,13 +3,13 @@ English | [中文版](./NPS-RFC-0005-reputation-policy-enforcement.cn.md)
 ---
 **RFC Number**: NPS-RFC-0005
 **Title**: Reputation Policy Enforcement
-**Status**: Accepted
+**Status**: Active
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: Ori Lynn (pre-1.0 fast-track per `spec/cr/README.md`)
 **Created**: 2026-05-19
-**Last-Updated**: 2026-05-27
-**Accepted**: 2026-05-27
-**Activated**: _(set when first reference implementation ships, target v1.0-alpha.8)_
+**Last-Updated**: 2026-05-28
+**Accepted**: 2026-05-19 (pre-1.0 fast-track; see `spec/cr/README.md`)
+**Activated**: 2026-05-28 (v1.0.0-alpha.9 — `DefaultReputationPolicyEvaluator`, `AnchorNodeMiddleware` enforcement, and `X-NWP-Ident` assurance extraction all shipped)
 **Supersedes**: _none_
 **Superseded-By**: _none_
 **Affected Specs**: NPS-2 NWP, NPS-3 NIP, spec/services/NPS-AaaS-Profile.md, spec/error-codes.md

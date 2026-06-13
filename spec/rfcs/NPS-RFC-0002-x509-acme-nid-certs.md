@@ -5,10 +5,10 @@ English | [中文版](./NPS-RFC-0002-x509-acme-nid-certs.cn.md)
 **Title**: Adopt X.509 + ACME for NID certificates
 **Status**: Accepted
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
-**Shepherd**: _TBD — assigned on PR open_
+**Shepherd**: Ori Lynn
 **Created**: 2026-04-21
-**Last-Updated**: 2026-05-27
-**Accepted**: 2026-05-27
+**Last-Updated**: 2026-05-17
+**Accepted**: 2026-05-17
 **Activated**: _(set when first reference SDK ships)_
 **Supersedes**: _none_
 **Superseded-By**: _none_
@@ -408,8 +408,12 @@ by doing it once.
   assigned arc before being relied on for conformance, production NID
   issuance, or cross-organisation interop. With PEN assigned, this RFC
   moves from Draft to Proposed.
-- [ ] **OQ-3**: Should NIP CA offer cross-signing with public CAs
-  (e.g., Let's Encrypt)? Defer to a follow-up RFC.
+- [x] **OQ-3**: Should NIP CA offer cross-signing with public CAs
+  (e.g., Let's Encrypt)? **Resolved 2026-05-17**: Deferred to a
+  dedicated follow-up RFC. Cross-signing policy is orthogonal to the
+  core X.509 + ACME issuance surface defined here and can be adopted
+  independently without altering this RFC's wire format. No open
+  question blocks Accepted status.
 
 ---
 

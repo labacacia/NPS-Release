@@ -8,8 +8,9 @@ Licensed under the Apache License, Version 2.0
 
 **CR ID**: NPS-CR-0003
 **Target version**: v1.0-alpha.6
-**Status**: Accepted
+**Status**: Implemented
 **Accepted**: 2026-05-11
+**Implemented**: 2026-05-28 (v1.0.0-alpha.9, LabAcacia.NPS.NIP)
 **Type**: Backward-compatible extension (new identifier conventions, new IdentFrame field, new CA endpoints, new revocation reason)
 **Author**: Ori, LabAcacia
 **Affected components**: NIP spec (NPS-3), NIP error codes, .NET SDK (`NPS.NIP`), `nip-ca-server`, conformance tests, public docs

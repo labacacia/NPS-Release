@@ -2,7 +2,7 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 1.4
+**Version**: 1.5
 **Date**: 2026-05-11
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`

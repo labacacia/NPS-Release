@@ -2,8 +2,8 @@
 
 # Cognon Budget 规范
 
-**Version**: 0.6
-**Date**: 2026-05-14
+**Version**: 0.7
+**Date**: 2026-05-21
 
 ---
 
@@ -57,6 +57,8 @@ CGN 定义为**两个命名 profile**，其合规性要求互不重叠（issue #
 CGN = ceil(UTF-8_bytes / 4)
 ```
 
+`UTF-8_bytes` 是**逻辑载荷以 UTF-8 表达时的字节数**（例如 JSON 编码帧的序列化 JSON 字节数）。对于 NCP 二进制等非 JSON 线格式，`UTF-8_bytes` MUST NOT 取原始线帧字节数——请参见 §2.4 中保留线格式无关性的字段级分解方法。
+
 此公式基于主流 LLM tokenizer 的平均行为（英文约 4 bytes/token，中文约 3 bytes/token），作为最保守的估算基线。
 
 字节数 fallback 在任何情况下 MUST NOT 用于 **CGN-Billing**。若 Node 无法为某条将被计费的请求解析出 `verified_tokenizer`，MUST 拒绝为该请求发出 CGN-Billing 记录，并采取以下两种处理之一：(a) 将该路面降级为 CGN-Estimate（仅作不可计费遥测）；(b) 以计费类错误拒绝该请求。
@@ -92,6 +94,31 @@ id 或版本，以便对端能区分它们与规范表。
 开始时刻或更早，并记录到签名计量记录中），且 MUST 使用与之匹配的、由
 `verified_tokenizer` 得出的原生计数；±5 % 容差**不**适用。`default.unknown`
 仅适用于 CGN-Estimate；CGN-Billing 没有 fallback 行。
+
+### 2.4 线格式无关性（normative）
+
+CGN MUST 在**逻辑帧层**（序列化之前）计算，且对相同语义内容在任意线格式下的结果 MUST 一致：
+
+| 线格式 | 相对 JSON 的大小 | CGN |
+|--------|----------------|-----|
+| JSON（UTF-8） | 100 %（基准） | 直接对 JSON UTF-8 字节应用字节公式（§2.2） |
+| NCP 二进制 | ≈ JSON 的 30–60 % | **与等价 JSON 内容的 CGN 相同** |
+| MsgPack | ≈ JSON 的 50–75 % | 与等价 JSON 内容的 CGN 相同 |
+
+**NCP 帧 CGN（CGN-Estimate fallback）。** 以 NCP 二进制格式传输帧且无可用的 verified tokenizer 时，Node MUST NOT 以原始线帧字节数作为 §2.2 的字节计数输入，而应采用以下字段级分解：
+
+```
+NCP_CGN = Σ ceil(utf8_bytes(string_field) / 4)    // 所有字符串类型字段
+         + Σ 1                                     // 所有数值 / 布尔字段
+         + Σ ceil(blob_bytes / 4)                  // 所有二进制 / blob 字段
+```
+
+`utf8_bytes(string_field)` 为该字段值以 UTF-8 重新编码后的字节长度。
+`blob_bytes` 为 blob 载荷的原始字节长度（不计 base64 或 hex 展开后的长度）。
+
+> **设计原因。** NPS 交互的主导成本是 Agent 侧的 LLM 推理，其操作对象是解码后的逻辑内容。NCP 二进制编码虽然降低了线路带宽与 Node I/O 成本，却不减少 Agent 的推理 token 负担。将 CGN 绑定到逻辑内容，可确保经济信号追踪实际消耗的资源——即 Agent 注意力——而非传输侧的节省。若 Node 以线字节计费，相同信息下 NCP 调用者将比 JSON 调用者被少收费，破坏公平计量的基础，并使 CGN 依赖于传输格式。
+
+`X-NWP-Tokens` 与 `X-NWP-Tokens-Native` 响应头 MUST 反映逻辑层 CGN 计数，而非序列化线字节数。
 
 ---
 
@@ -130,7 +157,7 @@ Node 根据 IdentFrame 中的元数据推断 Agent 使用的模型族：
 
 ### 3.3 默认 Fallback
 
-无法确定 tokenizer 时，使用 `ceil(UTF-8_bytes / 4)` 计算 CGN。
+无法确定 tokenizer 时，使用 `ceil(UTF-8_bytes / 4)` 计算 CGN（非 JSON 线格式请参见 §2.4）。
 
 ---
 
@@ -210,18 +237,65 @@ CapsFrame 的 `token_est` 字段值为 CGN：
 
 ---
 
-## 7. 流式与订阅预算策略
+## 7. Node 运营方 CGN 上限（`cgn_limit`）
+
+`X-NWP-Budget` 是 Agent 声明的单请求上限，而 `cgn_limit` 是 Node 运营方在服务侧对单次请求可消耗 CGN 的上限。两者独立存在；任意请求的有效预算为：
+
+```
+effective_budget = min(cgn_limit, X-NWP-Budget)   // 0 表示不限制
+```
+
+若 `X-NWP-Budget` 缺失，则 `effective_budget = cgn_limit`。若 `cgn_limit` 为 `0`（默认值），仅 Agent 提供的 `X-NWP-Budget` 生效。
+
+### 7.1 NWM 声明
+
+设置 `cgn_limit > 0` 的 Node MUST 在 NWM 的 `token_budget.cgn_limit` 字段中发布该值，使 Agent 在发送请求之前即可发现此上限：
+
+```json
+{
+  "token_budget": {
+    "cgn_limit": 5000,
+    "profile": "cgn.v1"
+  }
+}
+```
+
+### 7.2 在 `AnchorNodeMiddleware` 中的强制执行
+
+`AnchorNodeOptions.CgnLimit`（uint32，默认 `0`）设置单请求的 Node 上限。中间件的执行逻辑：
+
+1. 从请求头读取 `X-NWP-Budget`（Agent 上限，可能缺失）。
+2. 计算 `effective_budget = cgn_limit > 0 ? min(cgn_limit, x_nwp_budget_or_max) : x_nwp_budget_or_max`。
+3. 将 `effective_budget` 传入响应构建器与 CGN-Estimate 累计器。
+4. 若响应的 CGN 合计将超过 `effective_budget`：优先裁剪（减少字段 / 条数）；若无法裁剪，返回 `NWP-CGN-LIMIT-EXCEEDED`（HTTP 400，NPS 状态 `NPS-CLIENT-REQUEST-TOO-LARGE`）。
+
+### 7.3 CGN-Estimate 与 CGN-Billing 的执行差异
+
+| Profile | `cgn_limit` 行为 |
+|---------|-----------------|
+| CGN-Estimate | 建议性：Node SHOULD 裁剪；若无法裁剪且超出量已在 `X-NWP-Tokens` 中标记，MAY 允许超出。 |
+| CGN-Billing | 严格性：Node MUST NOT 发出超过 `effective_budget` 的响应；超出时 `NWP-CGN-LIMIT-EXCEEDED` 是强制要求。 |
+
+### 7.4 错误码
+
+| 错误码 | HTTP 状态 | NPS 状态 | 描述 |
+|--------|-----------|----------|------|
+| `NWP-CGN-LIMIT-EXCEEDED` | 400 | `NPS-CLIENT-REQUEST-TOO-LARGE` | 响应将超过有效 CGN 预算（`min(cgn_limit, X-NWP-Budget)`）；且无法裁剪。响应体 SHOULD 包含 `effective_budget` 与 `estimated_cgn`。 |
+
+---
+
+## 8. 流式与订阅预算策略
 
 `X-NWP-Budget` 上限仅适用于**同步请求/响应操作**（QueryFrame → CapsFrame / StreamFrame 批次）。以下持续推送操作遵循不同规则：
 
-### 7.1 流式查询（QueryFrame `stream: true`）
+### 8.1 流式查询（QueryFrame `stream: true`）
 
 - `X-NWP-Budget` 按**每个 StreamFrame 批次**执行，不针对整个流。
 - 若处理某批次会超出声明预算，节点 MUST 对该批次进行裁剪或终止。
 - 响应头 `X-NWP-Tokens` 仅报告当前批次消耗的 CGN。
 - Agent 可在累计预算耗尽后主动断开连接。
 
-### 7.2 SubscribeFrame / 推送流（topology.stream、事件订阅）
+### 8.2 SubscribeFrame / 推送流（topology.stream、事件订阅）
 
 长连续推送流（如通过 SubscribeFrame 建立的 `topology.stream`）由一系列大小不固定的事件组成，预算语义有所不同：
 

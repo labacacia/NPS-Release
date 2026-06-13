@@ -3,13 +3,13 @@
 ---
 **RFC 编号**：NPS-RFC-0004
 **标题**：NID 声誉日志（Agent 版 Certificate Transparency）
-**状态**：Accepted（Phase 1 —— 条目 wire 格式 + .NET 参考类型已落地）
+**状态**：Active
 **作者**：Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**：Ori Lynn（1.0 之前快速通道，见 `spec/cr/README.cn.md`）
 **创建日期**：2026-04-21
-**最后更新**：2026-04-26
+**最后更新**：2026-05-28
 **接受日期**：2026-04-26（1.0 之前快速通道；见 `spec/cr/README.cn.md`）
-**激活日期**：_（首个参考日志运营方发版时填写，目标 v1.0-alpha.4）_
+**激活日期**：2026-05-28（v1.0.0-alpha.9 — 条目 wire 格式、.NET ReputationLogClient 及 DefaultReputationPolicyEvaluator 日志查询路径均已发布）
 **取代**：_无_
 **被取代于**：_无_
 **影响的规范**：NPS-3 NIP、NPS-4 NDP、spec/services/NPS-AaaS-Profile.md、spec/error-codes.md

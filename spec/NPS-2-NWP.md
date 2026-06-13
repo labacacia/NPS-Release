@@ -4,11 +4,11 @@ English | [中文版](./NPS-2-NWP.cn.md)
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.13
+**Version**: 0.14
 **Date**: 2026-05-28
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.7), NPS-3 (NIP v0.9), NPS-4 (NDP v0.8)
+**Depends-On**: NPS-1 (NCP v0.8), NPS-3 (NIP v0.10), NPS-4 (NDP v0.9)
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -143,7 +143,8 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 | `node_id` | string | Required | Node NID, format: `urn:nps:node:{host}:{path}` |
 | `node_type` | string | Required | `"memory"` / `"action"` / `"complex"` / `"anchor"` / `"bridge"`. The legacy value `"gateway"` was removed in v1.0-alpha.3 (see §2.1 *Removed types* and [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)); parsers MUST reject it with `NWP-MANIFEST-NODE-TYPE-REMOVED`. Any other unrecognized value MUST be rejected with `NWP-MANIFEST-NODE-TYPE-UNKNOWN`. This field declares the **operative role** this NWP service endpoint is serving — it MUST be one of the values in the node's NDP `Announce.node_roles` (NPS-4 §3.1). For multi-role nodes, `node_type` selects which role is active at this endpoint; see §2.1 *Node Role Resolution* for the full constraint. |
 | `display_name` | string | Optional | Human-readable node name |
-| `manifest_version` | string | Optional | Manifest version identifier (ETag), for conditional request cache control |
+| `manifest_version` | uint32 | Optional | Monotonically incrementing manifest version counter (starts at 1, incremented on every structural change). Servers MUST include `X-NWM-Version: <manifest_version>` on every `GET /.nwm` response. Agents SHOULD send `If-None-Match: <manifest_version>` on subsequent requests; unchanged manifests return `304 Not Modified`. (NWP v0.14) |
+| `manifest_updated_at` | string | Optional | ISO 8601 timestamp of the last manifest change, e.g. `"2026-06-03T12:00:00Z"`. SHOULD be set whenever `manifest_version` is incremented. (NWP v0.14) |
 | `min_agent_version` | string | Optional | Minimum NPS version the Agent must support, format `"major.minor"`; Agents below this version MUST be rejected with `NWP-MANIFEST-VERSION-UNSUPPORTED` |
 | `min_assurance_level` | string | Optional | One of `"anonymous"` (default) / `"attested"` / `"verified"` (see [NIP §5.1.1](NPS-3-NIP.md#511-assurance-levels-nps-rfc-0003)). Requests presenting a level lower than this MUST be rejected with `NWP-AUTH-ASSURANCE-TOO-LOW` (`NPS-AUTH-FORBIDDEN`); response SHOULD include a `hint` pointing to a CA enrolment URL. Default `"anonymous"` preserves backward compatibility with v1.0-alpha.2 nodes. Per-action override is permitted via the `min_assurance_level` field on an individual `ActionSpec` (§4.6). (NPS-RFC-0003) |
 | `wire_formats` | array | Required | Supported encoding formats: `["ncp-capsule", "msgpack", "json"]` |
@@ -226,7 +227,8 @@ Advisory commercial metadata. The protocol does not authorize, meter, or settle 
   "node_id": "urn:nps:node:api.example.com:orders",
   "node_type": "complex",
   "display_name": "Order Management Node",
-  "manifest_version": "etag-2026041402",
+  "manifest_version": 7,
+  "manifest_updated_at": "2026-06-03T00:00:00Z",
   "min_agent_version": "0.3",
   "wire_formats": ["ncp-capsule", "msgpack", "json"],
   "preferred_format": "ncp-capsule",
@@ -312,7 +314,7 @@ Advisory commercial metadata. The protocol does not authorize, meter, or settle 
 
 **NWM Conditional Requests**
 
-Agents SHOULD cache the NWM and use `manifest_version` for conditional requests: in HTTP mode via the `If-None-Match: {manifest_version}` header; if the manifest is unchanged the server returns `304 Not Modified`.
+Agents SHOULD cache the NWM and use `manifest_version` for conditional requests: in HTTP mode via the `If-None-Match: <manifest_version>` header (integer string, e.g. `If-None-Match: 7`); if the manifest is unchanged the server returns `304 Not Modified`. Servers MUST include `X-NWM-Version: <manifest_version>` on every `GET /.nwm` response so agents can detect staleness without a full re-fetch. `manifest_updated_at` provides a human-readable timestamp of the last structural change.
 
 ### 4.6 NWM Action Registry
 
@@ -1099,10 +1101,74 @@ Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stre
 
 ---
 
-## 16. Changelog
+## 16. Bridge Node Conformance
+
+The Bridge Node type and the `bridge_target` object schema were introduced by NPS-CR-0001 (§2.1)
+and standardized at NWP v0.13. This section formalises the conformance requirements and provides
+canonical `bridge_target` round-trip test vectors so that all SDK Bridge implementations agree on
+the wire shape.
+
+### 16.1 Conformance requirements
+
+A conformant Bridge Node MUST:
+
+1. Advertise `node_type: "bridge"` in its NWM (§4.1) and the supported external protocols via
+   NDP `bridge_protocols` (NPS-4 §3.1).
+2. Accept inbound NWP frames carrying a `bridge_target` object and reject a frame missing it (for
+   a Bridge-routed action) with `NWP-ACTION-PARAMS-INVALID`.
+3. Validate `bridge_target.protocol` against its advertised set; an unsupported protocol MUST
+   return `NWP-ACTION-PARAMS-INVALID` (not a silent fallthrough).
+4. Treat unknown `bridge_target` fields as opaque pass-through and MUST NOT fail on them
+   (forward compatibility).
+5. Be **stateless per request** and MUST NOT participate in cluster topology (`topology.*` MUST
+   return `NWP-RESERVED-TYPE-UNSUPPORTED` on a pure Bridge Node).
+
+A conformant Bridge Node SHOULD:
+
+1. Apply SSRF protection to `bridge_target.endpoint` (NPS-2 §15.2) before dialing the upstream.
+2. Propagate `bridge_target.headers` to the upstream HTTP request verbatim, minus hop-by-hop
+   headers.
+
+### 16.2 `bridge_target` test vectors
+
+The canonical wire shape is `{ "protocol", "endpoint", "extras"? }` (the SDK in-memory form;
+`headers` and other per-protocol knobs travel inside `extras`). All six SDKs MUST round-trip
+these vectors identically (`from_dict(to_dict(x)) == x`):
+
+```json
+{ "protocol": "http", "endpoint": "https://api.example.com/v1/orders" }
+```
+
+```json
+{
+  "protocol": "http",
+  "endpoint": "https://api.example.com/v1/orders",
+  "extras": { "method": "POST", "headers": { "X-Tenant": "acme" } }
+}
+```
+
+```json
+{ "protocol": "grpc", "endpoint": "grpc.example.com:443/orders.OrderService/Create" }
+```
+
+```json
+{ "protocol": "mcp", "endpoint": "https://mcp.example.com/sse", "extras": { "tool": "create_order" } }
+```
+
+Vector rules:
+- `protocol` and `endpoint` are required and MUST be preserved verbatim.
+- `extras` MUST be omitted from the serialized form when empty/absent (not emitted as `null`).
+- A `BridgeNodeDescriptor` serialises `supported_protocols` as a **sorted** array for stable
+  output across SDKs.
+
+---
+
+## 17. Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.14 | 2026-06-12 | New §16 **Bridge Node Conformance**: formal MUST/SHOULD requirements (advertise `node_type: "bridge"`, validate `bridge_target.protocol`, opaque unknown-field pass-through, stateless / no-topology) and canonical `bridge_target` round-trip test vectors (http / grpc / mcp, with `extras`) all six SDKs must round-trip identically. §16 Changelog renumbered to §17. No new error codes; no `Depends-On` change. |
+| 0.14 | 2026-06-03 | NWM `manifest_version` type changed from opaque string (ETag) to uint32 monotonic counter (starts at 1, incremented on every structural change). New NWM field `manifest_updated_at` (ISO 8601, optional) records the last-change timestamp. Servers MUST return `X-NWM-Version: <manifest_version>` on every `GET /.nwm` response; agents use `If-None-Match: <uint32>` for conditional requests. No new error codes; `304 Not Modified` reused for cache hits. |
 | 0.13 | 2026-05-28 | §13 SubscribeFrame (0x12) formal specification (closes CR-0006): field table (subscription_id, filter, heartbeat_interval_ms, max_events, cursor), lifecycle (open→active→heartbeat→close), error code reference. §12.4 `topology:subscribe` enforcement promoted SHOULD → MUST; nodes that cannot enforce MUST document non-enforcement in NWM stability metadata. NWM gains optional `trust_anchors` field (array of CA NID URNs). BridgeNode `bridge_target` object schema standardized (protocol + endpoint + headers). |
 | 0.12 | 2026-05-11 | NPS-CR-0002 Phase 2 spec gaps closed. §8.2 DiffFrame extension table gains optional `cgn_est` field (uint32) for per-event CGN reporting on push streams per [token-budget.md §7.2](token-budget.md); columns reformatted to include Required. §12.2 `topology.stream` events table: `anchor_state` row gains explicit sub-type discriminator schema (`version_rebased` defined for Phase 1–2; `anchor_failover` and `anchor_quorum_lost` reserved as Phase 3 placeholder slots — implementations MUST NOT emit Phase 3 sub-types pre-stable and MUST ignore unknown sub-types for forward compatibility); `resync_required` trigger and `reason` enum broadened (`version_too_old` / `anchor_rebased` / `server_state_lost`). §12.4 Phase 1–2 authorization model expanded: (a) capability gate split per surface — `topology.snapshot` requires `topology:read`; `topology.stream` requires `topology:read` AND SHOULD additionally require `topology:subscribe` in Phase 2 (MUST in Phase 3); (b) new mid-stream rejection rule — server MUST emit terminal `NWP-TOPOLOGY-UNAUTHORIZED` event then close the stream on capability revocation; (c) new reputation interaction — for active subscriptions, Anchors with a declared `reputation_policy` SHOULD emit terminal `NWP-AUTH-REPUTATION-BLOCKED` and close the stream when the subscriber's reputation drops below threshold. No new error codes; existing `NWP-TOPOLOGY-UNAUTHORIZED` and `NWP-AUTH-REPUTATION-BLOCKED` reused. No `Depends-On` change. See issue #41. |
 | 0.11 | 2026-05-10 | NWM gains optional top-level `stability` (`experimental`/`stable`/`deprecated`), `sla` (object: `p95_latency_ms`, `availability`, `sla_tier`), and `billing` (object: `metering_profile`, `billing_unit`, `price_hint`, `currency`) fields (§4.1, §4.4a, §4.4b). ActionSpec (§4.6) gains matching per-action `stability` / `sla` / `billing` overrides with field-level fallback to the top-level values. All fields are advisory (no protocol-level enforcement) and backward-compatible — pre-0.11 manifests are treated as `stability="stable"` with no SLO/billing metadata. Enables marketplace / NeuronHub clients to filter, warn, or rank services by lifecycle stage and commercial profile per AaaS-Profile discovery requirements. No new error codes; no `Depends-On` change. See issue #36. |

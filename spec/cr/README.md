@@ -53,7 +53,8 @@ late in 0.x is still pending when v1.0 is cut).
 | [NPS-CR-0002](./NPS-CR-0002-anchor-topology-queries.md) | Standard topology query types for Anchor Node (`topology.snapshot` / `topology.stream`) | v1.0-alpha.4 | Implemented (2026-04-27) |
 | [NPS-CR-0003](./NPS-CR-0003-orchestrator-group-session-nids.md) | Orchestrator group NIDs and short-lived session NIDs | v1.0-alpha.6 | Accepted (2026-05-11) |
 | [NPS-CR-0004](./NPS-CR-0004-pen-wirein.md) | Wire in IANA-assigned PEN 65715 (replace provisional `1.3.6.1.4.1.99999`) | v1.0-alpha.6 | Implemented (2026-05-08) |
-| [NPS-CR-0005](./NPS-CR-0005-nip-ca-ra-model.md) | NIP CA Registration Authority (RA) model — three-tier admission (allowlist / bootstrap token / pending queue) | v1.0-alpha.6 | Implemented (2026-05-27) |
+| [NPS-CR-0005](./NPS-CR-0005-nip-ca-ra-model.md) | NIP CA Registration Authority (RA) model — three-tier admission (allowlist / bootstrap token / pending queue) | v1.0-alpha.7 | Implemented |
+| [NPS-CR-0006](./NPS-CR-0006-subscribe-frame.md) | SubscribeFrame (NWP §13) formal specification — field table, lifecycle, cursor resume; frame-registry promotion `proposed → stable` | v1.0.0-alpha.11 | Accepted (2026-05-28) |
 
 ## Authoring a new CR
 

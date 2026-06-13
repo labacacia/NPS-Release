@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.6
+**Version**: 0.7
 **Date**: 2026-05-10
 **Port**: 17433（默认，共用）/ 17437（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.7)、NPS-2 (NWP v0.13)、NPS-3 (NIP v0.9)
+**Depends-On**: NPS-1 (NCP v0.8)、NPS-2 (NWP v0.14)、NPS-3 (NIP v0.10)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > 本文档为 NOP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
@@ -629,6 +629,7 @@ Orchestrator MUST 验证接收到的 TaskFrame 来自可信 NID（通过 NIP 证
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.7 | 2026-06-12 | **NPS-CR-0007 —— NOP↔L3 运行时集成**：新增 §8（任务认领协议：原子租约 + `dedup_key`、`NOP-CLAIM-CONFLICT`；`spawn_spec_ref` SpawnSpec 内容模式；idle/max-runtime 生命周期强制；幂等结果上报）；4 个新错误码（`NOP-CLAIM-CONFLICT`、`NOP-SPAWN-SPEC-INVALID`、`NOP-RUNTIME-IDLE-TIMEOUT`、`NOP-RUNTIME-MAX-RUNTIME`）；新增 `services/conformance/NPS-Node-L3.md`（`TC-N3-*`）；Security/Changelog 重编号为 §9/§10。gate `nps-runner` L3 FaaS 运行时。（正文中文翻译待补，见 version-matrix translation_lag） |
 | 0.5 | 2026-05-10 | 补偿/Saga 语义（issue #34）：节点级 `compensate_action` / `compensate_params_mapping`；TaskFrame 级 `compensation_policy`（默认 `best_effort` / 可选 `strict`）；子任务 saga 状态 `COMPENSATING` / `COMPENSATED` / `COMPENSATION_FAILED`；§3.1.6 saga 触发逻辑（下游 FAILED 时按逆拓扑顺序补偿已完成前驱）；2 个新错误码：`NOP-COMPENSATION-FAILED`、`NOP-COMPENSATION-NOT-SUPPORTED` |
 | 0.4 | 2026-04-19 | Status / Depends-On 版本号同步；与 NCP v0.7 / NWP v0.13 / NIP v0.9 文字对齐 |
 | 0.3 | 2026-04-14 | DAG 节点粒度增强（per-node timeout/retry_policy/condition/input_mapping）；§3.1.2 context 字段支持 OpenTelemetry W3C Trace（trace_id/span_id/trace_flags/baggage）；§3.1.3 input_mapping JSONPath 映射；§3.1.4 retry_policy（fixed/linear/exponential）；§3.1.5 condition CEL 子集；DelegateFrame 新增 idempotency_key/priority/context/node_id；SyncFrame 新增 min_required（K-of-N 语义）和 §3.3.1/§3.3.2 聚合策略；AlignStream 新增 subtask_id/error 字段，§3.4.1 Token 级背压；§4 资源预检（preflight）协议；§5 扩展状态机（PREFLIGHT/SKIPPED）和任务取消机制；§6 完整多 Agent 流程图；3 个新错误码（RESOURCE-INSUFFICIENT、CONDITION-EVAL-ERROR、INPUT-MAPPING-ERROR、DELEGATE-TIMEOUT、TASK-CANCELLED）；§8.4 callback_url 防滥用；Depends-On 更新至 NCP v0.7 / NWP v0.13 |

@@ -67,6 +67,14 @@ frames:
     description: Native-mode client handshake frame. Sent by Agent immediately after TCP/QUIC connect to declare protocol version, encoding capabilities, and max_frame_payload. Server responds with CapsFrame. Not used in HTTP mode.
     fields_ref: "NPS-1-NCP.md#46-helloframe-0x06"
 
+  - id: "0x07"
+    name: NopFrame
+    protocol: NCP
+    protocol_version: "0.8"
+    status: stable
+    description: Keepalive / heartbeat frame. Null payload (single byte 0x07). Either peer MAY send at any time after handshake; receiver MUST accept and SHOULD reply with another NopFrame. When HelloFrame ping_interval_ms > 0, both peers SHOULD send at that interval. Dead-peer detection threshold is 3 × ping_interval_ms (NCP §7.6).
+    fields_ref: "NPS-1-NCP.md#48-nopframe-0x07"
+
   # ── NWP (0x10–0x1F) ────────────────────────────────────────────
   - id: "0x10"
     name: QueryFrame

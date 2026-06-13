@@ -3,13 +3,13 @@ English | [中文版](./NPS-RFC-0004-nid-reputation-log.cn.md)
 ---
 **RFC Number**: NPS-RFC-0004
 **Title**: Append-only NID reputation log (Certificate Transparency for Agents)
-**Status**: Accepted (Phase 1 — entry wire format + .NET reference types landed)
+**Status**: Active
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: Ori Lynn (pre-1.0 fast-track per `spec/cr/README.md`)
 **Created**: 2026-04-21
-**Last-Updated**: 2026-05-01
+**Last-Updated**: 2026-05-28
 **Accepted**: 2026-04-26 (pre-1.0 fast-track; see `spec/cr/README.md`)
-**Activated**: _(set when first reference log operator ships, target v1.0-alpha.4)_
+**Activated**: 2026-05-28 (v1.0.0-alpha.9 — entry wire format, .NET `ReputationLogClient`, and `DefaultReputationPolicyEvaluator` log-query path all shipped)
 **Supersedes**: _none_
 **Superseded-By**: _none_
 **Affected Specs**: NPS-3 NIP, NPS-4 NDP, spec/services/NPS-AaaS-Profile.md, spec/error-codes.md

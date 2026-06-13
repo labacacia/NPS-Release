@@ -4,11 +4,11 @@ English | [中文版](./NPS-3-NIP.cn.md)
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.9
+**Version**: 0.10
 **Date**: 2026-05-11
 **Port**: 17433 (default, shared) / 17435 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.7)
+**Depends-On**: NPS-1 (NCP v0.8)
 
 ---
 
@@ -108,10 +108,12 @@ Agent identity declaration carrying the certificate. Sent as the handshake frame
 | `serial` | string | required | Certificate serial (globally unique per Org CA, hex) |
 | `signature` | string | required | CA's signature over this frame; format `{alg}:{base64url}` |
 | `cert_format` | string (enum) | required | Certificate encoding format. One of `"x509-der"` / `"raw-pubkey"`. Excluded from the signed canonical JSON (see §5.1.3 canonicalisation note). |
-| `cert_chain` | array of string | required when `cert_format = "x509-der"`; MUST be omitted when `cert_format = "raw-pubkey"` | DER-encoded certificate chain, base64url-encoded, leaf first. Excluded from the signed canonical JSON (see §5.1.3 canonicalisation note). |
+| `cert_chain` | array of string | required when `cert_format = "x509-der"` | DER-encoded certificate chain, base64url-encoded, leaf first. When `cert_format = "raw-pubkey"`, `cert_chain` MUST be omitted (not present in the serialised frame and not included in the canonical form). Excluded from the signed canonical JSON (see §5.1.3 canonicalisation note). |
 | `metadata` | object | optional | Agent metadata — see below |
 | `assurance_level` | string | optional | One of `"anonymous"` / `"attested"` / `"verified"` (see §5.1.1). REQUIRED when the NID's certificate carries the `id-nid-assurance-level` extension. Receivers MUST treat an absent field as `"anonymous"` (backward compatibility with v1.0-alpha.2 publishers). When both field and cert extension are present, they MUST carry the same value — **phase gate**: Phase 1–2 (current) enforcement is opt-in (SHOULD check, MAY enforce); starting Phase 3 flag day (see NPS-RFC-0003 §8.1) enforcement is MUST, violation returns `NIP-ASSURANCE-MISMATCH`. (NPS-RFC-0003) |
 | `lineage` | object | optional | Signed lineage metadata. Present when the NID is an orchestrator group (`role = "group"`) or a short-lived session (`role = "session"`). See §5.1.3. (NPS-CR-0003) |
+| `ocsp_staple` | string | optional | Base64url-encoded DER OCSP response stapled by the Agent at send time (NIP v0.9 §5.1.4). Receivers SHOULD verify the staple signature; an expired staple returns `NIP-OCSP-STAPLE-EXPIRED`. When absent, receivers MAY perform an online OCSP lookup per the `ocsp_url` declared in the NWM. |
+| `node_roles` | array[string] | optional | Self-declared node-role tags, e.g. `["memory", "orchestrator"]` (NIP v0.10). Same vocabulary as NDP `AnnounceFrame.node_roles`. Phase 1–2: self-declared, informational. Phase 3 flag day: MUST match the `id-nps-node-roles` X.509 extension (`1.3.6.1.4.1.65715.2.2`); mismatch returns `NIP-CERT-NODE-ROLES-MISMATCH`. |
 
 **`metadata` fields (optional)**
 
@@ -330,6 +332,30 @@ See [NPS-CR-0003](cr/NPS-CR-0003-orchestrator-group-session-nids.md) for the ful
 
 ---
 
+### 5.1.4 OCSP Stapling (NIP v0.9)
+
+An Agent MAY attach a pre-fetched OCSP response to the `ocsp_staple` field of its IdentFrame, enabling the receiving Node to verify certificate revocation status without a live OCSP round-trip.
+
+**Verification rules (receiver)**
+
+1. Decode `ocsp_staple` from base64url to obtain the DER-encoded `OCSPResponse`.
+2. Verify the OCSP response signature against the issuing CA's certificate (extracted from `cert_chain` or the Node's local trust store).
+3. Check `thisUpdate` and `nextUpdate`: if the current time is after `nextUpdate`, return `NIP-OCSP-STAPLE-EXPIRED`.
+4. Check `certStatus` in `SingleResponse` for the certificate identified by `serial`. If `revoked`, return `NIP-CERT-REVOKED`.
+5. A staple that passes all checks supersedes any cached revocation state for this serial; the Node SHOULD NOT make a live OCSP request.
+
+When `ocsp_staple` is absent, the Node MAY perform an online OCSP lookup to the URL declared in `NWM.ocsp_url` (§4.1). This lookup is optional but RECOMMENDED for `"verified"` assurance level endpoints.
+
+**X.509 OID Registry (NIP v0.9 — PEN 65715 arc)**
+
+| OID | Name | ASN.1 type | Description |
+|-----|------|-----------|-------------|
+| `1.3.6.1.4.1.65715.2.1` | `id-nid-assurance-level` | UTF8String | Agent assurance level (`anonymous` / `attested` / `verified`). CA MUST populate when issuing. |
+| `1.3.6.1.4.1.65715.2.2` | `id-nps-node-roles` | SEQUENCE OF UTF8String | Role tags carried in `AnnounceFrame.node_roles` / `IdentFrame.node_roles`. CA SHOULD populate from the enrollment request. Phase 3 enforcement. |
+| `1.3.6.1.4.1.65715.2.3` | `id-nps-capabilities` | SEQUENCE OF UTF8String | Capability strings (same vocabulary as `IdentFrame.capabilities`). CA MAY populate as a CA-attested alternative to the unsigned `capabilities` field. Phase 3. |
+
+---
+
 ### 5.2 TrustFrame (0x21)
 
 Cross-CA trust-chain propagation and capability grant (commercial feature, NPS Cloud). A TrustFrame lets one CA (the **grantor**) authorise another CA (the **grantee**) to issue IdentFrames whose `capabilities` are accepted by Nodes that already trust the grantor — without the grantee being added to each Node's `trusted_issuers` list. The grant is scoped to a capability subset and a set of `nwp://` URL patterns; it is verifiable end-to-end via the grantor's signature.
@@ -471,6 +497,33 @@ IdentFrame        Agent triggers         takes effect     in parallel
                                          for that NID
 ```
 
+### 6.1 Short-lived / renewable cert profile (edge mTLS)
+
+Edge deployments that terminate native-mode mutual TLS at an `nps-ingress` (L2) gateway
+(NPS-RFC-0006 §6.3) benefit from **short-lived certificates** to minimise revocation exposure
+without per-request OCSP round-trips. This profile is additive to the standard validity tiers
+(§2.1) and is selected by the CA at issuance.
+
+| Property | Standard Node cert | **Short-lived edge cert** |
+|----------|--------------------|---------------------------|
+| Validity | 90 days | **1–24 hours** (default 6 h) |
+| Renewal trigger | 7 days pre-expiry | **renewal window = 25% of validity remaining** |
+| Renewal overlap | both valid 1 h | both valid until the old cert's `expires_at` |
+| Revocation reliance | OCSP / CRL | **lifetime ≤ OCSP cache TTL** — short validity is the primary revocation mechanism; OCSP is defense-in-depth |
+| OCSP-staple interaction | optional | the gateway SHOULD staple (`IdentFrame.ocsp_staple`, NIP v0.9 §8.2); a stapled response older than the cert's remaining validity MUST be refreshed (`NIP-OCSP-STAPLE-EXPIRED`) |
+
+Rules:
+
+1. A short-lived edge cert MUST carry validity in `[1h, 24h]`. A request to issue outside this
+   range returns `NIP-CA-SESSION-VALIDITY-INVALID` (reused from the session-NID path, §5).
+2. The CA SHOULD support **online renewal** (ACME `agent-01`, NPS-RFC-0002) so an edge node
+   self-renews before the renewal window without operator action.
+3. A relying party (e.g. `nps-ingress`) MUST reject a presented short-lived cert whose
+   `expires_at ≤ now` with `NIP-CERT-EXPIRED`; because validity is short, relying parties MAY
+   skip per-request OCSP when the cert lifetime is ≤ their configured OCSP cache TTL.
+4. Short-lived edge certs participate in TLS 1.3 session resumption (NPS-RFC-0006 §6.4): a
+   resumption ticket MUST NOT outlive the certificate it was issued under.
+
 ---
 
 ## 7. Verification Flow
@@ -583,6 +636,8 @@ The three tiers (allowlist / bootstrap token / pending queue), the new error cod
 | `NIP-CA-RENEWAL-TOO-EARLY` | `NPS-CLIENT-BAD-PARAM` | Renewal window not yet open |
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | Requested scope exceeds the parent scope |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP service temporarily unavailable |
+| `NIP-OCSP-STAPLE-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | `IdentFrame.ocsp_staple` `nextUpdate` has elapsed — staple is stale; Agent must refresh and resend (NIP v0.9 §5.1.4) |
+| `NIP-CERT-NODE-ROLES-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.node_roles` does not match the `id-nps-node-roles` X.509 extension; Phase 3 enforcement (NIP v0.10) |
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame signature or format is invalid — see §5.2 |
 | `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` is in the past — see §5.2 |
 | `NIP-TRUST-FRAME-GRANTOR-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `grantor_nid`'s own CA certificate is revoked or expired — see §5.2 |
@@ -625,6 +680,9 @@ At every link in the delegation chain, scope MUST NOT exceed that of its parent.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.10 | 2026-06-12 | New §6.1 **Short-lived / renewable cert profile (edge mTLS)**: 1–24 h validity tier (default 6 h) for native-mode mTLS terminated at `nps-ingress` (NPS-RFC-0006 §6.3); renewal window = 25% remaining; ACME `agent-01` online self-renewal; lifetime ≤ OCSP cache TTL so short validity is the primary revocation mechanism; OCSP-staple refresh interaction (`NIP-OCSP-STAPLE-EXPIRED`); resumption-ticket bounded to cert validity (NPS-RFC-0006 §6.4). Reuses existing error codes (`NIP-CA-SESSION-VALIDITY-INVALID`, `NIP-CERT-EXPIRED`); no new codes. |
+| 0.10 | 2026-06-03 | `IdentFrame.node_roles` (`string[]`, optional) — self-declared role tags, same vocabulary as `NDP.AnnounceFrame.node_roles`; Phase 3 gate against `id-nps-node-roles` X.509 extension (OID 65715.2.2); `NIP-CERT-NODE-ROLES-MISMATCH` error code. |
+| 0.9 | 2026-05-31 | `IdentFrame.ocsp_staple` (base64url DER OCSPResponse): §5.1.4 stapling rules (signature verify, `nextUpdate` check, `NIP-OCSP-STAPLE-EXPIRED`); X.509 OID table: `id-nid-assurance-level` 65715.2.1, `id-nps-node-roles` 65715.2.2, `id-nps-capabilities` 65715.2.3 (PEN 65715 — NPS-CR-0004). |
 | 0.8 | 2026-05-11 | Expanded §5.2 TrustFrame: added full field definition table (10 fields, including new required `issued_at`, `serial`, and `signer_nid` for revocation/audit traceability), explicit signature-canonicalisation rule (matching §5.1 IdentFrame), error sub-table, and full example. Added TrustFrame verification note to §7 (admit IdentFrames whose `issued_by` is a `grantee_ca` when a valid TrustFrame from a trusted `grantor_nid` covers the request). Four new error codes (§9): `NIP-TRUST-FRAME-EXPIRED`, `NIP-TRUST-FRAME-GRANTOR-REVOKED`, `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`, `NIP-TRUST-FRAME-NODES-PATTERN-INVALID`. |
 | 0.7 | 2026-05-07 | **NPS-CR-0003**: Orchestrator group NIDs and short-lived session NIDs. New §3.1 reserves `group-` / `session-` identifier prefixes on `entity-type = agent`. New signed `IdentFrame.lineage` object with `role` / `parent_nid` / `group_nid` / `session_id` / `purpose` / `owner_user_id` / `owner_key_id` (§5.1.3). New revocation reason `parent_revoked` (§5.3). New verification step **3a** for chain-check (§7). Four new CA endpoints under `/v1/orchestrators/groups/...` (§8). Seven new error codes (§9): `NIP-CA-GROUP-REVOKED`, `NIP-CA-PARENT-NOT-FOUND`, `NIP-CA-PARENT-NOT-GROUP`, `NIP-CA-SESSION-VALIDITY-INVALID`, `NIP-CA-JWS-INVALID`, `NIP-CA-JWS-EXPIRED`, `NIP-CERT-PARENT-REVOKED`. Backward-compatible for ordinary single-NID flows; opt-in for orchestrators. |
 | 0.6 | 2026-05-01 | Added `topology:read` to the standard `capabilities` registry (§5.1 capabilities table). This capability is required by Anchor Nodes at Phase 1–2 to gate access to topology read operations (`topology.snapshot` / `topology.stream`) as defined by the NPS-2 §12.4 minimum authorization binding (M6). Self-declared and key-signed at Phase 1–2; CA-attested role binding (`id-nps-node-roles` cert extension) deferred to Phase 3 pending RFC-0002 stabilization. |

@@ -3,8 +3,8 @@ English | [中文版](./NPS-Node-L2.cn.md)
 # NPS-Node-L2 Conformance Suite
 
 **Status**: Draft
-**Version**: 0.2
-**Date**: 2026-05-01
+**Version**: 0.3
+**Date**: 2026-06-12
 **Applies-To**: [NPS-AaaS-Profile §4.3](../NPS-AaaS-Profile.md) — Level 2 Standard
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
 
@@ -206,6 +206,46 @@ through TC-N2-AnchorTopo-08 cover required negative paths (one MUST-reject per e
 - The IUT's first pushed event has `event_type = "resync_required"` with `payload.reason = "version_too_old"`.
 - No member-event payloads are sent before the `resync_required` event.
 - The peer can recover by issuing a fresh `topology.snapshot` and resubscribing without `topology.since_version`.
+
+### 3.2 NCP-over-TLS Ingress (NPS-RFC-0006 §6)
+
+These cases apply to an IUT that terminates native-mode NCP-over-TLS at an L2 ingress
+(e.g. `nps-ingress`). They validate the transport-security admission gate added by
+[NPS-RFC-0006 §6](../../rfcs/NPS-RFC-0006-ncp-native-transport.md) and NCP v0.8 §7.5.
+
+#### TC-N2-Tls-01 — ALPN `nps/1.0` negotiated over TLS 1.3
+**Req**: NPS-RFC-0006 §6.1–§6.2
+**Fixture**: IUT acting as L2 terminator with a server certificate configured.
+**Action**:
+1. Peer opens a TLS 1.3 connection offering ALPN `nps/1.0` and a valid client certificate.
+**Pass**:
+- The handshake completes with negotiated ALPN `nps/1.0`.
+- A peer offering no/unknown ALPN is failed with TLS alert `no_application_protocol` (120).
+
+#### TC-N2-Tls-02 — Mutual TLS required
+**Req**: NPS-RFC-0006 §6.3 (mTLS)
+**Fixture**: IUT with `RequireClientCert = true`.
+**Action**:
+1. Peer attempts to connect without presenting a client certificate.
+**Pass**:
+- The IUT refuses the connection (no NCP frames are forwarded to the backend).
+
+#### TC-N2-Tls-03 — Client cert validates to a trust anchor and binds the NID
+**Req**: NPS-RFC-0006 §6.3
+**Fixture**: IUT with a configured trust anchor; peer holds a NIP leaf cert chaining to it.
+**Action**:
+1. Peer connects with the valid client certificate and sends the preamble + HelloFrame + IdentFrame.
+**Pass**:
+- The certificate validates to the trust anchor; the certificate subject NID is bound to the session.
+- The terminated NCP byte stream is proxied to the backend verbatim (preamble + frames replayed).
+
+#### TC-N2-Tls-04 — IdentFrame/certificate NID mismatch → `NCP-NID-MISMATCH`
+**Req**: NPS-RFC-0006 §6.3, error code `NCP-NID-MISMATCH`
+**Fixture**: IUT as above.
+**Action**:
+1. Peer presents a valid certificate for NID `urn:nps:agent:A` but its IdentFrame declares NID `urn:nps:agent:B`.
+**Pass**:
+- The IUT closes the session with `NCP-NID-MISMATCH` and does NOT forward the IdentFrame to the backend.
 
 ---
 

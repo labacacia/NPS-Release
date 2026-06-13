@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.13
+**Version**: 0.14
 **Date**: 2026-05-01
 **Port**: 17433（默认，共用）/ 17434（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.7)、NPS-3 (NIP v0.9)、NPS-4 (NDP v0.8)
+**Depends-On**: NPS-1 (NCP v0.8)、NPS-3 (NIP v0.10)、NPS-4 (NDP v0.9)
 
 > 本文档为 NWP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
 
@@ -1048,6 +1048,7 @@ Complex Node 解析子节点引用时，MUST 维护允许的节点 URL 前缀白
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.14 | 2026-06-12 | 新增 §16 **Bridge Node 合规性**：形式化 MUST/SHOULD 要求 + 规范化 `bridge_target` 往返测试向量（http / grpc / mcp），六个 SDK 必须一致往返。原 §16 变更历史重编号为 §17。无新错误码；`Depends-On` 升级为 NCP v0.8 / NIP v0.10 / NDP v0.9。（正文中文翻译待补，见 version-matrix translation_lag） |
 | 0.9 | 2026-05-01 | **破坏性更名（pre-1.0）**：拓扑成员对象字段 `node_kind` 更名为 `node_roles`（§12.1）；拓扑流过滤键 `node_kind` 更名为 `node_roles`（§12.2）。§2.1 更新 `node_kind` 引用为 `node_roles`。新增 §2.1 **节点角色解析**：`node_roles`（NDP，发现层，数组）与 `node_type`（NWM，服务层，字符串）是两个独立字段——`node_type` MUST 为 `node_roles` 中的一项；验证方 SHOULD 对照缓存 NDP 数据校验。§4.1 `node_type` 描述更新，补充跨协议约束及 §2.1 指针。§14.7 `node_kind` 引用更新为 `node_roles`。Depends-On NDP 升级为 v0.6。修复 M1 命名消歧问题。 |
 | 0.8 | 2026-04-27 | 新增 §12 **保留查询类型**，引入 `topology.*` 命名空间，强制于 NPS-AaaS Profile L2：`topology.snapshot`（QueryFrame，`type="topology.snapshot"`）与 `topology.stream`（SubscribeFrame，`type="topology.stream"`）。QueryFrame §6.1 与 SubscribeFrame §8.1 各新增可选顶层字段 `type` 用于选入保留类型。DiffFrame §8.2 `event_type` 通过保留订阅类型扩展枚举 —— `topology.stream` 增加 `member_joined` / `member_left` / `member_updated` / `anchor_state` / `resync_required`。新增 4 条错误码：`NWP-TOPOLOGY-UNAUTHORIZED`、`NWP-TOPOLOGY-UNSUPPORTED-SCOPE`、`NWP-TOPOLOGY-DEPTH-UNSUPPORTED`、`NWP-TOPOLOGY-FILTER-UNSUPPORTED`（§13）。新增 §14.7 拓扑读取安全节。原 §12 错误码 / §13 安全考量 / §14 变更历史顺延为 §13 / §14 / §15 以容纳新章节。详见 [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md)。 |
 | 0.7 | 2026-04-26 | **破坏性。** §2.1 节点类型：移除 `Gateway Node`；替换为 **Anchor Node**（集群控制平面 + NOP 路由 —— 继承既有角色）与 **Bridge Node**（NPS↔非-NPS 协议翻译 —— 全新）。NWM `node_type` 枚举更新；遗留 `"gateway"` MUST 拒绝。Anchor Node 详细语义（§2.1 内嵌）覆盖成员分派 + 可选注册表；Bridge Node 语义覆盖 HTTP/gRPC/MCP/A2A 目标适配器。Depends-On 升级为 NDP v0.8，引入 `node_kind` 数组形式 + `cluster_anchor` + `bridge_protocols` 字段。详见 [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)。 |

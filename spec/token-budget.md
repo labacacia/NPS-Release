@@ -2,8 +2,8 @@ English | [中文版](./token-budget.cn.md)
 
 # Cognon Budget Specification
 
-**Version**: 0.6
-**Date**: 2026-05-14
+**Version**: 0.7
+**Date**: 2026-05-21
 
 ---
 
@@ -57,6 +57,8 @@ When the tokenizer cannot be determined, **CGN-Estimate** MAY fall back to:
 CGN = ceil(UTF-8_bytes / 4)
 ```
 
+`UTF-8_bytes` is the byte count of the **logical payload expressed as UTF-8** (e.g. the serialized JSON body for JSON-encoded frames). For NCP binary and other non-JSON wire encodings, `UTF-8_bytes` MUST NOT be the raw wire frame byte count — see §2.4 for the field-level decomposition that preserves wire-format independence.
+
 This formula reflects the average behavior of mainstream LLM tokenizers (≈ 4 bytes/token for English, ≈ 3 bytes/token for Chinese) and acts as the most conservative baseline.
 
 The byte-size fallback MUST NOT be used for **CGN-Billing** under any circumstances. If a node cannot resolve a `verified_tokenizer` for a request that would be billed, it MUST refuse to issue a CGN-Billing record for that request and either (a) downgrade the surface to CGN-Estimate (non-billable telemetry only) or (b) reject the request with a billing-class error.
@@ -98,6 +100,42 @@ and recorded inside the signed metering record) and MUST use the matching
 `default.unknown` applies only to CGN-Estimate; CGN-Billing has no fallback
 row.
 
+### 2.4 Wire Format Independence (normative)
+
+CGN MUST be computed at the **logical frame layer**, before serialization, and MUST be
+identical for the same semantic content regardless of the wire encoding used to transmit
+the frame:
+
+| Wire format | Size vs. JSON | CGN |
+|-------------|---------------|-----|
+| JSON (UTF-8) | 100 % baseline | Byte formula applied to JSON UTF-8 bytes (§2.2) |
+| NCP binary | ≈ 30–60 % of JSON | **Same CGN as the JSON-equivalent content** |
+| MsgPack | ≈ 50–75 % of JSON | Same CGN as the JSON-equivalent content |
+
+**NCP frame CGN (CGN-Estimate fallback).** When a frame is transmitted in NCP binary
+encoding and no verified tokenizer is available, nodes MUST NOT use raw wire frame bytes
+as the byte-count input to §2.2. Instead, apply the following field-level decomposition:
+
+```
+NCP_CGN = Σ ceil(utf8_bytes(string_field) / 4)    // all string-typed fields
+         + Σ 1                                     // all numeric / boolean fields
+         + Σ ceil(blob_bytes / 4)                  // all binary / blob fields
+```
+
+`utf8_bytes(string_field)` is the byte length of the field value re-encoded as UTF-8.
+`blob_bytes` is the raw byte length of the blob payload (not its base64 or hex expansion).
+
+> **Rationale.** The dominant cost in an NPS interaction is agent-side LLM inference,
+> which operates on the decoded logical content. NCP binary encoding reduces wire
+> bandwidth and node I/O cost, but does not reduce the agent's inference-token load.
+> Tying CGN to logical content ensures the economic signal tracks the actual resource
+> consumed — agent attention — not the transport savings. Nodes that bill off wire bytes
+> would undercharge NCP callers relative to JSON callers for identical information,
+> breaking fair metering and making CGN transport-dependent.
+
+The `X-NWP-Tokens` and `X-NWP-Tokens-Native` response headers MUST reflect the
+logical-layer CGN count, not the serialized wire byte count.
+
 ---
 
 ## 3. Tokenizer Resolution Chain
@@ -135,7 +173,8 @@ When either field is present in the IdentFrame, the node uses the matching token
 
 ### 3.3 Default Fallback
 
-When the tokenizer cannot be determined, use `ceil(UTF-8_bytes / 4)` to compute CGN.
+When the tokenizer cannot be determined, use `ceil(UTF-8_bytes / 4)` to compute CGN
+(see §2.4 for NCP/binary wire encodings).
 
 ---
 
@@ -273,14 +312,14 @@ The middleware enforces it by:
 
 The `X-NWP-Budget` cap applies to **synchronous request/response operations** (QueryFrame → CapsFrame / StreamFrame batch). The following continuous-push operations are subject to modified rules:
 
-### 7.1 Streaming Queries (QueryFrame `stream: true`)
+### 8.1 Streaming Queries (QueryFrame `stream: true`)
 
 - `X-NWP-Budget` applies **per StreamFrame batch**, not to the total stream.
 - The node MUST trim or stop the batch if processing that batch would exceed the declared budget.
 - `X-NWP-Tokens` in the response header reports the CGN consumed by the current batch only.
 - The Agent MAY choose to disconnect early once its cumulative budget is exhausted.
 
-### 7.2 SubscribeFrame / Push Streams (topology.stream, event subscriptions)
+### 8.2 SubscribeFrame / Push Streams (topology.stream, event subscriptions)
 
 Long-running push streams (e.g. `topology.stream` via SubscribeFrame) represent an ongoing series of events with no fixed response size. Budget semantics differ:
 

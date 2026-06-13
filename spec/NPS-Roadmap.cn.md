@@ -2,8 +2,8 @@
 
 # NPS 路线图
 
-**Version**: 0.4  
-**Date**: 2026-04-30  
+**Version**: 0.6  
+**Date**: 2026-06-12  
 **归属**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -48,7 +48,7 @@
 - [x] `services/conformance/NPS-Node-L1.md` v0.1（21 个 TC-N1-* 用例）
 - [x] `services/conformance/NPS-Node-L2.md` v0.1（10 个 TC-N2-* 用例，拓扑查询）
 - [x] LabAcacia 仓库公开，Discussions 开启；`NPS-Dev` monorepo 按设计保持私有
-- [x] 已发布：alpha.1（2026-04-10）、alpha.2（2026-04-19）、alpha.3（2026-04-26）、alpha.4（2026-04-30）、alpha.5（2026-05-01）、alpha.6（2026-05-12）
+- [x] 已发布：alpha.1（2026-04-10）、alpha.2（2026-04-19）、alpha.3（2026-04-26）、alpha.4（2026-04-30）、alpha.5（2026-05-01）
 
 ---
 
@@ -62,7 +62,7 @@
 |------|------|------|
 | .NET       | `LabAcacia.NPS.Core` + `.NWP` + `.NWP.Anchor` + `.NWP.Bridge` + `.NIP` + `.NDP` + `.NOP` | ✅ v1.0.0-alpha.11（655 tests）|
 | Python     | `nps-lib`（PyPI）                  | ✅ v1.0.0-alpha.11（211+ tests，≥97% coverage）|
-| TypeScript | `@labacacia/nps-sdk`（npm）        | ⚠️ 源码/tag 为 v1.0.0-alpha.11；npm `1.0.0-alpha.11` 已 deprecated，`alpha` tag 暂回 `1.0.0-alpha.11` |
+| TypeScript | `@labacacia/nps-sdk`（npm）        | ✅ v1.0.0-alpha.11（284+ tests）|
 | Java       | `com.labacacia.nps:nps-java`（Maven Central）| ✅ v1.0.0-alpha.11（112+ tests）|
 | Rust       | `nps-sdk` + 6 个同生态 crate（crates.io）| ✅ v1.0.0-alpha.11（109 tests）|
 | Go         | `github.com/labacacia/NPS-sdk-go`  | ✅ v1.0.0-alpha.11（96 tests）|
@@ -97,17 +97,14 @@
 
 ### 常驻 Daemon
 
-| Daemon         | alpha.6 状态 |
+| Daemon         | alpha.5 状态 |
 |----------------|-------------|
 | `npsd`         | ✅ L1 + 子 NID 签发 + 每 NID 收件箱队列（17 integration tests）|
 | `nps-registry` | ✅ SQLite 持久化注册中心（SqliteNdpRegistry，10 tests）|
 | `nps-ledger`   | ✅ Phase 3：SQLite + Merkle + STH + 包含证明 + STH gossip（33 tests）|
 | `nps-runner`   | Phase 1 骨架（L3 运行时推迟）|
-| `nps-gateway`  | Phase 1 骨架（Internet 入站网关推迟）|
+| `nps-ingress`  | Phase 1 骨架（Internet 入站网关推迟）|
 | `nps-cloud-ca` | 存根（2027 Q1+）|
-
-`nps-gateway` 是 Internet ingress 的进程级 daemon 名，不会重新引入已退役的
-NWP Gateway Node 角色；逻辑节点角色仍为 Anchor Node 和 Bridge Node。
 
 ### 完成标准
 
@@ -175,15 +172,15 @@ v1.0.0-alpha.11 待开展任务：
 | 事项 | 备注 |
 |------|------|
 | 非 .NET SDK 移植 NPS-CR-0002 `AnchorNodeClient` 拓扑客户端 | .NET 参考已完成；Python/TS/Go/Java/Rust 待移植 |
-| 非 .NET SDK 移植 NPS-RFC-0004 声誉助手（`ReputationLogClient`）| .NET 参考已完成；全六 SDK 待移植 |
-| 非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手 | .NET 已接入；其他 SDK 只有枚举，无执行逻辑 |
+| 非 .NET SDK 移植 NPS-RFC-0004 声誉助手（`ReputationLogClient`）| .NET 仅有 Phase 1 数据类型，无客户端；全六 SDK 需完整客户端 |
+| ~~非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手~~ | ✅ 已完成 —— 全六 SDK 均有完整 `AssuranceLevel` 枚举 + 执行逻辑 |
 
 ### 协议 / 规范事项
 
 | 事项 | 备注 |
 |------|------|
 | `NDP.ResolveFrame` DNS TXT 解析（`nwp://` → 物理端点）| 已规范化；所有 SDK 尚未实现 |
-| `nps-gateway` 进程级 L2 Internet 入站网关（`:8080`→`:443` TLS 终止，NCP over TLS）| alpha.5 仅骨架；L2 合规推迟 |
+| `nps-ingress` L2 Internet 入站网关（`:8080`→`:443` TLS 终止，NCP over TLS）| alpha.5 仅骨架；L2 合规推迟 |
 | `nps-runner` L3 FaaS 任务运行时 | 仅骨架；完整实现在 Phase 3 范围 |
 
 ### 工具链
@@ -192,6 +189,66 @@ v1.0.0-alpha.11 待开展任务：
 |------|------|
 | **NPS Studio** — NPS 帧流可视化调试器 | Phase 2 目标；尚未开始 |
 | **NPS Probe** — Agent Coder 合规检查 CLI | Phase 2 目标；尚未开始 |
+
+---
+
+## alpha.7 任务队列
+
+v1.0.0-alpha.7 待开展任务：
+
+### SDK 功能缺口（alpha.6 遗留 —— 发布硬性门槛）
+
+每次 SDK 发布必须保证六种语言在同一功能水位上。以下条目从 alpha.6 延续，
+必须在 alpha.7 打标签前全部完成。
+
+| 事项 | 范围 | 备注 |
+|------|------|------|
+| NPS-CR-0002 `AnchorNodeClient` | ✅ 完成（2026-05-17） | 全五 SDK 非 .NET 端口：`get_snapshot` + `subscribe`（各语言对应 stream/async-generator/channel）+ 拓扑数据类型（MemberInfo、TopologySnapshot、TopologyFilter、TopologyEvent × 5）|
+| NPS-RFC-0004 `ReputationLogClient` | 全六 SDK（含 .NET）| .NET 仅有 Phase 1 数据类型；需完整客户端（Phase 2 Merkle / STH / 包含证明）覆盖所有 SDK |
+
+### 新规范 / 实现
+
+| 事项 | 状态 | 备注 |
+|------|------|------|
+| **NPS-CR-0005** — NIP CA RA 注册授权模型 | ✅ 完成（2026-05-17） | .NET 参考实现：`EnrollmentTier` 枚举、`Ca/Ra/` 策略 + 存储层、4 个 enrollment 端点、4 个新错误码；`db/003_ra_model.sql` PostgreSQL 迁移脚本 |
+| **#51 CGN Profile 换算规范** | ✅ 完成（2026-05-17） | `cgn-profiles.yaml` 新增 Google Gemini、Meta Llama、Mistral 系列；`token-budget.md` §2.3 同步更新 |
+| **NWP + NOP OpenTelemetry 埋点** | ✅ 完成（2026-05-17） | NPS-sdk-dotnet 新增 `ActivitySource` + `System.Diagnostics.Metrics`；关闭 NPS-sdk-dotnet#5 |
+
+### 进行中的 CR / RFC
+
+| 事项 | 状态 | 备注 |
+|------|------|------|
+| **NPS-RFC-0002** 晋级 Proposed → Accepted | ✅ 完成（2026-05-17） | OQ-3 已决议（延后至后续 RFC）；无剩余未解 OQ |
+
+---
+
+## alpha.12 — 🚧 进行中（目标 2026-06）
+
+> **主题**：*对等与边缘（Parity & Edge）* —— 让六个参考 SDK 达到真正的**功能**对等（而非仅源码存在）、推进全部五个协议规范、并立起 L2/L3 守护进程边缘。
+>
+> 详细实施计划见 [`docs/roadmap.md`](../docs/roadmap.md)。
+
+**发布闸**（打标签前全部必须交付）：
+
+1. **SDK 功能对等**（硬闸）—— 补齐 `SDK_ALIGNMENT_ALPHA11` 的缺口：把完整的 **Anchor/Bridge Node**、**CGN / token-budget**、**reputation-policy** 实现从 .NET 参考移植到 Python / TypeScript / Java / Rust / Go。源码存在不再充分；每种语言都必须通过等价于 .NET 的 Anchor/Bridge + CGN + reputation 测试套件。
+2. **五协议推进**（发布规则）—— 每个协议都要有实质的规范 + SDK 内容：
+   - **NCP v0.8** —— 将 **RFC-0006**（原生模式传输绑定）由 Draft → Proposed；原生模式 TLS 绑定（ALPN `nps/1.0`、双向 TLS）、会话恢复票据。与 `nps-ingress` L2 耦合。
+   - **NWP v0.14** —— Bridge Node 正式合规章节 + `bridge_target` 往返测试向量（对等驱动）。
+   - **NIP v0.10** —— 边缘 mTLS 短时/可续期证书 profile；关联 `nps-ingress` 证书处理。
+   - **NDP v0.9** —— AnnounceFrame liveness/health 字段 + 解析期失效检查。
+   - **NOP v0.7** —— **NPS-CR-0007**（NOP ↔ L3 运行时集成）：任务认领协议、`spawn_spec_ref` 语义、idle/max-runtime 上报。与 `nps-runner` L3 耦合。
+3. **Daemon L2/L3** —— `nps-ingress` L2（NCP over TLS、ALPN `nps/1.0`、双向 TLS、`:8080`→`:443` 终结、L2 合规 TC-N2-*）+ `nps-runner` L3 FaaS 运行时（NOP 任务调度、经 `spawn_spec_ref` 的 worker 生命周期、同步屏障协调）。
+4. **C++/PHP 降级** —— 明确移出"官方完整 SDK 集"；作为*计划中*跟踪，不阻塞（见 Phase 1 SDK 表下方注释）。
+
+**逐协议交付**（具体帧 / 字段 / 错误码）：
+
+| 事项 | 备注 |
+|------|------|
+| **NCP v0.8** | RFC-0006 原生模式 TLS 绑定（ALPN `nps/1.0`、mTLS、session-NID 绑定 `NCP-NID-MISMATCH`、恢复票据；§7.5）；NopFrame (0x07) 保活/心跳帧（null 载荷，双向）；`HelloFrame.ping_interval_ms`（uint32，0=禁用）；`NCP-KEEPALIVE-TIMEOUT`（`NPS-SERVER-TIMEOUT`）；§7.6 死节点检测（3 × ping_interval_ms）；2^32 帧或 24h 前重新密钥；`NCP-REKEY-REQUIRED` |
+| **NWP v0.14** | Bridge Node 正式合规（§16）+ `bridge_target` 往返向量；NWM `manifest_version` 改为 uint32 单调递增计数器；新增 `manifest_updated_at`（ISO 8601）；所有 `GET /.nwm` 响应 MUST 返回 `X-NWM-Version`；条件请求 `If-None-Match: <uint32>` |
+| **NIP v0.10** | §6.1 短时/可续期边缘 mTLS 证书 profile；`IdentFrame.node_roles`（array[string]）Phase 1–2 自声明；Phase 3 经 `id-nps-node-roles` 扩展（65715.2.2）CA 证明；`NIP-CERT-NODE-ROLES-MISMATCH` |
+| **NDP v0.9** | `AnnounceFrame` liveness 字段 `health` / `last_seen` + §3.2.1 解析期失效 `NDP-RESOLVE-STALE`；`heartbeat_interval_ms`（uint32，默认 60000）+ 公告期 `NDP-ANNOUNCE-STALE`；`spawn_spec_ref`（字符串引用）解析为 SpawnSpec，正式模式 §3.1.2（oci_image / command / resource_limits：cpu_millicores/memory_mb，Profile L3）；§9 联邦转发环路检测 |
+| **NOP v0.7** | **NPS-CR-0007** NOP ↔ L3 运行时（§8：任务认领租约、`NOP-CLAIM-CONFLICT`、`NOP-SPAWN-SPEC-INVALID`、`NOP-RUNTIME-IDLE-TIMEOUT`、`NOP-RUNTIME-MAX-RUNTIME`；合规 `TC-N3-*`）；`TaskFrame.result_ttl_seconds`（uint32，默认 3600）、`NOP-TASK-RESULT-EXPIRED`；`NOP-STREAM-NAK-UNRESOLVABLE`（被驱逐帧的 NAK）；frame-registry NopFrame 0x07 注册为 stable |
 
 ---
 

@@ -4,7 +4,7 @@ English | [中文版](./NPS-1-NCP.cn.md)
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.7
+**Version**: 0.8
 **Date**: 2026-04-25  
 **Port**: 17433 (default, shared across the protocol suite)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
@@ -519,6 +519,7 @@ Client-side handshake frame in native mode, **sent by the Agent (client) first a
 | `ext_support` | bool | optional | Whether extended header (EXT=1) is supported; default false |
 | `max_concurrent_streams` | uint32 | optional | Maximum concurrent streams the client can handle; default 32 |
 | `e2e_enc_algorithms` | array[string] | optional | E2E encryption algorithms the client supports (see §7.4), e.g. `["aes-256-gcm"]` |
+| `ping_interval_ms` | uint32 | optional | Preferred keepalive interval in milliseconds; 0 = disabled (default). When non-zero, both peers SHOULD send a `NopFrame` at this interval and MUST send one within `3 × ping_interval_ms` (NCP v0.8 §7.6). |
 
 **Rules**
 
@@ -571,6 +572,25 @@ The unified NPS error frame, shared across all protocol layers. Carries error re
   "details": { "anchor_ref": "sha256:a3f9b2c1..." }
 }
 ```
+
+---
+
+### 4.8 NopFrame (0x07) — Keepalive / Heartbeat
+
+Null frame with no payload. Used as a keepalive probe on idle connections to prevent NAT/firewall timeouts and to detect dead peers (NCP v0.8).
+
+**Fields**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `frame` | uint8 | required | Fixed value `0x07` |
+
+**Rules**
+
+- NopFrame MAY be sent at any time on an established native-mode connection (never during handshake).
+- Receivers MUST accept NopFrame and MUST NOT return an ErrorFrame in response; they SHOULD reply with another NopFrame.
+- When `ping_interval_ms > 0` is declared in HelloFrame, both peers SHOULD send a NopFrame at the declared interval. If no frame (of any type) has been received within `3 × ping_interval_ms`, the peer SHOULD send `NCP-KEEPALIVE-TIMEOUT` and close the connection.
+- NopFrame MUST NOT carry any payload; a NopFrame with non-zero payload length MUST be rejected with `NCP-FRAME-PAYLOAD-TOO-LARGE` (treat as 0-byte limit violation).
 
 ---
 
@@ -713,6 +733,8 @@ NPS uses a two-tier error model:
 | `NCP-VERSION-INCOMPATIBLE` | `NPS-PROTO-VERSION-INCOMPATIBLE` | Client min_version exceeds server's supported version |
 | `NCP-STREAM-WINDOW-OVERFLOW` | `NPS-STREAM-LIMIT` | Sender continued after the flow-control window was exhausted |
 | `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | Native-mode connection opened with bytes other than `b"NPS/1.0\n"`; server closes silently within 500 ms (no ErrorFrame) — see §2.6.1 |
+| `NCP-REKEY-REQUIRED` | `NPS-PROTO-VERSION-INCOMPATIBLE` | E2E-encrypted channel has reached the rekey threshold (2^32 frames or 24 h); peer MUST initiate key rotation before sending more encrypted frames |
+| `NCP-KEEPALIVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | No frame (including NopFrame) received within 3 × `ping_interval_ms`; connection will be closed |
 
 HTTP-mode status mapping: see [status-codes.md](./status-codes.md).
 
@@ -730,6 +752,8 @@ Schemas are published by the Node and referenced read-only by the Agent. Nodes M
 Nodes SHOULD limit max concurrent streams per connection (recommended default: 32, negotiated via CapsFrame `max_concurrent_streams`). On overflow, return `NCP-STREAM-LIMIT-EXCEEDED`.
 
 ### 7.4 E2E Encryption (Formal Definition of the ENC Flag)
+
+> **Rekeying** (NCP v0.7): When ENC=1 is in use, the sender MUST trigger rekeying before any of these thresholds are reached: (a) 2^32 frames sent on the current key, (b) 24 hours elapsed since the key was established. The triggering peer sends an ErrorFrame with `error: "NCP-REKEY-REQUIRED"` as a graceful signal; the peer MUST acknowledge by completing the key rotation before sending further encrypted frames. Key rotation follows the same ECDH + HKDF algorithm as the initial key derivation; implementations SHOULD use X25519.
 
 When frame-header flag **ENC=1**, the frame payload uses application-layer end-to-end encryption. E2E encryption is independent of TLS and applies where a Relay across multiple hops is untrusted.
 
@@ -769,6 +793,26 @@ Negotiated via the `e2e_enc_algorithms` field in the handshake CapsFrame, priori
 | `NCP-ENC-NOT-NEGOTIATED` | `NPS-CLIENT-BAD-FRAME` | ENC=1 but no E2E algorithm negotiated for this session |
 | `NCP-ENC-AUTH-FAILED` | `NPS-CLIENT-BAD-FRAME` | E2E Auth Tag verification failed (possible tampering) |
 
+### 7.5 Native-Mode TLS Binding & Mutual Authentication
+
+The transport-security layer for native mode is normatively specified by **[NPS-RFC-0006](rfcs/NPS-RFC-0006-ncp-native-transport.md) §6** (Proposed). In summary, non-`local-dev` native-mode connections MUST:
+
+- Negotiate the suite-wide ALPN token **`nps/1.0`** over a **TLS-wrapped** transport (TCP) or QUIC's built-in TLS 1.3; STARTTLS-style in-band upgrade is prohibited.
+- Use **mutual TLS** with NIP-issued certificates (RFC-0002 X.509 NID profile). The server binds the client-certificate NID to the NCP session and MUST reject a certificate/`IdentFrame` NID mismatch with `NCP-NID-MISMATCH`.
+- Optionally offer TLS 1.3 **session-resumption tickets** for repeat short-lived connections, bounded to the certificate validity and a ticket lifetime (≤ 24 h); resumption shortcuts only the TLS handshake, never the RFC-0001 preamble or HelloFrame.
+
+This binding is the transport-layer admission gate terminated by the `nps-ingress` (L2) daemon.
+
+### 7.6 Keepalive and Dead-Peer Detection (NCP v0.8)
+
+Long-lived native-mode connections (TCP/QUIC) can be silently killed by NAT appliances or firewalls. NopFrame (§4.8) provides an application-layer keepalive:
+
+- If both sides declare `ping_interval_ms > 0` in their HelloFrame/CapsFrame, both SHOULD send a NopFrame at approximately that interval when no other traffic is flowing.
+- The minimum acceptable interval is **1000 ms** (1 second); smaller values MUST be treated as 1000 ms.
+- A peer that receives no frame of any kind within `3 × ping_interval_ms` MUST send `NCP-KEEPALIVE-TIMEOUT` and close the connection within 500 ms.
+- When only one side declares `ping_interval_ms`, the other side SHOULD honour the declared interval as the shared interval.
+- TCP keepalive (`SO_KEEPALIVE`) and QUIC idle timeout are complementary mechanisms; implementations SHOULD configure both at the transport layer in addition to the application-layer NopFrame protocol.
+
 ---
 
 ## 8. Encoding Tiers
@@ -807,6 +851,9 @@ Defaults: Tier-2 for production, Tier-1 for development.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.8 | 2026-06-12 | New §7.5 Native-Mode TLS Binding & Mutual Authentication, summarising **NPS-RFC-0006 §6** (promoted Draft → Proposed): suite-wide ALPN `nps/1.0` (supersedes provisional `ncp/1`), TLS-wrapped framing mandated for native-mode-over-TCP, mTLS with NIP certificates + session-NID binding, TLS 1.3 session-resumption tickets; added error code `NCP-NID-MISMATCH`. Gates the `nps-ingress` (L2) daemon. |
+| 0.8 | 2026-06-03 | **NopFrame (0x07)** keepalive/heartbeat: null payload, bidirectional; `HelloFrame.ping_interval_ms` declares preferred interval (0 = disabled, default); `NCP-KEEPALIVE-TIMEOUT` error code when no frame received within 3 × interval; §7.6 dead-peer detection rules. |
+| 0.7 | 2026-05-31 | `max_concurrent_streams` negotiation via HelloFrame/CapsFrame (uint32, default 32); `NCP-STREAM-LIMIT-EXCEEDED` on overflow; mid-stream ErrorFrame MUST be sent when rejecting in-progress streams (previously MAY); E2E rekeying protocol (§7.4): trigger at 2^32 frames or 24 h, `NCP-REKEY-REQUIRED` signal; QUIC stream mapping: one bidirectional stream per NCP channel, HelloFrame on stream 0. See [NPS-RFC-0006](rfcs/NPS-RFC-0006-ncp-native-transport.md). |
 | 0.6 | 2026-04-25 | Added §2.6.1 native-mode connection preamble (8-byte constant `b"NPS/1.0\n"`); reserved frame-type byte 0x4E in `frame-registry.yaml`; added error code `NCP-PREAMBLE-INVALID` and status code `NPS-PROTO-PREAMBLE-INVALID`. See [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md). |
 | 0.4 | 2026-04-14 | Added HelloFrame (0x06); new §2.6 handshake sequence & version-negotiation rules; anchor_id computation now explicitly references RFC 8785 JCS; DiffFrame gains `patch_format` (json_patch / binary_bitset); CapsFrame gains `inline_anchor`; StreamFrame flow control formalized (window_size protocol); §7.4 E2E encryption section (ENC flag, AES-256-GCM / ChaCha20-Poly1305, payload layout); §5.4 auto-anchor protocol (NCP-ANCHOR-STALE + inline_anchor); added error codes NCP-ANCHOR-STALE, NCP-DIFF-FORMAT-UNSUPPORTED, NCP-VERSION-INCOMPATIBLE, NCP-STREAM-WINDOW-OVERFLOW, NCP-ENC-NOT-NEGOTIATED, NCP-ENC-AUTH-FAILED |
 | 0.3 | 2026-04-12 | Dual transport (HTTP / native); unified port 17433; configurable frame size (EXT bit); ErrorFrame (0xFE); NPS status-code system; Tier-3 marked Reserved; AnchorFrame ownership clarified as Node-published; token estimation switched to CGN |

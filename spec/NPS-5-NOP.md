@@ -4,11 +4,11 @@ English | [中文版](./NPS-5-NOP.cn.md)
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.6
-**Date**: 2026-05-10
+**Version**: 0.7
+**Date**: 2026-06-12
 **Port**: 17433 (default, shared) / 17437 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.7), NPS-2 (NWP v0.13), NPS-3 (NIP v0.9)
+**Depends-On**: NPS-1 (NCP v0.8), NPS-2 (NWP v0.14), NPS-3 (NIP v0.10)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
@@ -75,6 +75,8 @@ The complete task definition submitted by the Orchestrator to its runtime or a c
 | `callback_url` | string | Optional | Callback URL on task completion/failure (`https://`, see §8.4) |
 | `preflight` | bool | Optional | If true, perform a resource pre-flight check (§4) before execution, default false |
 | `compensation_policy` | string | Optional | Saga compensation policy: `"best_effort"` (default) or `"strict"`, see §3.1.6 |
+| `callback_secret` | string | Optional | HMAC-SHA256 key (base64url, 32 bytes) for webhook delivery signing (NOP v0.6). When present, the Orchestrator MUST compute `X-NPS-Signature: sha256=<HMAC-SHA256-hex>` over the raw JSON body and include it on every POST to `callback_url`. Receivers SHOULD reject callbacks missing this header with 400. Error code: `NOP-CALLBACK-HMAC-MISSING`. |
+| `result_ttl_seconds` | uint32 | Optional | How long (seconds) the Orchestrator retains the task result after completion; default 3600. After TTL expires, result retrieval returns `NOP-TASK-RESULT-EXPIRED`. (NOP v0.7) |
 | `context` | object | Optional | Pass-through context, see §3.1.2 |
 | `request_id` | string | Optional | UUID v4 for request tracing |
 
@@ -287,6 +289,7 @@ The Orchestrator delegates a single DAG subtask to a Worker Agent.
 | `deadline_at` | string | Required | Subtask deadline (ISO 8601 UTC) |
 | `idempotency_key` | string | Optional | Idempotency key (use the same value on retries) |
 | `priority` | string | Optional | Inherited from TaskFrame.priority |
+| `target_cluster_anchor` | string | Optional | NID of the cluster anchor to route this subtask to (cross-cluster delegation, NOP v0.6). When present, the Orchestrator MUST route the DelegateFrame to a Worker Agent registered under the specified cluster anchor. |
 | `context` | object | Optional | Pass-through context (inherited from TaskFrame.context with span_id updated to the current Delegate span) |
 
 **Scope Carving Principle**
@@ -324,7 +327,7 @@ A multi-Agent state synchronization barrier that waits for dependent subtasks to
 | `sync_id` | string | Required | Sync point unique identifier (UUID v4) |
 | `wait_for` | array | Required | List of subtask_ids to wait for |
 | `min_required` | uint32 | Optional | K-of-N: minimum number of subtasks that must succeed to proceed; omit or 0 means all must succeed (default) |
-| `aggregate` | string | Optional | Result aggregation strategy: `"merge"` (default) / `"first"` / `"all"` / `"fastest_k"`, see §3.3.1 |
+| `aggregate` | string | Optional | Result aggregation strategy: `"merge"` (default) / `"first"` / `"all"` / `"fastest_k"` / `"weighted_first_k"` / `"merge_all"`, see §3.3.1 and §3.3.2 |
 | `timeout_ms` | uint32 | Optional | Wait timeout (milliseconds); returns `NOP-SYNC-TIMEOUT` on expiry |
 
 #### §3.3.1 K-of-N Sync Semantics
@@ -347,6 +350,8 @@ When K < N, once the barrier passes, the Orchestrator SHOULD send a cancel signa
 | `first` | Use the result of the first subtask to complete successfully |
 | `all` | Preserve all results as an array `[result_a, result_b, ...]` |
 | `fastest_k` | Use the `min_required` fastest-completing results (merged in `all` format) |
+| `weighted_first_k` | Select the `min_required` results with the highest confidence scores (requires `result.score` field in each subtask result); merge as `all` format (NOP v0.6) |
+| `merge_all` | Merge all successful subtask results into a single object, preserving all fields; unlike `merge`, array-valued fields are concatenated rather than overwritten (NOP v0.6) |
 
 **SyncFrame Completion Response (CapsFrame)**
 
@@ -388,6 +393,8 @@ Directed task stream, replacing NCP AlignFrame (0x05). Carries DAG context and N
 | `data` | object | Optional | Intermediate result data |
 | `window_size` | uint32 | Optional | Backpressure window size (unit: CGN Token count), see §3.4.1 |
 | `is_final` | bool | Required | true indicates end of stream (final result frame) |
+| `ack_seq` | uint64 | Optional | Acknowledge all frames with `seq ≤ ack_seq` received and processed. Used in the sliding-window protocol (NOP v0.6 §3.4.2). |
+| `nak_seq` | uint64 | Optional | Negative-acknowledge: request retransmission from `nak_seq`. Sender MUST resend from `nak_seq`; if the frame is no longer available, sender returns `NOP-STREAM-NAK-UNRESOLVABLE`. |
 | `sender_nid` | string | Required | Sender NID (receiver MUST verify it matches the connection identity) |
 | `error` | object | Optional | Error information (may be present when is_final=true, indicating subtask failure) |
 
@@ -590,22 +597,79 @@ Orchestrator                              Worker B (Data)    Worker C (Inference
 | `NOP-INPUT-MAPPING-ERROR` | `NPS-CLIENT-UNPROCESSABLE` | input_mapping JSONPath could not be resolved or target field does not exist |
 | `NOP-COMPENSATION-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | Terminal — a node's `compensate_action` returned an error during saga rollback (see §3.1.6) |
 | `NOP-COMPENSATION-NOT-SUPPORTED` | `NPS-CLIENT-UNPROCESSABLE` | Terminal — a predecessor that must be compensated has no `compensate_action` and `compensation_policy="strict"` |
+| `NOP-CALLBACK-HMAC-MISSING` | `NPS-AUTH-UNAUTHENTICATED` | Callback recipient rejected delivery because `X-NPS-Signature` header was absent; `callback_secret` was set but signature was not computed |
+| `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | Task result requested after `result_ttl_seconds` elapsed; result no longer retained |
+| `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK retransmission requested for a frame no longer available in sender's buffer (frame has been evicted) |
+| `NOP-CLAIM-CONFLICT` | `NPS-CLIENT-CONFLICT` | TaskFrame already leased by a live runner lease (NPS-CR-0007 §4.2) |
+| `NOP-SPAWN-SPEC-INVALID` | `NPS-CLIENT-BAD-PARAM` | `spawn_spec_ref` could not be resolved or failed SpawnSpec schema validation (NPS-CR-0007 §5) |
+| `NOP-RUNTIME-IDLE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | L3 worker exceeded its idle timeout before completing the node (NPS-CR-0007 §6) |
+| `NOP-RUNTIME-MAX-RUNTIME` | `NPS-SERVER-TIMEOUT` | L3 worker exceeded its max runtime before completing the node (NPS-CR-0007 §6) |
 
 ---
 
-## 8. Security Considerations
+## 8. L3 Runtime Integration (nps-runner)
 
-### 8.1 Task Injection Defense
+> Normative contract: **NPS-CR-0007** (`cr/NPS-CR-0007-nop-l3-runtime-integration.md`).
+> This section is the in-spec summary; the CR carries the full field tables and conformance suite.
+
+The NPS-Node Profile **L3 (on-demand / FaaS)** tier materialises an agent process only when a
+task arrives. The runtime that does so is the `nps-runner` daemon. This section defines the
+normative interface between `nps-runner` and the NOP orchestration layer.
+
+### 8.1 Task-claim protocol
+
+A runner leases the head of a per-NID inbox atomically: `{ task_id, runner_nid, lease_seconds
+(clamped [10,600]), dedup_key = sha256(task_id ‖ dag_hash) }`. Outcomes:
+
+- **Granted** — inbox marks the task `LEASED (runner_nid, lease_expiry)`; the runner MUST renew
+  the lease before expiry while the node runs.
+- **Conflict** — a live lease already exists ⇒ `NOP-CLAIM-CONFLICT`; the runner backs off.
+- **Reclaim** — an expired lease is reclaimable; the `dedup_key` ensures a side-effect-bearing
+  node already in a terminal state is **not** re-executed (at-least-once with dedup).
+
+Result reporting is idempotent, keyed by `(task_id, node_id, dedup_key)`.
+
+### 8.2 `spawn_spec_ref` content schema
+
+`spawn_spec_ref` (NDP AnnounceFrame, NPS-4 §3.1) resolves to a **SpawnSpec**:
+`{ image (OCI ref, required), command?, env?, resource_limits? {cpu, memory, cgn_budget},
+idle_timeout_seconds?, max_runtime_seconds? }`. It MAY be an inline `spawnspec:` base64url-JSON
+data URI or an `https://`/`nwp://` URL whose body MUST validate against the schema. Resolution
+failure ⇒ `NOP-SPAWN-SPEC-INVALID`.
+
+### 8.3 Lifecycle enforcement
+
+| Limit | Precedence (high→low) | Terminal on breach |
+|-------|-----------------------|--------------------|
+| Idle timeout | SpawnSpec `idle_timeout_seconds` → runner policy | `NOP-RUNTIME-IDLE-TIMEOUT` |
+| Max runtime | SpawnSpec `max_runtime_seconds` → runner policy | `NOP-RUNTIME-MAX-RUNTIME` |
+
+On any terminal condition the runner PATCHes the node status into the orchestrator's task
+store: `done → COMPLETED`, `failed`/idle/max-runtime → `FAILED`. A `FAILED` L3 node with a
+`compensate_action` triggers the same reverse-topological saga rollback as L1/L2 (§3.1.6); L3
+introduces no new saga path.
+
+### 8.4 Conformance
+
+L3 deployments are tested by `services/conformance/NPS-Node-L3.md` (`TC-N3-*`): claim conflict,
+lease reclaim + dedup, spawn-spec resolution, idle/max-runtime breach, 3-node DAG end-to-end,
+and L3 saga trigger.
+
+---
+
+## 9. Security Considerations
+
+### 9.1 Task Injection Defense
 The Orchestrator MUST verify that received TaskFrames originate from a trusted NID (via NIP certificate verification). Worker Agents SHOULD only accept DelegateFrames that have passed NIP verification and MUST reject delegations with non-matching or missing scope.
 
-### 8.2 DAG Resource Limits
+### 9.2 DAG Resource Limits
 Implementations MUST enforce:
 - Maximum DAG node count: **32**
 - Maximum delegation chain depth: **3 levels**
 - `condition` expression length: **≤ 512 characters**
 - `input_mapping` JSONPath nesting depth: **≤ 8 levels**
 
-### 8.3 Audit Trail
+### 9.3 Audit Trail
 Every DelegateFrame execution SHOULD be written to an audit log containing:
 
 - `sender_nid` (Orchestrator)
@@ -615,20 +679,23 @@ Every DelegateFrame execution SHOULD be written to an audit log containing:
 - `timestamp`
 - `trace_id` (from context, for correlation with OpenTelemetry systems)
 
-### 8.4 callback_url Abuse Prevention
+### 9.4 callback_url Abuse Prevention
 - TaskFrame `callback_url` MUST use the `https://` scheme
 - The Orchestrator SHOULD perform SSRF checks on callback URLs (internal network addresses prohibited)
 - On callback delivery failure, SHOULD apply exponential backoff retries (max 3 attempts), then abandon and log
 
-### 8.5 Delegation Chain Security
+### 9.5 Delegation Chain Security
 Every delegation level must pass NIP CA verification that `delegated_scope` does not exceed the parent scope. Bypassing the CA to delegate with elevated permissions is not permitted.
 
 ---
 
-## 9. Changelog
+## 10. Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.7 | 2026-06-12 | **NPS-CR-0007 — NOP ↔ L3 runtime integration**: new §8 (task-claim protocol with lease + `dedup_key`; `spawn_spec_ref` SpawnSpec content schema; idle/max-runtime enforcement; idempotent result reporting); 4 new error codes (`NOP-CLAIM-CONFLICT`, `NOP-SPAWN-SPEC-INVALID`, `NOP-RUNTIME-IDLE-TIMEOUT`, `NOP-RUNTIME-MAX-RUNTIME`); new `services/conformance/NPS-Node-L3.md` (`TC-N3-*`); Security/Changelog renumbered §9/§10. Gates the `nps-runner` L3 FaaS runtime. |
+| 0.7 | 2026-06-03 | `result_ttl_seconds` (uint32, default 3600) on TaskFrame — `NOP-TASK-RESULT-EXPIRED` after TTL; `NOP-STREAM-NAK-UNRESOLVABLE` error code for evicted-frame NAK retransmission |
+| 0.6 | 2026-05-31 | `callback_secret` (HMAC-SHA256 key) on TaskFrame — `X-NPS-Signature` header on webhook callbacks, `NOP-CALLBACK-HMAC-MISSING`; `target_cluster_anchor` on DelegateFrame for cross-cluster routing; `weighted_first_k` / `merge_all` SyncFrame aggregate strategies (§3.3.2); `ack_seq` / `nak_seq` sliding-window ACK on AlignStream (§3.4.2) |
 | 0.5 | 2026-05-10 | Compensation/saga semantics (issue #34): per-node `compensate_action` / `compensate_params_mapping`; TaskFrame-level `compensation_policy` (`best_effort` default / `strict`); subtask saga states `COMPENSATING` / `COMPENSATED` / `COMPENSATION_FAILED`; saga trigger in §3.1.6 (reverse-topological compensation of completed predecessors when a downstream node FAILED); 2 new error codes: `NOP-COMPENSATION-FAILED`, `NOP-COMPENSATION-NOT-SUPPORTED` |
 | 0.4 | 2026-04-19 | Status / Depends-On version bumps; minor editorial alignment with NCP v0.7 / NWP v0.13 / NIP v0.9 |
 | 0.3 | 2026-04-14 | DAG node granularity enhancements (per-node timeout/retry_policy/condition/input_mapping); §3.1.2 context supports OpenTelemetry W3C Trace (trace_id/span_id/trace_flags/baggage); §3.1.3 input_mapping JSONPath; §3.1.4 retry_policy (fixed/linear/exponential); §3.1.5 condition CEL subset; DelegateFrame adds idempotency_key/priority/context/node_id; SyncFrame adds min_required (K-of-N) and §3.3.1/§3.3.2 aggregation strategies; AlignStream adds subtask_id/error fields, §3.4.1 Token-level backpressure; §4 resource pre-flight protocol; §5 extended state machine (PREFLIGHT/SKIPPED) and task cancellation mechanism; §6 complete multi-Agent flow diagram; 5 new error codes (RESOURCE-INSUFFICIENT, CONDITION-EVAL-ERROR, INPUT-MAPPING-ERROR, DELEGATE-TIMEOUT, TASK-CANCELLED); §8.4 callback_url abuse prevention; Depends-On updated to NCP v0.7 / NWP v0.13 |

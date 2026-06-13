@@ -4,7 +4,7 @@
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.7
+**Version**: 0.8
 **Date**: 2026-04-25  
 **Port**: 17433（默认，全协议族共用）  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
@@ -799,6 +799,7 @@ Node SHOULD 限制单连接最大并发流数（推荐默认值：32，通过 Ca
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.8 | 2026-06-12 | 新增 §7.5 原生模式 TLS 绑定与双向认证，归纳 **NPS-RFC-0006 §6**（草案→提议）：套件级 ALPN `nps/1.0`（取代临时值 `ncp/1`）、原生模式 over TCP 强制 TLS 封装、与 NIP 证书的 mTLS + session-NID 绑定、TLS 1.3 会话恢复票据；新增错误码 `NCP-NID-MISMATCH`。gate `nps-ingress`（L2）守护进程。（正文中文翻译待补，见 version-matrix translation_lag） |
 | 0.6 | 2026-04-25 | 新增 §2.6.1 原生模式连接前导（8 字节常量 `b"NPS/1.0\n"`）；在 `frame-registry.yaml` 中保留帧类型字节 0x4E；新增错误码 `NCP-PREAMBLE-INVALID` 和状态码 `NPS-PROTO-PREAMBLE-INVALID`。详见 [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.cn.md)。 |
 | 0.4 | 2026-04-14 | 新增 IdentFrame (0x06) 握手帧；新增 §2.6 连接握手序列及版本协商规则；anchor_id 计算明确引用 RFC 8785 JCS；DiffFrame 新增 patch_format 字段（json_patch / binary_bitset）；CapsFrame 新增 inline_anchor；StreamFrame 流量控制语义正式化（window_size 协议）；§7.4 E2E 加密节（ENC 标志、AES-256-GCM / ChaCha20-Poly1305、Payload 布局）；§5.4 auto-anchor 协议（NCP-ANCHOR-STALE + inline_anchor）；新增错误码 NCP-ANCHOR-STALE、NCP-DIFF-FORMAT-UNSUPPORTED、NCP-VERSION-INCOMPATIBLE、NCP-STREAM-WINDOW-OVERFLOW、NCP-ENC-NOT-NEGOTIATED、NCP-ENC-AUTH-FAILED |
 | 0.3 | 2026-04-12 | 传输双模（HTTP/原生）；统一端口 17433；可配置帧大小（EXT 位）；ErrorFrame (0xFE)；NPS 状态码体系；Tier-3 标记 Reserved；AnchorFrame 所有权明确为 Node 发布；Token 估算改用 CGN |

@@ -3,13 +3,13 @@
 ---
 **RFC 编号**: NPS-RFC-0005
 **标题**: 声誉策略强制执行
-**状态**: Accepted
+**状态**: Active
 **作者**: Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**: Ori Lynn（pre-1.0 快速通道，见 `spec/cr/README.md`）
 **创建日期**: 2026-05-19
-**最后更新**: 2026-05-27
-**通过日期**: 2026-05-27
-**激活日期**: _(首个参考实现发布时设置，目标 v1.0-alpha.8)_
+**最后更新**: 2026-05-28
+**通过日期**: 2026-05-19（pre-1.0 快速通道）
+**激活日期**: 2026-05-28（v1.0.0-alpha.9 — DefaultReputationPolicyEvaluator、AnchorNodeMiddleware 及 X-NWP-Ident 保证级别提取均已发布）
 **取代**: _无_
 **被取代**: _无_
 **影响规范**: NPS-2 NWP、NPS-3 NIP、spec/services/NPS-AaaS-Profile.md、spec/error-codes.md

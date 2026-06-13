@@ -2,8 +2,8 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 1.4
-**Date**: 2026-05-11
+**Version**: 1.5
+**Date**: 2026-06-12
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -34,6 +34,8 @@ NPS uses a two-level error system:
 | `NCP-ENC-NOT-NEGOTIATED` | `NPS-CLIENT-BAD-FRAME` | Received an ENC=1 frame but no E2E encryption algorithm was negotiated for the session (not declared in HelloFrame) |
 | `NCP-ENC-AUTH-FAILED` | `NPS-CLIENT-BAD-FRAME` | E2E encryption auth-tag verification failed; the frame may have been tampered with |
 | `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | Native-mode connection opened with bytes other than the constant preamble `b"NPS/1.0\n"`; server closes the connection silently without emitting an ErrorFrame (NPS-RFC-0001) |
+| `NCP-NID-MISMATCH` | `NPS-AUTH-UNAUTHENTICATED` | Native-mode mTLS client-certificate NID does not match the session `IdentFrame` NID, or a resumed TLS session's certificate NID differs from the ticket-bound NID (NPS-RFC-0006 §6.3–§6.4) |
+| `NCP-KEEPALIVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | No frame (including NopFrame) received within 3 × `ping_interval_ms`; connection will be closed (NCP v0.8 §7.6) |
 
 ---
 
@@ -93,6 +95,8 @@ NPS uses a two-level error system:
 | Error Code | NPS Status Code | Description |
 |------------|-----------------|-------------|
 | `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | Certificate has expired (`expires_at < now`) |
+| `NIP-CERT-NODE-ROLES-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.node_roles` does not match the `id-nps-node-roles` X.509 extension; Phase 3 enforcement (NIP v0.10) |
+| `NIP-OCSP-STAPLE-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | `IdentFrame.ocsp_staple` `nextUpdate` has elapsed — staple is stale; Agent must refresh and resend (NIP v0.9 §5.1.4) |
 | `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | Certificate has been revoked (found in CRL or OCSP) |
 | `NIP-CERT-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | Certificate signature verification failed |
 | `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | Issuer is not in `trusted_issuers` |
@@ -140,6 +144,8 @@ NPS uses a two-level error system:
 | `NDP-RESOLVE-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | `nwp://` address cannot be resolved to a physical endpoint |
 | `NDP-RESOLVE-AMBIGUOUS` | `NPS-CLIENT-CONFLICT` | Resolution result is conflicting (multiple inconsistent registrations) |
 | `NDP-RESOLVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | Resolution request timed out |
+| `NDP-RESOLVE-STALE` | `NPS-CLIENT-NOT-FOUND` | Resolved entry's freshness deadline `(last_seen ?? timestamp) + ttl` is in the past; the registration is stale and MUST NOT be served (NDP v0.9 §3.2.1) |
+| `NDP-ANNOUNCE-STALE` | `NPS-CLIENT-NOT-FOUND` | AnnounceFrame heartbeat has expired (3× `heartbeat_interval_ms` elapsed with no re-announce) (NDP v0.9) |
 | `NDP-ANNOUNCE-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | AnnounceFrame signature verification failed |
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | NID in AnnounceFrame does not match the signing certificate |
 | `NDP-ANNOUNCE-ROLE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` contains the removed legacy value `"gateway"` (NPS-CR-0001); use `"anchor"` or `"bridge"`. Response SHOULD include a `hint` pointing to NPS-CR-0001. |
@@ -177,6 +183,13 @@ NPS uses a two-level error system:
 | `NOP-INPUT-MAPPING-ERROR` | `NPS-CLIENT-UNPROCESSABLE` | `input_mapping` JSONPath could not be resolved or target field is missing |
 | `NOP-COMPENSATION-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | Terminal — node `compensate_action` returned an error during saga rollback |
 | `NOP-COMPENSATION-NOT-SUPPORTED` | `NPS-CLIENT-UNPROCESSABLE` | Terminal — predecessor that must be compensated has no `compensate_action` (and `compensation_policy="strict"`) |
+| `NOP-CLAIM-CONFLICT` | `NPS-CLIENT-CONFLICT` | TaskFrame already leased by a live `nps-runner` lease (NPS-CR-0007 §4.2) |
+| `NOP-SPAWN-SPEC-INVALID` | `NPS-CLIENT-BAD-PARAM` | `spawn_spec_ref` could not be resolved or failed SpawnSpec schema validation (NPS-CR-0007 §5) |
+| `NOP-RUNTIME-IDLE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | L3 worker exceeded its idle timeout before completing the node (NPS-CR-0007 §6) |
+| `NOP-RUNTIME-MAX-RUNTIME` | `NPS-SERVER-TIMEOUT` | L3 worker exceeded its max runtime before completing the node (NPS-CR-0007 §6) |
+| `NOP-CALLBACK-HMAC-MISSING` | `NPS-AUTH-UNAUTHENTICATED` | Callback recipient rejected delivery because `X-NPS-Signature` header was absent; `callback_secret` was set but signature was not computed (NOP v0.6) |
+| `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | Task result requested after `result_ttl_seconds` elapsed; result no longer retained (NOP v0.7) |
+| `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK retransmission requested for a frame no longer available in sender's buffer (frame has been evicted) (NOP v0.7) |
 
 ---
 
