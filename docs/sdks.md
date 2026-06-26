@@ -2,11 +2,11 @@
 
 > English | [中文版](sdks.cn.md)
 
-Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — with latest published packages at **1.0.0-alpha.13** and candidate docs staged for **1.0.0-alpha.14**.
+Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — with latest published packages at **1.0.0-alpha.14** and candidate docs staged for **1.0.0-alpha.14**.
 
-> alpha.14 candidate note: SDK docs now call out typed remote NIP CA clients, native-mode NWP serving helpers, and TC-N1/TC-N2 conformance helpers. Install snippets stay on the latest published packages until the release artifacts are cut.
+> alpha.14 release note: SDK docs now call out typed remote NIP CA clients, native-mode NWP serving helpers, and TC-N1/TC-N2 conformance helpers. Install snippets stay on the latest published packages until the release artifacts are cut.
 
-> npm note: `@labacacia/nps-sdk@1.0.0-alpha.13` fixed the earlier alpha.11 tarball issue; install `@labacacia/nps-sdk@alpha` for the latest published alpha.
+> npm note: `@labacacia/nps-sdk@1.0.0-alpha.14` fixed the earlier alpha.11 tarball issue; install `@labacacia/nps-sdk@alpha` for the latest published alpha.
 
 ---
 
@@ -39,7 +39,7 @@ For operator guides and embedding options (SQLite vs PostgreSQL) see [Wiki: NIP-
 
 ## NPS Daemons
 
-Reference deployment binaries for the standard three-layer NPS topology, currently published at `v1.0.0-alpha.13` with alpha.14 candidate docs for native NCP TLS/mTLS and NWP serving.
+Reference deployment binaries for the standard three-layer NPS topology, currently published at `v1.0.0-alpha.14` with alpha.14 release docs for native NCP TLS/mTLS and NWP serving.
 
 | Repo | Daemons | Quickstart |
 |------|---------|------------|

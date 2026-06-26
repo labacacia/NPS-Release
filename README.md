@@ -10,7 +10,7 @@ English | [中文版](./README.cn.md)
 [![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
 [![NOP](https://img.shields.io/badge/NOP-v0.7-ff8c42.svg)]()
 
-> **Version:** 1.0.0-alpha.14 candidate | **Latest published release:** 1.0.0-alpha.13 | **Status:** Proposed | **License:** Apache 2.0
+> **Version:** 1.0.0-alpha.14 | **Latest published release:** 1.0.0-alpha.14 | **Status:** Proposed | **License:** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 
@@ -78,7 +78,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 ### Alpha.14 candidate focus
 
-The alpha.14 candidate documentation tracks the Banyan integration asks and
+The alpha.14 release documentation tracks the Banyan integration asks and
 the SDK-alignment work now staged in the development branch:
 
 - typed remote NIP CA clients across SDKs, including discovery, CRL,

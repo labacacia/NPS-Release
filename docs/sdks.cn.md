@@ -2,11 +2,11 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。最新已发布包组为 **1.0.0-alpha.13**，当前文档已为 **1.0.0-alpha.14** candidate 预先对齐。
+六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。最新已发布包组为 **1.0.0-alpha.14**，当前文档已为 **1.0.0-alpha.14** candidate 预先对齐。
 
-> alpha.14 candidate 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。正式发包前，安装片段仍指向最新已发布包。
+> alpha.14 release 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。正式发包前，安装片段仍指向最新已发布包。
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.13` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.14` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
 
 ---
 
@@ -39,7 +39,7 @@
 
 ## NPS Daemons
 
-标准三层 NPS 拓扑的参考部署二进制，最新已发布版本为 `v1.0.0-alpha.13`，当前文档跟踪 alpha.14 candidate 的 native NCP TLS/mTLS 与 NWP serving 边界。
+标准三层 NPS 拓扑的参考部署二进制，最新已发布版本为 `v1.0.0-alpha.14`，当前文档跟踪 alpha.14 release 的 native NCP TLS/mTLS 与 NWP serving 边界。
 
 | 仓库 | Daemon | 快速开始 |
 |------|--------|----------|

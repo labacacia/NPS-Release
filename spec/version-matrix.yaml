@@ -27,7 +27,7 @@
 # Suite release version (mirror of NPS-Release/version.yaml `suite_version`).
 # Kept here only so that README's `release-vX` badge can be validated by the
 # same gate; the authoritative oracle is still NPS-Release/version.yaml.
-suite_version: "1.0.0-alpha.13"
+suite_version: "1.0.0-alpha.14"
 
 # Per-protocol document versions. Each entry pins:
 #   version       — current Version: header in spec/<file>.md
