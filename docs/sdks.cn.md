@@ -2,9 +2,9 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。最新已发布包组为 **1.0.0-alpha.14**，当前文档已为 **1.0.0-alpha.14** candidate 预先对齐。
+六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。最新已发布包组为 **1.0.0-alpha.14**。
 
-> alpha.14 release 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。正式发包前，安装片段仍指向最新已发布包。
+> alpha.14 release 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。
 
 > npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.14` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
 

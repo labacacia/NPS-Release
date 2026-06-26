@@ -4,9 +4,8 @@
 
 NPS is a multi-layer protocol suite. Where you start depends on what you're building.
 
-The latest published package set is `1.0.0-alpha.14`. The documentation is
-already staged for the `1.0.0-alpha.14` candidate; candidate-only APIs are
-called out in the SDK docs until the release artifacts are cut.
+The latest published package set is `1.0.0-alpha.14`. The documentation and
+SDK notes are aligned with the alpha.14 release boundary.
 
 ---
 

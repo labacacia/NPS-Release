@@ -8,7 +8,7 @@ Case studies, production deployments, and public integrations will be published 
 
 ## Status
 
-NPS latest published packages are at `v1.0.0-alpha.14`, with `v1.0.0-alpha.14` candidate docs staged for SDK/spec alignment. The first wave of production adopters is expected in Phase 3 (2027 Q1+). If you are evaluating NPS for a production use case, open a GitHub Discussion in the [NPS-Release](https://github.com/labacacia/NPS-Release) repository.
+NPS latest published packages are at `v1.0.0-alpha.14`, with SDK/spec docs aligned to the alpha.14 release. The first wave of production adopters is expected in Phase 3 (2027 Q1+). If you are evaluating NPS for a production use case, open a GitHub Discussion in the [NPS-Release](https://github.com/labacacia/NPS-Release) repository.
 
 ---
 

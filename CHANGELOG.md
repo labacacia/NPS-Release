@@ -19,7 +19,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
   artifacts.
 - Updated Release README badges and protocol summary to the current spec
   versions: NCP v0.8, NWP v0.14, NIP v0.10, NDP v0.9, and NOP v0.7.
-- Added the alpha.14 candidate boundary to the public docs: typed remote NIP
+- Added the alpha.14 release boundary to the public docs: typed remote NIP
   CA clients, native-mode NWP serving helpers, TC-N1/TC-N2 conformance helpers,
   live revocation, native NCP TLS/mTLS hardening, signed CRL output, and
   transport-neutral observability.
@@ -29,11 +29,11 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ### SDK Alignment Notes
 
-- alpha.14 candidate SDK docs now call out the staged parity work for remote
+- alpha.14 SDK docs now call out the staged parity work for remote
   CA clients, native NWP serving, and conformance manifest support across the
   official SDKs.
-- Install snippets continue to point to the latest published packages until
-  the alpha.14 artifacts are cut.
+- Install snippets now point at the alpha.14 release line where package
+  managers support the published artifact.
 
 ## [1.0.0-alpha.13] — 2026-06-13
 

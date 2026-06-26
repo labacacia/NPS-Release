@@ -3,15 +3,14 @@
 # Neural Protocol Suite (NPS) — 协议规范
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.13-orange.svg)](CHANGELOG.cn.md)
-[![Next](https://img.shields.io/badge/next-v1.0.0--alpha.14--candidate-yellow.svg)](CHANGELOG.cn.md#100-alpha14--unreleased)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.14-orange.svg)](CHANGELOG.cn.md#100-alpha14--2026-06-26)
 [![NCP](https://img.shields.io/badge/NCP-v0.8-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
 [![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
 [![NOP](https://img.shields.io/badge/NOP-v0.7-ff8c42.svg)]()
 
-> **版本：** 1.0.0-alpha.14 | **最新已发布版本：** 1.0.0-alpha.14 | **状态：** Proposed | **许可证：** Apache 2.0
+> **版本：** 1.0.0-alpha.14 | **最新已发布版本：** 1.0.0-alpha.14 | **状态：** Released | **许可证：** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 

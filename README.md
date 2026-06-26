@@ -2,15 +2,14 @@ English | [中文版](./README.cn.md)
 
 # Neural Protocol Suite (NPS) — Protocol Specification
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.13-orange.svg)](CHANGELOG.md)
-[![Next](https://img.shields.io/badge/next-v1.0.0--alpha.14--candidate-yellow.svg)](CHANGELOG.md#100-alpha14--unreleased)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.14-orange.svg)](CHANGELOG.md#100-alpha14--2026-06-26)
 [![NCP](https://img.shields.io/badge/NCP-v0.8-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
 [![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
 [![NOP](https://img.shields.io/badge/NOP-v0.7-ff8c42.svg)]()
 
-> **Version:** 1.0.0-alpha.14 | **Latest published release:** 1.0.0-alpha.14 | **Status:** Proposed | **License:** Apache 2.0
+> **Version:** 1.0.0-alpha.14 | **Latest published release:** 1.0.0-alpha.14 | **Status:** Released | **License:** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 
@@ -76,10 +75,10 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 **Dependency chain:** `NCP ← NWP ← NIP ← NDP` / `NCP + NWP + NIP ← NOP`
 
-### Alpha.14 candidate focus
+### Alpha.14 release focus
 
-The alpha.14 release documentation tracks the Banyan integration asks and
-the SDK-alignment work now staged in the development branch:
+The alpha.14 release tracks the Banyan integration asks and SDK-alignment
+work:
 
 - typed remote NIP CA clients across SDKs, including discovery, CRL,
   Ed25519 and RFC-0002 X.509 registration flows;
