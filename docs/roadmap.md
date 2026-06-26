@@ -39,7 +39,7 @@ All five protocols production-ready in six reference SDKs (.NET / Python / TypeS
 
 Adapters to MCP, A2A, and gRPC ecosystems; Tier-2 MsgPack production hardening; reference tooling.
 
-- ✅ MCP, A2A, and gRPC ingress adapters packaged at v1.0.0-alpha.14; NuGet registry push waits on Nexus DNS repair
+- ✅ MCP, A2A, and gRPC ingress adapters packaged at v1.0.0-alpha.14; NuGet registry push waits on the new Nexus credential/permission update
 - ✅ Tier-2 MsgPack and token-savings benchmarks published
 - ✅ NOP orchestrator executes multi-node DAGs; Claude Desktop integration via `mcp-ingress` verified
 - ✅ `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint) — all six SDKs

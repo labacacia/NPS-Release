@@ -39,7 +39,7 @@ NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 s
 
 MCP、A2A、gRPC 生态适配器，Tier-2 MsgPack 生产硬化，参考工具链。
 
-- ✅ MCP、A2A、gRPC ingress 适配器已打包为 v1.0.0-alpha.14；NuGet registry push 等待 Nexus DNS 修复
+- ✅ MCP、A2A、gRPC ingress 适配器已打包为 v1.0.0-alpha.14；NuGet registry push 等待新 Nexus 凭据/权限更新
 - ✅ Tier-2 MsgPack 与 Token 节约基准测试已发布
 - ✅ NOP Orchestrator 执行多节点 DAG；Claude Desktop 通过 `mcp-ingress` 集成验证
 - ✅ `NDP.ResolveFrame` DNS TXT 解析（`nwp://` → 物理端点）—— 全六 SDK 交付
