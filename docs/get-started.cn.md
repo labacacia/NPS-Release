@@ -4,8 +4,8 @@
 
 NPS 是一套多层协议族，从哪里开始取决于你在构建什么。
 
-最新已发布包组是 `1.0.0-alpha.14`。当前文档与 SDK 说明已经对齐
-alpha.14 release 边界。
+最新 suite release 是 `1.0.0-alpha.14`。当前文档与 SDK 说明已经对齐
+alpha.14 release 边界；各生态包管理器可用性单独跟踪。
 
 ---
 

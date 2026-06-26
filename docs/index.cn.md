@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — 为 AI Agent 和神经模型量身设计的完整互联网协议栈。
 >
-> 1.0.0-alpha.14 · 最新已发布包 1.0.0-alpha.14 · Apache 2.0 · [English](index.md)
+> 1.0.0-alpha.14 · 最新 suite release 1.0.0-alpha.14 · Apache 2.0 · [English](index.md)
 
 ---
 
@@ -65,7 +65,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.14
 
 ## 状态
 
-**v1.0.0-alpha.14** — 文档与规范当前跟踪 NCP v0.8、NWP v0.14、NIP v0.10、NDP v0.9、NOP v0.7。本次发布补齐类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper、live revocation、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。**NIP CA Server** 在 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-ingress` + `nps-registry`）在 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)。Layer-3 trust-anchor daemon 在 `innolotus` 组织私有，随 NPS Cloud GA 公开。
+**v1.0.0-alpha.14** — 文档与规范当前跟踪 NCP v0.8、NWP v0.14、NIP v0.10、NDP v0.9、NOP v0.7。本次发布补齐类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper、live revocation、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。各生态包管理器可用性单独跟踪；.NET 包 bundle 已挂到 GitHub Release，Nexus registry 发布等待 DNS 修复。**NIP CA Server** 在 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-ingress` + `nps-registry`）在 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)。Layer-3 trust-anchor daemon 在 `innolotus` 组织私有，随 NPS Cloud GA 公开。
 
 ---
 

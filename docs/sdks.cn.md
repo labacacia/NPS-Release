@@ -2,7 +2,7 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。最新已发布包组为 **1.0.0-alpha.14**。
+六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。当前已对齐 suite release **1.0.0-alpha.14**；各生态包管理器可用性单独跟踪。
 
 > alpha.14 release 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。
 
