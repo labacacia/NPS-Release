@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — 为 AI Agent 和神经模型量身设计的完整互联网协议栈。
 >
-> 1.0.0-alpha.11 · Apache 2.0 · [English](index.md)
+> 1.0.0-alpha.14 candidate · 最新已发布包 1.0.0-alpha.13 · Apache 2.0 · [English](index.md)
 
 ---
 
@@ -32,25 +32,25 @@ NPS 在**协议层面**同时解决这四个问题：
 
 ```bash
 # Python
-pip install nps-lib==1.0.0a6
+pip install nps-lib==1.0.0a13
 
 # TypeScript
 npm install @labacacia/nps-sdk@alpha
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.11
+cargo add nps-sdk@=1.0.0-alpha.13
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.11
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.13
 
 # Java (Gradle)
-implementation("com.labacacia.nps:nps-java:1.0.0-alpha.11")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.13")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.11
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.13
 ```
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.11` 已 deprecated，因为发布到 npm 的 tarball 缺少 `dist/`。当前 `alpha` dist-tag 临时指向 `1.0.0-alpha.11`；需要 alpha.6 源码时请使用 GitHub `v1.0.0-alpha.11` tag，等待下一个 npm 预发布。
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.13` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；`alpha` dist-tag 指向最新已发布 alpha。
 
 ---
 
@@ -65,7 +65,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.11
 
 ## 状态
 
-**v1.0.0-alpha.11** — NWP 错误码全集 + RFC-0004 Phase 3（STH gossip 联邦）。全 30 个 NWP wire 错误码现已作为常量在六种 SDK 中发布。`nps-ledger` 新增 STH gossip 联邦（`GET /v1/log/gossip/sth`），含签名验证与单调性检查。新增 `NPS-SERVER-UNSUPPORTED` 状态码（HTTP 501）。Python、TypeScript、Java 三种 SDK 修复 `AssuranceLevel.from_wire("")` / `fromWire("")` 的 spec §5.1.1 行为。规范：NCP v0.7、NWP v0.13、NIP v0.9、NDP v0.8、NOP v0.6。.NET、Python、TypeScript、Java、Rust、Go 六种参考实现全部覆盖 NCP + NWP + NIP + NDP + NOP。**NIP CA Server** 在 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons** bundle（`npsd` + `nps-runner` + 进程级 Internet ingress `nps-gateway` + `nps-registry` + `nps-ledger`）在 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)。Layer-3 信任锚 daemon `nps-cloud-ca` 在 `innolotus` 组织私有，跟 NPS Cloud GA 一起公开（2027 Q1+）。
+**v1.0.0-alpha.14 candidate** — 文档与规范当前跟踪 NCP v0.8、NWP v0.14、NIP v0.10、NDP v0.9、NOP v0.7。candidate 边界补齐类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper、live revocation、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。安装片段在 alpha.14 工件发布前继续指向最新已发布包。**NIP CA Server** 在 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-ingress` + `nps-registry`）在 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)。Layer-3 trust-anchor daemon 在 `innolotus` 组织私有，随 NPS Cloud GA 公开。
 
 ---
 

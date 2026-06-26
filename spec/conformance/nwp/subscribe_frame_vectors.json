@@ -1,0 +1,433 @@
+{
+  "name": "nwp-subscribe-frame",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-2-NWP.md §12.2, §13",
+  "description": "SubscribeFrame (0x12) conformance vectors. Covers: (a) CR-0006 subscribe open flow per §13.1/§13.2, (b) per-subscription `seq` monotonicity on pushed DiffFrames (§13.2), (c) opaque `cursor` replay and the out-of-buffer rejection `NWP-SUBSCRIBE-SEQ-TOO-OLD` (§13), (d) HTTP-mode SSE wire shape per §8.1, (e) reserved `topology.stream` events `member_joined` / `member_left` / `member_updated` / `anchor_state` (sub-types `version_rebased`, `anchor_failover`, `anchor_quorum_lost`) / `resync_required` (§12.2), and (f) the optional per-event `cgn_est` field on DiffFrame push events (§13.2, NPS-CR-0002 Phase 2).",
+  "vectors": [
+    {
+      "id": "nwp.subscribe.001",
+      "description": "Positive — minimal subscribe. SubscribeFrame{subscription_id, anchor_ref}. Response MUST be a CapsFrame with `anchor_ref=\"nps:system:subscribe:ack\"` and a single data element {subscription_id, status:\"open\", resumed:false, last_seq:0}.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x12",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440000",
+          "anchor_ref": "sha256:a3f9b2c1aa1100",
+          "heartbeat_interval_ms": 30000
+        }
+      },
+      "expected": {
+        "response_kind": "CapsFrame",
+        "response": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:subscribe:ack",
+          "count": 1,
+          "data": [{
+            "subscription_id": "550e8400-e29b-41d4-a716-446655440000",
+            "status": "open",
+            "resumed": false,
+            "last_seq": 0,
+            "effective_filter": {}
+          }]
+        }
+      }
+    },
+    {
+      "id": "nwp.subscribe.002",
+      "description": "Positive — client cancellation is transport-level in v0.13. Closing the subscription transport for an open subscription_id terminates delivery without requiring a SubscribeFrame action field.",
+      "kind": "positive",
+      "input": {
+        "subscription_id": "550e8400-e29b-41d4-a716-446655440000",
+        "client_closes_transport": true
+      },
+      "expected": {
+        "subscription_closed": true,
+        "no_subscribe_action_required": true
+      }
+    },
+    {
+      "id": "nwp.subscribe.003",
+      "description": "Negative — server-side operation references a subscription_id that was never opened (or already closed). Response MUST be `NWP-SUBSCRIBE-STREAM-NOT-FOUND` (§13).",
+      "kind": "negative",
+      "input": {
+        "subscription_id": "ffffffff-ffff-4fff-8fff-ffffffffffff",
+        "server_operation": "close_or_emit"
+      },
+      "expected": {
+        "error": "NWP-SUBSCRIBE-STREAM-NOT-FOUND",
+        "status": "NPS-CLIENT-NOT-FOUND"
+      }
+    },
+    {
+      "id": "nwp.subscribe.004",
+      "description": "Positive — heartbeat keepalive. Server emits a DiffFrame with event_type=\"heartbeat\" for the subscription_id; heartbeat does not count toward max_events.",
+      "kind": "positive",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440000",
+          "event_type": "heartbeat",
+          "payload": {}
+        }
+      },
+      "expected": {
+        "decoded_event_type": "heartbeat",
+        "counts_toward_max_events": false
+      }
+    },
+    {
+      "id": "nwp.subscribe.005",
+      "description": "Positive — seq monotonicity. Three DiffFrame pushes on the same subscription MUST carry strictly increasing seq starting from 1.",
+      "kind": "positive",
+      "input": {
+        "subscription_id": "550e8400-e29b-41d4-a716-446655440000",
+        "events_in_order": [
+          { "frame": "0x02", "subscription_id": "550e8400-e29b-41d4-a716-446655440000", "seq": 1, "event_type": "create", "timestamp": "2026-05-11T10:00:00Z", "patch": [{ "op": "add", "path": "/items/0", "value": { "id": 1 } }] },
+          { "frame": "0x02", "subscription_id": "550e8400-e29b-41d4-a716-446655440000", "seq": 2, "event_type": "update", "timestamp": "2026-05-11T10:00:01Z", "patch": [{ "op": "replace", "path": "/items/0/qty", "value": 3 }] },
+          { "frame": "0x02", "subscription_id": "550e8400-e29b-41d4-a716-446655440000", "seq": 3, "event_type": "delete", "timestamp": "2026-05-11T10:00:02Z", "patch": [{ "op": "remove", "path": "/items/0" }] }
+        ]
+      },
+      "expected": {
+        "monotonic_strictly_increasing": true,
+        "starts_at_1": true,
+        "per_subscription": true
+      }
+    },
+    {
+      "id": "nwp.subscribe.006",
+      "description": "Negative — seq monotonicity violation. A DiffFrame push out of order (seq=2 followed by seq=2) is a protocol violation. Receivers MUST detect the gap/repeat and re-subscribe with cursor; conformance check asserts the SDK flags the violation.",
+      "kind": "negative",
+      "input": {
+        "subscription_id": "550e8400-e29b-41d4-a716-446655440001",
+        "events_in_order": [
+          { "frame": "0x02", "subscription_id": "550e8400-e29b-41d4-a716-446655440001", "seq": 1, "event_type": "create", "timestamp": "2026-05-11T10:00:00Z" },
+          { "frame": "0x02", "subscription_id": "550e8400-e29b-41d4-a716-446655440001", "seq": 2, "event_type": "update", "timestamp": "2026-05-11T10:00:01Z" },
+          { "frame": "0x02", "subscription_id": "550e8400-e29b-41d4-a716-446655440001", "seq": 2, "event_type": "update", "timestamp": "2026-05-11T10:00:02Z" }
+        ]
+      },
+      "expected": {
+        "client_detects": "seq_not_monotonic",
+        "client_action": "re-subscribe with the latest opaque cursor returned by the server"
+      }
+    },
+    {
+      "id": "nwp.subscribe.007",
+      "description": "Positive — cursor replays from breakpoint. Reconnection with an opaque cursor within the node retention window returns CapsFrame ack with resumed=true, then replays subsequent events.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x12",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440002",
+          "anchor_ref": "sha256:a3f9b2c1aa1100",
+          "cursor": "cur:orders:00000042"
+        },
+        "node_buffer_window": { "min_seq": 10, "max_seq": 100 }
+      },
+      "expected": {
+        "ack": {
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440002",
+          "status": "open",
+          "resumed": true,
+          "last_seq": 100
+        },
+        "first_replayed_seq": 43,
+        "note": "Per §13.2, cursor values are opaque; this vector models a server-recognized cursor whose next event is seq 43."
+      }
+    },
+    {
+      "id": "nwp.subscribe.008",
+      "description": "Negative — cursor outside the node's retention window. Per §13 the node MUST return `NWP-SUBSCRIBE-SEQ-TOO-OLD` and the client MUST do a full re-query or reserved-type resync before re-subscribing.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x12",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440003",
+          "anchor_ref": "sha256:a3f9b2c1aa1100",
+          "cursor": "cur:orders:expired-00000005"
+        },
+        "node_buffer_window": { "min_seq": 10, "max_seq": 100 }
+      },
+      "expected": {
+        "error": "NWP-SUBSCRIBE-SEQ-TOO-OLD",
+        "status": "NPS-CLIENT-CONFLICT"
+      }
+    },
+    {
+      "id": "nwp.subscribe.009",
+      "description": "Positive — DiffFrame push carries `cgn_est` per §13.2 (NPS-CR-0002 Phase 2). SDKs MUST round-trip the field as uint32 and present it to the application for cumulative budget accounting per token-budget.md §7.2.",
+      "kind": "positive",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440000",
+          "seq": 7,
+          "event_type": "update",
+          "timestamp": "2026-05-11T10:30:00Z",
+          "cgn_est": 184,
+          "patch": [{ "op": "replace", "path": "/title", "value": "Updated headline (medium length payload)" }]
+        }
+      },
+      "expected": {
+        "decoded_cgn_est": 184,
+        "field_type": "uint32",
+        "field_optional": true,
+        "note": "Absent cgn_est is also valid; SDKs MUST NOT synthesize a default. Agents MAY estimate locally via UTF-8/4 fallback when absent."
+      }
+    },
+    {
+      "id": "nwp.subscribe.010",
+      "description": "Positive — HTTP-mode (SSE) wire shape per §8.1. Each DiffFrame is base64-encoded in an SSE `data:` field, terminated by a blank line.",
+      "kind": "positive",
+      "input": {
+        "http_request": "POST /nwp/orders/subscribe HTTP/1.1\r\nContent-Type: application/nwp-frame\r\n\r\n<SubscribeFrame bytes>",
+        "http_response_headers": {
+          "Status": "200 OK",
+          "Content-Type": "text/event-stream",
+          "Cache-Control": "no-cache",
+          "Connection": "keep-alive"
+        },
+        "body_events_in_order": [
+          { "diff_frame_seq": 1, "sse_data_base64": "<base64(DiffFrame bytes)>" },
+          { "diff_frame_seq": 2, "sse_data_base64": "<base64(DiffFrame bytes)>" }
+        ]
+      },
+      "expected": {
+        "framing": "each SSE event MUST be `data: <base64>\\n\\n`",
+        "content_type": "text/event-stream",
+        "ordering": "SSE event order == DiffFrame seq order",
+        "decode": "client MUST base64-decode each data line and parse it as a DiffFrame (0x02)"
+      }
+    },
+    {
+      "id": "nwp.subscribe.011",
+      "description": "Positive — topology.stream subscribe (§12.2). SubscribeFrame{subscription_id,type:\"topology.stream\", topology.scope:\"cluster\"}. anchor_ref is NOT required because the reserved type defines its own semantics (§12).",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x12",
+          "type": "topology.stream",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "topology": {
+            "scope": "cluster",
+            "filter": { "tags_any": ["dev"], "node_roles": ["memory", "action"] },
+            "since_version": 142
+          }
+        }
+      },
+      "expected": {
+        "response_kind": "CapsFrame",
+        "response_data": [{
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "status": "open",
+          "resumed": true,
+          "last_seq": 142
+        }]
+      }
+    },
+    {
+      "id": "nwp.subscribe.012",
+      "description": "Positive — topology.stream `member_joined` event. DiffFrame carries event_type=\"member_joined\", seq=post-event topology version, payload is the full member object schema per §12.1. `cgn_est` is OPTIONAL on topology events too.",
+      "kind": "positive",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "seq": 143,
+          "event_type": "member_joined",
+          "timestamp": "2026-05-11T10:31:00Z",
+          "cgn_est": 96,
+          "payload": {
+            "nid": "urn:nps:agent:labacacia:host-new123-sess-aaa",
+            "node_roles": ["memory"],
+            "activation_mode": "ephemeral",
+            "tags": ["dev"],
+            "joined_at": "2026-05-11T10:31:00Z",
+            "last_seen": "2026-05-11T10:31:00Z"
+          }
+        }
+      },
+      "expected": {
+        "decoded_event_type": "member_joined",
+        "decoded_seq": 143,
+        "payload_kind": "full_member_object",
+        "topology_version_after_event": 143
+      }
+    },
+    {
+      "id": "nwp.subscribe.013",
+      "description": "Positive — topology.stream `member_left` event. Payload contains only `{nid}` per §12.2.",
+      "kind": "positive",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "seq": 144,
+          "event_type": "member_left",
+          "timestamp": "2026-05-11T10:32:00Z",
+          "cgn_est": 24,
+          "payload": {
+            "nid": "urn:nps:agent:labacacia:host-old456-sess-zzz"
+          }
+        }
+      },
+      "expected": {
+        "decoded_event_type": "member_left",
+        "payload_shape": { "nid": "string" },
+        "payload_excludes_full_member": true
+      }
+    },
+    {
+      "id": "nwp.subscribe.014",
+      "description": "Positive — topology.stream `member_updated` event. Payload is `{nid, changes:{field:new_value,…}}` per §12.2 — field-level diff only; client reassembles.",
+      "kind": "positive",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "seq": 145,
+          "event_type": "member_updated",
+          "timestamp": "2026-05-11T10:33:00Z",
+          "cgn_est": 42,
+          "payload": {
+            "nid": "urn:nps:agent:labacacia:host-abc123-sess-aaa",
+            "changes": {
+              "tags": ["dev", "library", "promoted"],
+              "activation_mode": "resident"
+            }
+          }
+        }
+      },
+      "expected": {
+        "decoded_event_type": "member_updated",
+        "payload_shape": { "nid": "string", "changes": "object" },
+        "changes_is_field_level_diff": true
+      }
+    },
+    {
+      "id": "nwp.subscribe.015",
+      "description": "Positive — topology.stream `anchor_state` event, sub-type `version_rebased` (Phase 1–2). Client MUST treat as equivalent to `resync_required` per §12.3.",
+      "kind": "positive",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "seq": 1,
+          "event_type": "anchor_state",
+          "timestamp": "2026-05-11T10:34:00Z",
+          "cgn_est": 30,
+          "payload": {
+            "field": "version_rebased",
+            "details": { "previous_version": 145, "new_version": 1 }
+          }
+        }
+      },
+      "expected": {
+        "decoded_event_type": "anchor_state",
+        "decoded_field": "version_rebased",
+        "client_action": "issue fresh topology.snapshot + new topology.stream subscribe",
+        "treat_as": "resync_required"
+      }
+    },
+    {
+      "id": "nwp.subscribe.016",
+      "description": "Positive — forward-compat: unknown `anchor_state.field` MUST be ignored (§12.2) rather than torn down. Phase 3 sub-types like `anchor_failover` and `anchor_quorum_lost` MUST NOT be emitted by Phase 1–2 nodes but MUST be parseable by Phase 1–2 SDKs without error.",
+      "kind": "positive",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "seq": 200,
+          "event_type": "anchor_state",
+          "timestamp": "2026-05-11T11:00:00Z",
+          "payload": {
+            "field": "anchor_failover",
+            "details": { "successor_nid": "urn:nps:node:labacacia:host-zzz999" }
+          }
+        }
+      },
+      "expected": {
+        "decoded": true,
+        "client_action": "ignore (forward-compat); subscription remains open",
+        "decoded_field": "anchor_failover",
+        "phase": "reserved Phase 3 placeholder"
+      }
+    },
+    {
+      "id": "nwp.subscribe.017",
+      "description": "Positive — topology.stream `resync_required` event. May omit seq. Reason MUST be one of {version_too_old, anchor_rebased, server_state_lost} (§12.2).",
+      "kind": "positive",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "event_type": "resync_required",
+          "timestamp": "2026-05-11T10:40:00Z",
+          "payload": { "reason": "version_too_old" }
+        }
+      },
+      "expected": {
+        "decoded_event_type": "resync_required",
+        "seq_optional": true,
+        "reason_in_enum": true,
+        "client_action": "tear down view, issue fresh topology.snapshot, then re-subscribe"
+      }
+    },
+    {
+      "id": "nwp.subscribe.018",
+      "description": "Negative — topology.stream filter contains an unrecognized key (e.g. `region`). Per §12.2 the Anchor MUST reject with `NWP-TOPOLOGY-FILTER-UNSUPPORTED`.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x12",
+          "type": "topology.stream",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440011",
+          "topology": {
+            "scope": "cluster",
+            "filter": { "region": ["us-west"] }
+          }
+        }
+      },
+      "expected": {
+        "error": "NWP-TOPOLOGY-FILTER-UNSUPPORTED",
+        "status": "NPS-CLIENT-BAD-PARAM"
+      }
+    },
+    {
+      "id": "nwp.subscribe.019",
+      "description": "Negative — mid-stream capability revocation. Per §12.4 (3) the server MUST emit a terminal DiffFrame with `event_type=\"error\"` and payload `{code:\"NWP-TOPOLOGY-UNAUTHORIZED\", reason:…}` then close the stream. Conformance asserts the SDK surfaces the terminal error rather than treating it as a transport-level disconnect.",
+      "kind": "negative",
+      "input": {
+        "diff": {
+          "frame": "0x02",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440010",
+          "seq": 150,
+          "event_type": "error",
+          "timestamp": "2026-05-11T11:05:00Z",
+          "payload": { "code": "NWP-TOPOLOGY-UNAUTHORIZED", "reason": "revoked" }
+        }
+      },
+      "expected": {
+        "error": "NWP-TOPOLOGY-UNAUTHORIZED",
+        "status": "NPS-AUTH-FORBIDDEN",
+        "stream_terminal": true,
+        "transport_disconnect_distinct_from_auth_loss": true
+      }
+    },
+    {
+      "id": "nwp.subscribe.020",
+      "description": "Negative — unrecognized reserved `type` on SubscribeFrame. Per §12 the Anchor MUST reject with `NWP-RESERVED-TYPE-UNSUPPORTED` (distinct from `NWP-ACTION-NOT-FOUND`).",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x12",
+          "type": "topology.does_not_exist",
+          "subscription_id": "550e8400-e29b-41d4-a716-446655440012"
+        }
+      },
+      "expected": {
+        "error": "NWP-RESERVED-TYPE-UNSUPPORTED",
+        "status": "NPS-SERVER-UNSUPPORTED"
+      }
+    }
+  ]
+}

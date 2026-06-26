@@ -1,0 +1,275 @@
+{
+  "name": "nip-revoke-frame",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-3-NIP.md §5.3, §7 inbound-RevokeFrame flow",
+  "description": "RevokeFrame (0x22) Ed25519 / ECDSA P-256 signature canonicalisation, `signer_nid` authorisation, serial / target_nid agreement, `reason` enum coverage, and the §5.3 `parent_revoked` cascade (NPS-CR-0003). Canonicalisation is RFC 8785 JCS as in §5.1: keys sorted alphabetically, no whitespace, `signature` field removed. Each vector exercises one of the four §5.3 error codes or one of the positive admission paths through the §7 R1–R6 flow.",
+  "vectors": [
+    {
+      "id": "nip.revoke.001",
+      "description": "Canonicalisation of a minimal RevokeFrame for signature verification. `serial` is present, scoping the revocation to a single cert under `target_nid`. Keys MUST appear in lexicographic order; `signature` MUST be stripped.",
+      "kind": "positive",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4",
+          "serial": "0x0A3F9C",
+          "reason": "key_compromise",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "signer_nid": "urn:nps:org:ca.innolotus.com",
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation"
+        }
+      },
+      "expected": {
+        "canonical_for_signing": "{\"frame\":\"0x22\",\"reason\":\"key_compromise\",\"revoked_at\":\"2026-04-10T12:00:00Z\",\"serial\":\"0x0A3F9C\",\"signer_nid\":\"urn:nps:org:ca.innolotus.com\",\"target_nid\":\"urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4\"}",
+        "signature_field_excluded": true,
+        "keys_in_canonical_order": ["frame", "reason", "revoked_at", "serial", "signer_nid", "target_nid"]
+      }
+    },
+    {
+      "id": "nip.revoke.002",
+      "description": "Whole-NID revocation: `serial` omitted, so the frame revokes ALL currently-issued certs for `target_nid` (effectively revoking the NID itself per §5.3 field table). Canonical bytes MUST NOT carry a null / empty `serial` — the field is absent rather than serialised as null.",
+      "kind": "positive",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.innolotus.com:7c2db4a0-1234",
+          "reason": "affiliation_changed",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "signer_nid": "urn:nps:org:ca.innolotus.com",
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation"
+        }
+      },
+      "expected": {
+        "canonical_for_signing": "{\"frame\":\"0x22\",\"reason\":\"affiliation_changed\",\"revoked_at\":\"2026-04-10T12:00:00Z\",\"signer_nid\":\"urn:nps:org:ca.innolotus.com\",\"target_nid\":\"urn:nps:agent:ca.innolotus.com:7c2db4a0-1234\"}",
+        "serial_field_absent": true,
+        "scope": "all certs for target_nid"
+      }
+    },
+    {
+      "id": "nip.revoke.003",
+      "description": "Positive cascade (`reason = parent_revoked`, NPS-CR-0003): a session NID is revoked because its group NID was revoked first. `parent_nid` MUST be set to the group NID; the `signer_nid` is the CA that issued the parent group NID. This is the canonical CR-0003 cascade shape — `parent_nid` agreement with the actual lineage is what distinguishes ancestry-driven invalidation from a session revoked on its own merits.",
+      "kind": "positive",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.example.com:session-1714672800-f3a92c0b",
+          "reason": "parent_revoked",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "parent_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+          "signer_nid": "urn:nps:org:ca.example.com",
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation"
+        },
+        "session_lineage": {
+          "role": "session",
+          "parent_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+          "group_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01"
+        }
+      },
+      "expected": {
+        "canonical_for_signing": "{\"frame\":\"0x22\",\"parent_nid\":\"urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01\",\"reason\":\"parent_revoked\",\"revoked_at\":\"2026-04-10T12:00:00Z\",\"signer_nid\":\"urn:nps:org:ca.example.com\",\"target_nid\":\"urn:nps:agent:ca.example.com:session-1714672800-f3a92c0b\"}",
+        "parent_nid_matches_lineage": true,
+        "signer_authorised_for_cascade": true
+      }
+    },
+    {
+      "id": "nip.revoke.004",
+      "description": "Negative: `reason = parent_revoked` but `parent_nid` field is missing. §5.3 makes `parent_nid` conditionally REQUIRED when `reason = parent_revoked`. Receiver MUST reject with NIP-REVOKE-FRAME-INVALID at R1 — the frame is malformed.",
+      "kind": "negative",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.example.com:session-abc",
+          "reason": "parent_revoked",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "signer_nid": "urn:nps:org:ca.example.com",
+          "signature": "ed25519:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      },
+      "expected": {
+        "error": "NIP-REVOKE-FRAME-INVALID",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nip.revoke.005",
+      "description": "Negative: `reason ≠ parent_revoked` but `parent_nid` is present. §5.3 mandates `parent_nid` MUST be omitted for any reason other than `parent_revoked` — its presence with another reason is malformed. Receiver MUST reject with NIP-REVOKE-FRAME-INVALID.",
+      "kind": "negative",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.example.com:550e8400",
+          "reason": "key_compromise",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "parent_nid": "urn:nps:agent:ca.example.com:group-stray",
+          "signer_nid": "urn:nps:org:ca.example.com",
+          "signature": "ed25519:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      },
+      "expected": {
+        "error": "NIP-REVOKE-FRAME-INVALID",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nip.revoke.006",
+      "description": "Negative: `signer_nid` is not the issuing CA of `target_nid`, not an operator under that CA, and not the CA that issued any claimed `parent_nid`. R2 of the §7 inbound flow MUST reject with NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER. A third party MUST NOT be able to forge revocations.",
+      "kind": "negative",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.innolotus.com:550e8400",
+          "reason": "key_compromise",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "signer_nid": "urn:nps:org:ca.totally-different-ca.com",
+          "signature": "ed25519:1111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111111"
+        },
+        "target_issuing_ca": "urn:nps:org:ca.innolotus.com"
+      },
+      "expected": {
+        "error": "NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER",
+        "status": "NPS-AUTH-FORBIDDEN"
+      }
+    },
+    {
+      "id": "nip.revoke.007",
+      "description": "Positive: `signer_nid` is an operator NID under the issuing CA, holding the `nip:revoke` capability per §5.3. Receiver MUST admit the revocation at R2. This is the delegated-revocation path used by CA operations teams.",
+      "kind": "positive",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.innolotus.com:550e8400",
+          "reason": "key_compromise",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "signer_nid": "urn:nps:operator:ca.innolotus.com:revoker-1",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "operator_capabilities": ["nip:revoke"],
+        "target_issuing_ca": "urn:nps:org:ca.innolotus.com"
+      },
+      "expected": {
+        "signer_authorised": true,
+        "delegation_path": "operator under target's issuing CA holding nip:revoke"
+      }
+    },
+    {
+      "id": "nip.revoke.008",
+      "description": "Negative: `serial` is present but does not match any currently-issued cert for `target_nid`. R3 of the §7 inbound flow MUST reject with NIP-REVOKE-FRAME-SERIAL-MISMATCH. Prevents poisoning the cache for an arbitrary serial that the receiver never issued.",
+      "kind": "negative",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.innolotus.com:550e8400",
+          "serial": "0xDEADBEEF",
+          "reason": "key_compromise",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "signer_nid": "urn:nps:org:ca.innolotus.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "known_serials_for_target": ["0x0A3F9C", "0x0A3F9D"]
+      },
+      "expected": {
+        "error": "NIP-REVOKE-FRAME-SERIAL-MISMATCH",
+        "status": "NPS-CLIENT-BAD-PARAM"
+      }
+    },
+    {
+      "id": "nip.revoke.009",
+      "description": "Negative + safety-fallback: `reason` value is outside the §5.3 enum (`mood_swing`). Per §5.3 Forward compatibility and R4: receivers MUST treat the revocation as `key_compromise` (most restrictive — the cert is still revoked locally) AND emit NIP-REVOKE-FRAME-REASON-UNKNOWN back to the publisher. Critically — receivers MUST NOT silently demote an unknown reason to a less restrictive one.",
+      "kind": "negative",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.innolotus.com:550e8400",
+          "serial": "0x0A3F9C",
+          "reason": "mood_swing",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "signer_nid": "urn:nps:org:ca.innolotus.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "error": "NIP-REVOKE-FRAME-REASON-UNKNOWN",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "local_revocation_applied": true,
+        "treat_as": "key_compromise",
+        "silent_demotion_forbidden": true
+      }
+    },
+    {
+      "id": "nip.revoke.010",
+      "description": "Negative: `reason = parent_revoked` cascade but `parent_nid` disagrees with the session's actual lineage. Even when the signer is the cascade-authorised CA, R2 MUST reject with NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER if the claimed parent is not the session's true group NID — preventing a CA from forging a 'cascade' to revoke a session whose parent it does not control.",
+      "kind": "negative",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.example.com:session-1714672800-f3a92c0b",
+          "reason": "parent_revoked",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "parent_nid": "urn:nps:agent:ca.example.com:group-WRONG-PARENT",
+          "signer_nid": "urn:nps:org:ca.example.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "session_actual_lineage": {
+          "role": "session",
+          "parent_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+          "group_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01"
+        }
+      },
+      "expected": {
+        "error": "NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER",
+        "status": "NPS-AUTH-FORBIDDEN",
+        "reason_for_rejection": "claimed parent_nid does not match session's actual lineage"
+      }
+    },
+    {
+      "id": "nip.revoke.011",
+      "description": "Subsequent admission path after R5: after a successful RevokeFrame for `target_nid` is applied (cache poisoned), the next IdentFrame for `target_nid` MUST fail step 4 of the §7 IdentFrame verification flow with NIP-CERT-REVOKED. Validates the end-to-end revocation effect, not just the RevokeFrame's own admission.",
+      "kind": "negative",
+      "input": {
+        "prior_revoke_applied": {
+          "target_nid": "urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4",
+          "serial": "0x0A3F9C",
+          "reason": "key_compromise"
+        },
+        "subsequent_ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://api.example.com/*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:ca.innolotus.com",
+          "issued_at": "2026-04-09T00:00:00Z",
+          "expires_at": "2026-05-09T00:00:00Z",
+          "serial": "0x0A3F9C",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "error": "NIP-CERT-REVOKED",
+        "status": "NPS-AUTH-UNAUTHENTICATED",
+        "verification_step": "§7 step 4"
+      }
+    },
+    {
+      "id": "nip.revoke.012",
+      "description": "Fire-and-forget property: on a successful RevokeFrame admission (R1–R5 all pass), the receiver MUST NOT emit any response frame at R6. This is what makes RevokeFrame distribution scale via the push channel — failures get an ErrorFrame, success is silent.",
+      "kind": "positive",
+      "input": {
+        "revoke_frame": {
+          "frame": "0x22",
+          "target_nid": "urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4",
+          "serial": "0x0A3F9C",
+          "reason": "key_compromise",
+          "revoked_at": "2026-04-10T12:00:00Z",
+          "signer_nid": "urn:nps:org:ca.innolotus.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "response_frame": null,
+        "cache_poisoned_for": "0x0A3F9C under urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4",
+        "fire_and_forget": true
+      }
+    }
+  ]
+}

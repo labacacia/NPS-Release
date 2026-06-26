@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The current release — **v1.0.0-alpha.11** — completes Phase 1 and makes significant progress on Phase 2. Notable additions since alpha.4: NWP error code parity across all six SDKs (30 constants), RFC-0004 Phase 3 STH gossip federation in `nps-ledger`, `NPS-SERVER-UNSUPPORTED` status code, and `AssuranceLevel` spec fixes in Python / TypeScript / Java.
+NPS is on a four-phase path from draft specification to formal standard. The latest published package set is **v1.0.0-alpha.13**; the docs are staged for the **v1.0.0-alpha.14 candidate**. The candidate closes the Banyan integration gaps that were blocking SDK/spec adoption: typed remote NIP CA clients, native-mode NWP serving helpers, conformance manifests, live revocation hooks, native NCP TLS/mTLS hardening, signed CRL output, and transport-neutral observability.
 
 ---
 
@@ -28,7 +28,7 @@ Established the full NPS spec skeleton across all five protocols (NCP / NWP / NI
 All five protocols production-ready in six reference SDKs (.NET / Python / TypeScript / Java / Rust / Go), with NIP CA Server reference deployments in all six languages. Key milestones:
 
 - NPS-RFC-0001 (NCP connection preamble), NPS-RFC-0003 (agent identity assurance levels), NPS-CR-0001 (Anchor/Bridge Node split), NPS-CR-0002 (Anchor topology queries) — all shipped
-- NPS-RFC-0002 (X.509 NID + ACME) prototype across all six SDKs; promotion to Accepted pending IANA PEN
+- NPS-RFC-0002 (X.509 NID + ACME) prototype across all six SDKs; typed remote CA clients staged for alpha.14
 - NPS-RFC-0004 (CT-style NID reputation ledger) Phase 1+2+3: SQLite + Merkle tree + STH + inclusion proofs + STH gossip federation
 - `npsd` L1 daemon with sub-NID issuance and per-NID inbox queues
 - Token-savings: **45.0 %** CGN reduction vs REST · Wire-size: **63.6 %** reduction vs JSON
@@ -39,10 +39,11 @@ All five protocols production-ready in six reference SDKs (.NET / Python / TypeS
 
 Adapters to MCP, A2A, and gRPC ecosystems; Tier-2 MsgPack production hardening; reference tooling.
 
-- ✅ MCP, A2A, and gRPC ingress adapters available on NuGet at v1.0.0-alpha.11
+- ✅ MCP, A2A, and gRPC ingress adapters available on NuGet at v1.0.0-alpha.13
 - ✅ Tier-2 MsgPack and token-savings benchmarks published
 - ✅ NOP orchestrator executes multi-node DAGs; Claude Desktop integration via `mcp-ingress` verified
 - ✅ `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint) — all six SDKs
+- ✅ Native-mode NWP serving helpers and TC-N1/TC-N2 conformance helpers staged for SDK alpha.14
 - ⬜ **NPS Studio** (visual frame debugger) + **NPS Probe** (conformance CLI)
 
 ---

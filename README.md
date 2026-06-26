@@ -3,13 +3,14 @@ English | [中文版](./README.cn.md)
 # Neural Protocol Suite (NPS) — Protocol Specification
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/badge/release-v1.0.0--alpha.13-orange.svg)](CHANGELOG.md)
-[![NCP](https://img.shields.io/badge/NCP-v0.7-5b8cff.svg)]()
-[![NWP](https://img.shields.io/badge/NWP-v0.13-4af0b0.svg)]()
-[![NIP](https://img.shields.io/badge/NIP-v0.9-7b61ff.svg)]()
-[![NDP](https://img.shields.io/badge/NDP-v0.8-f0a050.svg)]()
-[![NOP](https://img.shields.io/badge/NOP-v0.6-ff8c42.svg)]()
+[![Next](https://img.shields.io/badge/next-v1.0.0--alpha.14--candidate-yellow.svg)](CHANGELOG.md#100-alpha14--unreleased)
+[![NCP](https://img.shields.io/badge/NCP-v0.8-5b8cff.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
+[![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
+[![NOP](https://img.shields.io/badge/NOP-v0.7-ff8c42.svg)]()
 
-> **Version:** 1.0.0-alpha.13 | **Status:** Proposed | **License:** Apache 2.0
+> **Version:** 1.0.0-alpha.14 candidate | **Latest published release:** 1.0.0-alpha.13 | **Status:** Proposed | **License:** Apache 2.0
 >
 > Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
 
@@ -27,13 +28,13 @@ English | [中文版](./README.cn.md)
 | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts) | Dual-format (ESM + CJS) Node/browser SDK | TypeScript |
 | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java) | JVM SDK | Java 21+ |
 | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust) | Async Rust SDK | Rust stable |
-| [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go) | Go SDK | Go 1.23+ |
+| [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go) | Go SDK | Go 1.25+ |
 | [nip-ca-server](https://github.com/labacacia/nip-ca-server) | NIP Certificate Authority — single-Docker self-hostable CA for issuing NID certificates | C# / .NET 10 + PostgreSQL |
-| [nps-daemons](https://github.com/labacacia/nps-daemons) | Reference deployment binaries — `npsd`, `nps-runner`, `nps-gateway`, `nps-registry` (Layer 1 + Layer 2 of the standard NPS topology) | C# / .NET 10 |
+| [nps-daemons](https://github.com/labacacia/nps-daemons) | Reference deployment binaries — `npsd`, `nps-runner`, `nps-ingress`, `nps-registry` (Layer 1 + Layer 2 of the standard NPS topology) | C# / .NET 10 |
 
-Naming note: `nps-gateway` is the current process-level Internet ingress
-daemon name. It is separate from the retired NWP **Gateway Node** logical
-role; CR-0001 replaced that role with **Anchor Node** and **Bridge Node**.
+Naming note: the process-level Internet ingress daemon is `nps-ingress`.
+It is separate from the retired NWP **Gateway Node** logical role; CR-0001
+replaced that role with **Anchor Node** and **Bridge Node**.
 
 The .NET SDK ships the underlying CA library (`LabAcacia.NPS.NIP`); the
 standalone [`nip-ca-server`](https://github.com/labacacia/nip-ca-server)
@@ -67,13 +68,26 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 | Protocol | Analogue | Version | Summary |
 |----------|----------|---------|---------|
-| **NCP** — Neural Communication Protocol | Wire / Framing | v0.7 | Binary frame format, dual-tier codec (JSON / MsgPack), streaming; `max_concurrent_streams` negotiation; QUIC stream mapping; rekeying protocol |
-| **NWP** — Neural Web Protocol | HTTP | v0.13 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Anchor / Bridge nodes; SubscribeFrame §13 (CR-0006); NWM `trust_anchors` |
-| **NIP** — Neural Identity Protocol | TLS / PKI | v0.9 | Ed25519 identity, certificate lifecycle, CA, OCSP, CRL; `ocsp_staple`; OIDs 65715.2.2/2.3; RA three-tier enrollment |
-| **NDP** — Neural Discovery Protocol | DNS | v0.8 | Node announcement, signed records, GraphFrame §5 topology snapshot; §9 federation forwarding with loop detection |
-| **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.6 | DAG task orchestration, delegation, streaming results; AlignStream ack/NAK; saga compensation; webhook HMAC |
+| **NCP** — Neural Communication Protocol | Wire / Framing | v0.8 | Binary frame format, dual-tier codec (JSON / MsgPack), streaming, native-mode preamble, bounded Hello, keepalive `NopFrame`, and TLS/mTLS native transport binding |
+| **NWP** — Neural Web Protocol | HTTP / NCP | v0.14 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Anchor / Bridge nodes, SubscribeFrame §13, manifest versioning, `bridge_target` schema, and native-mode serving over NCP |
+| **NIP** — Neural Identity Protocol | TLS / PKI | v0.10 | Ed25519 identity, certificate lifecycle, CA, OCSP, signed CRL, live revocation hooks, X.509/ACME, assurance levels, reputation, and short-lived edge-mTLS profile |
+| **NDP** — Neural Discovery Protocol | DNS | v0.9 | Node announcement, signed records, GraphFrame §5 topology snapshot, liveness fields, resolve-time staleness handling, and federation forwarding |
+| **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.7 | DAG task orchestration, delegation, streaming results, AlignStream ack/NAK, saga compensation, webhook HMAC, result TTL, and L3 runtime claim semantics |
 
 **Dependency chain:** `NCP ← NWP ← NIP ← NDP` / `NCP + NWP + NIP ← NOP`
+
+### Alpha.14 candidate focus
+
+The alpha.14 candidate documentation tracks the Banyan integration asks and
+the SDK-alignment work now staged in the development branch:
+
+- typed remote NIP CA clients across SDKs, including discovery, CRL,
+  Ed25519 and RFC-0002 X.509 registration flows;
+- native-mode NWP serving helpers so nodes can handle `QueryFrame` and
+  `ActionFrame` over established NCP sessions;
+- TC-N1/TC-N2 conformance catalogs, manifests, and validation helpers;
+- .NET hardening for live revocation, native NCP TLS/mTLS hooks, bounded
+  native handshakes, signed CRL output, and transport-neutral observability.
 
 ---
 
@@ -98,6 +112,8 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 | [Error Codes](./spec/error-codes.md) | Unified protocol error code namespace |
 | [Status Codes](./spec/status-codes.md) | NPS native status codes + HTTP mapping |
 | [Token Budget](./spec/token-budget.md) | CGN token budget specification |
+| [Version Matrix](./spec/version-matrix.yaml) | Machine-readable suite/spec version oracle |
+| [Node Conformance](./spec/conformance/README.md) | TC-N1/TC-N2/TC-N3 conformance entry point |
 | [Roadmap](./docs/roadmap.md) | Phase 0–4 development roadmap |
 
 ### Service Specifications
@@ -130,7 +146,7 @@ NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity
 
 | Range | Protocol | Frames |
 |-------|----------|--------|
-| `0x01–0x0F` | **NCP** | Anchor(0x01), Diff(0x02), Stream(0x03), Caps(0x04), Align(0x05, deprecated), Hello(0x06) |
+| `0x01–0x0F` | **NCP** | Anchor(0x01), Diff(0x02), Stream(0x03), Caps(0x04), Align(0x05, deprecated), Hello(0x06), Nop(0x07) |
 | `0x10–0x1F` | **NWP** | Query(0x10), Action(0x11), Subscribe(0x12) |
 | `0x20–0x2F` | **NIP** | Ident(0x20), Trust(0x21), Revoke(0x22) |
 | `0x30–0x3F` | **NDP** | Announce(0x30), Resolve(0x31), Graph(0x32) |

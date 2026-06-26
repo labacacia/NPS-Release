@@ -8,7 +8,8 @@ Licensed under the Apache License, Version 2.0
 
 **CR ID**: NPS-CR-0005
 **Target version**: v1.0-alpha.6
-**Status**: Implemented (2026-05-27)
+**Status**: Implemented
+**Implemented-in**: v1.0.0-alpha.7
 **Type**: Backward-compatible extension (new CA endpoints, new options, new error codes; Operator-credential registration unchanged)
 **Author**: Ori, LabAcacia
 **Affected components**: NIP spec (NPS-3) §8 / §9, `spec/error-codes.md`, `.NET` SDK (`NPS.NIP.Ca`), `tools/nip-ca-server`, conformance docs, top-level CHANGELOG / README
@@ -380,10 +381,33 @@ This CR is considered accepted and ready to merge when:
 
 ## 10. Open questions
 
-- **OQ-1** Should Tier 2 bootstrap tokens carry an optional `audience` claim (e.g. restrict use to a specific source IP / source ASN)? The current draft keeps the token opaque and NID-scoped only; audience-binding would mirror OAuth 2.0 `aud` and is implementable additively in a follow-up CR.
-- **OQ-2** Tier 3 pending entries store the agent's submitted `public_key`. If the agent reboots between submit and approval, it may want to rotate the key. Should approval accept a new key in its request body, or strictly bind to the originally-submitted one? Draft answer: strict bind, to prevent a key-substitution attack via a leaked `pending_id`. Worth a second opinion.
-- **OQ-3** Should `enrollment_source = "ra-pending-approved"` audit entries also embed the `pending_id` to make join-back to the original request trivial? Likely yes; this CR's draft mentions `approver_operator_id` only. Tighten when implementing.
-- **OQ-4** Tier 1 patterns currently consume one-or-more characters per `*`. Should `*` be allowed to consume zero characters (i.e. a prefix-only pattern), or is requiring at least one character preferred (more conservative)? Draft answer: at-least-one, matching POSIX shell glob; revisit if any real fleet shape needs zero-match.
+- [x] **OQ-1** Should Tier 2 bootstrap tokens carry an optional `audience` claim?
+  **Resolved 2026-05-17**: No audience field in v1. Token is opaque and NID-scoped only.
+  Audience-binding (source IP / source ASN restriction) is additive and can land in a
+  follow-up CR without breaking existing tokens. Keeping v1 minimal reduces impl surface
+  and avoids cross-deployment compat issues.
+
+- [x] **OQ-2** Tier 3 key rotation — should `POST /v1/ra/pending/{id}/approve` accept a
+  new `public_key`?
+  **Resolved 2026-05-17**: Strict bind to the originally-submitted key. The `pending_id`
+  is a capability token; accepting a replacement key on approval opens a key-substitution
+  attack window if the `pending_id` leaks after submission. Agents that reboot and lose
+  their keypair must re-submit a new pending request; the previous entry can be rejected or
+  left to expire.
+
+- [x] **OQ-3** Should `enrollment_source = "ra-pending-approved"` audit entries embed
+  `pending_id`?
+  **Resolved 2026-05-17**: Yes. The implementation MUST write `pending_id` alongside
+  `approver_operator_id` in the audit record so that approved registrations can be
+  joined back to their original pending entry without a full-table scan. This is a
+  normative implementation requirement, not a spec wire-format change.
+
+- [x] **OQ-4** Should Tier 1 glob `*` match zero characters?
+  **Resolved 2026-05-17**: At-least-one character, matching POSIX shell glob semantics.
+  A zero-match `*` would make patterns like `urn:nps:agent:domain:prefix-*` equivalent
+  to `urn:nps:agent:domain:prefix-` (literal), which is confusing and unintended.
+  Fleet shapes requiring a suffix-less match should use a literal NID in the allowlist
+  rather than a glob.
 
 ## 11. References
 

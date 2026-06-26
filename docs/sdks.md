@@ -2,9 +2,11 @@
 
 > English | [中文版](sdks.cn.md)
 
-Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — at suite version **1.0.0-alpha.11**.
+Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — with latest published packages at **1.0.0-alpha.13** and candidate docs staged for **1.0.0-alpha.14**.
 
-> npm note: the TypeScript source/tag is `v1.0.0-alpha.11`, but `@labacacia/nps-sdk@1.0.0-alpha.11` on npm is deprecated because its tarball omitted `dist/`. Install `@labacacia/nps-sdk@alpha` for now; it currently resolves to `1.0.0-alpha.11`.
+> alpha.14 candidate note: SDK docs now call out typed remote NIP CA clients, native-mode NWP serving helpers, and TC-N1/TC-N2 conformance helpers. Install snippets stay on the latest published packages until the release artifacts are cut.
+
+> npm note: `@labacacia/nps-sdk@1.0.0-alpha.13` fixed the earlier alpha.11 tarball issue; install `@labacacia/nps-sdk@alpha` for the latest published alpha.
 
 ---
 
@@ -25,7 +27,7 @@ For install commands, minimal examples, and per-feature coverage tables, see the
 
 ## NIP CA Server
 
-Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Independently versioned from the SDKs since `v1.0.0-alpha.11`.
+Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Independently versioned from the SDKs since `v1.0.0-alpha.11`; current public docs track the alpha.14 signed-CRL and remote-client boundary.
 
 | Repo | Stack | Quickstart |
 |------|-------|------------|
@@ -37,15 +39,15 @@ For operator guides and embedding options (SQLite vs PostgreSQL) see [Wiki: NIP-
 
 ## NPS Daemons
 
-Reference deployment binaries for the standard three-layer NPS topology, currently at `v1.0.0-alpha.11`.
+Reference deployment binaries for the standard three-layer NPS topology, currently published at `v1.0.0-alpha.13` with alpha.14 candidate docs for native NCP TLS/mTLS and NWP serving.
 
 | Repo | Daemons | Quickstart |
 |------|---------|------------|
-| [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd` (L1, :17433) · `nps-runner` (L1 FaaS) · `nps-gateway` (L2, :8080) · `nps-registry` (L2 NDP, :17436) | `docker compose up -d` |
+| [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd` (L1, :17433) · `nps-runner` (L1 FaaS) · `nps-ingress` (L2, :8080) · `nps-registry` (L2 NDP, :17436) | `docker compose up -d` |
 
-`nps-gateway` is a process-level Internet ingress daemon name, not the
-retired NWP **Gateway Node** logical role. CR-0001 replaced that logical
-role with **Anchor Node** and **Bridge Node**.
+`nps-ingress` is a process-level Internet ingress daemon name, not the retired
+NWP **Gateway Node** logical role. CR-0001 replaced that logical role with
+**Anchor Node** and **Bridge Node**.
 
 The Layer-3 trust-anchor daemons (`nps-cloud-ca` and `nps-ledger`) are private under the `innolotus` org and ship publicly with NPS Cloud GA (2027 Q1+). For operator and architecture detail see [Wiki: Operators-QuickStart](https://github.com/labacacia/NPS-Release/wiki/Operators-QuickStart).
 

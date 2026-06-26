@@ -1,0 +1,100 @@
+{
+  "name": "ncp-anchor-id",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-1-NCP.md §4.1",
+  "description": "AnchorFrame anchor_id derivation: RFC 8785 (JCS) canonicalisation of `schema` followed by SHA-256, formatted as `sha256:{lowercase hex}`. Implementations MUST use a standard JCS library (do not roll your own). Vectors include an alphabetical-vs-shuffled key-order pair that proves canonicalisation kicks in.",
+  "vectors": [
+    {
+      "id": "ncp.anchor_id.001",
+      "description": "Canonical product schema (4 fields, all with semantic annotations).",
+      "kind": "positive",
+      "input": {
+        "schema": {
+          "fields": [
+            { "name": "id",    "type": "uint64",  "semantic": "entity.id" },
+            { "name": "name",  "type": "string",  "semantic": "entity.label" },
+            { "name": "price", "type": "decimal", "semantic": "commerce.price.usd" },
+            { "name": "stock", "type": "uint64",  "semantic": "commerce.inventory.count" }
+          ]
+        }
+      },
+      "expected": {
+        "canonical_jcs": "{\"fields\":[{\"name\":\"id\",\"semantic\":\"entity.id\",\"type\":\"uint64\"},{\"name\":\"name\",\"semantic\":\"entity.label\",\"type\":\"string\"},{\"name\":\"price\",\"semantic\":\"commerce.price.usd\",\"type\":\"decimal\"},{\"name\":\"stock\",\"semantic\":\"commerce.inventory.count\",\"type\":\"uint64\"}]}",
+        "anchor_id": "sha256:d31c3734e35b4e3815cb281a6307786aa0c46136b5d3b2ab07183d0b541ca9fe"
+      }
+    },
+    {
+      "id": "ncp.anchor_id.002",
+      "description": "Minimal schema without semantic annotations.",
+      "kind": "positive",
+      "input": {
+        "schema": {
+          "fields": [
+            { "name": "id",   "type": "uint64" },
+            { "name": "name", "type": "string" }
+          ]
+        }
+      },
+      "expected": {
+        "canonical_jcs": "{\"fields\":[{\"name\":\"id\",\"type\":\"uint64\"},{\"name\":\"name\",\"type\":\"string\"}]}",
+        "anchor_id": "sha256:8f02e05eee5c4e02f40567b4b17c3ceed022b9719aedc0774d520b63665e198c"
+      }
+    },
+    {
+      "id": "ncp.anchor_id.003",
+      "description": "Same logical schema as 002 but field-object keys arrive in shuffled order. JCS must produce the identical canonical form, so anchor_id MUST equal 002's. This proves the SDK's canonicalisation is order-independent.",
+      "kind": "positive",
+      "input": {
+        "schema": {
+          "fields": [
+            { "type": "uint64", "name": "id" },
+            { "type": "string", "name": "name" }
+          ]
+        }
+      },
+      "expected": {
+        "canonical_jcs": "{\"fields\":[{\"name\":\"id\",\"type\":\"uint64\"},{\"name\":\"name\",\"type\":\"string\"}]}",
+        "anchor_id": "sha256:8f02e05eee5c4e02f40567b4b17c3ceed022b9719aedc0774d520b63665e198c"
+      }
+    },
+    {
+      "id": "ncp.anchor_id.004",
+      "description": "Geo schema (decimal lat/lng with semantic annotations).",
+      "kind": "positive",
+      "input": {
+        "schema": {
+          "fields": [
+            { "name": "lat", "type": "decimal", "semantic": "geo.latitude" },
+            { "name": "lng", "type": "decimal", "semantic": "geo.longitude" }
+          ]
+        }
+      },
+      "expected": {
+        "canonical_jcs": "{\"fields\":[{\"name\":\"lat\",\"semantic\":\"geo.latitude\",\"type\":\"decimal\"},{\"name\":\"lng\",\"semantic\":\"geo.longitude\",\"type\":\"decimal\"}]}",
+        "anchor_id": "sha256:6f448d402076d3b9c2666598b7214551c599a3c2d9a5c3c79494074f8e9d2b10"
+      }
+    },
+    {
+      "id": "ncp.anchor_id.005",
+      "description": "Anchor-poisoning negative case: inbound AnchorFrame whose `anchor_id` does not match recomputed JCS+SHA-256 of `schema`. MUST be rejected with NCP-ANCHOR-ID-MISMATCH per spec §4.1 / §6.",
+      "kind": "negative",
+      "input": {
+        "anchor_frame": {
+          "frame": "0x01",
+          "anchor_id": "sha256:0000000000000000000000000000000000000000000000000000000000000000",
+          "schema": {
+            "fields": [
+              { "name": "id",   "type": "uint64" },
+              { "name": "name", "type": "string" }
+            ]
+          },
+          "ttl": 3600
+        }
+      },
+      "expected": {
+        "error": "NCP-ANCHOR-ID-MISMATCH",
+        "status": "NPS-CLIENT-CONFLICT"
+      }
+    }
+  ]
+}

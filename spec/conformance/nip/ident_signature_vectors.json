@@ -1,0 +1,386 @@
+{
+  "name": "nip-ident-signature",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-3-NIP.md §5.1",
+  "description": "IdentFrame Ed25519 signature canonicalisation. The signature covers the canonical JSON of the IdentFrame with the `signature` field removed (RFC 8785 JCS, keys sorted alphabetically, no whitespace). The `metadata` field is excluded from the signature; `lineage` (NPS-CR-0003) is included. Vectors carry deterministic Ed25519 keypairs (RFC 8032 test seeds) so that every SDK produces bit-identical signatures and verifies the same canonical bytes.",
+  "vectors": [
+    {
+      "id": "nip.ident.001",
+      "description": "Canonicalisation of a minimal IdentFrame for signature verification. Asserts the SDK produces the exact byte string the CA signed over (signature field stripped, keys sorted, metadata stripped).",
+      "kind": "positive",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query", "nwp:action"],
+          "scope": {
+            "nodes": ["nwp://api.myapp.com/*"],
+            "actions": ["orders:read", "orders:create"],
+            "max_token_budget": 50000
+          },
+          "issued_by": "urn:nps:org:mycompany.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-05-10T00:00:00Z",
+          "serial": "0x0A3F9C",
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation",
+          "metadata": {
+            "model_family": "anthropic/claude-4",
+            "tokenizer": "cl100k_base"
+          }
+        }
+      },
+      "expected": {
+        "canonical_for_signing": "{\"capabilities\":[\"nwp:query\",\"nwp:action\"],\"expires_at\":\"2026-05-10T00:00:00Z\",\"frame\":\"0x20\",\"issued_at\":\"2026-04-10T00:00:00Z\",\"issued_by\":\"urn:nps:org:mycompany.com\",\"nid\":\"urn:nps:agent:ca.innolotus.com:550e8400-e29b-41d4\",\"pub_key\":\"ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=\",\"scope\":{\"actions\":[\"orders:read\",\"orders:create\"],\"max_token_budget\":50000,\"nodes\":[\"nwp://api.myapp.com/*\"]},\"serial\":\"0x0A3F9C\"}",
+        "metadata_excluded": true,
+        "signature_field_excluded": true
+      }
+    },
+    {
+      "id": "nip.ident.002",
+      "description": "Lineage MUST be included in the signed canonical form (NPS-CR-0003 §5.1.3). Mutating any lineage sub-field invalidates the CA signature — this is what makes the chain verifiable.",
+      "kind": "positive",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:session-7f3c9e1a",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAYxr0VS8AhmF3hOh2RXi2WCh5xL1xL5xL5xL5xL5xL5w=",
+          "capabilities": ["nwp:query"],
+          "scope": {
+            "nodes": ["nwp://api.example.com/*"],
+            "max_token_budget": 5000
+          },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-04-10T01:00:00Z",
+          "serial": "0x0A3F9D",
+          "lineage": {
+            "role": "session",
+            "parent_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+            "group_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+            "session_id": "session-7f3c9e1a"
+          },
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation"
+        }
+      },
+      "expected": {
+        "canonical_for_signing_includes_lineage": true,
+        "lineage_keys_in_canonical_order": ["group_nid", "parent_nid", "role", "session_id"]
+      }
+    },
+    {
+      "id": "nip.ident.003",
+      "description": "Negative: a frame whose CA signature was computed BEFORE a downstream agent appended a `lineage` field. The downstream agent's modification invalidates the signature — receiver MUST reject with NIP-CERT-SIGNATURE-INVALID per spec verification step §5 step 3.",
+      "kind": "negative",
+      "input": {
+        "ident_frame_after_tamper": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:550e8400",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-05-10T00:00:00Z",
+          "serial": "0x0A3F9E",
+          "lineage": {
+            "role": "session",
+            "parent_nid": "urn:nps:agent:ca.example.com:group-injected",
+            "group_nid":  "urn:nps:agent:ca.example.com:group-injected",
+            "session_id": "session-injected"
+          },
+          "signature": "ed25519:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      },
+      "expected": {
+        "error": "NIP-CERT-SIGNATURE-INVALID",
+        "status": "NPS-AUTH-UNAUTHENTICATED"
+      }
+    },
+    {
+      "id": "nip.ident.004",
+      "description": "Negative: IdentFrame whose `expires_at` is in the past. MUST be rejected with NIP-CERT-EXPIRED regardless of signature validity (verification step ordering — expiry checked before scope, but signature MUST also be valid).",
+      "kind": "negative",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:expired-001",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2025-01-01T00:00:00Z",
+          "expires_at": "2025-12-31T00:00:00Z",
+          "serial": "0x0A3F9F",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "verification_time": "2026-05-09T12:00:00Z"
+      },
+      "expected": {
+        "error": "NIP-CERT-EXPIRED",
+        "status": "NPS-AUTH-UNAUTHENTICATED"
+      }
+    },
+    {
+      "id": "nip.ident.005",
+      "description": "Negative: assurance_level carries a value not in the §5.1.1 enum. Spec mandates implementations MUST NOT silently demote — receivers MUST return NIP-ASSURANCE-UNKNOWN.",
+      "kind": "negative",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:550e8400",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-05-10T00:00:00Z",
+          "serial": "0x0A3FA0",
+          "assurance_level": "platinum",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "error": "NIP-ASSURANCE-UNKNOWN",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nip.ident.006",
+      "description": "Group-NID lineage canonicalisation (NPS-CR-0003 §5.1.3). For `role = \"group\"`, only `role` plus optional `owner_user_id` / `owner_key_id` / `purpose` appear; `parent_nid` / `group_nid` / `session_id` are absent. The canonical key order within `lineage` MUST be lexicographic, and the entire `lineage` object MUST be included in the signed canonical form (unlike `metadata`).",
+      "kind": "positive",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAYxr0VS8AhmF3hOh2RXi2WCh5xL1xL5xL5xL5xL5xL5w=",
+          "capabilities": ["nop:orchestrate"],
+          "scope": {
+            "nodes": ["nwp://api.example.com/*"],
+            "max_token_budget": 500000
+          },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-07-10T00:00:00Z",
+          "serial": "0x0A3FA1",
+          "lineage": {
+            "role": "group",
+            "owner_user_id": "user-7f3c9e1a",
+            "owner_key_id": "op-kid-2026-04"
+          },
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation"
+        }
+      },
+      "expected": {
+        "canonical_for_signing_includes_lineage": true,
+        "lineage_keys_in_canonical_order": ["owner_key_id", "owner_user_id", "role"],
+        "session_only_fields_absent": ["parent_nid", "group_nid", "session_id"]
+      }
+    },
+    {
+      "id": "nip.ident.007",
+      "description": "Session-NID lineage canonicalisation with ALL §5.1.3 optional fields populated (`purpose`, `owner_user_id`, `owner_key_id`). Exercises the full lineage key set for canonical ordering — implementations MUST sort `lineage` sub-keys lexicographically AND keep the parent `ident_frame` keys lexicographic across the whole object.",
+      "kind": "positive",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:session-1714672800-f3a92c0b",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": {
+            "nodes": ["nwp://api.example.com/v1/products/*"],
+            "max_token_budget": 5000
+          },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-04-10T01:00:00Z",
+          "serial": "0x0A3FA2",
+          "lineage": {
+            "role": "session",
+            "parent_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+            "group_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+            "session_id": "session-1714672800-f3a92c0b",
+            "purpose": "order-classification-job",
+            "owner_user_id": "user-7f3c9e1a",
+            "owner_key_id": "op-kid-2026-04"
+          },
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation"
+        }
+      },
+      "expected": {
+        "canonical_for_signing_includes_lineage": true,
+        "lineage_keys_in_canonical_order": ["group_nid", "owner_key_id", "owner_user_id", "parent_nid", "purpose", "role", "session_id"]
+      }
+    },
+    {
+      "id": "nip.ident.008",
+      "description": "Negative: lineage field mutated after CA signature (NPS-CR-0003 §5.1.3). The CA signed `purpose = \"order-classification-job\"`; a downstream party rewrote it to `purpose = \"admin-takeover\"` while leaving the signature byte-identical. Receiver MUST reject with NIP-CERT-SIGNATURE-INVALID — `lineage` is part of the signed canonical form, so any modification invalidates the signature.",
+      "kind": "negative",
+      "input": {
+        "ident_frame_after_tamper": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:session-1714672800-f3a92c0b",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": {
+            "nodes": ["nwp://api.example.com/v1/products/*"],
+            "max_token_budget": 5000
+          },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-04-10T01:00:00Z",
+          "serial": "0x0A3FA3",
+          "lineage": {
+            "role": "session",
+            "parent_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+            "group_nid": "urn:nps:agent:ca.example.com:group-7f3c9e1a-b2d8-4c6f-9a01",
+            "session_id": "session-1714672800-f3a92c0b",
+            "purpose": "admin-takeover"
+          },
+          "signature": "ed25519:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        },
+        "originally_signed_purpose": "order-classification-job"
+      },
+      "expected": {
+        "error": "NIP-CERT-SIGNATURE-INVALID",
+        "status": "NPS-AUTH-UNAUTHENTICATED"
+      }
+    },
+    {
+      "id": "nip.ident.009",
+      "description": "Negative: lineage role enum mismatch — `role = \"session\"` is asserted but the required `parent_nid` / `group_nid` / `session_id` fields are missing. Per §5.1.3 these are conditionally required when `role = \"session\"`. Receiver MUST reject the IdentFrame as malformed with NIP-CERT-SIGNATURE-INVALID (signature over a partial lineage will not verify) — and the CA MUST refuse to issue such a frame in the first place.",
+      "kind": "negative",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:session-incomplete",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-04-10T01:00:00Z",
+          "serial": "0x0A3FA4",
+          "lineage": {
+            "role": "session"
+          },
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "error": "NIP-CERT-SIGNATURE-INVALID",
+        "status": "NPS-AUTH-UNAUTHENTICATED",
+        "reason_for_rejection": "role=session requires parent_nid, group_nid, session_id per §5.1.3"
+      }
+    },
+    {
+      "id": "nip.ident.010",
+      "description": "Negative: downgrade-attack defense per §5.1.1. The IdentFrame asserts `assurance_level = \"anonymous\"` on the wire, but the accompanying X.509 NID certificate carries the `id-nid-assurance-level` extension (OID 1.3.6.1.4.1.65715.2.1) with value `verified`. The two MUST agree — receiver MUST reject with NIP-ASSURANCE-MISMATCH per §5.1.1 / §11 error table. This prevents an Agent from claiming a lower level than its cert actually attests, evading audit / rate-limit policy.",
+      "kind": "negative",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:550e8400",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-05-10T00:00:00Z",
+          "serial": "0x0A3FA5",
+          "assurance_level": "anonymous",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "x509_extension": {
+          "oid": "1.3.6.1.4.1.65715.2.1",
+          "value": "verified"
+        }
+      },
+      "expected": {
+        "error": "NIP-ASSURANCE-MISMATCH",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "reason_for_rejection": "wire assurance_level disagrees with id-nid-assurance-level X.509 extension"
+      }
+    },
+    {
+      "id": "nip.ident.011",
+      "description": "Negative: upward-claim mismatch — IdentFrame asserts `assurance_level = \"verified\"` but the X.509 cert extension carries `attested`. The Agent is overclaiming its assurance level. Receiver MUST reject with NIP-ASSURANCE-MISMATCH; the mismatch direction is irrelevant — any disagreement is a hard fail.",
+      "kind": "negative",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:550e8401",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-05-10T00:00:00Z",
+          "serial": "0x0A3FA6",
+          "assurance_level": "verified",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "x509_extension": {
+          "oid": "1.3.6.1.4.1.65715.2.1",
+          "value": "attested"
+        }
+      },
+      "expected": {
+        "error": "NIP-ASSURANCE-MISMATCH",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nip.ident.012",
+      "description": "Positive: assurance_level present and agrees with X.509 extension (`attested` on both sides). Frame admitted. Demonstrates the happy-path complement to .010 / .011, so SDKs can assert their AssuranceLevel propagator does not falsely flag agreeing pairs.",
+      "kind": "positive",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:550e8402",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://api.example.com/*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-05-10T00:00:00Z",
+          "serial": "0x0A3FA7",
+          "assurance_level": "attested",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "x509_extension": {
+          "oid": "1.3.6.1.4.1.65715.2.1",
+          "value": "attested"
+        }
+      },
+      "expected": {
+        "match": true,
+        "assurance_level_effective": "attested"
+      }
+    },
+    {
+      "id": "nip.ident.013",
+      "description": "Empty-string assurance_level wire value. Per the v1.0.0-alpha.11 fix landed across Python / TypeScript / Java SDKs, `from_wire(\"\")` MUST return `anonymous` (the documented default per §5.1.1). This is distinct from .005 — there an unknown enum value MUST be rejected; the empty string is the absence sentinel and falls back to default.",
+      "kind": "positive",
+      "input": {
+        "ident_frame": {
+          "frame": "0x20",
+          "nid": "urn:nps:agent:ca.example.com:550e8403",
+          "pub_key": "ed25519:MCowBQYDK2VwAyEAGb9ECWmEzf6FQbrBZ9w7lshQhqowtrbLDFw4rXAxZuE=",
+          "capabilities": ["nwp:query"],
+          "scope": { "nodes": ["nwp://*"], "max_token_budget": 1000 },
+          "issued_by": "urn:nps:org:example.com",
+          "issued_at": "2026-04-10T00:00:00Z",
+          "expires_at": "2026-05-10T00:00:00Z",
+          "serial": "0x0A3FA8",
+          "assurance_level": "",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "match": true,
+        "assurance_level_effective": "anonymous"
+      }
+    }
+  ]
+}

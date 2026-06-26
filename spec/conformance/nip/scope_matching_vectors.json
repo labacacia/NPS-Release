@@ -1,0 +1,109 @@
+{
+  "name": "nip-scope-matching",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-3-NIP.md §5.1, §6 admission step 6",
+  "description": "NID `scope.nodes` and `scope.actions` matching against an inbound request. `scope.nodes` entries are URL patterns with `*` glob (matches any single path segment) and `**` (matches across segments); `scope.actions` entries are exact-string capability tokens. A node/action MUST be covered by at least one entry, otherwise the request is rejected with `NWP-AUTH-NID-SCOPE-VIOLATION`.",
+  "vectors": [
+    {
+      "id": "nip.scope.001",
+      "description": "Exact-prefix glob match: scope grants `nwp://api.myapp.com/*`; request to `nwp://api.myapp.com/products/query` matches because `*` covers the remaining path.",
+      "kind": "positive",
+      "input": {
+        "scope": {
+          "nodes": ["nwp://api.myapp.com/*"],
+          "actions": ["orders:read"]
+        },
+        "request": {
+          "node": "nwp://api.myapp.com/products/query",
+          "action": "orders:read"
+        }
+      },
+      "expected": {
+        "match": true
+      }
+    },
+    {
+      "id": "nip.scope.002",
+      "description": "Cross-host rejection: scope only grants `nwp://api.myapp.com/*`; request targets `nwp://api.evil.com/products/query`. Different host → no match.",
+      "kind": "negative",
+      "input": {
+        "scope": {
+          "nodes": ["nwp://api.myapp.com/*"],
+          "actions": ["orders:read"]
+        },
+        "request": {
+          "node": "nwp://api.evil.com/products/query",
+          "action": "orders:read"
+        }
+      },
+      "expected": {
+        "match": false,
+        "error": "NWP-AUTH-NID-SCOPE-VIOLATION",
+        "status": "NPS-AUTH-FORBIDDEN"
+      }
+    },
+    {
+      "id": "nip.scope.003",
+      "description": "Action not in capability list: scope grants `orders:read` but request asks for `orders:create`. MUST be rejected.",
+      "kind": "negative",
+      "input": {
+        "scope": {
+          "nodes": ["nwp://api.myapp.com/*"],
+          "actions": ["orders:read"]
+        },
+        "request": {
+          "node": "nwp://api.myapp.com/orders/create",
+          "action": "orders:create"
+        }
+      },
+      "expected": {
+        "match": false,
+        "error": "NWP-AUTH-NID-SCOPE-VIOLATION",
+        "status": "NPS-AUTH-FORBIDDEN"
+      }
+    },
+    {
+      "id": "nip.scope.004",
+      "description": "Multi-pattern union: scope grants two distinct prefixes; request matches the second.",
+      "kind": "positive",
+      "input": {
+        "scope": {
+          "nodes": [
+            "nwp://api.myapp.com/v1/*",
+            "nwp://api.myapp.com/v2/*"
+          ],
+          "actions": ["orders:read", "orders:create"]
+        },
+        "request": {
+          "node": "nwp://api.myapp.com/v2/orders/list",
+          "action": "orders:read"
+        }
+      },
+      "expected": {
+        "match": true
+      }
+    },
+    {
+      "id": "nip.scope.005",
+      "description": "Token-budget exhaustion is a runtime check, not a scope-pattern match. Even with a scope match the request MUST be rejected when CGN budget is exceeded — this proves SDKs treat `max_token_budget` as a separate gate, not as part of the URL/action match.",
+      "kind": "negative",
+      "input": {
+        "scope": {
+          "nodes": ["nwp://api.myapp.com/*"],
+          "actions": ["orders:read"],
+          "max_token_budget": 1000
+        },
+        "request": {
+          "node": "nwp://api.myapp.com/orders/list",
+          "action": "orders:read",
+          "estimated_cgn": 5000
+        }
+      },
+      "expected": {
+        "match": false,
+        "error": "NWP-BUDGET-EXCEEDED",
+        "status": "NPS-LIMIT-BUDGET"
+      }
+    }
+  ]
+}

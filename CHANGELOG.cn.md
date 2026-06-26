@@ -10,6 +10,20 @@
 
 ---
 
+## [1.0.0-alpha.14] —— Unreleased
+
+### 规范与文档
+
+- 从开发仓库 SSoT 同步 Release `spec/` 树，包含 conformance specs、version matrix、CR/RFC 更新与共享协议工件。
+- 更新 Release README badge 与协议摘要到当前规范版本：NCP v0.8、NWP v0.14、NIP v0.10、NDP v0.9、NOP v0.7。
+- 在公共文档中补上 alpha.14 candidate 边界：类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper、live revocation、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。
+- 将过时的 `nps-gateway` 引用替换为当前 daemon 名 `nps-ingress`，同时保留它与已退役 NWP Gateway Node 逻辑角色之间的区别。
+
+### SDK 对齐说明
+
+- alpha.14 candidate SDK 文档补充跨官方 SDK 的 remote CA client、native NWP serving 与 conformance manifest 支持。
+- 安装片段在 alpha.14 工件正式发布前继续指向最新已发布包。
+
 ## [1.0.0-alpha.13] —— 2026-06-03
 
 ### 规范

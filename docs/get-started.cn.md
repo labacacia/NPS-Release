@@ -4,6 +4,10 @@
 
 NPS 是一套多层协议族，从哪里开始取决于你在构建什么。
 
+最新已发布包组是 `1.0.0-alpha.13`。当前文档已经为 `1.0.0-alpha.14`
+candidate 预先对齐；candidate-only API 会在 SDK 文档中单独标注，直到
+正式发包。
+
 ---
 
 ## 我在编写 AI Agent 或模型客户端
@@ -12,22 +16,22 @@ NPS 是一套多层协议族，从哪里开始取决于你在构建什么。
 
 | 语言 | 安装 | Wiki 快速入门 |
 |------|------|--------------|
-| Python     | `pip install nps-lib==1.0.0a6`                           | [SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
+| Python     | `pip install nps-lib==1.0.0a13`                          | [SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
 | TypeScript | `npm install @labacacia/nps-sdk@alpha`                   | [SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
-| Rust       | `cargo add nps-sdk@=1.0.0-alpha.11`                       | [SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.11`  | [SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
-| Java       | `implementation("com.labacacia.nps:nps-java:1.0.0-alpha.11")` | [SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
-| .NET       | `dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.11` | [SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
+| Rust       | `cargo add nps-sdk@=1.0.0-alpha.13`                       | [SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
+| Go         | `go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.13`  | [SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| Java       | `implementation("com.labacacia.nps:nps-java:1.0.0-alpha.13")` | [SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
+| .NET       | `dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.13` | [SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.11` 已 deprecated，因为发布到 npm 的 tarball 缺少 `dist/`。当前 `alpha` dist-tag 临时指向 `1.0.0-alpha.11`；需要 alpha.6 源码时请使用 GitHub `v1.0.0-alpha.11` tag，等待下一个 npm 预发布。
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.13` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；`alpha` dist-tag 指向最新已发布 alpha。
 
 ---
 
 ## 我在部署 NPS 节点或基础设施
 
-你需要 **NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-gateway` + `nps-registry`）。
+你需要 **NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-ingress` + `nps-registry`）。
 
-`nps-gateway` 是进程级 Internet ingress daemon 名，不是 NWP 中已退役的
+`nps-ingress` 是进程级 Internet ingress daemon 名，不是 NWP 中已退役的
 **Gateway Node** 逻辑角色。CR-0001 已将该逻辑角色替换为 **Anchor Node**
 和 **Bridge Node**。
 

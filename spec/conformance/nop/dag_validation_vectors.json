@@ -1,0 +1,138 @@
+{
+  "name": "nop-dag-validation",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-5-NOP.md §3.1.1, §8.2",
+  "description": "TaskFrame `dag` validation. Constraints (per §3.1.1): MUST be a DAG (no cycles); MUST have ≥1 root and ≥1 terminal; node count ≤ 32; delegation chain depth ≤ 3 levels. Errors: `NOP-TASK-DAG-CYCLE`, `NOP-TASK-DAG-TOO-LARGE`, `NOP-TASK-DAG-INVALID`, `NOP-DELEGATE-CHAIN-TOO-DEEP`. Vectors here exercise the static `dag` checks the Orchestrator MUST run before dispatching the first DelegateFrame.",
+  "vectors": [
+    {
+      "id": "nop.dag.001",
+      "description": "Valid linear DAG: fetch → analyze → report. One root, one terminal, no cycles, 3 nodes (well under 32).",
+      "kind": "positive",
+      "input": {
+        "dag": {
+          "nodes": [
+            { "id": "fetch",   "action": "nwp://api.example.com/products/query",  "agent": "urn:nps:agent:ca.example.com:fetcher" },
+            { "id": "analyze", "action": "nwp://ml.example.com/inference/invoke", "agent": "urn:nps:agent:ca.example.com:analyzer", "input_from": ["fetch"] },
+            { "id": "report",  "action": "nwp://report.example.com/generate/invoke","agent": "urn:nps:agent:ca.example.com:reporter", "input_from": ["analyze"] }
+          ],
+          "edges": [
+            { "from": "fetch",   "to": "analyze" },
+            { "from": "analyze", "to": "report"  }
+          ]
+        }
+      },
+      "expected": {
+        "valid": true,
+        "node_count": 3,
+        "roots": ["fetch"],
+        "terminals": ["report"]
+      }
+    },
+    {
+      "id": "nop.dag.002",
+      "description": "Valid diamond fan-out / fan-in: fetch branches into two parallel analyses, both join at merge. Two roots are NOT required — one root + diamond is fine.",
+      "kind": "positive",
+      "input": {
+        "dag": {
+          "nodes": [
+            { "id": "fetch",  "action": "nwp://api.example.com/q",   "agent": "urn:nps:agent:ca.example.com:a" },
+            { "id": "analyze_a", "action": "nwp://ml.example.com/i", "agent": "urn:nps:agent:ca.example.com:b", "input_from": ["fetch"] },
+            { "id": "analyze_b", "action": "nwp://ml.example.com/j", "agent": "urn:nps:agent:ca.example.com:c", "input_from": ["fetch"] },
+            { "id": "merge",  "action": "nwp://api.example.com/m",   "agent": "urn:nps:agent:ca.example.com:d", "input_from": ["analyze_a", "analyze_b"] }
+          ],
+          "edges": [
+            { "from": "fetch", "to": "analyze_a" },
+            { "from": "fetch", "to": "analyze_b" },
+            { "from": "analyze_a", "to": "merge" },
+            { "from": "analyze_b", "to": "merge" }
+          ]
+        }
+      },
+      "expected": {
+        "valid": true,
+        "node_count": 4,
+        "roots": ["fetch"],
+        "terminals": ["merge"]
+      }
+    },
+    {
+      "id": "nop.dag.003",
+      "description": "Negative — cycle: a → b → c → a. Topological sort fails; orchestrator MUST refuse to dispatch with NOP-TASK-DAG-CYCLE.",
+      "kind": "negative",
+      "input": {
+        "dag": {
+          "nodes": [
+            { "id": "a", "action": "nwp://x/y", "agent": "urn:nps:agent:e:1", "input_from": ["c"] },
+            { "id": "b", "action": "nwp://x/y", "agent": "urn:nps:agent:e:2", "input_from": ["a"] },
+            { "id": "c", "action": "nwp://x/y", "agent": "urn:nps:agent:e:3", "input_from": ["b"] }
+          ],
+          "edges": [
+            { "from": "a", "to": "b" },
+            { "from": "b", "to": "c" },
+            { "from": "c", "to": "a" }
+          ]
+        }
+      },
+      "expected": {
+        "valid": false,
+        "error": "NOP-TASK-DAG-CYCLE",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nop.dag.004",
+      "description": "Negative — too large: 33 nodes (limit is 32). MUST reject with NOP-TASK-DAG-TOO-LARGE before any dispatch. We list the count rather than 33 inline node objects to keep the vector compact; `node_count_to_generate` instructs the runner to synthesise that many linear nodes (n_0 → n_1 → ... → n_32).",
+      "kind": "negative",
+      "input": {
+        "dag_generator": {
+          "kind": "linear_chain",
+          "node_count_to_generate": 33,
+          "id_prefix": "n_"
+        }
+      },
+      "expected": {
+        "valid": false,
+        "error": "NOP-TASK-DAG-TOO-LARGE",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nop.dag.005",
+      "description": "Negative — orphan node referenced as `input_from` target. Node `analyze` lists `fetch` as upstream but `fetch` is not declared. MUST reject with NOP-TASK-DAG-INVALID.",
+      "kind": "negative",
+      "input": {
+        "dag": {
+          "nodes": [
+            { "id": "analyze", "action": "nwp://ml/i", "agent": "urn:nps:agent:e:1", "input_from": ["fetch"] }
+          ],
+          "edges": [
+            { "from": "fetch", "to": "analyze" }
+          ]
+        }
+      },
+      "expected": {
+        "valid": false,
+        "error": "NOP-TASK-DAG-INVALID",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nop.dag.006",
+      "description": "Negative — delegation chain too deep: Orchestrator → Worker → Sub-Worker → Sub-Sub-Worker (4 levels; limit is 3). The 2nd DelegateFrame hop is the violating one. MUST reject with NOP-DELEGATE-CHAIN-TOO-DEEP.",
+      "kind": "negative",
+      "input": {
+        "delegation_chain": [
+          { "level": 1, "role": "orchestrator", "nid": "urn:nps:agent:e:orch" },
+          { "level": 2, "role": "worker",       "nid": "urn:nps:agent:e:w1" },
+          { "level": 3, "role": "sub-worker",   "nid": "urn:nps:agent:e:w2" },
+          { "level": 4, "role": "sub-sub-worker", "nid": "urn:nps:agent:e:w3" }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "error": "NOP-DELEGATE-CHAIN-TOO-DEEP",
+        "status": "NPS-CLIENT-BAD-PARAM"
+      }
+    }
+  ]
+}

@@ -1,0 +1,394 @@
+{
+  "name": "nwp-query-aggregation",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-2-NWP.md §6.7, §12.1",
+  "description": "QueryFrame (0x10) aggregation + topology.snapshot conformance vectors. Covers: (a) aggregate.operations with the full §6.7 function set (COUNT, SUM, AVG, MIN, MAX, COUNT_DISTINCT), (b) group_by + having post-grouping filter, (c) the fixed aggregation response shape `anchor_ref=\"nps:system:aggregate:result\"`, (d) negative cases for unknown func / duplicate alias / aggregate-unsupported nodes, (e) topology.snapshot request + response shape per §12.1 with the full member object schema (nid / node_roles / activation_mode / child_anchor / member_count / tags / joined_at / last_seen / capabilities / metrics), and (f) the `truncated` flag when topology.depth is capped. Cross-references §13 error codes.",
+  "vectors": [
+    {
+      "id": "nwp.query.agg.001",
+      "description": "Positive — COUNT-only aggregation. operations=[{func:COUNT, alias:total}]; no group_by. Response carries a single row {total: N} with anchor_ref fixed to `nps:system:aggregate:result` (§6.7).",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "filter": { "status": { "$eq": "active" } },
+          "aggregate": {
+            "operations": [
+              { "func": "COUNT", "alias": "total" }
+            ]
+          },
+          "request_id": "550e8400-e29b-41d4-a716-446655440100"
+        },
+        "records": [
+          { "id": 1, "status": "active",   "price": 100, "rating": 4.0, "category": "books" },
+          { "id": 2, "status": "active",   "price": 200, "rating": 4.5, "category": "books" },
+          { "id": 3, "status": "inactive", "price": 999, "rating": 5.0, "category": "books" }
+        ]
+      },
+      "expected": {
+        "response": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:aggregate:result",
+          "count": 1,
+          "data": [{ "total": 2 }]
+        }
+      }
+    },
+    {
+      "id": "nwp.query.agg.002",
+      "description": "Positive — full §6.7 example. COUNT + SUM + AVG with group_by=[category] and having `total > 10`; result ordered by revenue DESC. Asserts (a) every named function operates on the right field, (b) having filters groups by alias, (c) order applies to the aggregated rows.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "filter": { "status": { "$eq": "active" } },
+          "aggregate": {
+            "operations": [
+              { "func": "COUNT", "alias": "total" },
+              { "func": "SUM",   "field": "price",  "alias": "revenue" },
+              { "func": "AVG",   "field": "rating", "alias": "avg_rating" }
+            ],
+            "group_by": ["category"],
+            "having": { "total": { "$gt": 10 } }
+          },
+          "order": [{ "field": "revenue", "dir": "DESC" }],
+          "request_id": "550e8400-e29b-41d4-a716-446655440002"
+        }
+      },
+      "expected": {
+        "response": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:aggregate:result",
+          "count": 3,
+          "data": [
+            { "category": "electronics", "total": 142, "revenue": 89450.00, "avg_rating": 4.3 },
+            { "category": "clothing",    "total": 87,  "revenue": 12300.00, "avg_rating": 4.1 },
+            { "category": "books",       "total": 56,  "revenue": 3200.00,  "avg_rating": 4.6 }
+          ]
+        },
+        "ordering": "revenue DESC",
+        "having_applied_after_group": true
+      }
+    },
+    {
+      "id": "nwp.query.agg.003",
+      "description": "Positive — MIN / MAX / COUNT_DISTINCT on a small in-line dataset. Verifies each function's exact semantics: MIN/MAX pick the field's extreme value within the group; COUNT_DISTINCT counts unique non-null values.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "aggregate": {
+            "operations": [
+              { "func": "MIN", "field": "price",   "alias": "min_price" },
+              { "func": "MAX", "field": "price",   "alias": "max_price" },
+              { "func": "COUNT_DISTINCT", "field": "vendor", "alias": "unique_vendors" }
+            ],
+            "group_by": ["category"]
+          }
+        },
+        "records": [
+          { "category": "books",   "price": 10,  "vendor": "A" },
+          { "category": "books",   "price": 30,  "vendor": "A" },
+          { "category": "books",   "price": 20,  "vendor": "B" },
+          { "category": "movies",  "price": 99,  "vendor": "C" },
+          { "category": "movies",  "price": 99,  "vendor": "C" }
+        ]
+      },
+      "expected": {
+        "response": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:aggregate:result",
+          "count": 2,
+          "data": [
+            { "category": "books",  "min_price": 10, "max_price": 30, "unique_vendors": 2 },
+            { "category": "movies", "min_price": 99, "max_price": 99, "unique_vendors": 1 }
+          ]
+        }
+      }
+    },
+    {
+      "id": "nwp.query.agg.004",
+      "description": "Negative — unknown aggregate.func. operations=[{func:MEDIAN,…}] is not in §6.7's enum. Node MUST reject with `NWP-QUERY-AGGREGATE-INVALID` at parse time.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "aggregate": {
+            "operations": [
+              { "func": "MEDIAN", "field": "price", "alias": "p50" }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "NWP-QUERY-AGGREGATE-INVALID",
+        "status": "NPS-CLIENT-BAD-PARAM",
+        "reason": "func not in {COUNT, SUM, AVG, MIN, MAX, COUNT_DISTINCT}"
+      }
+    },
+    {
+      "id": "nwp.query.agg.005",
+      "description": "Negative — duplicate alias in aggregate.operations. Two operations share `alias: \"total\"`. Per §13 / §6.7 the structure is invalid → `NWP-QUERY-AGGREGATE-INVALID`.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "aggregate": {
+            "operations": [
+              { "func": "COUNT",                       "alias": "total" },
+              { "func": "SUM",  "field": "price",      "alias": "total" }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "NWP-QUERY-AGGREGATE-INVALID",
+        "status": "NPS-CLIENT-BAD-PARAM",
+        "reason": "duplicate alias"
+      }
+    },
+    {
+      "id": "nwp.query.agg.006",
+      "description": "Negative — SUM/AVG/MIN/MAX without `field`. `COUNT` MAY omit field (meaning row count) per §6.7 but other functions MUST carry it. → `NWP-QUERY-AGGREGATE-INVALID`.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "aggregate": {
+            "operations": [
+              { "func": "SUM", "alias": "revenue" }
+            ]
+          }
+        }
+      },
+      "expected": {
+        "error": "NWP-QUERY-AGGREGATE-INVALID",
+        "status": "NPS-CLIENT-BAD-PARAM",
+        "reason": "non-COUNT operations require `field`"
+      }
+    },
+    {
+      "id": "nwp.query.agg.007",
+      "description": "Negative — node does not declare `capabilities.aggregate=true` in its NWM (§4.2) but the Agent sent an aggregate query. Node MUST return `NWP-QUERY-AGGREGATE-UNSUPPORTED`.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "aggregate": {
+            "operations": [{ "func": "COUNT", "alias": "total" }]
+          }
+        },
+        "node_capabilities": { "aggregate": false }
+      },
+      "expected": {
+        "error": "NWP-QUERY-AGGREGATE-UNSUPPORTED",
+        "status": "NPS-SERVER-UNSUPPORTED"
+      }
+    },
+    {
+      "id": "nwp.query.topology.001",
+      "description": "Positive — minimal topology.snapshot request. QueryFrame{type:\"topology.snapshot\", topology:{scope:\"cluster\"}}. anchor_ref is omitted (per §12, reserved type defines its own semantics).",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.snapshot",
+          "topology": {
+            "scope": "cluster",
+            "include": ["members"]
+          },
+          "request_id": "550e8400-e29b-41d4-a716-446655440200"
+        }
+      },
+      "expected": {
+        "response_kind": "CapsFrame",
+        "response": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:topology:snapshot",
+          "count": 1,
+          "data": [{
+            "version": 142,
+            "anchor_nid": "urn:nps:node:labacacia:host-abc123",
+            "cluster_size": 23,
+            "members": [
+              {
+                "nid": "urn:nps:agent:labacacia:host-abc123-sess-aaa",
+                "node_roles": ["memory"],
+                "activation_mode": "ephemeral",
+                "tags": ["dev", "library"],
+                "joined_at": "2026-04-15T10:23:00Z",
+                "last_seen": "2026-04-26T14:55:00Z"
+              },
+              {
+                "nid": "urn:nps:node:labacacia:host-def456",
+                "node_roles": ["anchor"],
+                "activation_mode": "resident",
+                "child_anchor": true,
+                "member_count": 7,
+                "tags": ["sub-cluster", "training"]
+              }
+            ],
+            "truncated": false
+          }]
+        }
+      }
+    },
+    {
+      "id": "nwp.query.topology.002",
+      "description": "Positive — topology.snapshot with include=[members, capabilities, tags, metrics]. Member objects MAY carry `capabilities` and `metrics` only when requested via topology.include; their schema is implementation-defined and MAY be empty.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.snapshot",
+          "topology": {
+            "scope": "cluster",
+            "include": ["members", "capabilities", "tags", "metrics"]
+          }
+        }
+      },
+      "expected": {
+        "response_data_first_element_member_fields_include": ["nid", "node_roles", "activation_mode", "tags", "capabilities", "metrics"],
+        "capabilities_schema": "implementation-defined; MAY be empty object",
+        "metrics_schema": "implementation-defined; MAY be empty object"
+      }
+    },
+    {
+      "id": "nwp.query.topology.003",
+      "description": "Positive — topology.snapshot scope=\"member\" with topology.target_nid returns a single-member view. Required-when-scope-is-member binding from §12.1.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.snapshot",
+          "topology": {
+            "scope": "member",
+            "target_nid": "urn:nps:agent:labacacia:host-abc123-sess-aaa"
+          }
+        }
+      },
+      "expected": {
+        "response": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:topology:snapshot",
+          "count": 1,
+          "data": [{
+            "version": 142,
+            "anchor_nid": "urn:nps:node:labacacia:host-abc123",
+            "cluster_size": 1,
+            "members": [{
+              "nid": "urn:nps:agent:labacacia:host-abc123-sess-aaa",
+              "node_roles": ["memory"],
+              "activation_mode": "ephemeral",
+              "tags": ["dev", "library"],
+              "joined_at": "2026-04-15T10:23:00Z",
+              "last_seen": "2026-04-26T14:55:00Z"
+            }]
+          }]
+        }
+      }
+    },
+    {
+      "id": "nwp.query.topology.004",
+      "description": "Positive — topology.snapshot depth cap. Requested depth=3 exceeds the Anchor's max recursion; response includes truncated=true and lists sub-Anchors as references (child_anchor=true, member_count set) rather than recursing.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.snapshot",
+          "topology": { "scope": "cluster", "depth": 3 }
+        },
+        "anchor_max_depth": 1
+      },
+      "expected": {
+        "response_data_first_element": {
+          "truncated": true,
+          "members_contain_only_references_to_sub_anchors": true
+        },
+        "members_sub_anchor_required_fields": ["nid", "node_roles", "activation_mode", "child_anchor", "member_count"]
+      }
+    },
+    {
+      "id": "nwp.query.topology.005",
+      "description": "Negative — topology.snapshot scope=\"member\" without topology.target_nid. Per §12.1 target_nid is required when scope is `member` → `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` is NOT the right code here (that's reserved for unimplemented scopes); the right code is `NWP-QUERY-FILTER-INVALID` per §13 framing for malformed query envelopes. Conformance asserts the SDK fails the request before dispatch.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.snapshot",
+          "topology": { "scope": "member" }
+        }
+      },
+      "expected": {
+        "error": "NWP-QUERY-FILTER-INVALID",
+        "status": "NPS-CLIENT-BAD-PARAM",
+        "reason": "topology.scope=\"member\" requires topology.target_nid (§12.1)"
+      }
+    },
+    {
+      "id": "nwp.query.topology.006",
+      "description": "Negative — topology.snapshot topology.scope=\"datacenter\" is not implemented by this Anchor. Per §13 → `NWP-TOPOLOGY-UNSUPPORTED-SCOPE`.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.snapshot",
+          "topology": { "scope": "datacenter" }
+        }
+      },
+      "expected": {
+        "error": "NWP-TOPOLOGY-UNSUPPORTED-SCOPE",
+        "status": "NPS-CLIENT-BAD-PARAM"
+      }
+    },
+    {
+      "id": "nwp.query.topology.007",
+      "description": "Negative — topology.snapshot topology.depth exceeds the Anchor's cap. Per §13 → `NWP-TOPOLOGY-DEPTH-UNSUPPORTED`. Distinct from depth=N being silently truncated (positive vector .004) — this fires when the Anchor refuses outright instead of truncating.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.snapshot",
+          "topology": { "scope": "cluster", "depth": 8 }
+        },
+        "anchor_policy": "reject_above_max"
+      },
+      "expected": {
+        "error": "NWP-TOPOLOGY-DEPTH-UNSUPPORTED",
+        "status": "NPS-CLIENT-BAD-PARAM"
+      }
+    },
+    {
+      "id": "nwp.query.topology.008",
+      "description": "Negative — caller lacks `topology:read` capability in IdentFrame.capabilities. Per §12.4 (1) Anchor MUST return `NWP-TOPOLOGY-UNAUTHORIZED`. Asserted at the snapshot surface (single-shot pull).",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.snapshot",
+          "topology": { "scope": "cluster" }
+        },
+        "ident_capabilities": []
+      },
+      "expected": {
+        "error": "NWP-TOPOLOGY-UNAUTHORIZED",
+        "status": "NPS-AUTH-FORBIDDEN"
+      }
+    },
+    {
+      "id": "nwp.query.topology.009",
+      "description": "Negative — unrecognized reserved `type` on QueryFrame. Per §12 → `NWP-RESERVED-TYPE-UNSUPPORTED` (distinct from `NWP-ACTION-NOT-FOUND`).",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x10",
+          "type": "topology.future_op"
+        }
+      },
+      "expected": {
+        "error": "NWP-RESERVED-TYPE-UNSUPPORTED",
+        "status": "NPS-SERVER-UNSUPPORTED"
+      }
+    }
+  ]
+}

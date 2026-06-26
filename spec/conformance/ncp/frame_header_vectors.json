@@ -1,0 +1,114 @@
+{
+  "name": "ncp-frame-header",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-1-NCP.md §3.1, §3.2",
+  "description": "NCP fixed-header encode and decode. Default header is 4 bytes (1 type + 1 flags + 2-byte BE payload length); extended header is 8 bytes (1 type + 1 flags + 4-byte BE payload length + 2 reserved bytes). Flags layout (MSB→LSB): EXT | RSV | RSV | RSV | ENC | FINAL | T1 | T0. Encoding tier T1T0: 00=JSON, 01=MsgPack, 10/11=Reserved.",
+  "vectors": [
+    {
+      "id": "ncp.header.001",
+      "description": "Default 4-byte header for an AnchorFrame (0x01) with Tier-1 JSON encoding, FINAL=1, ENC=0, EXT=0, payload_len=200. Flags = 00000100 = 0x04.",
+      "kind": "positive",
+      "input": {
+        "frame_type": 1,
+        "flags": {
+          "ext": false,
+          "enc": false,
+          "final": true,
+          "tier": "json"
+        },
+        "payload_len": 200
+      },
+      "expected": {
+        "header_hex": "010400c8",
+        "header_len": 4
+      }
+    },
+    {
+      "id": "ncp.header.002",
+      "description": "Default 4-byte header for a CapsFrame (0x04), Tier-2 MsgPack, FINAL=1, ENC=0, EXT=0, payload_len=65535 (max for default mode). Flags = 00000101 = 0x05.",
+      "kind": "positive",
+      "input": {
+        "frame_type": 4,
+        "flags": {
+          "ext": false,
+          "enc": false,
+          "final": true,
+          "tier": "msgpack"
+        },
+        "payload_len": 65535
+      },
+      "expected": {
+        "header_hex": "0405ffff",
+        "header_len": 4
+      }
+    },
+    {
+      "id": "ncp.header.003",
+      "description": "Extended 8-byte header (EXT=1) for a StreamFrame (0x03) carrying a 1 MiB Tier-2 MsgPack chunk, FINAL=0 (mid-stream). Flags = 10000001 = 0x81. Reserved bytes (6,7) MUST be 0x0000.",
+      "kind": "positive",
+      "input": {
+        "frame_type": 3,
+        "flags": {
+          "ext": true,
+          "enc": false,
+          "final": false,
+          "tier": "msgpack"
+        },
+        "payload_len": 1048576
+      },
+      "expected": {
+        "header_hex": "0381001000000000",
+        "header_len": 8
+      }
+    },
+    {
+      "id": "ncp.header.004",
+      "description": "Decode round-trip: parse a HelloFrame (0x06) header with default mode, Tier-1 JSON, ENC=0, FINAL=1, payload_len=312. Flags = 00000100 = 0x04.",
+      "kind": "positive",
+      "input": {
+        "header_hex": "06040138"
+      },
+      "expected": {
+        "frame_type": 6,
+        "flags": {
+          "ext": false,
+          "enc": false,
+          "final": true,
+          "tier": "json"
+        },
+        "payload_len": 312
+      }
+    },
+    {
+      "id": "ncp.header.005",
+      "description": "Negative: header declares default mode (EXT=0) but real payload would be 70000 bytes (>65535). Sender MUST set EXT=1 or chunk via StreamFrame. Receiver detecting size > 65535 with EXT=0 MUST reject with NCP-FRAME-SIZE-EXCEEDED.",
+      "kind": "negative",
+      "input": {
+        "frame_type": 4,
+        "flags": {
+          "ext": false,
+          "enc": false,
+          "final": true,
+          "tier": "msgpack"
+        },
+        "payload_len": 70000
+      },
+      "expected": {
+        "error": "NCP-FRAME-PAYLOAD-TOO-LARGE",
+        "status": "NPS-LIMIT-PAYLOAD"
+      }
+    },
+    {
+      "id": "ncp.header.006",
+      "description": "Negative: reserved tier 0b10 in T1T0 (former Tier-3 slot). Spec marks Tier-3 Reserved; receivers MUST reject. Flags = 00000110 = 0x06.",
+      "kind": "negative",
+      "input": {
+        "header_hex": "01060040"
+      },
+      "expected": {
+        "error": "NCP-FRAME-FLAGS-INVALID",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    }
+  ]
+}

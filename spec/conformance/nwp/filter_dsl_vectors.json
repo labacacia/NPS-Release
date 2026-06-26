@@ -1,0 +1,130 @@
+{
+  "name": "nwp-filter-dsl",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-2-NWP.md §6.2",
+  "description": "QueryFrame filter DSL parse + evaluate vectors. Operators: `$eq` `$ne` `$lt` `$lte` `$gt` `$gte` `$in` `$nin` `$contains` `$between` `$exists` `$regex` `$and` `$or` `$not`. Constraints: filter nesting depth ≤ 8; `$regex` pattern length ≤ 256 chars and MUST pass ReDoS detection; nested quantifiers like `(a+)+` are prohibited.",
+  "vectors": [
+    {
+      "id": "nwp.filter.001",
+      "description": "Simple AND of three comparison operators against one record. All three predicates true → match.",
+      "kind": "positive",
+      "input": {
+        "filter": {
+          "$and": [
+            { "category": { "$eq": "electronics" } },
+            { "price": { "$lt": 500 } },
+            { "stock": { "$gt": 0 } }
+          ]
+        },
+        "record": {
+          "id": 1001,
+          "category": "electronics",
+          "price": 299.0,
+          "stock": 42
+        }
+      },
+      "expected": {
+        "matches": true
+      }
+    },
+    {
+      "id": "nwp.filter.002",
+      "description": "Same filter as 001, but `stock=0` fails the `$gt: 0` predicate. AND short-circuits → no match.",
+      "kind": "positive",
+      "input": {
+        "filter": {
+          "$and": [
+            { "category": { "$eq": "electronics" } },
+            { "price": { "$lt": 500 } },
+            { "stock": { "$gt": 0 } }
+          ]
+        },
+        "record": {
+          "id": 1002,
+          "category": "electronics",
+          "price": 299.0,
+          "stock": 0
+        }
+      },
+      "expected": {
+        "matches": false
+      }
+    },
+    {
+      "id": "nwp.filter.003",
+      "description": "Nested `$or` inside `$and` with `$in` and `$between`. Verifies operator composability and array-membership semantics.",
+      "kind": "positive",
+      "input": {
+        "filter": {
+          "$and": [
+            { "category": { "$in": ["phone", "tablet", "laptop"] } },
+            {
+              "$or": [
+                { "rating": { "$gte": 4.5 } },
+                { "price": { "$between": [100, 300] } }
+              ]
+            }
+          ]
+        },
+        "record": {
+          "id": 1003,
+          "category": "tablet",
+          "price": 250.0,
+          "rating": 4.0
+        }
+      },
+      "expected": {
+        "matches": true
+      }
+    },
+    {
+      "id": "nwp.filter.004",
+      "description": "Negative — ReDoS guard: `$regex` with nested quantifiers `(a+)+`. Spec §6.2 mandates rejection with NWP-QUERY-REGEX-UNSAFE before any matching attempt.",
+      "kind": "negative",
+      "input": {
+        "filter": {
+          "sku": { "$regex": "^(a+)+$" }
+        },
+        "record": {
+          "id": 1004,
+          "sku": "aaaaaaaaaaaaaaaaaaaaaaa!"
+        }
+      },
+      "expected": {
+        "error": "NWP-QUERY-REGEX-UNSAFE",
+        "status": "NPS-CLIENT-BAD-PARAM"
+      }
+    },
+    {
+      "id": "nwp.filter.005",
+      "description": "Negative — depth guard: filter nesting depth = 9 (one over the limit of 8). MUST be rejected at parse time, not at evaluate time.",
+      "kind": "negative",
+      "input": {
+        "filter": {
+          "$and": [{
+            "$and": [{
+              "$and": [{
+                "$and": [{
+                  "$and": [{
+                    "$and": [{
+                      "$and": [{
+                        "$and": [
+                          { "x": { "$eq": 1 } }
+                        ]
+                      }]
+                    }]
+                  }]
+                }]
+              }]
+            }]
+          }]
+        }
+      },
+      "expected": {
+        "error": "NWP-QUERY-FILTER-INVALID",
+        "status": "NPS-CLIENT-BAD-PARAM",
+        "reason": "filter nesting depth exceeds the §6.2 limit of 8"
+      }
+    }
+  ]
+}

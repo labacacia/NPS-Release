@@ -1,0 +1,181 @@
+{
+  "name": "ncp-hello-caps",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-1-NCP.md §4.4, §4.6",
+  "description": "Native-mode capability negotiation: client sends HelloFrame (0x06) declaring its versions and capabilities; server responds with a connection-negotiation CapsFrame (0x04) carrying the intersection. Vectors cover the three deterministic negotiation rules: NPS version = min(client.nps_version, server.nps_version); encoding = first client preference also in server.supported; max_frame_payload = min(client, server). Unsupported version overlap → ErrorFrame.",
+  "vectors": [
+    {
+      "id": "ncp.hello_caps.001",
+      "description": "Happy path: client v0.4 prefers msgpack, server supports v0.4 and msgpack. Negotiated encoding = msgpack, ext_support = true, frame_payload = min(65535, 65535) = 65535.",
+      "kind": "positive",
+      "input": {
+        "client_hello": {
+          "frame": "0x06",
+          "nps_version": "0.4",
+          "min_version": "0.3",
+          "supported_encodings": ["msgpack", "json"],
+          "supported_protocols": ["ncp", "nwp", "nip"],
+          "agent_id": "urn:nps:agent:ca.innolotus.com:550e8400",
+          "max_frame_payload": 65535,
+          "ext_support": true,
+          "max_concurrent_streams": 32
+        },
+        "server_caps": {
+          "nps_version": "0.4",
+          "min_version": "0.3",
+          "supported_encodings": ["msgpack", "json"],
+          "supported_protocols": ["ncp", "nwp", "nip"],
+          "max_frame_payload": 65535,
+          "ext_support": true,
+          "max_concurrent_streams": 64
+        }
+      },
+      "expected": {
+        "caps_frame": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:caps",
+          "count": 1,
+          "data": [{
+            "nps_version": "0.4",
+            "session_version": "0.4",
+            "max_frame_payload": 65535,
+            "negotiated_encoding": "msgpack",
+            "supported_protocols": ["ncp", "nwp", "nip"],
+            "ext_support": true,
+            "max_concurrent_streams": 32
+          }]
+        }
+      }
+    },
+    {
+      "id": "ncp.hello_caps.002",
+      "description": "Version downgrade: client supports up to v0.4 (min v0.3), server caps at v0.3. Negotiated nps_version = 0.3.",
+      "kind": "positive",
+      "input": {
+        "client_hello": {
+          "frame": "0x06",
+          "nps_version": "0.4",
+          "min_version": "0.3",
+          "supported_encodings": ["msgpack", "json"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 65535,
+          "ext_support": false
+        },
+        "server_caps": {
+          "nps_version": "0.3",
+          "min_version": "0.3",
+          "supported_encodings": ["json"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 32768,
+          "ext_support": false
+        }
+      },
+      "expected": {
+        "caps_frame": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:caps",
+          "count": 1,
+          "data": [{
+            "nps_version": "0.3",
+            "session_version": "0.3",
+            "max_frame_payload": 32768,
+            "negotiated_encoding": "json",
+            "supported_protocols": ["ncp", "nwp"],
+            "ext_support": false,
+            "max_concurrent_streams": 32
+          }]
+        }
+      }
+    },
+    {
+      "id": "ncp.hello_caps.003",
+      "description": "Encoding fallback: client prefers msgpack but server only supports json — server picks the highest client preference it also supports, i.e. json.",
+      "kind": "positive",
+      "input": {
+        "client_hello": {
+          "frame": "0x06",
+          "nps_version": "0.4",
+          "supported_encodings": ["msgpack", "json"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 65535,
+          "ext_support": true
+        },
+        "server_caps": {
+          "nps_version": "0.4",
+          "supported_encodings": ["json"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 65535,
+          "ext_support": true
+        }
+      },
+      "expected": {
+        "caps_frame": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:caps",
+          "count": 1,
+          "data": [{
+            "nps_version": "0.4",
+            "session_version": "0.4",
+            "max_frame_payload": 65535,
+            "negotiated_encoding": "json",
+            "supported_protocols": ["ncp", "nwp"],
+            "ext_support": true,
+            "max_concurrent_streams": 32
+          }]
+        }
+      }
+    },
+    {
+      "id": "ncp.hello_caps.004",
+      "description": "Negative: client min_version=0.5 but server only supports up to 0.4 — no overlap. Server MUST reply ErrorFrame with NCP-VERSION-UNSUPPORTED instead of CapsFrame.",
+      "kind": "negative",
+      "input": {
+        "client_hello": {
+          "frame": "0x06",
+          "nps_version": "0.6",
+          "min_version": "0.5",
+          "supported_encodings": ["msgpack"],
+          "supported_protocols": ["ncp"]
+        },
+        "server_caps": {
+          "nps_version": "0.4",
+          "min_version": "0.3",
+          "supported_encodings": ["msgpack"],
+          "supported_protocols": ["ncp"]
+        }
+      },
+      "expected": {
+        "error_frame": {
+          "frame": "0xFE",
+          "status": "NPS-PROTO-VERSION-INCOMPATIBLE",
+          "error": "NCP-VERSION-INCOMPATIBLE"
+        }
+      }
+    },
+    {
+      "id": "ncp.hello_caps.005",
+      "description": "Negative: client and server share no encoding (client only msgpack, server only json with no fallback). MUST return NCP-ENCODING-UNSUPPORTED.",
+      "kind": "negative",
+      "input": {
+        "client_hello": {
+          "frame": "0x06",
+          "nps_version": "0.4",
+          "supported_encodings": ["msgpack"],
+          "supported_protocols": ["ncp"]
+        },
+        "server_caps": {
+          "nps_version": "0.4",
+          "supported_encodings": ["json"],
+          "supported_protocols": ["ncp"]
+        }
+      },
+      "expected": {
+        "error_frame": {
+          "frame": "0xFE",
+          "status": "NPS-SERVER-ENCODING-UNSUPPORTED",
+          "error": "NCP-ENCODING-UNSUPPORTED"
+        }
+      }
+    }
+  ]
+}

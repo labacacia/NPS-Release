@@ -2,9 +2,11 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP），当前套件版本 **1.0.0-alpha.11**。
+六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。最新已发布包组为 **1.0.0-alpha.13**，当前文档已为 **1.0.0-alpha.14** candidate 预先对齐。
 
-> npm 说明：TypeScript 源码/tag 是 `v1.0.0-alpha.11`，但 npm 上的 `@labacacia/nps-sdk@1.0.0-alpha.11` tarball 缺少 `dist/`，已 deprecated。当前请安装 `@labacacia/nps-sdk@alpha`；它临时解析到 `1.0.0-alpha.11`。
+> alpha.14 candidate 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。正式发包前，安装片段仍指向最新已发布包。
+
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.13` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
 
 ---
 
@@ -25,7 +27,7 @@
 
 ## NIP CA Server
 
-可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构，自 `v1.0.0-alpha.11` 起从 SDK 拆出独立发布。
+可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构，自 `v1.0.0-alpha.11` 起从 SDK 拆出独立发布；当前公共文档跟踪 alpha.14 的签名 CRL 与 remote-client 边界。
 
 | 仓库 | 技术栈 | 快速开始 |
 |------|--------|----------|
@@ -37,13 +39,13 @@
 
 ## NPS Daemons
 
-标准三层 NPS 拓扑的参考部署二进制，当前版本 `v1.0.0-alpha.11`。
+标准三层 NPS 拓扑的参考部署二进制，最新已发布版本为 `v1.0.0-alpha.13`，当前文档跟踪 alpha.14 candidate 的 native NCP TLS/mTLS 与 NWP serving 边界。
 
 | 仓库 | Daemon | 快速开始 |
 |------|--------|----------|
-| [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd`（L1，:17433）· `nps-runner`（L1 FaaS）· `nps-gateway`（L2，:8080）· `nps-registry`（L2 NDP，:17436）| `docker compose up -d` |
+| [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd`（L1，:17433）· `nps-runner`（L1 FaaS）· `nps-ingress`（L2，:8080）· `nps-registry`（L2 NDP，:17436）| `docker compose up -d` |
 
-`nps-gateway` 是进程级 Internet ingress daemon 名，不是 NWP 中已退役的
+`nps-ingress` 是进程级 Internet ingress daemon 名，不是 NWP 中已退役的
 **Gateway Node** 逻辑角色。CR-0001 已将该逻辑角色替换为 **Anchor Node**
 和 **Bridge Node**。
 

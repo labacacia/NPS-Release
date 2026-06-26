@@ -1,0 +1,324 @@
+{
+  "name": "nwp-action-frame",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-2-NWP.md §7",
+  "description": "ActionFrame (0x11) conformance vectors. Covers: (a) idempotency_key replay semantics and conflict on concurrent in-flight key, (b) async task lifecycle state transitions (pending → running → completed / failed / cancelled per §7.2), (c) the two system-reserved operations `system.task.status` and `system.task.cancel` (§7.3), (d) callback_url shape validation per §7.1 and §14.6 (https-only, no internal IPs, SSRF-safe). All `expected.error` codes refer to `spec/error-codes.md`.",
+  "vectors": [
+    {
+      "id": "nwp.action.001",
+      "description": "Positive — minimal sync ActionFrame. action_id `orders.create` with params; no idempotency_key, no async. Asserts the frame parses and is dispatched.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "orders.create",
+          "params": { "product_id": 1001, "quantity": 2 },
+          "timeout_ms": 5000,
+          "request_id": "550e8400-e29b-41d4-a716-446655440000"
+        }
+      },
+      "expected": {
+        "dispatched": true,
+        "async": false,
+        "response_kind": "CapsFrame"
+      }
+    },
+    {
+      "id": "nwp.action.002",
+      "description": "Positive — async ActionFrame with idempotency_key. Initial response MUST be a CapsFrame carrying `{task_id, status: \"pending\", poll_url, request_id}` per §7.2.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "orders.create",
+          "params": { "product_id": 1001, "quantity": 2 },
+          "idempotency_key": "550e8400-e29b-41d4-a716-446655440000",
+          "timeout_ms": 10000,
+          "async": true,
+          "callback_url": "https://agent.myapp.com/callbacks/nwp",
+          "priority": "normal",
+          "request_id": "550e8400-e29b-41d4-a716-446655440003"
+        }
+      },
+      "expected": {
+        "dispatched": true,
+        "async": true,
+        "response_kind": "CapsFrame",
+        "response_data": {
+          "task_id": "<uuid-v4>",
+          "status": "pending",
+          "poll_url": "<nwp-url>",
+          "estimated_ms": "<uint32>",
+          "request_id": "550e8400-e29b-41d4-a716-446655440003"
+        }
+      }
+    },
+    {
+      "id": "nwp.action.003",
+      "description": "Positive — idempotency replay. Second submission of the same `idempotency_key` after the first completed within the 24h window MUST return the cached completion result (§7.1: \"valid for 24 hours\") instead of re-executing.",
+      "kind": "positive",
+      "input": {
+        "sequence": [
+          {
+            "frame": {
+              "frame": "0x11",
+              "action_id": "orders.create",
+              "params": { "product_id": 1001, "quantity": 2 },
+              "idempotency_key": "11111111-2222-4333-8444-555555555555",
+              "async": false,
+              "request_id": "aaaaaaaa-bbbb-4ccc-8ddd-eeeeeeeeeeee"
+            },
+            "outcome": "completed",
+            "result": { "order_id": "ORD-9001" }
+          },
+          {
+            "frame": {
+              "frame": "0x11",
+              "action_id": "orders.create",
+              "params": { "product_id": 1001, "quantity": 2 },
+              "idempotency_key": "11111111-2222-4333-8444-555555555555",
+              "async": false,
+              "request_id": "ffffffff-1111-4222-8333-444444444444"
+            },
+            "outcome": "replay"
+          }
+        ]
+      },
+      "expected": {
+        "second_response_kind": "CapsFrame",
+        "second_response_result_equals_first": true,
+        "executed_twice": false,
+        "note": "Replay returns the cached result; request_id in the response echoes the *replay* request, but the business result is byte-identical to the first execution."
+      }
+    },
+    {
+      "id": "nwp.action.004",
+      "description": "Negative — idempotency conflict. Second submission arrives while the first is still in `pending`/`running`. MUST be rejected with `NWP-ACTION-IDEMPOTENCY-CONFLICT` rather than queued (§7, §13).",
+      "kind": "negative",
+      "input": {
+        "sequence": [
+          {
+            "frame": {
+              "frame": "0x11",
+              "action_id": "orders.create",
+              "params": { "product_id": 1001, "quantity": 2 },
+              "idempotency_key": "22222222-3333-4444-8555-666666666666",
+              "async": true,
+              "request_id": "bbbbbbbb-cccc-4ddd-8eee-ffffffffffff"
+            },
+            "outcome": "running"
+          },
+          {
+            "frame": {
+              "frame": "0x11",
+              "action_id": "orders.create",
+              "params": { "product_id": 1001, "quantity": 2 },
+              "idempotency_key": "22222222-3333-4444-8555-666666666666",
+              "async": true,
+              "request_id": "cccccccc-dddd-4eee-8fff-000000000000"
+            },
+            "outcome": "must_reject"
+          }
+        ]
+      },
+      "expected": {
+        "error": "NWP-ACTION-IDEMPOTENCY-CONFLICT",
+        "status": "NPS-CLIENT-CONFLICT"
+      }
+    },
+    {
+      "id": "nwp.action.005",
+      "description": "Positive — async lifecycle: pending → running → completed. Poll via `system.task.status` after the initial `pending` ack; status MUST transition monotonically. `result` is null until status=`completed`.",
+      "kind": "positive",
+      "input": {
+        "initial": {
+          "frame": "0x11",
+          "action_id": "orders.create",
+          "params": { "product_id": 1001, "quantity": 2 },
+          "async": true,
+          "request_id": "11111111-2222-4333-8444-666666666666"
+        },
+        "poll": {
+          "frame": "0x11",
+          "action_id": "system.task.status",
+          "params": { "task_id": "<task_id-from-initial-ack>" }
+        }
+      },
+      "expected": {
+        "lifecycle": [
+          { "status": "pending", "result": null, "error": null },
+          { "status": "running", "result": null, "error": null, "progress_min": 0.0, "progress_max": 1.0 },
+          { "status": "completed", "result": "<non-null>", "error": null }
+        ],
+        "monotonic_states": true,
+        "request_id_echoed": true,
+        "note": "`status` strings are the §7.2 state machine in lowercase: `pending`/`running`/`completed`/`failed`/`cancelled`."
+      }
+    },
+    {
+      "id": "nwp.action.006",
+      "description": "Positive — async lifecycle: pending → running → failed. `system.task.status` response MUST carry a non-null `error` object and a null `result` on terminal failure.",
+      "kind": "positive",
+      "input": {
+        "initial": {
+          "frame": "0x11",
+          "action_id": "orders.create",
+          "params": { "product_id": 9999, "quantity": -1 },
+          "async": true,
+          "request_id": "22222222-3333-4444-8555-777777777777"
+        },
+        "poll": {
+          "frame": "0x11",
+          "action_id": "system.task.status",
+          "params": { "task_id": "<task_id-from-initial-ack>" }
+        }
+      },
+      "expected": {
+        "lifecycle": [
+          { "status": "pending" },
+          { "status": "running" },
+          { "status": "failed", "result": null, "error": { "code": "<NWP-* or domain code>", "message": "<string>" } }
+        ],
+        "terminal": "failed"
+      }
+    },
+    {
+      "id": "nwp.action.007",
+      "description": "Positive — system.task.cancel on a running task returns `{cancelled: true}` and subsequent status polls MUST report `cancelled`.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "system.task.cancel",
+          "params": { "task_id": "33333333-4444-4555-8666-888888888888" }
+        },
+        "pre_state": "running"
+      },
+      "expected": {
+        "response_kind": "CapsFrame",
+        "response_data": { "cancelled": true },
+        "post_state": "cancelled"
+      }
+    },
+    {
+      "id": "nwp.action.008",
+      "description": "Negative — system.task.cancel on an already-completed task MUST return `NWP-TASK-ALREADY-COMPLETED` (§13). State machine forbids cancelling terminal states.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "system.task.cancel",
+          "params": { "task_id": "44444444-5555-4666-8777-999999999999" }
+        },
+        "pre_state": "completed"
+      },
+      "expected": {
+        "error": "NWP-TASK-ALREADY-COMPLETED",
+        "status": "NPS-CLIENT-CONFLICT"
+      }
+    },
+    {
+      "id": "nwp.action.009",
+      "description": "Negative — system.task.status for an unknown task_id MUST return `NWP-TASK-NOT-FOUND` (§13).",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "system.task.status",
+          "params": { "task_id": "ffffffff-ffff-4fff-8fff-ffffffffffff" }
+        }
+      },
+      "expected": {
+        "error": "NWP-TASK-NOT-FOUND",
+        "status": "NPS-CLIENT-NOT-FOUND"
+      }
+    },
+    {
+      "id": "nwp.action.010",
+      "description": "Negative — callback_url uses a non-`https://` scheme. §14.6 forbids any scheme but https; nodes MUST reject before dispatch. Error: `NWP-ACTION-PARAMS-INVALID` (callback shape is part of the action envelope).",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "orders.create",
+          "params": { "product_id": 1001, "quantity": 1 },
+          "async": true,
+          "callback_url": "http://agent.myapp.com/callbacks/nwp",
+          "request_id": "55555555-6666-4777-8888-aaaaaaaaaaaa"
+        }
+      },
+      "expected": {
+        "error": "NWP-ACTION-PARAMS-INVALID",
+        "status": "NPS-CLIENT-UNPROCESSABLE",
+        "reason": "callback_url scheme must be https per §14.6"
+      }
+    },
+    {
+      "id": "nwp.action.011",
+      "description": "Negative — callback_url targets an RFC 1918 private address. §14.6 SSRF check MUST reject. Reuses `NWP-ACTION-PARAMS-INVALID` since the URL is structurally valid but policy-rejected.",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "orders.create",
+          "params": { "product_id": 1001, "quantity": 1 },
+          "async": true,
+          "callback_url": "https://10.0.0.5/internal/callback",
+          "request_id": "66666666-7777-4888-8999-bbbbbbbbbbbb"
+        }
+      },
+      "expected": {
+        "error": "NWP-ACTION-PARAMS-INVALID",
+        "status": "NPS-CLIENT-UNPROCESSABLE",
+        "reason": "callback_url targets an internal/private network address (SSRF guard, §14.6)"
+      }
+    },
+    {
+      "id": "nwp.action.012",
+      "description": "Negative — unknown action_id MUST return `NWP-ACTION-NOT-FOUND` (§13).",
+      "kind": "negative",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "orders.does_not_exist",
+          "params": {},
+          "request_id": "77777777-8888-4999-8aaa-cccccccccccc"
+        }
+      },
+      "expected": {
+        "error": "NWP-ACTION-NOT-FOUND",
+        "status": "NPS-CLIENT-NOT-FOUND"
+      }
+    },
+    {
+      "id": "nwp.action.013",
+      "description": "Positive — system.task.status response shape. Asserts the exact fields and types §7.3 requires: task_id, status, progress (float 0..1), created_at/updated_at (ISO 8601 UTC `Z`), request_id, result, error.",
+      "kind": "positive",
+      "input": {
+        "frame": {
+          "frame": "0x11",
+          "action_id": "system.task.status",
+          "params": { "task_id": "88888888-9999-4aaa-8bbb-dddddddddddd" }
+        }
+      },
+      "expected": {
+        "response_kind": "CapsFrame",
+        "response_schema": {
+          "task_id": "string (uuid v4)",
+          "status": "string in {pending,running,completed,failed,cancelled}",
+          "progress": "number in [0.0, 1.0]",
+          "created_at": "string (RFC 3339 / ISO 8601, UTC, suffix Z)",
+          "updated_at": "string (RFC 3339 / ISO 8601, UTC, suffix Z)",
+          "request_id": "string (uuid v4)",
+          "result": "object | null",
+          "error": "object | null"
+        },
+        "constraints": [
+          "result and error are mutually exclusive: at most one is non-null",
+          "progress monotonically non-decreasing across status polls for the same task_id",
+          "updated_at >= created_at"
+        ]
+      }
+    }
+  ]
+}

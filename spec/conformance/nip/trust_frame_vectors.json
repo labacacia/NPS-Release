@@ -1,0 +1,246 @@
+{
+  "name": "nip-trust-frame",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-3-NIP.md §5.2",
+  "description": "TrustFrame (0x21) Ed25519 / ECDSA P-256 signature canonicalisation, signer_nid authorisation, trust_scope subset enforcement (no-scope-expansion principle, §10.3), and `nodes` `nwp://` pattern matching. Canonicalisation is the same RFC 8785 JCS rule as IdentFrame in §5.1: keys sorted alphabetically, no whitespace, `signature` field removed. Vectors carry deterministic key material so every SDK produces bit-identical canonical bytes and accepts / rejects the same way.",
+  "vectors": [
+    {
+      "id": "nip.trust.001",
+      "description": "Canonicalisation of a minimal TrustFrame for signature verification. Keys MUST appear in lexicographic order; `signature` MUST be stripped. The grant covers a path-prefix glob (`nwp://api.org-a.com/public/**`) and the standard capability tokens `nwp:query` and `nwp:action`.",
+      "kind": "positive",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query", "nwp:action"],
+          "nodes": ["nwp://api.org-a.com/public/**"],
+          "issued_at": "2026-05-11T00:00:00Z",
+          "expires_at": "2026-12-31T00:00:00Z",
+          "serial": "00000000000A3F9C",
+          "signer_nid": "urn:nps:org:org-a.com",
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation"
+        }
+      },
+      "expected": {
+        "canonical_for_signing": "{\"expires_at\":\"2026-12-31T00:00:00Z\",\"frame\":\"0x21\",\"grantee_ca\":\"urn:nps:org:org-b.com\",\"grantor_nid\":\"urn:nps:org:org-a.com\",\"issued_at\":\"2026-05-11T00:00:00Z\",\"nodes\":[\"nwp://api.org-a.com/public/**\"],\"serial\":\"00000000000A3F9C\",\"signer_nid\":\"urn:nps:org:org-a.com\",\"trust_scope\":[\"nwp:query\",\"nwp:action\"]}",
+        "signature_field_excluded": true,
+        "keys_in_canonical_order": ["expires_at", "frame", "grantee_ca", "grantor_nid", "issued_at", "nodes", "serial", "signer_nid", "trust_scope"]
+      }
+    },
+    {
+      "id": "nip.trust.002",
+      "description": "Operator-signed TrustFrame: `signer_nid` is an operator NID under `grantor_nid` (not equal to `grantor_nid` itself). Spec §5.2 permits this; verifier accepts as long as the operator key is recognised under the grantor's NID hierarchy.",
+      "kind": "positive",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query"],
+          "nodes": ["nwp://api.org-a.com/v1/*"],
+          "issued_at": "2026-05-11T00:00:00Z",
+          "expires_at": "2026-08-11T00:00:00Z",
+          "serial": "00000000000A3FA1",
+          "signer_nid": "urn:nps:operator:org-a.com:trust-issuer-1",
+          "signature": "ed25519:placeholder-stripped-during-canonicalisation"
+        }
+      },
+      "expected": {
+        "signer_authorised": true,
+        "operator_relationship": "signer_nid is under grantor_nid"
+      }
+    },
+    {
+      "id": "nip.trust.003",
+      "description": "Negative: `signer_nid` is unrelated to `grantor_nid` (neither equal to it nor an operator under it). Verifier MUST reject with NIP-TRUST-FRAME-INVALID — the signer is not authorised to issue a trust grant on behalf of `grantor_nid`.",
+      "kind": "negative",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query"],
+          "nodes": ["nwp://api.org-a.com/public/**"],
+          "issued_at": "2026-05-11T00:00:00Z",
+          "expires_at": "2026-12-31T00:00:00Z",
+          "serial": "00000000000A3FA2",
+          "signer_nid": "urn:nps:org:totally-different-org.com",
+          "signature": "ed25519:0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+        }
+      },
+      "expected": {
+        "error": "NIP-TRUST-FRAME-INVALID",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nip.trust.004",
+      "description": "Negative: scope-expansion attempt. The grantor itself holds only `nwp:query`, but tries to grant `nwp:query` + `nop:orchestrate` to the grantee. No-scope-expansion principle (§10.3) — a CA cannot grant capabilities it does not itself hold. Verifier MUST reject with NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR.",
+      "kind": "negative",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query", "nop:orchestrate"],
+          "nodes": ["nwp://api.org-a.com/public/**"],
+          "issued_at": "2026-05-11T00:00:00Z",
+          "expires_at": "2026-12-31T00:00:00Z",
+          "serial": "00000000000A3FA3",
+          "signer_nid": "urn:nps:org:org-a.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "grantor_held_capabilities": ["nwp:query"]
+      },
+      "expected": {
+        "error": "NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR",
+        "status": "NPS-AUTH-FORBIDDEN"
+      }
+    },
+    {
+      "id": "nip.trust.005",
+      "description": "Negative: `trust_scope` carries a capability token not in the §5.1 standard enum (`nwp:hack` is not a defined capability). Verifier MUST reject with NIP-TRUST-FRAME-INVALID — `trust_scope` MUST be a subset of the standard capability enum, not arbitrary strings.",
+      "kind": "negative",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query", "nwp:hack"],
+          "nodes": ["nwp://api.org-a.com/public/**"],
+          "issued_at": "2026-05-11T00:00:00Z",
+          "expires_at": "2026-12-31T00:00:00Z",
+          "serial": "00000000000A3FA4",
+          "signer_nid": "urn:nps:org:org-a.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "error": "NIP-TRUST-FRAME-INVALID",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nip.trust.006",
+      "description": "Positive `nodes` pattern match: TrustFrame grants `nwp://api.org-a.com/public/**`; an inbound IdentFrame issued by the grantee under this trust requests `nwp://api.org-a.com/public/v1/products/list`. `**` matches across segments, so the grant covers the request.",
+      "kind": "positive",
+      "input": {
+        "trust_frame_nodes": ["nwp://api.org-a.com/public/**"],
+        "request_node": "nwp://api.org-a.com/public/v1/products/list"
+      },
+      "expected": {
+        "nodes_match": true
+      }
+    },
+    {
+      "id": "nip.trust.007",
+      "description": "Single-segment glob `*` does NOT span path separators. Grant `nwp://api.org-a.com/v1/*` covers `/v1/products` (one segment) but NOT `/v1/products/list` (two segments). Verifier MUST distinguish `*` (one segment) from `**` (multi-segment) per §5.2 `nodes` field definition.",
+      "kind": "negative",
+      "input": {
+        "trust_frame_nodes": ["nwp://api.org-a.com/v1/*"],
+        "request_node": "nwp://api.org-a.com/v1/products/list"
+      },
+      "expected": {
+        "nodes_match": false,
+        "error": "NWP-AUTH-NID-SCOPE-VIOLATION",
+        "status": "NPS-AUTH-FORBIDDEN"
+      }
+    },
+    {
+      "id": "nip.trust.008",
+      "description": "Negative: invalid `nwp://` URL pattern in `nodes`. Bare path with no scheme (`/public/**`) is not a valid `nwp://` URL pattern — MUST be rejected with NIP-TRUST-FRAME-NODES-PATTERN-INVALID per §5.2 error table.",
+      "kind": "negative",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query"],
+          "nodes": ["/public/**"],
+          "issued_at": "2026-05-11T00:00:00Z",
+          "expires_at": "2026-12-31T00:00:00Z",
+          "serial": "00000000000A3FA5",
+          "signer_nid": "urn:nps:org:org-a.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "error": "NIP-TRUST-FRAME-NODES-PATTERN-INVALID",
+        "status": "NPS-CLIENT-BAD-FRAME"
+      }
+    },
+    {
+      "id": "nip.trust.009",
+      "description": "Negative: TrustFrame whose `expires_at` is in the past at verification time. MUST be rejected with NIP-TRUST-FRAME-EXPIRED regardless of signature validity (§5.2 error table).",
+      "kind": "negative",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query"],
+          "nodes": ["nwp://api.org-a.com/public/**"],
+          "issued_at": "2025-01-01T00:00:00Z",
+          "expires_at": "2025-12-31T00:00:00Z",
+          "serial": "00000000000A3FA6",
+          "signer_nid": "urn:nps:org:org-a.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "verification_time": "2026-05-09T12:00:00Z"
+      },
+      "expected": {
+        "error": "NIP-TRUST-FRAME-EXPIRED",
+        "status": "NPS-AUTH-UNAUTHENTICATED"
+      }
+    },
+    {
+      "id": "nip.trust.010",
+      "description": "Negative: TrustFrame valid in shape and signature, but the `grantor_nid`'s own CA cert is revoked at verification time. MUST be rejected with NIP-TRUST-FRAME-GRANTOR-REVOKED — a revoked grantor cannot extend trust.",
+      "kind": "negative",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query"],
+          "nodes": ["nwp://api.org-a.com/public/**"],
+          "issued_at": "2026-05-11T00:00:00Z",
+          "expires_at": "2026-12-31T00:00:00Z",
+          "serial": "00000000000A3FA7",
+          "signer_nid": "urn:nps:org:org-a.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        },
+        "grantor_cert_status": "revoked"
+      },
+      "expected": {
+        "error": "NIP-TRUST-FRAME-GRANTOR-REVOKED",
+        "status": "NPS-AUTH-UNAUTHENTICATED"
+      }
+    },
+    {
+      "id": "nip.trust.011",
+      "description": "Empty `nodes` array. Per §5.2 the grant is well-formed but covers no nodes (effectively inert): any request will fail the `nodes` pattern check, with NWP-AUTH-NID-SCOPE-VIOLATION at the consuming Node. The TrustFrame itself MUST verify successfully — it is the downstream scope check that fails.",
+      "kind": "positive",
+      "input": {
+        "trust_frame": {
+          "frame": "0x21",
+          "grantor_nid": "urn:nps:org:org-a.com",
+          "grantee_ca": "urn:nps:org:org-b.com",
+          "trust_scope": ["nwp:query"],
+          "nodes": [],
+          "issued_at": "2026-05-11T00:00:00Z",
+          "expires_at": "2026-12-31T00:00:00Z",
+          "serial": "00000000000A3FA8",
+          "signer_nid": "urn:nps:org:org-a.com",
+          "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
+        }
+      },
+      "expected": {
+        "trust_frame_valid": true,
+        "downstream_request_match": false,
+        "downstream_error_on_use": "NWP-AUTH-NID-SCOPE-VIOLATION"
+      }
+    }
+  ]
+}
