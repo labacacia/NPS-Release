@@ -49,6 +49,10 @@
 | [NPS-CR-0002](./NPS-CR-0002-anchor-topology-queries.md) | Anchor Node 标准拓扑查询类型（`topology.snapshot` / `topology.stream`） | v1.0-alpha.4 | Implemented（2026-04-27）|
 | [NPS-CR-0003](./NPS-CR-0003-orchestrator-group-session-nids.md) | 编排器 group NID 与短期 session NID | v1.0-alpha.6 | Draft |
 | [NPS-CR-0004](./NPS-CR-0004-pen-wirein.md) | 写入 IANA 已分配的 PEN 65715（替换临时 `1.3.6.1.4.1.99999`） | v1.0-alpha.6 | Implemented（2026-05-08）|
+| [NPS-CR-0005](./NPS-CR-0005-nip-ca-ra-model.md) | NIP CA RA 注册授权模型（三层准入） | v1.0-alpha.7 | Implemented |
+| [NPS-CR-0006](./NPS-CR-0006-subscribe-frame.md) | SubscribeFrame（NWP §13）正式规范 | v1.0.0-alpha.11 | Accepted（2026-05-28）|
+| [NPS-CR-0007](./NPS-CR-0007-nop-l3-runtime-integration.md) | NOP ↔ Node Profile L3 runtime 集成 | v1.0.0-alpha.12 | Accepted |
+| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 编码 | v1.0-alpha.15 或之后 | Proposed |
 
 ## 起草新 CR 的方法
 

@@ -57,7 +57,7 @@ is normative in [NPS-4 §3.1](../NPS-4-NDP.md#31-announceframe-0x30).
 | **Position** | Passive frame I/O | Subscribe and react | Spawn on demand |
 | **NCP encoding** | Tier-1 JSON MUST; Tier-2 OPTIONAL | + Tier-2 MsgPack MUST | + Multiplexed long-lived connections MUST |
 | **NIP** | Ed25519 sign / verify MUST | + Trust-chain validation MUST | + Dynamic sub-NID issuance MUST |
-| **NDP** | Announce / Resolve (static) MUST | + GraphFrame subscription MUST | + On-demand register / deregister MUST |
+| **NDP** | Announce / Resolve (static) MUST | + GraphFrame topology snapshot consumption MUST | + On-demand register / deregister MUST |
 | **NWP** | ActionFrame pull MUST | + ActionFrame push + Subscribe MUST | + Query fan-out MUST |
 | **NOP** | Not required | + TaskFrame / DelegateFrame MUST | + DAG execution + K-of-N sync barrier MUST |
 | **Activation modes** | `ephemeral` only (pull-style pseudo-resident) | `resident` MUST; others MAY | All three; default `ephemeral` |
@@ -134,7 +134,7 @@ L2 = L1 + every "+" row in the L2 column of §2. Headline additions:
 
 - **NCP**: Tier-2 MsgPack MUST.
 - **NIP**: Trust-chain validation against a configured trust anchor MUST.
-- **NDP**: GraphFrame subscription MUST; node SHOULD react to incremental changes within the GraphFrame `seq` window.
+- **NDP**: GraphFrame topology snapshot consumption MUST; node SHOULD refresh its view within the snapshot `ttl` and react to changed `nodes` / `edges` before using stale topology.
 - **NWP**: ActionFrame push and Subscribe MUST; pull remains available. Anchor Nodes MUST additionally implement the `topology.snapshot` / `topology.stream` reserved query types ([NPS-2 §12](../NPS-2-NWP.md)); see [NPS-AaaS-Profile](./NPS-AaaS-Profile.md) L2-08.
 - **NOP**: TaskFrame and DelegateFrame MUST be accepted; full DAG execution is L3.
 - **Activation**: `resident` mode MUST be supported; `hybrid` MAY be supported.

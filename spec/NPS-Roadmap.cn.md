@@ -2,8 +2,8 @@
 
 # NPS 路线图
 
-**Version**: 0.6  
-**Date**: 2026-06-12  
+**Version**: 0.7
+**Date**: 2026-06-27
 **归属**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -33,7 +33,7 @@
 
 **目标**：建立 NPS 完整规范骨架，统一帧空间和命名，输出可供社区评论的 v0.2-draft。
 
-- [x] `NPS-0-Overview.md` v0.3
+- [x] `NPS-0-Overview.md` v0.4
 - [x] `NPS-1-NCP.md` v0.6（传输双模、可配帧大小、ErrorFrame）
 - [x] `NPS-2-NWP.md` v0.8（AnchorFrame Node 发布、CGN、拓扑查询）
 - [x] `NPS-3-NIP.md` v0.5（metadata 字段、NPS 状态码、X.509 NID 原型）
@@ -244,7 +244,7 @@ v1.0.0-alpha.7 待开展任务：
 
 | 事项 | 备注 |
 |------|------|
-| **NCP v0.8** | RFC-0006 原生模式 TLS 绑定（ALPN `nps/1.0`、mTLS、session-NID 绑定 `NCP-NID-MISMATCH`、恢复票据；§7.5）；NopFrame (0x07) 保活/心跳帧（null 载荷，双向）；`HelloFrame.ping_interval_ms`（uint32，0=禁用）；`NCP-KEEPALIVE-TIMEOUT`（`NPS-SERVER-TIMEOUT`）；§7.6 死节点检测（3 × ping_interval_ms）；2^32 帧或 24h 前重新密钥；`NCP-REKEY-REQUIRED` |
+| **NCP v0.9** | Tier-3 BinaryVector v1（`binary_vector.v1`、`NPBV` Payload、MessagePack 元数据 + little-endian float32 向量段）用于 NWP 向量搜索；RFC-0006 原生模式 TLS 绑定（ALPN `nps/1.0`、mTLS、session-NID 绑定 `NCP-NID-MISMATCH`、恢复票据；§7.5）；NopFrame (0x07) 保活/心跳帧（null 载荷，双向）；`HelloFrame.ping_interval_ms`（uint32，0=禁用）；`NCP-KEEPALIVE-TIMEOUT`（`NPS-SERVER-TIMEOUT`）；§7.6 死节点检测（3 × ping_interval_ms）；2^32 帧或 24h 前重新密钥；`NCP-REKEY-REQUIRED` |
 | **NWP v0.14** | Bridge Node 正式合规（§16）+ `bridge_target` 往返向量；NWM `manifest_version` 改为 uint32 单调递增计数器；新增 `manifest_updated_at`（ISO 8601）；所有 `GET /.nwm` 响应 MUST 返回 `X-NWM-Version`；条件请求 `If-None-Match: <uint32>` |
 | **NIP v0.10** | §6.1 短时/可续期边缘 mTLS 证书 profile；`IdentFrame.node_roles`（array[string]）Phase 1–2 自声明；Phase 3 经 `id-nps-node-roles` 扩展（65715.2.2）CA 证明；`NIP-CERT-NODE-ROLES-MISMATCH` |
 | **NDP v0.9** | `AnnounceFrame` liveness 字段 `health` / `last_seen` + §3.2.1 解析期失效 `NDP-RESOLVE-STALE`；`heartbeat_interval_ms`（uint32，默认 60000）+ 公告期 `NDP-ANNOUNCE-STALE`；`spawn_spec_ref`（字符串引用）解析为 SpawnSpec，正式模式 §3.1.2（oci_image / command / resource_limits：cpu_millicores/memory_mb，Profile L3）；§9 联邦转发环路检测 |
@@ -276,7 +276,8 @@ v1.0.0-alpha.7 待开展任务：
 - [ ] IETF Internet-Draft（NCP + NWP 核心规范）
 - [ ] NPS 1.0 规范冻结
 - [ ] ISO/IEC JTC 1 评估
-- [ ] Tier-3 MatrixTensor 规范
+- [x] Tier-3 BinaryVector v1 规范（CR-0008）
+- [ ] Tier-3 MatrixTensor / 更多 dtype 扩展
 
 ---
 

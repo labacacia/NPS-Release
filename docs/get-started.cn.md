@@ -4,8 +4,8 @@
 
 NPS 是一套多层协议族，从哪里开始取决于你在构建什么。
 
-最新 suite release 是 `1.0.0-alpha.14`。当前文档与 SDK 说明已经对齐
-alpha.14 release 边界；各生态包管理器可用性单独跟踪。
+最新 suite release 是 `1.0.0-alpha.15`。当前文档与 SDK 说明已经对齐
+alpha.15 release 边界；各生态包管理器可用性单独跟踪。
 
 ---
 
@@ -17,12 +17,12 @@ alpha.14 release 边界；各生态包管理器可用性单独跟踪。
 |------|------|--------------|
 | Python     | `pip install nps-lib==1.0.0a13`                          | [SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
 | TypeScript | `npm install @labacacia/nps-sdk@alpha`                   | [SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
-| Rust       | `cargo add nps-sdk@=1.0.0-alpha.14`                       | [SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.14`  | [SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
-| Java       | `implementation("com.labacacia.nps:nps-java:1.0.0-alpha.14")` | [SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
-| .NET       | `dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.14` | [SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
+| Rust       | `cargo add nps-sdk@=1.0.0-alpha.15`                       | [SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
+| Go         | `go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.15`  | [SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| Java       | `implementation("com.labacacia.nps:nps-java:1.0.0-alpha.15")` | [SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
+| .NET       | `dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.15` | [SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.14` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；`alpha` dist-tag 指向最新已发布 alpha。
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.15` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；`alpha` dist-tag 指向最新已发布 alpha。
 
 ---
 

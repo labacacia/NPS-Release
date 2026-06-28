@@ -12,7 +12,7 @@
 
 任何 PR 在动手之前 **必须** 先开 RFC，如果它：
 
-- 占用 Reserved 位 / 码 / 命名空间（例如 encoding tier `0x02`、新帧类型、新的 NPS 状态码段）
+- 占用 Reserved 位 / 码 / 命名空间（例如 encoding tier `0x03`、新帧类型、新的 NPS 状态码段）
 - 在 `spec/frame-registry.yaml` 里增删帧
 - 引入新节点类型或新 endpoint sub-path
 - 改变现有帧的 on-the-wire 语义（不管是显式 breaking 还是静默变更）

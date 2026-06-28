@@ -13,7 +13,7 @@ it exists so the argument survives the decision.
 
 An RFC **MUST** be opened before any PR that:
 
-- Assigns a Reserved bit / code / namespace (e.g. encoding tier `0x02`,
+- Assigns a Reserved bit / code / namespace (e.g. encoding tier `0x03`,
   a new frame type, a new NPS status code range)
 - Adds or removes a frame in `spec/frame-registry.yaml`
 - Introduces a new node type or endpoint sub-path

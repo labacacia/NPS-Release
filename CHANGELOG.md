@@ -10,6 +10,18 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
+## [1.0.0-alpha.15] — 2026-06-28
+
+### Protocol Alignment and Hardening
+
+- Implemented the NCP Tier-3 BinaryVector policy across the SDK source trees and distribution repos, including malformed-frame/client-error conformance coverage.
+- Realigned NIP TrustFrame/RevokeFrame and NDP Announce/Graph/Federation semantics across Python, TypeScript, Go, Java, Rust, and .NET, including canonical Announce signed payloads, explicit heartbeat_interval_ms=0 handling, graph bounds, and revoke parent rules.
+- Hardened inbound NWP Bridge server dispatch with required caller verification, bounded request bodies, dispatch timeouts, sanitized client errors, and safer native-mode parser behavior.
+
+### Release Engineering
+
+- Synchronized the Dev source-of-truth into Release/spec, standalone SDK source trees, ingress/tool distribution repos, README banners, package manifests, lockfiles, and current alpha.15 version metadata.
+
 ## [1.0.0-alpha.14] — 2026-06-26
 
 ### Spec and Documentation

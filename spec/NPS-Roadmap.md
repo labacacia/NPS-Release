@@ -2,8 +2,8 @@ English | [中文版](./NPS-Roadmap.cn.md)
 
 # NPS Roadmap
 
-**Version**: 0.6  
-**Date**: 2026-06-11  
+**Version**: 0.7
+**Date**: 2026-06-27
 **Owner**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -33,7 +33,7 @@ Each phase breaks into three segments:
 
 **Goal**: establish the full NPS spec skeleton, unify the frame namespace and naming, produce a v0.2-draft for community comment.
 
-- [x] `NPS-0-Overview.md` v0.3
+- [x] `NPS-0-Overview.md` v0.4
 - [x] `NPS-1-NCP.md` v0.6 (dual transport, configurable frame size, ErrorFrame)
 - [x] `NPS-2-NWP.md` v0.8 (Node-published AnchorFrame, CGN, topology queries)
 - [x] `NPS-3-NIP.md` v0.5 (metadata field, NPS status codes, X.509 NID prototype)
@@ -230,11 +230,11 @@ Each phase breaks into three segments:
 | **NCP v0.7** | `max_concurrent_streams` negotiation (HelloFrame/CapsFrame, uint16, default 32, `NCP-STREAM-LIMIT-EXCEEDED`); QUIC stream mapping (one bidirectional stream per channel; HelloFrame on stream 0); rekeying at 2^32 frames or 24 h (`EXT rekey: true`, `NCP-REKEY-REQUIRED`); mid-stream ErrorFrame MAY→MUST |
 | **NWP v0.13** | §13 SubscribeFrame formal spec (CR-0006 Accepted): `subscription_id`, filter, `heartbeat_interval_ms`, `max_events`, opaque `cursor`; `topology:subscribe` SHOULD→MUST in §12.4; NWM `trust_anchors` (CA NID URN array); `bridge_target` schema standardized |
 | **NIP v0.9** | `IdentFrame.ocsp_staple` (base64url DER, `NIP-OCSP-STAPLE-EXPIRED`); OID table: `id-nps-node-roles` 65715.2.2 (ASN.1 SEQUENCE OF UTF8String) + `id-nps-capabilities` 65715.2.3; Phase 3 flag day at v1.0.0-beta.1 |
-| **NDP v0.8** | GraphFrame §5 topology-snapshot format (graph_id / nodes / edges / ttl / metadata; max 256 nodes / 1024 edges; `NDP-GRAPH-INVALID`, `NDP-GRAPH-TOO-LARGE`); §9 federation forwarding (`ndp-forwarded-by`, max 3 hops, `NDP-FEDERATION-LOOP`); `spawn_spec_ref` schema (OCI image, command, resource_limits) |
+| **NDP v0.8** | GraphFrame §3.3 topology-snapshot format (graph_id / nodes / edges / ttl / metadata; max 256 nodes / 1024 edges; `NDP-GRAPH-INVALID`, `NDP-GRAPH-TOO-LARGE`); §9 federation forwarding (`ndp-forwarded-by`, max 3 hops, `NDP-FEDERATION-LOOP`); `spawn_spec_ref` schema (OCI image, command, resource_limits) |
 | **NOP v0.6** | AlignStream ack/NAK protocol (window_size=16, `ack_seq`/`nak_seq`, `NOP-STREAM-NAK`); `weighted_first_k` + `merge_all` aggregate strategies; `DelegateFrame.target_cluster_anchor` cross-cluster routing; webhook HMAC (`callback_secret`, `X-NPS-Signature`, `NOP-CALLBACK-HMAC-MISSING`) |
 | **CR-0006** (Accepted 2026-05-28) | SubscribeFrame §13 formal spec; frame-registry promotion `proposed → stable` |
 | **RFC-0006** (Draft) | NCP native-mode transport binding: TCP length-prefix framing, QUIC stream mapping, rekeying, `max_concurrent_streams` conformance |
-| **SDK parity — all 6 SDKs** | Python/TS/Go/Java/Rust/.NET at alpha.11: NOP saga + AlignStream ack + cross-cluster; NDP security profiles + GraphFrame §5 + AnnounceFrame fields; NIP `ocsp_staple` + OID constants; NWP `SubscribeFrame` CR-0006 + `trust_anchors`; .NET: `IdNpsCapabilities` (65715.2.3), `TrustAnchors` in AnchorNodeOptions, `GraphFrame` §5 rewrite, `SubscribeFrame` CR-0006, `AggregateStrategy.WeightedFirstK/MergeAll`; 10 NuGet packages at 1.0.0-alpha.11 |
+| **SDK parity — all 6 SDKs** | Python/TS/Go/Java/Rust/.NET at alpha.11: NOP saga + AlignStream ack + cross-cluster; NDP security profiles + GraphFrame topology snapshots + AnnounceFrame fields; NIP `ocsp_staple` + OID constants; NWP `SubscribeFrame` CR-0006 + `trust_anchors`; .NET: `IdNpsCapabilities` (65715.2.3), `TrustAnchors` in AnchorNodeOptions, `GraphFrame` topology-snapshot rewrite, `SubscribeFrame` CR-0006, `AggregateStrategy.WeightedFirstK/MergeAll`; 10 NuGet packages at 1.0.0-alpha.11 |
 | **nps-ledger v1.0.0-alpha.11** | `POST /v1/log/federation/push` (NDP §9 loop detection, `X-NPS-Forwarded-By`, max 3 hops) |
 | **nps-probe v0.2** | Check 5: NWM `trust_anchors` format validation (NWP v0.13 §4.1) |
 | **nps-orchestrator v1.0.0-alpha.11** | Version bump + CHANGELOG backfill alpha.9/10/11 |
@@ -264,7 +264,7 @@ Each phase breaks into three segments:
 
 | Item | Notes |
 |------|-------|
-| **NCP v0.8** | RFC-0006 native-mode TLS binding (ALPN `nps/1.0`, mTLS, session-NID binding `NCP-NID-MISMATCH`, resumption tickets; §7.5); NopFrame (0x07) keepalive/heartbeat (null payload, bidirectional); `HelloFrame.ping_interval_ms` (uint32, 0=disabled); `NCP-KEEPALIVE-TIMEOUT` error code (`NPS-SERVER-TIMEOUT`); §7.6 dead-peer detection at `3 × ping_interval_ms`; rekeying rule before 2^32 frames or 24 h; `NCP-REKEY-REQUIRED` |
+| **NCP v0.9** | Tier-3 BinaryVector v1 (`binary_vector.v1`, `NPBV` payload, MessagePack metadata + little-endian float32 segments) for NWP vector search; RFC-0006 native-mode TLS binding (ALPN `nps/1.0`, mTLS, session-NID binding `NCP-NID-MISMATCH`, resumption tickets; §7.5); NopFrame (0x07) keepalive/heartbeat (null payload, bidirectional); `HelloFrame.ping_interval_ms` (uint32, 0=disabled); `NCP-KEEPALIVE-TIMEOUT` error code (`NPS-SERVER-TIMEOUT`); §7.6 dead-peer detection at `3 × ping_interval_ms`; rekeying rule before 2^32 frames or 24 h; `NCP-REKEY-REQUIRED` |
 | **NWP v0.14** | Bridge Node formal conformance (§16) + `bridge_target` round-trip vectors; NWM `manifest_version` type changed to uint32 monotonic counter; new NWM field `manifest_updated_at` (ISO 8601); `X-NWM-Version` response header MUST on all `GET /.nwm` responses; conditional-request via `If-None-Match: <uint32>` |
 | **NIP v0.10** | §6.1 short-lived / renewable edge-mTLS cert profile; `IdentFrame.node_roles` (array[string]) self-declared Phase 1–2; Phase 3 CA-attested via `id-nps-node-roles` extension (65715.2.2); `NIP-CERT-NODE-ROLES-MISMATCH` error code |
 | **NDP v0.9** | `AnnounceFrame` liveness fields `health` / `last_seen` + §3.2.1 resolve-time staleness `NDP-RESOLVE-STALE`; `heartbeat_interval_ms` (uint32, default 60000) + announce-time `NDP-ANNOUNCE-STALE`; `spawn_spec_ref` (string ref) resolving to a SpawnSpec, formal schema §3.1.2 (oci_image, command, resource_limits: cpu_millicores/memory_mb, Profile L3); §9 federation forwarding loop detection |
@@ -296,7 +296,8 @@ Each phase breaks into three segments:
 - [ ] IETF Internet-Draft (NCP + NWP core specs)
 - [ ] NPS 1.0 spec freeze
 - [ ] ISO/IEC JTC 1 evaluation
-- [ ] Tier-3 MatrixTensor specification
+- [x] Tier-3 BinaryVector v1 specification (CR-0008)
+- [ ] Tier-3 MatrixTensor / additional dtype extensions
 
 ---
 

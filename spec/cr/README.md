@@ -55,6 +55,8 @@ late in 0.x is still pending when v1.0 is cut).
 | [NPS-CR-0004](./NPS-CR-0004-pen-wirein.md) | Wire in IANA-assigned PEN 65715 (replace provisional `1.3.6.1.4.1.99999`) | v1.0-alpha.6 | Implemented (2026-05-08) |
 | [NPS-CR-0005](./NPS-CR-0005-nip-ca-ra-model.md) | NIP CA Registration Authority (RA) model — three-tier admission (allowlist / bootstrap token / pending queue) | v1.0-alpha.7 | Implemented |
 | [NPS-CR-0006](./NPS-CR-0006-subscribe-frame.md) | SubscribeFrame (NWP §13) formal specification — field table, lifecycle, cursor resume; frame-registry promotion `proposed → stable` | v1.0.0-alpha.11 | Accepted (2026-05-28) |
+| [NPS-CR-0007](./NPS-CR-0007-nop-l3-runtime-integration.md) | NOP ↔ Node Profile L3 runtime integration | v1.0.0-alpha.12 | Accepted |
+| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 encoding | v1.0-alpha.15 or later | Proposed |
 
 ## Authoring a new CR
 

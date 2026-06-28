@@ -4,8 +4,8 @@
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.8
-**Date**: 2026-04-25  
+**Version**: 0.9
+**Date**: 2026-06-27
 **Port**: 17433（默认，全协议族共用）  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 
@@ -127,7 +127,9 @@ Client (Agent)                        Server (Node)
 
 - Server MUST 选择 min(client.nps_version, server.nps_version) 作为会话版本
 - 若 client.min_version > server.nps_version，Server MUST 返回 `NCP-VERSION-INCOMPATIBLE` 并关闭连接
-- 协商后的编码格式 = client.supported_encodings ∩ server.supported_encodings 的最优交集（优先 Tier-2）
+- 协商结果是会话级编码策略（encoding policy），从 `client.supported_encodings` 按优先级选择，并受服务端支持集合约束。服务端在多个编码都可用时 SHOULD 尊重客户端优先级。
+- 一个会话 SHOULD 使用稳定的默认编码策略：生产环境用 Tier-2 MsgPack，开发/兼容场景用 Tier-1 JSON，Tier-3 BinaryVector 只作为已协商的向量密集型帧专用优化。仅当符合已协商策略时，才允许逐帧使用不同 Tier（例如协商前 HelloFrame 用 JSON、普通帧用 MsgPack、NWP 向量检索 QueryFrame 用 BinaryVector）。实现 MUST NOT 把帧头 tier bits 理解为应用层可随意切换编码的许可。
+- 只有当双方都支持 Tier-3 BinaryVector v1 时，服务端 MAY 启用 `binary_vector.v1`；启用它并不表示 Tier-3 成为会话默认编码。
 - 协商后的 `max_frame_payload` = min(client.max_frame_payload, server.max_frame_payload)
 
 **错误处理**
@@ -243,7 +245,7 @@ Bit 7   Bit 6   Bit 5   Bit 4   Bit 3   Bit 2   Bit 1   Bit 0
 
 | 位 | 名称 | 描述 |
 |----|------|------|
-| 0–1 | T0, T1 | 编码 Tier：`00`=Tier-1 JSON，`01`=Tier-2 MsgPack，`10`=Reserved（原 Tier-3 位），`11`=Reserved |
+| 0–1 | T0, T1 | 编码 Tier：`00`=Tier-1 JSON，`01`=Tier-2 MsgPack，`10`=Tier-3 BinaryVector v1，`11`=Reserved |
 | 2 | FINAL | 流式帧最终块标志（StreamFrame 专用，其他帧固定为 1） |
 | 3 | ENC | Payload 使用应用层 E2E 加密（见 §7.4）；TLS 传输层加密独立，开发模式可为 0 |
 | 4–6 | RSV | 保留，MUST 为 0，接收方 MUST 忽略 |
@@ -457,6 +459,7 @@ NCP 提供应用层语义背压，补充 TCP/QUIC 传输层流量控制：
     "session_version": "0.4",
     "max_frame_payload": 65535,
     "negotiated_encoding": "msgpack",
+    "enabled_encodings": ["msgpack", "binary_vector.v1"],
     "supported_protocols": ["ncp", "nwp", "nip"],
     "ext_support": true,
     "max_concurrent_streams": 32,
@@ -504,7 +507,7 @@ NCP 提供应用层语义背压，补充 TCP/QUIC 传输层流量控制：
 | `frame` | uint8 | 必填 | 固定值 `0x06` |
 | `nps_version` | string | 必填 | 客户端支持的最高 NPS 版本，格式 `"major.minor"` |
 | `min_version` | string | 可选 | 客户端支持的最低 NPS 版本，默认与 `nps_version` 相同 |
-| `supported_encodings` | array[string] | 必填 | 支持的编码格式列表，如 `["json", "msgpack"]`，按优先级降序 |
+| `supported_encodings` | array[string] | 必填 | 支持的编码格式列表，如 `["binary_vector.v1", "msgpack", "json"]`，按优先级降序 |
 | `supported_protocols` | array[string] | 必填 | 支持的上层协议列表，如 `["ncp", "nwp", "nip"]` |
 | `agent_id` | string | 可选 | Agent 的 NID（NIP 身份标识符），格式 `urn:nps:agent:{domain}:{id}` |
 | `max_frame_payload` | uint32 | 可选 | 客户端可接受的最大帧 Payload 字节数，默认 65535 |
@@ -526,7 +529,7 @@ NCP 提供应用层语义背压，补充 TCP/QUIC 传输层流量控制：
   "frame": "0x06",
   "nps_version": "0.4",
   "min_version": "0.3",
-  "supported_encodings": ["msgpack", "json"],
+  "supported_encodings": ["binary_vector.v1", "msgpack", "json"],
   "supported_protocols": ["ncp", "nwp"],
   "agent_id": "urn:nps:agent:ca.innolotus.com:550e8400",
   "max_frame_payload": 65535,
@@ -696,6 +699,11 @@ NPS 采用两级错误体系：
 | `NCP-FRAME-UNKNOWN-TYPE` | `NPS-CLIENT-BAD-FRAME` | 未知帧类型码 |
 | `NCP-FRAME-PAYLOAD-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | Payload 超过协商的 max_frame_payload |
 | `NCP-FRAME-FLAGS-INVALID` | `NPS-CLIENT-BAD-FRAME` | Flags 字段中保留位非零 |
+| `NCP-BINARY-VECTOR-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | Tier-3 BinaryVector Payload 格式不合法 |
+| `NCP-BINARY-VECTOR-DIM-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker 的维度与向量段不匹配 |
+| `NCP-BINARY-VECTOR-INDEX-INVALID` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker 引用了不存在的向量段 |
+| `NCP-BINARY-VECTOR-DTYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker 使用了不支持的 dtype |
+| `NCP-BINARY-VECTOR-TRUNCATED` | `NPS-CLIENT-BAD-FRAME` | BinaryVector 向量段被截断 |
 | `NCP-STREAM-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | StreamFrame 序号不连续 |
 | `NCP-STREAM-NOT-FOUND` | `NPS-STREAM-NOT-FOUND` | stream_id 引用的流不存在 |
 | `NCP-STREAM-LIMIT-EXCEEDED` | `NPS-STREAM-LIMIT` | 超出单连接最大并发流数 |
@@ -771,12 +779,43 @@ Node SHOULD 限制单连接最大并发流数（推荐默认值：32，通过 Ca
 |------|------|------|---------|
 | Tier-1 | JSON | `00` | 开发调试、兼容模式 |
 | Tier-2 | MsgPack（Binary） | `01` | 生产环境，~60% 体积压缩 |
-| — | Reserved | `10` | 保留，供未来高性能编码格式使用 |
+| Tier-3 | BinaryVector v1 | `10` | 向量密集型帧；MessagePack 元数据 + little-endian float32 原始向量段 |
 | — | Reserved | `11` | 保留 |
 
-默认：生产环境使用 Tier-2，开发环境使用 Tier-1。
+默认值是策略级默认：生产环境使用 Tier-2，开发/兼容场景使用 Tier-1。实现 SHOULD 在握手或配置阶段选择稳定的会话编码策略，并持续一致地应用；只有当策略明确允许某类帧或某个阶段使用不同 Tier 时，该帧 MAY 使用不同 Tier。
 
-> **注**：原 Tier-3 MatrixTensor 概念已从编码层级中移除，`10` 位标记为 Reserved。若未来定义高性能编码格式（如向量/张量专用编码），将通过正式 RFC 流程分配。
+Tier-3 是可选能力。除非会话已协商 `binary_vector.v1`，发送方 MUST NOT 发出 `Flags.T1T0 = 10`；不支持或未协商 Tier-3 的接收方 MUST 以 `NCP-ENCODING-UNSUPPORTED` 拒绝该帧。`Flags.T1T0 = 11` 仍为保留值，MUST 以 `NCP-FRAME-FLAGS-INVALID` 拒绝。
+
+### 8.1 Tier-3 BinaryVector v1 Payload
+
+Tier-3 BinaryVector v1 是帧 Payload 的编码格式，不替代 NWP 语义。帧类型字节仍决定逻辑帧类型；Tier-3 Payload 只负责把该帧的元数据与稠密向量段编码到线上格式。
+
+协商 token：`binary_vector.v1`。
+
+二进制布局：
+
+| Offset | Size | 字段 | 编码 |
+|--------|------|------|------|
+| 0 | 4 | Magic | ASCII `NPBV` |
+| 4 | 1 | Version | `0x01` |
+| 5 | 1 | Flags | v1 中固定 `0x00`；接收方 MUST 拒绝非零值 |
+| 6 | 2 | `vector_count` | uint16，大端 |
+| 8 | 4 | `metadata_len` | uint32，大端 |
+| 12 | 4 | Reserved | MUST 为 0 |
+| 16 | `metadata_len` | Metadata | MessagePack map，字段名与 Tier-2 相同 |
+| ... | variable | Vector segments | 重复的 `dim:uint32_be` + `dim` 个 little-endian float32 |
+
+Metadata MUST 保留逻辑帧对象。被移入二进制段的向量字段用 marker 对象替换：
+
+```json
+{
+  "$nps_binary_vector": 0,
+  "dtype": "float32",
+  "dim": 1536
+}
+```
+
+NCP v0.9 的标准绑定是 NWP `QueryFrame.vector_search.vector`。marker index 从 0 开始，MUST 指向后续向量段之一。`dtype` MUST 为 `float32`；向量值为 IEEE-754 binary32 little-endian。MatrixTensor、float16、量化 int8、多向量 schema 绑定留给后续 CR。
 
 ---
 
@@ -799,6 +838,7 @@ Node SHOULD 限制单连接最大并发流数（推荐默认值：32，通过 Ca
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.9 | 2026-06-27 | 激活 Tier-3 BinaryVector v1（`Flags.T1T0 = 10`），协商 token 为 `binary_vector.v1`；定义 `NPBV` Payload 布局、MessagePack metadata marker、float32 little-endian 向量段，以及 NWP `QueryFrame.vector_search.vector` 绑定；`0b11` 仍为保留值。 |
 | 0.8 | 2026-06-12 | 新增 §7.5 原生模式 TLS 绑定与双向认证，归纳 **NPS-RFC-0006 §6**（草案→提议）：套件级 ALPN `nps/1.0`（取代临时值 `ncp/1`）、原生模式 over TCP 强制 TLS 封装、与 NIP 证书的 mTLS + session-NID 绑定、TLS 1.3 会话恢复票据；新增错误码 `NCP-NID-MISMATCH`。gate `nps-ingress`（L2）守护进程。（正文中文翻译待补，见 version-matrix translation_lag） |
 | 0.6 | 2026-04-25 | 新增 §2.6.1 原生模式连接前导（8 字节常量 `b"NPS/1.0\n"`）；在 `frame-registry.yaml` 中保留帧类型字节 0x4E；新增错误码 `NCP-PREAMBLE-INVALID` 和状态码 `NPS-PROTO-PREAMBLE-INVALID`。详见 [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.cn.md)。 |
 | 0.4 | 2026-04-14 | 新增 IdentFrame (0x06) 握手帧；新增 §2.6 连接握手序列及版本协商规则；anchor_id 计算明确引用 RFC 8785 JCS；DiffFrame 新增 patch_format 字段（json_patch / binary_bitset）；CapsFrame 新增 inline_anchor；StreamFrame 流量控制语义正式化（window_size 协议）；§7.4 E2E 加密节（ENC 标志、AES-256-GCM / ChaCha20-Poly1305、Payload 布局）；§5.4 auto-anchor 协议（NCP-ANCHOR-STALE + inline_anchor）；新增错误码 NCP-ANCHOR-STALE、NCP-DIFF-FORMAT-UNSUPPORTED、NCP-VERSION-INCOMPATIBLE、NCP-STREAM-WINDOW-OVERFLOW、NCP-ENC-NOT-NEGOTIATED、NCP-ENC-AUTH-FAILED |

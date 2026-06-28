@@ -10,6 +10,18 @@
 
 ---
 
+## [1.0.0-alpha.15] —— 2026-06-28
+
+### 协议对齐与加固
+
+- 在 SDK 源树与分发仓中实现 NCP Tier-3 BinaryVector policy，并补齐 malformed-frame / client-error conformance 覆盖。
+- 对齐 Python、TypeScript、Go、Java、Rust、.NET 的 NIP TrustFrame/RevokeFrame 与 NDP Announce/Graph/Federation 语义，包括 Announce 签名规范体、显式 heartbeat_interval_ms=0、Graph 边界以及 revoke parent 规则。
+- 加固入站 NWP Bridge server dispatch：默认要求调用方验证，增加 request body 上限、dispatch timeout、客户端错误脱敏，以及更安全的 native-mode parser 行为。
+
+### 发布工程
+
+- 将 Dev 单一事实源同步到 Release/spec、独立 SDK 源树、ingress/tool 分发仓、README banner、包 manifest、lockfile 与当前 alpha.15 版本元数据。
+
 ## [1.0.0-alpha.14] —— 2026-06-26
 
 ### 规范与文档

@@ -4,8 +4,8 @@ English | [中文版](./NPS-1-NCP.cn.md)
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.8
-**Date**: 2026-04-25  
+**Version**: 0.9
+**Date**: 2026-06-27
 **Port**: 17433 (default, shared across the protocol suite)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 
@@ -127,7 +127,9 @@ Client (Agent)                        Server (Node)
 
 - Server MUST pick `min(client.nps_version, server.nps_version)` as the session version.
 - If `client.min_version > server.nps_version`, Server MUST return `NCP-VERSION-INCOMPATIBLE` and close the connection.
-- The negotiated encoding = best intersection of `client.supported_encodings ∩ server.supported_encodings` (Tier-2 preferred).
+- The negotiated encoding policy is selected from `client.supported_encodings` in priority order, constrained by the server's supported encodings. Servers SHOULD prefer the client's order when multiple encodings are supported.
+- A session SHOULD use one stable default encoding policy: Tier-2 MsgPack for production, Tier-1 JSON for development/compatibility, or Tier-3 BinaryVector only as a negotiated specialization for vector-heavy frames. Per-frame tier variation is permitted only when it follows the negotiated policy (for example, HelloFrame in JSON before negotiation, ordinary frames in MsgPack, and NWP vector-search QueryFrame in BinaryVector). Implementations MUST NOT treat the header tier bits as permission for arbitrary application-level switching.
+- `binary_vector.v1` MAY be enabled only when both peers support Tier-3 BinaryVector v1; enabling it does not make Tier-3 the session default.
 - The negotiated `max_frame_payload` = `min(client.max_frame_payload, server.max_frame_payload)`.
 
 **Identity and authorization binding**
@@ -250,7 +252,7 @@ Bit 7   Bit 6   Bit 5   Bit 4   Bit 3   Bit 2   Bit 1   Bit 0
 
 | Bit | Name | Description |
 |-----|------|-------------|
-| 0–1 | T0, T1 | Encoding tier: `00`=Tier-1 JSON, `01`=Tier-2 MsgPack, `10`=Reserved (former Tier-3 slot), `11`=Reserved |
+| 0–1 | T0, T1 | Encoding tier: `00`=Tier-1 JSON, `01`=Tier-2 MsgPack, `10`=Tier-3 BinaryVector v1, `11`=Reserved |
 | 2 | FINAL | Final-chunk flag for streaming frames (StreamFrame only; fixed to 1 elsewhere) |
 | 3 | ENC | Payload uses application-layer E2E encryption (see §7.4); TLS is independent, MAY be 0 in dev mode |
 | 4–6 | RSV | Reserved; senders MUST set to 0, receivers MUST ignore |
@@ -465,6 +467,7 @@ During native-mode connection setup, the Node returns its negotiated capabilitie
     "session_version": "0.4",
     "max_frame_payload": 65535,
     "negotiated_encoding": "msgpack",
+    "enabled_encodings": ["msgpack", "binary_vector.v1"],
     "supported_protocols": ["ncp", "nwp", "nip"],
     "ext_support": true,
     "max_concurrent_streams": 32,
@@ -512,7 +515,7 @@ Client-side handshake frame in native mode, **sent by the Agent (client) first a
 | `frame` | uint8 | required | Fixed value `0x06` |
 | `nps_version` | string | required | Highest NPS version the client supports; format `"major.minor"` |
 | `min_version` | string | optional | Lowest NPS version the client supports; defaults to `nps_version` |
-| `supported_encodings` | array[string] | required | Supported encodings, e.g. `["json", "msgpack"]`, in descending priority |
+| `supported_encodings` | array[string] | required | Supported encodings, e.g. `["binary_vector.v1", "msgpack", "json"]`, in descending priority |
 | `supported_protocols` | array[string] | required | Supported higher-layer protocols, e.g. `["ncp", "nwp", "nip"]` |
 | `agent_id` | string | optional | Agent NID (NIP identity identifier), format `urn:nps:agent:{domain}:{id}` |
 | `max_frame_payload` | uint32 | optional | Maximum payload bytes the client can accept; default 65535 |
@@ -535,7 +538,7 @@ Client-side handshake frame in native mode, **sent by the Agent (client) first a
   "frame": "0x06",
   "nps_version": "0.4",
   "min_version": "0.3",
-  "supported_encodings": ["msgpack", "json"],
+  "supported_encodings": ["binary_vector.v1", "msgpack", "json"],
   "supported_protocols": ["ncp", "nwp"],
   "agent_id": "urn:nps:agent:ca.innolotus.com:550e8400",
   "max_frame_payload": 65535,
@@ -724,6 +727,11 @@ NPS uses a two-tier error model:
 | `NCP-FRAME-UNKNOWN-TYPE` | `NPS-CLIENT-BAD-FRAME` | Unknown frame-type byte |
 | `NCP-FRAME-PAYLOAD-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | Payload exceeds negotiated max_frame_payload |
 | `NCP-FRAME-FLAGS-INVALID` | `NPS-CLIENT-BAD-FRAME` | Reserved bits in Flags are non-zero |
+| `NCP-BINARY-VECTOR-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | Tier-3 BinaryVector payload is malformed |
+| `NCP-BINARY-VECTOR-DIM-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker dimension does not match the vector segment |
+| `NCP-BINARY-VECTOR-INDEX-INVALID` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker references a missing vector segment |
+| `NCP-BINARY-VECTOR-DTYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker uses an unsupported dtype |
+| `NCP-BINARY-VECTOR-TRUNCATED` | `NPS-CLIENT-BAD-FRAME` | BinaryVector vector segment is truncated |
 | `NCP-STREAM-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | Non-contiguous StreamFrame sequence |
 | `NCP-STREAM-NOT-FOUND` | `NPS-STREAM-NOT-FOUND` | stream_id does not refer to an existing stream |
 | `NCP-STREAM-LIMIT-EXCEEDED` | `NPS-STREAM-LIMIT` | Max concurrent streams per connection exceeded |
@@ -823,12 +831,43 @@ All frame types support the following encoding tiers, selected via the T0/T1 bit
 |------|--------|------|----------|
 | Tier-1 | JSON | `00` | Development, debugging, compatibility mode |
 | Tier-2 | MsgPack (binary) | `01` | Production, ~60% size reduction |
-| — | Reserved | `10` | Reserved for future high-performance encoding |
+| Tier-3 | BinaryVector v1 | `10` | Vector-heavy frames; MessagePack metadata plus raw little-endian float32 vector segments |
 | — | Reserved | `11` | Reserved |
 
-Defaults: Tier-2 for production, Tier-1 for development.
+Defaults are policy-level defaults: Tier-2 for production and Tier-1 for development/compatibility. Implementations SHOULD choose a stable session encoding policy during handshake or configuration, then apply it consistently. A frame MAY use a different tier only when the selected policy explicitly allows that frame class or phase.
 
-> **Note**: The former Tier-3 MatrixTensor concept has been removed from the tier system; `10` is marked Reserved. If a high-performance encoding format (e.g. dedicated vector/tensor encoding) is defined in the future, it will be allocated through a formal RFC process.
+Tier-3 is optional. Senders MUST NOT emit `Flags.T1T0 = 10` unless the session has negotiated `binary_vector.v1`; receivers that do not support or did not negotiate Tier-3 MUST reject the frame with `NCP-ENCODING-UNSUPPORTED`. `Flags.T1T0 = 11` remains reserved and MUST be rejected with `NCP-FRAME-FLAGS-INVALID`.
+
+### 8.1 Tier-3 BinaryVector v1 Payload
+
+Tier-3 BinaryVector v1 is a frame-payload encoding, not a replacement for NWP semantics. The frame type byte still determines the logical frame, and the Tier-3 payload encodes that frame's metadata plus dense vector segments.
+
+Negotiation token: `binary_vector.v1`.
+
+Binary layout:
+
+| Offset | Size | Field | Encoding |
+|--------|------|-------|----------|
+| 0 | 4 | Magic | ASCII `NPBV` |
+| 4 | 1 | Version | `0x01` |
+| 5 | 1 | Flags | `0x00` in v1; receivers MUST reject non-zero values |
+| 6 | 2 | `vector_count` | uint16, big-endian |
+| 8 | 4 | `metadata_len` | uint32, big-endian |
+| 12 | 4 | Reserved | MUST be zero |
+| 16 | `metadata_len` | Metadata | MessagePack map using the same field names as Tier-2 |
+| ... | variable | Vector segments | repeated `dim:uint32_be` + `dim` little-endian float32 values |
+
+Metadata MUST preserve the logical frame object. Vector fields moved to binary segments are replaced by a marker object:
+
+```json
+{
+  "$nps_binary_vector": 0,
+  "dtype": "float32",
+  "dim": 1536
+}
+```
+
+For NCP v0.9, the standard binding is NWP `QueryFrame.vector_search.vector`. The marker index is zero-based and MUST reference one of the appended vector segments. `dtype` MUST be `float32`; vector values are IEEE-754 binary32 little-endian. MatrixTensor, float16, quantized int8, and multi-vector schema bindings are reserved for future CRs.
 
 ---
 
@@ -851,6 +890,7 @@ Defaults: Tier-2 for production, Tier-1 for development.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.9 | 2026-06-27 | Activated Tier-3 BinaryVector v1 (`Flags.T1T0 = 10`) with negotiation token `binary_vector.v1`; defined the `NPBV` payload layout, MessagePack metadata marker, float32 little-endian vector segments, and NWP `QueryFrame.vector_search.vector` binding; `0b11` remains reserved. |
 | 0.8 | 2026-06-12 | New §7.5 Native-Mode TLS Binding & Mutual Authentication, summarising **NPS-RFC-0006 §6** (promoted Draft → Proposed): suite-wide ALPN `nps/1.0` (supersedes provisional `ncp/1`), TLS-wrapped framing mandated for native-mode-over-TCP, mTLS with NIP certificates + session-NID binding, TLS 1.3 session-resumption tickets; added error code `NCP-NID-MISMATCH`. Gates the `nps-ingress` (L2) daemon. |
 | 0.8 | 2026-06-03 | **NopFrame (0x07)** keepalive/heartbeat: null payload, bidirectional; `HelloFrame.ping_interval_ms` declares preferred interval (0 = disabled, default); `NCP-KEEPALIVE-TIMEOUT` error code when no frame received within 3 × interval; §7.6 dead-peer detection rules. |
 | 0.7 | 2026-05-31 | `max_concurrent_streams` negotiation via HelloFrame/CapsFrame (uint32, default 32); `NCP-STREAM-LIMIT-EXCEEDED` on overflow; mid-stream ErrorFrame MUST be sent when rejecting in-progress streams (previously MAY); E2E rekeying protocol (§7.4): trigger at 2^32 frames or 24 h, `NCP-REKEY-REQUIRED` signal; QUIC stream mapping: one bidirectional stream per NCP channel, HelloFrame on stream 0. See [NPS-RFC-0006](rfcs/NPS-RFC-0006-ncp-native-transport.md). |

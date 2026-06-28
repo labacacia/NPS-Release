@@ -2,11 +2,11 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。当前已对齐 suite release **1.0.0-alpha.14**；各生态包管理器可用性单独跟踪。
+六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。当前已对齐 suite release **1.0.0-alpha.15**；各生态包管理器可用性单独跟踪。
 
-> alpha.14 release 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。
+> alpha.15 release 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.14` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.15` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
 
 ---
 
@@ -27,7 +27,7 @@
 
 ## NIP CA Server
 
-可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构，自 `v1.0.0-alpha.11` 起从 SDK 拆出独立发布；当前公共文档跟踪 alpha.14 的签名 CRL 与 remote-client 边界。
+可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构，自 `v1.0.0-alpha.11` 起从 SDK 拆出独立发布；当前公共文档跟踪 alpha.15 的签名 CRL 与 remote-client 边界。
 
 | 仓库 | 技术栈 | 快速开始 |
 |------|--------|----------|
@@ -39,7 +39,7 @@
 
 ## NPS Daemons
 
-标准三层 NPS 拓扑的参考部署二进制，最新已发布版本为 `v1.0.0-alpha.14`，当前文档跟踪 alpha.14 release 的 native NCP TLS/mTLS 与 NWP serving 边界。
+标准三层 NPS 拓扑的参考部署二进制，最新已发布版本为 `v1.0.0-alpha.15`，当前文档跟踪 alpha.15 release 的 native NCP TLS/mTLS 与 NWP serving 边界。
 
 | 仓库 | Daemon | 快速开始 |
 |------|--------|----------|

@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — a complete internet protocol stack purpose-built for AI agents and neural models.
 >
-> Version 1.0.0-alpha.14 · latest suite release 1.0.0-alpha.14 · Apache 2.0 · [中文版](index.cn.md)
+> Version 1.0.0-alpha.15 · latest suite release 1.0.0-alpha.15 · Apache 2.0 · [中文版](index.cn.md)
 
 ---
 
@@ -38,19 +38,19 @@ pip install nps-lib==1.0.0a13
 npm install @labacacia/nps-sdk@alpha
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.14
+cargo add nps-sdk@=1.0.0-alpha.15
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.14
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.15
 
 # Java (Gradle)
-implementation("com.labacacia.nps:nps-java:1.0.0-alpha.14")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.15")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.14
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.15
 ```
 
-> npm note: `@labacacia/nps-sdk@1.0.0-alpha.14` fixed the earlier alpha.11 tarball issue; the `alpha` dist-tag resolves to the latest published alpha.
+> npm note: `@labacacia/nps-sdk@1.0.0-alpha.15` fixed the earlier alpha.11 tarball issue; the `alpha` dist-tag resolves to the latest published alpha.
 
 ---
 
@@ -65,7 +65,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.14
 
 ## Status
 
-**v1.0.0-alpha.14** — docs and specs now track NCP v0.8, NWP v0.14, NIP v0.10, NDP v0.9, and NOP v0.7. This release adds typed remote NIP CA clients, native-mode NWP serving helpers, TC-N1/TC-N2 conformance helpers, live revocation, native NCP TLS/mTLS hardening, signed CRL output, and transport-neutral observability. Package-manager availability is tracked per ecosystem; the .NET package family is published to Nexus and also attached to the GitHub Release as a fallback bundle. **NIP CA Server** lives at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server). **NPS Daemons** bundle (`npsd` + `nps-runner` + `nps-ingress` + `nps-registry`) lives at [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons). Layer-3 trust-anchor daemons remain private under the `innolotus` org until NPS Cloud GA.
+**v1.0.0-alpha.15** — docs and specs now track NCP v0.9, NWP v0.14, NIP v0.10, NDP v0.9, and NOP v0.7. This release adds typed remote NIP CA clients, native-mode NWP serving helpers, TC-N1/TC-N2 conformance helpers, live revocation, native NCP TLS/mTLS hardening, signed CRL output, and transport-neutral observability. Package-manager availability is tracked per ecosystem; the .NET package family is published to Nexus and also attached to the GitHub Release as a fallback bundle. **NIP CA Server** lives at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server). **NPS Daemons** bundle (`npsd` + `nps-runner` + `nps-ingress` + `nps-registry`) lives at [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons). Layer-3 trust-anchor daemons remain private under the `innolotus` org until NPS Cloud GA.
 
 ---
 

@@ -8,7 +8,7 @@ English | [中文版](./NPS-3-NIP.cn.md)
 **Date**: 2026-05-11
 **Port**: 17433 (default, shared) / 17435 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.8)
+**Depends-On**: NPS-1 (NCP v0.9)
 
 ---
 
@@ -358,7 +358,7 @@ When `ocsp_staple` is absent, the Node MAY perform an online OCSP lookup to the 
 
 ### 5.2 TrustFrame (0x21)
 
-Cross-CA trust-chain propagation and capability grant (commercial feature, NPS Cloud). A TrustFrame lets one CA (the **grantor**) authorise another CA (the **grantee**) to issue IdentFrames whose `capabilities` are accepted by Nodes that already trust the grantor — without the grantee being added to each Node's `trusted_issuers` list. The grant is scoped to a capability subset and a set of `nwp://` URL patterns; it is verifiable end-to-end via the grantor's signature.
+Cross-CA trust-chain propagation and capability grant. A TrustFrame lets one CA (the **grantor**) authorise another CA (the **grantee**) to issue IdentFrames whose `capabilities` are accepted by Nodes that already trust the grantor — without the grantee being added to each Node's `trusted_issuers` list. The grant is scoped to a capability subset and a set of `nwp://` URL patterns; it is verifiable end-to-end via the grantor's signature. Open SDKs carry the full wire frame and MAY provide basic validation for explicitly pinned grantor anchors; managed multi-CA federation, trust-anchor discovery, revocation feeds, and commercial trust-chain policy are NPS Cloud concerns.
 
 **Field definitions**
 
@@ -372,7 +372,7 @@ Cross-CA trust-chain propagation and capability grant (commercial feature, NPS C
 | `issued_at` | string (ISO 8601 UTC) | required | Issuance time. |
 | `expires_at` | string (ISO 8601 UTC) | required | Expiry time. After this instant the frame MUST be rejected with `NIP-TRUST-FRAME-EXPIRED`. |
 | `serial` | string (hex) | required | 16-character zero-padded hex serial number used for revocation tracking via RevokeFrame (§5.3). |
-| `signer_nid` | string (NID) | required | NID whose private key signs this frame. MUST be either `grantor_nid` itself or an operator NID under `grantor_nid`. |
+| `signer_nid` | string (NID) | required | NID whose private key signs this frame. MUST be either `grantor_nid` itself or an authorised delegated `agent` NID under `grantor_nid`'s domain, recognised by local policy as an operator/delegated signer. |
 | `signature` | string | required | `{alg}:{base64url}` — `ed25519:` (Ed25519) or `ecdsa-p256:` (ECDSA P-256). |
 
 **Signature computation**
@@ -410,7 +410,7 @@ The signature is computed over the canonical JSON of the TrustFrame with the `si
 
 ### 5.3 RevokeFrame (0x22)
 
-Revokes an NID, all certificates issued under an NID, or a specific certificate identified by serial. RevokeFrames are emitted by an issuing CA (or by an authorised operator under that CA) and pushed to subscribed Nodes via the NIP push channel; receivers update their local cert / OCSP cache and reject subsequent requests authenticated under the revoked target. A RevokeFrame is **fire-and-forget** at the protocol layer (no response frame on success); receivers MUST emit an `ErrorFrame` only when the frame itself is malformed or unauthorised.
+Revokes an NID, all certificates issued under an NID, or a specific certificate identified by serial. RevokeFrames are emitted by an issuing CA (or by an authorised delegated agent under that CA) and pushed to subscribed Nodes via the NIP push channel; receivers update their local cert / OCSP cache and reject subsequent requests authenticated under the revoked target. A RevokeFrame is **fire-and-forget** at the protocol layer (no response frame on success); receivers MUST emit an `ErrorFrame` only when the frame itself is malformed or unauthorised.
 
 **Field definitions**
 
@@ -422,7 +422,7 @@ Revokes an NID, all certificates issued under an NID, or a specific certificate 
 | `reason` | string (enum) | required | One of the values defined in the reason table below. |
 | `revoked_at` | string (ISO 8601 UTC) | required | Wall-clock instant at which revocation takes effect. Receivers SHOULD reject any request whose IdentFrame `issued_at` is at or before `revoked_at`. |
 | `parent_nid` | string (NID) | conditional | REQUIRED when `reason = "parent_revoked"`; identifies the group NID whose cascade triggered this revocation (NPS-CR-0003). MUST be omitted for any other reason. |
-| `signer_nid` | string (NID) | required | NID of the CA or operator signing this revocation. MUST be either the issuing CA of `target_nid`, an operator under that CA holding the `nip:revoke` capability, or — for cascade revocations — the CA that issued `parent_nid`. |
+| `signer_nid` | string (NID) | required | NID of the CA or delegated agent signing this revocation. MUST be either the issuing CA of `target_nid`, an authorised `agent` NID under that CA's domain holding the `nip:revoke` capability, or — for cascade revocations — the CA that issued `parent_nid`. |
 | `signature` | string | required | `{alg}:{base64url}` signature by `signer_nid`'s private key. Supported algorithms: `ed25519:` (Ed25519) or `ecdsa-p256:` (ECDSA P-256). |
 
 **`reason` enum**
@@ -447,7 +447,7 @@ The signature is computed over the canonical JSON of the RevokeFrame with the `s
 | Code | When |
 |------|------|
 | `NIP-REVOKE-FRAME-INVALID` (`NPS-CLIENT-BAD-FRAME`) | RevokeFrame is malformed (missing required field, signature verification fails, or canonical form is invalid). |
-| `NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER` (`NPS-AUTH-FORBIDDEN`) | `signer_nid` is not authorised to revoke `target_nid` (not the issuing CA of `target_nid`, not an operator under that CA holding `nip:revoke`, and — for `parent_revoked` — not the CA that issued `parent_nid`). |
+| `NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER` (`NPS-AUTH-FORBIDDEN`) | `signer_nid` is not authorised to revoke `target_nid` (not the issuing CA of `target_nid`, not an authorised delegated `agent` under that CA holding `nip:revoke`, and — for `parent_revoked` — not the CA that issued `parent_nid`). |
 | `NIP-REVOKE-FRAME-SERIAL-MISMATCH` (`NPS-CLIENT-BAD-PARAM`) | `serial` is present but does not match any currently-issued cert for `target_nid`. |
 | `NIP-REVOKE-FRAME-REASON-UNKNOWN` (`NPS-CLIENT-BAD-FRAME`) | `reason` carries a value outside the defined enum. Receivers treat the revocation as `key_compromise` for safety (see Forward compatibility above); this code is reported back to the publishing CA so the publish can be corrected. |
 
@@ -597,7 +597,7 @@ After R5 takes effect, any subsequent IdentFrame for `target_nid` (or for the sp
   "endpoints": {
     "register": "https://ca.mycompany.com/v1/agents/register",
     "verify":   "https://ca.mycompany.com/v1/agents/{nid}/verify",
-    "ocsp":     "https://ca.mycompany.com/ocsp",
+    "node_verify": "https://ca.mycompany.com/v1/nodes/{nid}/verify",
     "crl":      "https://ca.mycompany.com/v1/crl"
   },
   "capabilities": ["agent", "node", "operator", "orchestrator-group"],

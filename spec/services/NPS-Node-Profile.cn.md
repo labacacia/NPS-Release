@@ -56,7 +56,7 @@ L1+ 节点上的每个 Agent 都携带一个 `activation_mode`：
 | **定位** | 被动收发帧 | 订阅并响应 | 按需具现化 |
 | **NCP 编码** | Tier-1 JSON MUST；Tier-2 OPTIONAL | + Tier-2 MsgPack MUST | + 长连接多路复用 MUST |
 | **NIP** | Ed25519 签 / 验 MUST | + 信任链校验 MUST | + 动态 sub-NID 签发 MUST |
-| **NDP** | Announce / Resolve（静态）MUST | + GraphFrame 订阅 MUST | + 按需注册 / 下线 MUST |
+| **NDP** | Announce / Resolve（静态）MUST | + GraphFrame 拓扑快照消费 MUST | + 按需注册 / 下线 MUST |
 | **NWP** | ActionFrame pull MUST | + ActionFrame push + Subscribe MUST | + Query fan-out MUST |
 | **NOP** | 不要求 | + TaskFrame / DelegateFrame MUST | + DAG 执行 + K-of-N 同步屏障 MUST |
 | **激活模式** | 仅 `ephemeral`（pull 模式下的伪常驻） | `resident` MUST；其他 MAY | 三种模式全支持；默认 `ephemeral` |
@@ -131,7 +131,7 @@ L2 = L1 + §2 L2 列每个 "+" 行。要点：
 
 - **NCP**：Tier-2 MsgPack MUST。
 - **NIP**：对配置的信任锚做信任链校验 MUST。
-- **NDP**：GraphFrame 订阅 MUST；节点 SHOULD 在 GraphFrame `seq` 窗口内响应增量变更。
+- **NDP**：GraphFrame 拓扑快照消费 MUST；节点 SHOULD 在 snapshot `ttl` 内刷新本地图谱，并在使用陈旧拓扑前响应 `nodes` / `edges` 变化。
 - **NWP**：ActionFrame push 和 Subscribe MUST；pull 仍然可用。Anchor Node MUST 额外实现 `topology.snapshot` / `topology.stream` 保留查询类型（[NPS-2 §12](../NPS-2-NWP.cn.md)）；详见 [NPS-AaaS-Profile](./NPS-AaaS-Profile.cn.md) L2-08。
 - **NOP**：MUST 接受 TaskFrame、DelegateFrame；完整 DAG 执行在 L3。
 - **激活**：MUST 支持 `resident` 模式；`hybrid` MAY 支持。

@@ -8,7 +8,7 @@ English | [中文版](./NPS-2-NWP.cn.md)
 **Date**: 2026-05-28
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.8), NPS-3 (NIP v0.10), NPS-4 (NDP v0.9)
+**Depends-On**: NPS-1 (NCP v0.9), NPS-3 (NIP v0.10), NPS-4 (NDP v0.9)
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -22,7 +22,9 @@ Keywords "MUST", "MUST NOT", "REQUIRED", "SHOULD", "MAY" in this document are in
 
 ## 2. Protocol Overview
 
-NWP defines how AI Agents access web data and services. Agents use `nwp://` addresses to reach three types of Neural Nodes (Memory / Action / Complex). Node responses are directly machine-understandable, requiring no semantic parsing layer.
+NWP defines the AI-native request/response semantics for interacting with Neural Nodes. Agents use `nwp://` addresses to query data, invoke operations, subscribe to changes, route through cluster anchors, and bridge to external protocols across the Memory / Action / Complex / Anchor / Bridge roles. Responses are directly machine-understandable, requiring no semantic parsing layer.
+
+NWP is a semantic protocol layer, not a Memory-Node-only REST API. It can be carried over native NCP sessions or over the HTTP overlay mode defined in §2.2; REST is only an analogy for familiar request/response semantics or an external protocol target of Bridge Nodes.
 
 ### 2.1 Node Types
 

@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The latest suite release is **v1.0.0-alpha.14**. The release closes the Banyan integration gaps that were blocking SDK/spec adoption: typed remote NIP CA clients, native-mode NWP serving helpers, conformance manifests, live revocation hooks, native NCP TLS/mTLS hardening, signed CRL output, and transport-neutral observability.
+NPS is on a four-phase path from draft specification to formal standard. The latest suite release is **v1.0.0-alpha.15**. The release closes the Banyan integration gaps that were blocking SDK/spec adoption: typed remote NIP CA clients, native-mode NWP serving helpers, conformance manifests, live revocation hooks, native NCP TLS/mTLS hardening, signed CRL output, and transport-neutral observability.
 
 ---
 
@@ -39,11 +39,11 @@ All five protocols production-ready in six reference SDKs (.NET / Python / TypeS
 
 Adapters to MCP, A2A, and gRPC ecosystems; Tier-2 MsgPack production hardening; reference tooling.
 
-- ✅ MCP, A2A, and gRPC ingress adapters packaged and published to Nexus at v1.0.0-alpha.14
+- ✅ MCP, A2A, and gRPC ingress adapters packaged and published to Nexus at v1.0.0-alpha.15
 - ✅ Tier-2 MsgPack and token-savings benchmarks published
 - ✅ NOP orchestrator executes multi-node DAGs; Claude Desktop integration via `mcp-ingress` verified
 - ✅ `NDP.ResolveFrame` DNS TXT resolution (`nwp://` → physical endpoint) — all six SDKs
-- ✅ Native-mode NWP serving helpers and TC-N1/TC-N2 conformance helpers delivered for SDK alpha.14
+- ✅ Native-mode NWP serving helpers and TC-N1/TC-N2 conformance helpers delivered for SDK alpha.15
 - ⬜ **NPS Studio** (visual frame debugger) + **NPS Probe** (conformance CLI)
 
 ---

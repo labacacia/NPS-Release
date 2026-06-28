@@ -4,8 +4,8 @@ English | [中文版](./NPS-0-Overview.cn.md)
 
 **Spec Number**: NPS-0  
 **Status**: Proposed  
-**Version**: 0.3  
-**Date**: 2026-04-19  
+**Version**: 0.4
+**Date**: 2026-06-27
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **License**: Apache 2.0  
 
@@ -48,14 +48,14 @@ Existing Web protocols (HTTP, REST, GraphQL) were designed for human browsers. W
 
 ### 1.2 Goals
 
-- When an AI accesses a Web node, no semantic-parsing layer is required; the response is directly consumable by the model.
+- When an AI accesses a Neural Node, no semantic-parsing layer is required; the response is directly consumable by the model.
 - The AnchorFrame Schema anchoring mechanism eliminates redundant Schema transmission and significantly reduces token consumption.
 - A unified Agent NID (Neural Identity) makes "AI access" vs. "human access" an explicit distinction at the protocol layer.
 - Layered and optional: the minimal deployment needs only NCP + NWP; NIP / NDP / NOP are opt-in.
 
 ### 1.3 Non-Goals
 
-- NPS does not replace MCP (the Tool-invocation semantic layer); it fills the Web-node network layer MCP does not cover.
+- NPS does not replace MCP (the Tool-invocation semantic layer); it fills the AI-native node request/response network layer MCP does not cover.
 - NPS is not designed as a human-readable API format (except in Overlay mode).
 - NPS does not handle model inference itself, only data transport and access control.
 
@@ -64,7 +64,7 @@ Existing Web protocols (HTTP, REST, GraphQL) were designed for human browsers. W
 | Human Internet | NPS Counterpart | Responsibility |
 |---------------|-----------------|----------------|
 | Wire Format / Framing | **NCP** | AI-to-AI frame format, encoding tiers, semantic compression |
-| HTTP | **NWP** | AI access to Web nodes |
+| HTTP | **NWP** | AI-native node request/response semantics |
 | TLS / PKI | **NIP** | Agent identity certificates and trust chain |
 | DNS | **NDP** | Global discovery of nodes and agents |
 | SMTP / Message Bus | **NOP** | Multi-agent task orchestration |
@@ -111,7 +111,7 @@ The core specification and reference implementations are fully open source (LabA
 │       Agent identity · NID certificates · trust · revoke │
 ├─────────────────────────────────────────────────────────┤
 │  NWP  Neural Web Protocol                                │
-│       Memory Node · Action Node · Complex Node           │
+│       Memory · Action · Complex · Anchor · Bridge        │
 ├─────────────────────────────────────────────────────────┤
 │  NCP  Neural Communication Protocol                      │
 │       Framing · Schema anchoring · diff coding · stream  │
@@ -244,7 +244,7 @@ Every frame type supports the following encoding tiers, selected via the Flags f
 |------|--------|------|-----------|
 | Tier-1 | JSON | 0x00 | Development, debugging, compatibility mode |
 | Tier-2 | MsgPack (binary) | 0x01 | Production, ~60% size reduction |
-| — | Reserved | 0x02 | Reserved for future high-performance encoding |
+| Tier-3 | BinaryVector v1 | 0x02 | Optional vector-heavy payload encoding; `binary_vector.v1` negotiation required; metadata MessagePack + little-endian float32 segments |
 | — | Reserved | 0x03 | Reserved |
 
 Defaults: Tier-2 for production, Tier-1 for development.
@@ -285,8 +285,8 @@ Breaking changes are defined as: frame-format changes, field-semantics changes, 
 
 | Protocol | Position | Relationship to NPS |
 |----------|----------|---------------------|
-| REST / GraphQL | Human APIs | NWP is the AI-native replacement |
-| MCP | Tool-invocation layer | NPS fills the Web-node network layer MCP does not cover; an MCP adapter is provided |
+| REST / GraphQL | Human APIs | NWP is the AI-native node request/response replacement |
+| MCP | Tool-invocation layer | NPS fills the AI-native node request/response network layer MCP does not cover; an MCP adapter is provided |
 | A2A | Agent collaboration | NOP covers similar scenarios; an A2A adapter is provided |
 
 NPS does not replace MCP — it adds an efficiency layer on top. MCP answers "how does an AI invoke a tool"; NPS answers "how does an AI plug into the Internet".
@@ -358,7 +358,7 @@ Optional dedicated per-protocol ports: NWP 17434, NIP 17435, NDP 17436, NOP 1743
 |------|------------|
 | **NPS** | Neural Protocol Suite; umbrella name for this protocol family |
 | **NCP** | Neural Communication Protocol; framing and communication base layer |
-| **NWP** | Neural Web Protocol; AI Web-access layer |
+| **NWP** | Neural Web Protocol; AI-native node request/response semantic layer |
 | **NIP** | Neural Identity Protocol; Agent identity layer |
 | **NDP** | Neural Discovery Protocol; node discovery layer |
 | **NOP** | Neural Orchestration Protocol; multi-agent orchestration layer |
@@ -380,6 +380,7 @@ Optional dedicated per-protocol ports: NWP 17434, NIP 17435, NDP 17436, NOP 1743
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.4 | 2026-06-27 | NCP v0.9 activates Tier-3 BinaryVector v1 (`binary_vector.v1`) as the optional vector-heavy payload encoding; `0x02` is no longer a reserved/invalid tier when negotiated. |
 | 0.2 | 2026-04-12 | Unified port (17433); dual transport modes (HTTP / native); AnchorFrame ownership clarified as Node-published; Cognon (CGN) accounting; NPS status-code system; ErrorFrame (0xFE); encoding Tier-3 marked Reserved; configurable frame size |
 | 0.1-draft | 2026-04-10 | Initial draft, integrating the NCP v0.7 design document |
 

@@ -8,7 +8,7 @@
 **Date**: 2026-05-01
 **Port**: 17433（默认，共用）/ 17434（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.8)、NPS-3 (NIP v0.10)、NPS-4 (NDP v0.9)
+**Depends-On**: NPS-1 (NCP v0.9)、NPS-3 (NIP v0.10)、NPS-4 (NDP v0.9)
 
 > 本文档为 NWP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
 
@@ -22,7 +22,9 @@
 
 ## 2. 协议概述
 
-NWP 定义 AI Agent 访问 Web 数据和服务的方式。Agent 通过 `nwp://` 地址访问三类神经节点（Memory / Action / Complex），节点响应直接可被模型理解，无需任何语义解析层。
+NWP 定义 AI Agent 与神经节点交互时使用的 AI-native 请求/响应语义。Agent 通过 `nwp://` 地址查询数据、调用操作、订阅变化、经由集群 Anchor 路由，并通过 Bridge 连接外部协议；覆盖 Memory / Action / Complex / Anchor / Bridge 五类角色。节点响应直接可被模型理解，无需任何语义解析层。
+
+NWP 是语义协议层，不是只面向 Memory Node 的 REST API。它可以承载在原生 NCP session 上，也可以使用 §2.2 定义的 HTTP Overlay 模式；REST 只是一种便于理解请求/响应语义的类比，或 Bridge Node 的外部协议目标之一。
 
 ### 2.1 节点类型
 

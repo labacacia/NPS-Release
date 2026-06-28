@@ -8,7 +8,7 @@
 **Date**: 2026-05-11
 **Port**: 17433（默认，共用）/ 17435（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.8)
+**Depends-On**: NPS-1 (NCP v0.9)
 
 ---
 
@@ -156,6 +156,7 @@ metadata 字段不参与签名计算，Agent 可在运行时动态设置。Node 
 | `ncp:stream` | 可发起 NCP 流式传输 |
 | `nop:delegate` | 可委托子任务给其他 Agent |
 | `nop:orchestrate` | 可作为 Orchestrator 发起 TaskFrame |
+| `topology:read` | 可通过保留查询类型 `topology.snapshot` / `topology.stream` 读取 Anchor Node 拓扑数据（NPS-2 §12）；Phase 1–2 的 Anchor Node MUST 按 NPS-2 §12.4 要求此能力。Phase 1–2 中该能力为自声明并签名；CA 背书的角色绑定推迟到 Phase 3（RFC-0002 修订）。 |
 
 **scope 字段**
 
@@ -331,7 +332,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 
 ### 5.2 TrustFrame (0x21)
 
-跨 CA 信任链传递与能力授权（商业功能，NPS Cloud）。TrustFrame 让某一 CA（**grantor**，授权方）授权另一 CA（**grantee**，受权方）颁发的 IdentFrame 中携带的 `capabilities` 被已信任 grantor 的 Node 接受 —— 而无需将 grantee 加入每个 Node 的 `trusted_issuers` 列表。授权按能力子集与一组 `nwp://` URL 模式作 scope 限制；通过 grantor 的签名做到端到端可验证。
+跨 CA 信任链传递与能力授权。TrustFrame 让某一 CA（**grantor**，授权方）授权另一 CA（**grantee**，受权方）颁发的 IdentFrame 中携带的 `capabilities` 被已信任 grantor 的 Node 接受 —— 而无需将 grantee 加入每个 Node 的 `trusted_issuers` 列表。授权按能力子集与一组 `nwp://` URL 模式作 scope 限制；通过 grantor 的签名做到端到端可验证。开源 SDK 承载完整 wire frame，并 MAY 提供针对显式 pin 住的 grantor anchor 的基础验证；托管多 CA federation、trust-anchor discovery、吊销 feed 与商业 trust-chain policy 属于 NPS Cloud 范畴。
 
 **字段定义**
 
@@ -345,7 +346,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 | `issued_at` | string（ISO 8601 UTC）| 必填 | 颁发时间。|
 | `expires_at` | string（ISO 8601 UTC）| 必填 | 过期时间。超过该时刻后帧 MUST 被拒绝并返回 `NIP-TRUST-FRAME-EXPIRED`。|
 | `serial` | string（hex）| 必填 | 16 位 0 填充的十六进制序列号，用于通过 RevokeFrame（§5.3）做吊销跟踪。|
-| `signer_nid` | string（NID）| 必填 | 对该帧签名的私钥所属 NID。MUST 等于 `grantor_nid` 自身，或 `grantor_nid` 下的 operator NID。|
+| `signer_nid` | string（NID）| 必填 | 对该帧签名的私钥所属 NID。MUST 等于 `grantor_nid` 自身，或位于 `grantor_nid` 域下、并被本地策略识别为 operator / delegated signer 的授权 `agent` NID。|
 | `signature` | string | 必填 | `{alg}:{base64url}` —— `ed25519:`（Ed25519）或 `ecdsa-p256:`（ECDSA P-256）。|
 
 **签名计算**
@@ -383,7 +384,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 
 ### 5.3 RevokeFrame (0x22)
 
-吊销一个 NID、该 NID 名下所有证书，或通过 serial 指定的某张证书。RevokeFrame 由颁发该 NID 的 CA（或其下持有相应能力的运营者）签发，通过 NIP push 通道推送给订阅的 Node；接收方据此更新本地证书 / OCSP 缓存，并拒绝后续使用被吊销目标进行认证的请求。在协议层 RevokeFrame 为 **fire-and-forget**（成功时无响应帧）；接收方 MUST 仅在帧本身格式错误或未授权时回发 `ErrorFrame`。
+吊销一个 NID、该 NID 名下所有证书，或通过 serial 指定的某张证书。RevokeFrame 由颁发该 NID 的 CA（或该 CA 域下已授权的 delegated agent）签发，通过 NIP push 通道推送给订阅的 Node；接收方据此更新本地证书 / OCSP 缓存，并拒绝后续使用被吊销目标进行认证的请求。在协议层 RevokeFrame 为 **fire-and-forget**（成功时无响应帧）；接收方 MUST 仅在帧本身格式错误或未授权时回发 `ErrorFrame`。
 
 **字段定义**
 
@@ -395,7 +396,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 | `reason` | string（枚举）| 必填 | 取下方 reason 枚举表中的某个值。|
 | `revoked_at` | string（ISO 8601 UTC）| 必填 | 吊销生效的墙钟时刻。接收方 SHOULD 拒绝任何 IdentFrame `issued_at` 早于或等于 `revoked_at` 的请求。|
 | `parent_nid` | string（NID）| 条件 | 当 `reason = "parent_revoked"` 时为 REQUIRED，用于标记触发本次级联的组 NID（NPS-CR-0003）；其他 reason 取值时 MUST 省略。|
-| `signer_nid` | string（NID）| 必填 | 对本帧签名的 CA 或运营者 NID。MUST 是以下之一：`target_nid` 的颁发 CA、该 CA 下持有 `nip:revoke` 能力的运营者，或（级联场景）颁发 `parent_nid` 的 CA。|
+| `signer_nid` | string（NID）| 必填 | 对本帧签名的 CA 或 delegated agent NID。MUST 是以下之一：`target_nid` 的颁发 CA、该 CA 域下持有 `nip:revoke` 能力的已授权 `agent` NID，或（级联场景）颁发 `parent_nid` 的 CA。|
 | `signature` | string | 必填 | `{alg}:{base64url}`，由 `signer_nid` 的私钥签名。支持算法：`ed25519:`（Ed25519）或 `ecdsa-p256:`（ECDSA P-256）。|
 
 **`reason` 枚举**
@@ -420,7 +421,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 | 错误码 | 触发条件 |
 |--------|---------|
 | `NIP-REVOKE-FRAME-INVALID`（`NPS-CLIENT-BAD-FRAME`）| RevokeFrame 不合法（缺必填字段、签名校验失败或规范化形式错误）。|
-| `NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER`（`NPS-AUTH-FORBIDDEN`）| `signer_nid` 无权吊销 `target_nid`（既不是 `target_nid` 的颁发 CA，也不是该 CA 下持有 `nip:revoke` 的运营者；级联场景下也不是 `parent_nid` 的颁发 CA）。|
+| `NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER`（`NPS-AUTH-FORBIDDEN`）| `signer_nid` 无权吊销 `target_nid`（既不是 `target_nid` 的颁发 CA，也不是该 CA 域下持有 `nip:revoke` 的已授权 delegated `agent`；级联场景下也不是 `parent_nid` 的颁发 CA）。|
 | `NIP-REVOKE-FRAME-SERIAL-MISMATCH`（`NPS-CLIENT-BAD-PARAM`）| `serial` 存在但与 `target_nid` 当前已颁发的任何证书 serial 都不匹配。|
 | `NIP-REVOKE-FRAME-REASON-UNKNOWN`（`NPS-CLIENT-BAD-FRAME`）| `reason` 取值不在定义的枚举中。接收方安全起见按 `key_compromise` 处理（见上方"向前兼容"），并通过旁路回报本错误码以便发布 CA 纠正。|
 
@@ -541,7 +542,7 @@ R5 生效后，任何针对 `target_nid`（或被限定的 `serial`）的后续 
   "endpoints": {
     "register": "https://ca.mycompany.com/v1/agents/register",
     "verify":   "https://ca.mycompany.com/v1/agents/{nid}/verify",
-    "ocsp":     "https://ca.mycompany.com/ocsp",
+    "node_verify": "https://ca.mycompany.com/v1/nodes/{nid}/verify",
     "crl":      "https://ca.mycompany.com/v1/crl"
   },
   "capabilities": ["agent", "node", "operator", "orchestrator-group"],

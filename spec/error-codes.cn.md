@@ -23,6 +23,11 @@ NPS 采用两级错误体系：
 | `NCP-FRAME-UNKNOWN-TYPE` | `NPS-CLIENT-BAD-FRAME` | 未知帧类型码 |
 | `NCP-FRAME-PAYLOAD-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | Payload 超过协商的 max_frame_payload |
 | `NCP-FRAME-FLAGS-INVALID` | `NPS-CLIENT-BAD-FRAME` | Flags 字段中保留位非零 |
+| `NCP-BINARY-VECTOR-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | Tier-3 BinaryVector Payload 格式不合法 |
+| `NCP-BINARY-VECTOR-DIM-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker 的维度与向量段不匹配 |
+| `NCP-BINARY-VECTOR-INDEX-INVALID` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker 引用了不存在的向量段 |
+| `NCP-BINARY-VECTOR-DTYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker 使用了不支持的 dtype |
+| `NCP-BINARY-VECTOR-TRUNCATED` | `NPS-CLIENT-BAD-FRAME` | BinaryVector 向量段被截断 |
 | `NCP-STREAM-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | StreamFrame 序号不连续 |
 | `NCP-STREAM-NOT-FOUND` | `NPS-STREAM-NOT-FOUND` | stream_id 引用的流��存在 |
 | `NCP-STREAM-LIMIT-EXCEEDED` | `NPS-STREAM-LIMIT` | 超出单连接最大并发流数 |
@@ -129,13 +134,19 @@ NPS 采用两级错误体系：
 | `NDP-RESOLVE-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | nwp:// 地址无法解析到物理端点 |
 | `NDP-RESOLVE-AMBIGUOUS` | `NPS-CLIENT-CONFLICT` | 解析结果存在冲突（多个不一致的注册）|
 | `NDP-RESOLVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | 解析请求超时 |
-| `NDP-ANNOUNCE-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | AnnounceFrame 签名验证失�� |
+| `NDP-RESOLVE-STALE` | `NPS-CLIENT-NOT-FOUND` | 被解析条目的新鲜度截止 `(last_seen ?? timestamp) + ttl` 已过期；Registry MUST NOT 返回该失效注册（NDP v0.9 §3.2.1）|
+| `NDP-ANNOUNCE-STALE` | `NPS-CLIENT-NOT-FOUND` | 超过 `heartbeat_interval_ms × 3` 未收到重新公告，AnnounceFrame 心跳已过期（NDP v0.9）|
+| `NDP-ANNOUNCE-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | AnnounceFrame 签名验证失败 |
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 中 NID 与签名证书不一致 |
 | `NDP-ANNOUNCE-ROLE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` 包含已移除的遗留值 `"gateway"`（NPS-CR-0001）；请改用 `"anchor"` 或 `"bridge"`。响应 SHOULD 携带指向 NPS-CR-0001 的 `hint` 字段。|
 | `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` 包含无法识别的值（非已知遗留移除值——遗留移除情况请用 `NDP-ANNOUNCE-ROLE-REMOVED`）。|
 | `NDP-ANNOUNCE-CONFLICT` | `NPS-CLIENT-CONFLICT` | 两个 AnnounceFrame 共享相同 `nid` 与 `graph_seq` 但所覆盖内容不同（注册表投毒企图；见 NPS-4 §7.4）|
+| `NDP-ANNOUNCE-PROFILE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame 违反当前 Registry 安全 profile 约束，且没有更具体的 NDP 错误码可用（例如 org-private / public-federated profile 下的地址策略）|
 | `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 的 `graph_seq` 小于或等于该 NID 此前已接受的最高值（回滚企图；见 NPS-4 §7.5）|
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame 序号不连续 |
+| `NDP-GRAPH-INVALID` | `NPS-CLIENT-BAD-FRAME` | GraphFrame 边引用了不在 `nodes` 列表中的 NID，或存在自环边 |
+| `NDP-GRAPH-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | GraphFrame 超过拓扑快照规模限制（`nodes` > 256 或 `edges` > 1024）|
+| `NDP-FEDERATION-LOOP` | `NPS-CLIENT-CONFLICT` | 联邦转发通过 `ndp-forwarded-by` hop 列表检测到环路 |
 | `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame 的签发者（签名 CA）不在当前注册表 profile 的签发者白名单中（见 NPS-4 §7.3）|
 | `NDP-CA-ATTEST-REQUIRED` | `NPS-AUTH-UNAUTHENTICATED` | 当前注册表 profile 要求 CA 背书的 NID，但 AnnounceFrame 证书链未锚定到配置的信任根（见 NPS-4 §7.3）|
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry 暂时不可用 |

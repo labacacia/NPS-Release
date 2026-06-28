@@ -219,7 +219,7 @@ CA-side correctness is enforced by the unit test suite added to `impl/dotnet/tes
 ## 7. Out of scope
 
 - **Multi-level lineage chains** (group → sub-group → session). The `parent_nid` / `group_nid` split anticipates this but the CA enforces a 1-level chain in this CR; deeper chains are a follow-up.
-- **Cross-CA delegation**. Sessions can only be issued by the same CA that issued the group; cross-CA session issuance lives under TrustFrame (NIP §5.2) and the commercial NPS Cloud surface.
+- **Cross-CA delegation**. Sessions can only be issued by the same CA that issued the group; cross-CA session issuance lives under TrustFrame (NIP §5.2). Open deployments may validate explicitly pinned grantor anchors, while managed federation policy, trust-anchor discovery, and revocation feeds are NPS Cloud concerns.
 - **Reputation log entries linked by group**. NIP §5.1.2 entries can already use `subject_nid = group_nid` to fan-in by orchestrator; no new entry shape is added here.
 - **Per-session keypair attestation hardware**. Sessions get fresh Ed25519 keypairs but no requirement that they be HSM-resident; that's deployment policy.
 - **ACME `agent-01`-style challenge for session issuance**. Sessions are CA-internal; ACME is for external-domain proof and is overkill here. The group-JWS path serves the same anti-replay role.

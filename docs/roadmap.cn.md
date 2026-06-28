@@ -2,7 +2,7 @@
 
 > [English](roadmap.md) | 中文版
 
-NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 suite release 为 **v1.0.0-alpha.14**；本次发布关闭 Banyan 集成中阻塞 SDK/spec 采用的缺口：类型化远程 NIP CA client、native-mode NWP serving helper、conformance manifest、live revocation hook、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。
+NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 suite release 为 **v1.0.0-alpha.15**；本次发布关闭 Banyan 集成中阻塞 SDK/spec 采用的缺口：类型化远程 NIP CA client、native-mode NWP serving helper、conformance manifest、live revocation hook、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。
 
 ---
 
@@ -28,7 +28,7 @@ NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 s
 六种参考语言（.NET / Python / TypeScript / Java / Rust / Go）全五协议生产可用，NIP CA Server 六语言参考部署。关键里程碑：
 
 - NPS-RFC-0001（NCP 连接前导码）、NPS-RFC-0003（Agent 身份保证级别）、NPS-CR-0001（Anchor/Bridge Node 拆分）、NPS-CR-0002（Anchor 拓扑查询）——全部交付
-- NPS-RFC-0002（X.509 NID + ACME）原型覆盖全六 SDK；类型化远程 CA client 已在 alpha.14 交付
+- NPS-RFC-0002（X.509 NID + ACME）原型覆盖全六 SDK；类型化远程 CA client 已在 alpha.15 交付
 - NPS-RFC-0004（CT 风格 NID 声誉日志）Phase 1+2+3：SQLite + Merkle 树 + STH + 包含证明 + STH gossip 联邦
 - `npsd` L1 daemon：子 NID 签发 + 每 NID 收件箱队列
 - Token 节约：**45.0 %**（对比 REST）· 线路体积：**63.6 %** 压缩（对比 JSON）
@@ -39,11 +39,11 @@ NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 s
 
 MCP、A2A、gRPC 生态适配器，Tier-2 MsgPack 生产硬化，参考工具链。
 
-- ✅ MCP、A2A、gRPC ingress 适配器已打包并发布到 Nexus v1.0.0-alpha.14
+- ✅ MCP、A2A、gRPC ingress 适配器已打包并发布到 Nexus v1.0.0-alpha.15
 - ✅ Tier-2 MsgPack 与 Token 节约基准测试已发布
 - ✅ NOP Orchestrator 执行多节点 DAG；Claude Desktop 通过 `mcp-ingress` 集成验证
 - ✅ `NDP.ResolveFrame` DNS TXT 解析（`nwp://` → 物理端点）—— 全六 SDK 交付
-- ✅ native-mode NWP serving helper 与 TC-N1/TC-N2 conformance helper 已在 SDK alpha.14 交付
+- ✅ native-mode NWP serving helper 与 TC-N1/TC-N2 conformance helper 已在 SDK alpha.15 交付
 - ⬜ **NPS Studio**（帧流可视化调试器）+ **NPS Probe**（合规检查 CLI）
 
 ---
