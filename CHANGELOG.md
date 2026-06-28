@@ -12,11 +12,21 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ## [1.0.0-alpha.15] — 2026-06-28
 
-### Protocol Alignment and Hardening
+### Added
 
-- Implemented the NCP Tier-3 BinaryVector policy across the SDK source trees and distribution repos, including malformed-frame/client-error conformance coverage.
-- Realigned NIP TrustFrame/RevokeFrame and NDP Announce/Graph/Federation semantics across Python, TypeScript, Go, Java, Rust, and .NET, including canonical Announce signed payloads, explicit heartbeat_interval_ms=0 handling, graph bounds, and revoke parent rules.
-- Hardened inbound NWP Bridge server dispatch with required caller verification, bounded request bodies, dispatch timeouts, sanitized client errors, and safer native-mode parser behavior.
+- **NCP Tier-3 BinaryVector**: implemented `binary_vector.v1` across the SDK source trees and distribution repos, including malformed-frame/client-error conformance coverage.
+- **Inbound NWP Bridge server adapters**: added MCP and A2A server-side Bridge adapters with ASP.NET hosting, JSON-RPC framing helpers, tool/agent-card metadata, and local action dispatch.
+
+### Breaking Alpha Wire Changes
+
+- **NIP TrustFrame/RevokeFrame signed payload realignment**: the signed payload now includes the current NPS-3 fields (`issued_at`, `serial`, `signer_nid`, `target_nid`, `target_node`) and uses the current revocation status/error naming (`NIP-CERT-REVOKED`). Signed frames produced by the old alpha.14-era SDK shape will no longer verify after upgrading.
+- **NDP Announce signed canonical form realignment**: SDKs now sign the same canonical Announce body (`signature`/`health`/`last_seen`/`frame` excluded, null optionals omitted, `heartbeat_interval_ms` defaulted to `60000` only when absent, and explicit `0` signed literally as disabled). Old signed announcements that depended on the divergent per-SDK forms may fail cross-SDK verification.
+- **NDP graph/revoke guard enforcement**: SDKs now enforce GraphFrame node/edge bounds and NIP revoke parent rules consistently, so malformed frames that previously slipped through are rejected with the documented protocol errors.
+
+### Hardening
+
+- Hardened inbound NWP Bridge server dispatch with required caller verification, bounded request bodies, dispatch timeouts, and sanitized client errors.
+- Hardened native-mode parsing so malformed Tier-3 BinaryVector frames return documented client errors instead of server-internal failures, and Go native serving avoids shared negotiated-tier mutation.
 
 ### Release Engineering
 

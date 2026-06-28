@@ -12,11 +12,21 @@
 
 ## [1.0.0-alpha.15] —— 2026-06-28
 
-### 协议对齐与加固
+### 新增
 
 - 在 SDK 源树与分发仓中实现 NCP Tier-3 BinaryVector policy，并补齐 malformed-frame / client-error conformance 覆盖。
-- 对齐 Python、TypeScript、Go、Java、Rust、.NET 的 NIP TrustFrame/RevokeFrame 与 NDP Announce/Graph/Federation 语义，包括 Announce 签名规范体、显式 heartbeat_interval_ms=0、Graph 边界以及 revoke parent 规则。
-- 加固入站 NWP Bridge server dispatch：默认要求调用方验证，增加 request body 上限、dispatch timeout、客户端错误脱敏，以及更安全的 native-mode parser 行为。
+- 新增入站 NWP Bridge server adapters：MCP 与 A2A server-side Bridge adapter，包含 ASP.NET hosting、JSON-RPC framing helper、tool / AgentCard metadata 与本地 action dispatch。
+
+### Alpha 破坏性 wire 修正
+
+- **NIP TrustFrame/RevokeFrame 签名 payload 对齐**：签名 payload 现在包含当前 NPS-3 字段（`issued_at`、`serial`、`signer_nid`、`target_nid`、`target_node`），并使用当前吊销状态 / 错误命名（`NIP-CERT-REVOKED`）。旧 alpha.14 形状签出的 frame 升级后不再通过验证。
+- **NDP Announce 签名规范体对齐**：各 SDK 现在签同一个 canonical Announce body（排除 `signature` / `health` / `last_seen` / `frame`，省略 null optional，`heartbeat_interval_ms` 缺省时才按 `60000` 默认值参与签名，显式 `0` 作为 disabled 原样签入）。依赖旧 per-SDK 差异形态的 signed Announce 可能无法跨 SDK 验证。
+- **NDP graph / revoke guard 强制执行**：SDK 现在一致强制 GraphFrame 节点/边界限与 NIP revoke parent 规则；过去可能漏过的 malformed frame 会按文档化协议错误拒绝。
+
+### 加固
+
+- 加固入站 NWP Bridge server dispatch：默认要求调用方验证，增加 request body 上限、dispatch timeout，并对客户端错误脱敏。
+- 加固 native-mode parser：malformed Tier-3 BinaryVector frame 返回文档化 client error，而不是 server-internal failure；Go native serving 不再修改共享 negotiated tier 状态。
 
 ### 发布工程
 
