@@ -19,7 +19,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ### Breaking Alpha Wire Changes
 
-- **NIP TrustFrame/RevokeFrame signed payload realignment**: the signed payload now includes the current NPS-3 fields (`issued_at`, `serial`, `signer_nid`, `target_nid`, `target_node`) and uses the current revocation status/error naming (`NIP-CERT-REVOKED`). Signed frames produced by the old alpha.14-era SDK shape will no longer verify after upgrading.
+- **NIP TrustFrame/RevokeFrame signed payload realignment**: the signed payload now includes the current NPS-3 fields (`issued_at`, `serial`, `signer_nid`, `target_nid`) and uses the current revocation status/error naming (`NIP-CERT-REVOKED`). Signed frames produced by the old alpha.14-era SDK shape will no longer verify after upgrading.
 - **NDP Announce signed canonical form realignment**: SDKs now sign the same canonical Announce body (`signature`/`health`/`last_seen`/`frame` excluded, null optionals omitted, `heartbeat_interval_ms` defaulted to `60000` only when absent, and explicit `0` signed literally as disabled). Old signed announcements that depended on the divergent per-SDK forms may fail cross-SDK verification.
 - **NDP graph/revoke guard enforcement**: SDKs now enforce GraphFrame node/edge bounds and NIP revoke parent rules consistently, so malformed frames that previously slipped through are rejected with the documented protocol errors.
 

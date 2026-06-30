@@ -19,7 +19,7 @@
 
 ### Alpha 破坏性 wire 修正
 
-- **NIP TrustFrame/RevokeFrame 签名 payload 对齐**：签名 payload 现在包含当前 NPS-3 字段（`issued_at`、`serial`、`signer_nid`、`target_nid`、`target_node`），并使用当前吊销状态 / 错误命名（`NIP-CERT-REVOKED`）。旧 alpha.14 形状签出的 frame 升级后不再通过验证。
+- **NIP TrustFrame/RevokeFrame 签名 payload 对齐**：签名 payload 现在包含当前 NPS-3 字段（`issued_at`、`serial`、`signer_nid`、`target_nid`），并使用当前吊销状态 / 错误命名（`NIP-CERT-REVOKED`）。旧 alpha.14 形状签出的 frame 升级后不再通过验证。
 - **NDP Announce 签名规范体对齐**：各 SDK 现在签同一个 canonical Announce body（排除 `signature` / `health` / `last_seen` / `frame`，省略 null optional，`heartbeat_interval_ms` 缺省时才按 `60000` 默认值参与签名，显式 `0` 作为 disabled 原样签入）。依赖旧 per-SDK 差异形态的 signed Announce 可能无法跨 SDK 验证。
 - **NDP graph / revoke guard 强制执行**：SDK 现在一致强制 GraphFrame 节点/边界限与 NIP revoke parent 规则；过去可能漏过的 malformed frame 会按文档化协议错误拒绝。
 
