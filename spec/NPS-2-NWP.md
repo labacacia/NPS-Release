@@ -4,11 +4,11 @@ English | [中文版](./NPS-2-NWP.cn.md)
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.14
-**Date**: 2026-05-28
+**Version**: 0.17
+**Date**: 2026-07-05
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9), NPS-3 (NIP v0.10), NPS-4 (NDP v0.9)
+**Depends-On**: NPS-1 (NCP v0.9), NPS-3 (NIP v0.11), NPS-4 (NDP v0.9)
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -26,6 +26,8 @@ NWP defines the AI-native request/response semantics for interacting with Neural
 
 NWP is a semantic protocol layer, not a Memory-Node-only REST API. It can be carried over native NCP sessions or over the HTTP overlay mode defined in §2.2; REST is only an analogy for familiar request/response semantics or an external protocol target of Bridge Nodes.
 
+LLM-serving is expressed as an NWM **LLM/Thinking Profile** (§4.2a) on ordinary Action or Complex Nodes, not as a sixth base `node_type`. This keeps `node_type` tied to protocol responsibility while still giving model-serving nodes a standard discovery shape.
+
 ### 2.1 Node Types
 
 | Type | Responsibility | Typical Data Sources |
@@ -37,6 +39,8 @@ NWP is a semantic protocol layer, not a Memory-Node-only REST API. It can be car
 | **Bridge Node** | Translates between NPS frames and non-NPS protocols (HTTP/HTTPS, gRPC, MCP, A2A) | Calls to legacy REST APIs, gRPC services, Model Context Protocol servers, Agent-to-Agent endpoints |
 
 A node MAY simultaneously carry more than one role (for example, a single deployment can be both a Memory Node and an Anchor Node when role separation is unnecessary). Multi-role declaration travels in the NDP `Announce` frame's `node_roles` field (NPS-4 §3.1).
+
+> **Thinking Node** is a product-facing alias, not a wire-level node type. A node that serves LLM completions SHOULD declare `node_type: "action"` when it only performs model actions, or `node_type: "complex"` when it also owns memory, tools, routing, or graph behavior. It advertises the standard `profiles.llm` NWM block (§4.2a) and the appropriate NIP capabilities (`llm:*`, NPS-3 §5.1).
 
 > **Anchor Node** and **Bridge Node** were introduced together by [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md), replacing the original `Gateway Node` type:
 > - **Anchor Node** inherits the cluster-entry / NOP-routing role that Gateway Node was carrying. It is stateless per request but MAY maintain a long-lived registry of member nodes.
@@ -77,7 +81,7 @@ Anchor Nodes that maintain a member registry MUST expose it via the reserved que
 
 A Bridge Node MUST:
 
-1. Accept inbound NWP frames carrying a `bridge_target` parameter that identifies the external protocol and endpoint. The `bridge_target` object has the following standard fields: `protocol` (string, required — one of `"http"`, `"grpc"`, `"mcp"`, `"a2a"`); `endpoint` (string URL, required); `headers` (object string→string, optional — extra HTTP headers the bridge passes to the upstream). Third-party adapters MAY extend with additional fields; unknown fields MUST be ignored by consumers.
+1. Accept inbound NWP frames carrying a `bridge_target` parameter that identifies the external protocol and endpoint. The canonical `bridge_target` wire shape is `{ "protocol", "endpoint", "extras"? }`: `protocol` (string, required — one of `"http"`, `"grpc"`, `"mcp"`, `"a2a"`); `endpoint` (string URL, required); `extras` (object, optional — per-protocol knobs such as HTTP `method`, `headers`, MCP `tool`, or gRPC call metadata). HTTP headers MUST travel inside `bridge_target.extras.headers`, not as a top-level `bridge_target.headers` field. Third-party adapters MAY add fields inside `extras`; unknown top-level fields and unknown `extras` members MUST be ignored by consumers.
 2. Produce outbound requests in the target protocol's format.
 3. Translate target-protocol responses back into NWP frames (typically `CapsFrame`).
 
@@ -164,6 +168,7 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 | `sla` | object | Optional | SLO commitments for the node, see §4.7. Advisory only; the protocol does not enforce these. Per-action override permitted via ActionSpec.sla (§4.6). |
 | `billing` | object | Optional | Commercial metadata for the node (metering profile + price hint), see §4.8. Advisory only; the protocol does not collect or settle charges. Per-action override permitted via ActionSpec.billing (§4.6). |
 | `trust_anchors` | array of strings | Optional | NIDs of CA nodes the Anchor accepts as IdentFrame issuers (e.g. `["urn:nps:agent:ca.example.com:root"]`). Consumers SHOULD use this to pre-validate their issuer before connecting. When absent, the node accepts any CA trusted by the NIP verification chain. |
+| `profiles` | object | Optional | Structured protocol profiles layered on top of the base node role, see §4.2a. Unknown profile keys MUST be ignored by consumers. |
 
 ### 4.2 capabilities Field
 
@@ -179,6 +184,96 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 | `ext_frame` | bool | Supports extended frame header (large frame mode) |
 | `e2e_enc` | bool | Supports NCP E2E encryption (ENC=1, see NPS-1-NCP §7.4) |
 | `inline_anchor` | bool | Supports returning updated AnchorFrame inline in responses |
+
+### 4.2a profiles Field
+
+`profiles` is an optional object for structured capability profiles that refine a node's base role. Profiles do **not** introduce new `node_type` values. A consumer that does not understand a profile key MUST ignore that key and continue using the base NWP role, action registry, and capability flags.
+
+#### LLM / Thinking Profile (`profiles.llm`)
+
+A node with `profiles.llm` is an **LLM-capable Action or Complex Node**. Product documentation MAY call it a "Thinking Node", but the canonical NWM `node_type` remains `"action"` or `"complex"`:
+
+- Use `"action"` when the endpoint only runs model actions and returns results.
+- Use `"complex"` when the endpoint also owns memory, tool orchestration, graph traversal, session state, or other non-trivial composition.
+- The node SHOULD advertise `llm:complete` in its NDP/NIP `capabilities` and MUST implement the `llm.complete` ActionFrame contract (§7.5) when `profiles.llm.actions` contains `"llm.complete"`.
+- If `supports_stream = true`, the node SHOULD also advertise `llm:stream`; if `supports_tools = true`, it SHOULD advertise `llm:tool_call`.
+
+**`profiles.llm` fields**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `profile_version` | string | Optional | LLM profile schema version. Current value: `"0.1"` |
+| `actions` | array[string] | Optional | Standard LLM action ids implemented by this node. Default: `["llm.complete"]` |
+| `provider` | string | Optional | Provider/runtime family, e.g. `"willow"`, `"ollama"`, `"openai-compatible"`. Advisory only |
+| `default_model` | string | Optional | Model id used when a request omits provider-specific routing hints |
+| `models` | array | Optional | Model descriptors, see below |
+| `supports_stream` | bool | Optional | Whether `llm.complete` accepts `stream=true` and returns a StreamFrame sequence |
+| `supports_tools` | bool | Optional | Whether tool definitions and tool-call responses are supported |
+| `supports_json_mode` | bool | Optional | Whether structured JSON/object completions are supported |
+| `supports_embeddings` | bool | Optional | Whether embedding actions such as `llm.embed` are supported |
+| `supports_rerank` | bool | Optional | Whether rerank actions such as `llm.rerank` are supported |
+| `reasoning_visibility` | string | Optional | `"none"` / `"summary"` / `"trace"`. `trace` exposes provider reasoning artifacts and is deployment-sensitive |
+| `privacy` | object | Optional | Operator privacy policy hints, see below |
+
+**Model descriptor**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `id` | string | Required | Model id accepted by `LlmCompleteActionRequest.model` |
+| `display_name` | string | Optional | Human-readable model name |
+| `modalities` | array[string] | Optional | Supported modalities, e.g. `["text"]` or `["text","image"]` |
+| `context_window` | uint32 | Optional | Maximum input context window in native model tokens |
+| `max_output_tokens` | uint32 | Optional | Maximum output tokens permitted by this node |
+| `tokenizer` | string | Optional | Tokenizer id used for estimates and CGN hints |
+| `cgn_profile` | string | Optional | CGN conversion profile id from `cgn-profiles.yaml`, when known |
+
+**Privacy descriptor**
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `retention` | string | Prompt/response retention policy, e.g. `"none"` / `"session"` / `"30d"` |
+| `training` | bool | Whether prompt/response content may be used for model training |
+| `region` | string | Optional processing or storage region hint |
+
+**Example**
+
+```json
+{
+  "node_type": "action",
+  "capabilities": { "query": false, "stream_query": false, "token_budget_hint": true },
+  "actions": {
+    "llm.complete": {
+      "description": "Complete a chat conversation",
+      "params_anchor": "nps:system:llm.complete:request",
+      "result_anchor": "nps:system:llm.complete:response",
+      "async": true,
+      "required_capability": "llm:complete"
+    }
+  },
+  "profiles": {
+    "llm": {
+      "profile_version": "0.1",
+      "provider": "willow",
+      "default_model": "willow-small",
+      "actions": ["llm.complete"],
+      "supports_stream": true,
+      "supports_tools": true,
+      "reasoning_visibility": "summary",
+      "models": [
+        {
+          "id": "willow-small",
+          "modalities": ["text"],
+          "context_window": 128000,
+          "max_output_tokens": 8192,
+          "tokenizer": "cl100k_base",
+          "cgn_profile": "oa.reasoning"
+        }
+      ],
+      "privacy": { "retention": "none", "training": false, "region": "us" }
+    }
+  }
+}
+```
 
 ### 4.3 auth Field
 
@@ -639,6 +734,97 @@ All nodes supporting async Actions MUST implement:
 }
 ```
 
+### 7.5 Standard LLM Completion Action (`llm.complete`)
+
+NWP standardizes the `llm.complete` action so SDKs and agent runtimes do not
+need private ActionFrame payload codecs for ordinary model completions.
+Nodes that serve this action SHOULD also advertise the LLM/Thinking Profile in
+NWM `profiles.llm` (§4.2a) so clients can discover models, streaming/tool
+support, privacy hints, and reasoning-disclosure policy without invoking a
+model request.
+
+**Request binding**
+
+- The wire frame is `ActionFrame` with `action_id = "llm.complete"`.
+- `ActionFrame.params` MUST contain a `LlmCompleteActionRequest` object.
+- `params.kind` MUST be `"llm.complete"` when present. Producers SHOULD emit it
+  for self-description and compatibility with pre-contract clients; consumers
+  MAY accept an absent `kind` only when `action_id` is already `"llm.complete"`.
+- `ActionFrame.async = true` requests asynchronous execution. `params.stream =
+  true` requests an immediate `StreamFrame` response. The two flags MUST NOT be
+  combined; servers SHOULD reject the combination with `NWP-ACTION-PARAMS-INVALID`.
+
+**`LlmCompleteActionRequest` fields**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `kind` | string | Optional | Self-description. Canonical value: `"llm.complete"` |
+| `model` | string | Required | Model identifier as understood by the receiving LLM node |
+| `max_tokens` | uint32 | Optional | Maximum generated tokens |
+| `stream` | bool | Optional | When true, response is a `StreamFrame` sequence instead of a synchronous `CapsFrame` |
+| `messages` | array | Required | Ordered conversation messages |
+| `tools` | array | Optional | Tool definitions available to the model |
+
+**`LlmMessageDto` fields**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `role` | string | Required | `"system"` / `"user"` / `"assistant"` / `"tool"` |
+| `content` | string | Optional | Message text or serialized tool result |
+| `tool_call_id` | string | Optional | Tool-call id referenced by a `"tool"` message |
+| `tool_name` | string | Optional | Tool name referenced by a `"tool"` message |
+| `tool_calls` | array | Optional | Tool calls emitted by an assistant message |
+
+**Tool fields**
+
+`LlmToolCallDto` uses `{ "call_id", "tool_name", "arguments_json" }`.
+`arguments_json` is a JSON string so providers can preserve the exact argument
+object received from or sent to an LLM backend. `LlmToolDefinitionDto` uses
+`{ "name", "description", "parameters" }`, where each `ToolParameterDto` uses
+`{ "name", "type", "description", "required" }`. Standard `type` values are
+`"string"`, `"number"`, `"boolean"`, `"object"`, and `"array"`.
+
+**Success response semantics**
+
+| Request mode | Successful response |
+|--------------|---------------------|
+| `async=false`, `stream=false` | `CapsFrame` with `anchor_ref = "nps:system:llm.complete:response"` and `data[0]` containing `LlmCompleteActionResponse` |
+| `async=true`, `stream=false` | `AsyncActionResponse` acknowledgment. `system.task.status.result` contains `LlmCompleteActionResponse` when completed |
+| `stream=true` | `StreamFrame` sequence with `anchor_ref = "nps:system:llm.complete:stream"` on the first chunk; `data[]` contains `LlmCompleteStreamChunkDto` items |
+
+Fire-and-forget is not a separate `llm.complete` mode. Clients that do not care
+about the result MAY submit an async request and ignore the poll URL, but the
+server still follows the async task contract.
+
+**`LlmCompleteActionResponse` fields**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `stop_reason` | enum | Required | `"end_turn"` / `"tool_use"` / `"tool_calls"` / `"max_tokens"` / `"length"` / `"error"` |
+| `content` | string | Optional | Final generated text for non-tool completions |
+| `tool_calls` | array | Optional | Tool calls requested by the model |
+| `error` | string | Optional | Model/provider-level completion error; see error rule below |
+
+For streaming responses, `LlmCompleteStreamChunkDto.content_delta` carries the
+new text for that chunk. The final chunk SHOULD set `stop_reason`; abnormal
+stream termination SHOULD use a terminal `ErrorFrame` or `StreamFrame.error_code`.
+
+**Error rule**
+
+Protocol, validation, authorization, timeout, and provider dispatch failures
+SHOULD be returned as `ErrorFrame` using the normal NWP error mapping. The
+`LlmCompleteActionResponse.error` field is reserved for model-level failures
+that are themselves a successful action result, for example a provider returning
+a structured "model refused/error" completion instead of raising a transport or
+server error.
+
+**Field naming and encoding**
+
+Canonical JSON field names are snake_case. SDK producers MUST emit snake_case.
+SDK consumers SHOULD accept PascalCase/case-insensitive property names as a
+compatibility fallback. MessagePack payload maps MUST use the same canonical
+snake_case keys as JSON.
+
 ---
 
 ## 8. SubscribeFrame Overview (0x12)
@@ -732,6 +918,21 @@ The HTTP status code is determined by the NPS status code mapping; see [status-c
 | `message` | string | Optional | Human-readable description |
 | `details` | object | Optional | Structured additional error information |
 | `request_id` | string | Optional | Echo of the `X-NWP-Request-ID` from the request |
+
+### 9.5 HTTP Binding Rejection Codes
+
+HTTP overlay implementations MUST use canonical NWP error codes for transport-binding preconditions before the request body is admitted as a NWP frame. These errors are NWP-owned because they determine whether an NWP `QueryFrame`, `ActionFrame`, or `SubscribeFrame` can be recovered from the HTTP exchange; they are not implementation-local adapter errors.
+
+| Rejection | Trigger | Error Code | NPS Status Code |
+|-----------|---------|------------|-----------------|
+| Origin disallowed | Browser-facing HTTP binding rejects the request origin by CORS or equivalent origin policy | `NWP-HTTP-ORIGIN-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` |
+| Content-Type unsupported | Request body media type is not a supported NWP frame media type | `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` |
+| Accept unsatisfiable | `Accept` refuses every response media type this node can emit | `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` |
+| Request-id echo mismatch | Client observes that the response `X-NWP-Request-ID` does not match the request header | `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` |
+| Unparseable frame body | HTTP body cannot be parsed as any supported NWP frame envelope or NCP-carried NWP frame | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` |
+| Advertised but unimplemented | NWM advertises a capability or profile that this node accepts in discovery but cannot currently serve | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` |
+
+`NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` is distinct from capability-specific unsupported codes such as `NWP-QUERY-VECTOR-UNSUPPORTED`: use the specific code when the manifest truthfully declares the feature unsupported, and use `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` only for rollout windows, disabled backends, or inconsistent discovery state where the feature was advertised but cannot be served.
 
 ---
 
@@ -1067,6 +1268,12 @@ The following error codes (defined in §14) apply to SubscribeFrame operations:
 | `NWP-MANIFEST-NODE-TYPE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` contains an unrecognized value (see `NWP-MANIFEST-NODE-TYPE-REMOVED` for the `"gateway"` case) |
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | Rate limit exceeded |
 | `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | `QueryFrame` or `SubscribeFrame` `type` is an unrecognized reserved-type identifier (§12). Distinct from `NWP-ACTION-NOT-FOUND` — the unknown operand is `type`, not `action_id`. |
+| `NWP-HTTP-ORIGIN-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | HTTP overlay origin policy rejected the caller (§9.5) |
+| `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | HTTP overlay request `Content-Type` is not a supported NWP frame media type (§9.5) |
+| `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` | HTTP overlay request `Accept` cannot be satisfied by any supported response media type (§9.5) |
+| `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | Response `X-NWP-Request-ID` does not echo the request ID (§9.5) |
+| `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body cannot be parsed as a supported NWP frame envelope (§9.5) |
+| `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM advertises a capability/profile that the node currently cannot serve (§9.5) |
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | Caller lacks permission to read this Anchor's topology (§12). Authorization policy is implementation-defined per §12.4 |
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` value is not implemented by this Anchor |
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Requested `topology.depth` exceeds this Anchor's maximum |
@@ -1128,8 +1335,8 @@ A conformant Bridge Node MUST:
 A conformant Bridge Node SHOULD:
 
 1. Apply SSRF protection to `bridge_target.endpoint` (NPS-2 §15.2) before dialing the upstream.
-2. Propagate `bridge_target.headers` to the upstream HTTP request verbatim, minus hop-by-hop
-   headers.
+2. Propagate `bridge_target.extras.headers` to the upstream HTTP request verbatim, minus
+   hop-by-hop headers.
 
 ### 16.2 `bridge_target` test vectors
 
@@ -1169,9 +1376,12 @@ Vector rules:
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.17 | 2026-07-05 | Added §9.5 HTTP Binding Rejection Codes and six canonical NWP error codes for HTTP overlay preconditions and advertised-but-unimplemented capability rollout windows: `NWP-HTTP-ORIGIN-FORBIDDEN`, `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED`, `NWP-HTTP-ACCEPT-UNSATISFIABLE`, `NWP-HTTP-REQUEST-ID-MISMATCH`, `NWP-HTTP-FRAME-BODY-MALFORMED`, and `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED`. Shared `error-codes.md` bumped to v1.6. |
+| 0.16 | 2026-07-04 | Adds §4.2a NWM `profiles` and the standard LLM/Thinking Profile (`profiles.llm`) for model-serving Action/Complex Nodes. Clarifies that "Thinking Node" is a product-facing alias, not a new `node_type`; coarse discovery uses NIP/NDP `llm:*` capabilities while detailed model, streaming, tool, privacy, and reasoning-disclosure metadata lives in NWM. No new frame type or error code. Depends-On NIP bumped to v0.11 for the `llm:*` capability registry. |
+| 0.15 | 2026-07-04 | New §7.5 standardizes the `llm.complete` ActionFrame contract: typed request/response DTO shape, stop_reason enum, tool call field names, sync/async/streaming response semantics, ErrorFrame-vs-payload-error rule, and snake_case JSON/MessagePack key policy. No new frame type or error code. |
 | 0.14 | 2026-06-12 | New §16 **Bridge Node Conformance**: formal MUST/SHOULD requirements (advertise `node_type: "bridge"`, validate `bridge_target.protocol`, opaque unknown-field pass-through, stateless / no-topology) and canonical `bridge_target` round-trip test vectors (http / grpc / mcp, with `extras`) all six SDKs must round-trip identically. §16 Changelog renumbered to §17. No new error codes; no `Depends-On` change. |
 | 0.14 | 2026-06-03 | NWM `manifest_version` type changed from opaque string (ETag) to uint32 monotonic counter (starts at 1, incremented on every structural change). New NWM field `manifest_updated_at` (ISO 8601, optional) records the last-change timestamp. Servers MUST return `X-NWM-Version: <manifest_version>` on every `GET /.nwm` response; agents use `If-None-Match: <uint32>` for conditional requests. No new error codes; `304 Not Modified` reused for cache hits. |
-| 0.13 | 2026-05-28 | §13 SubscribeFrame (0x12) formal specification (closes CR-0006): field table (subscription_id, filter, heartbeat_interval_ms, max_events, cursor), lifecycle (open→active→heartbeat→close), error code reference. §12.4 `topology:subscribe` enforcement promoted SHOULD → MUST; nodes that cannot enforce MUST document non-enforcement in NWM stability metadata. NWM gains optional `trust_anchors` field (array of CA NID URNs). BridgeNode `bridge_target` object schema standardized (protocol + endpoint + headers). |
+| 0.13 | 2026-05-28 | §13 SubscribeFrame (0x12) formal specification (closes CR-0006): field table (subscription_id, filter, heartbeat_interval_ms, max_events, cursor), lifecycle (open→active→heartbeat→close), error code reference. §12.4 `topology:subscribe` enforcement promoted SHOULD → MUST; nodes that cannot enforce MUST document non-enforcement in NWM stability metadata. NWM gains optional `trust_anchors` field (array of CA NID URNs). BridgeNode `bridge_target` object schema standardized (protocol + endpoint + extras carrier). |
 | 0.12 | 2026-05-11 | NPS-CR-0002 Phase 2 spec gaps closed. §8.2 DiffFrame extension table gains optional `cgn_est` field (uint32) for per-event CGN reporting on push streams per [token-budget.md §7.2](token-budget.md); columns reformatted to include Required. §12.2 `topology.stream` events table: `anchor_state` row gains explicit sub-type discriminator schema (`version_rebased` defined for Phase 1–2; `anchor_failover` and `anchor_quorum_lost` reserved as Phase 3 placeholder slots — implementations MUST NOT emit Phase 3 sub-types pre-stable and MUST ignore unknown sub-types for forward compatibility); `resync_required` trigger and `reason` enum broadened (`version_too_old` / `anchor_rebased` / `server_state_lost`). §12.4 Phase 1–2 authorization model expanded: (a) capability gate split per surface — `topology.snapshot` requires `topology:read`; `topology.stream` requires `topology:read` AND SHOULD additionally require `topology:subscribe` in Phase 2 (MUST in Phase 3); (b) new mid-stream rejection rule — server MUST emit terminal `NWP-TOPOLOGY-UNAUTHORIZED` event then close the stream on capability revocation; (c) new reputation interaction — for active subscriptions, Anchors with a declared `reputation_policy` SHOULD emit terminal `NWP-AUTH-REPUTATION-BLOCKED` and close the stream when the subscriber's reputation drops below threshold. No new error codes; existing `NWP-TOPOLOGY-UNAUTHORIZED` and `NWP-AUTH-REPUTATION-BLOCKED` reused. No `Depends-On` change. See issue #41. |
 | 0.11 | 2026-05-10 | NWM gains optional top-level `stability` (`experimental`/`stable`/`deprecated`), `sla` (object: `p95_latency_ms`, `availability`, `sla_tier`), and `billing` (object: `metering_profile`, `billing_unit`, `price_hint`, `currency`) fields (§4.1, §4.4a, §4.4b). ActionSpec (§4.6) gains matching per-action `stability` / `sla` / `billing` overrides with field-level fallback to the top-level values. All fields are advisory (no protocol-level enforcement) and backward-compatible — pre-0.11 manifests are treated as `stability="stable"` with no SLO/billing metadata. Enables marketplace / NeuronHub clients to filter, warn, or rank services by lifecycle stage and commercial profile per AaaS-Profile discovery requirements. No new error codes; no `Depends-On` change. See issue #36. |
 | 0.10 | 2026-05-01 | §12.4 authorization model replaced "implementation-defined" with a Phase 1–2 minimum binding: Anchor Nodes MUST require `topology:read` in `IdentFrame.capabilities` (capability gate, self-declared but signed); SHOULD cross-check NDP `node_roles` contains `"anchor"` as defense-in-depth; Phase 3 [RFC-0002 stable] adds CA-attested `id-nps-node-roles` cert extension. §14.7 updated to reference §12.4 defined minimum instead of the previous hedging "SHOULD restrict" language. `Depends-On` NIP bumped to v0.6 (defines `topology:read` capability). |

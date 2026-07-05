@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.14
-**Date**: 2026-05-01
+**Version**: 0.17
+**Date**: 2026-07-05
 **Port**: 17433（默认，共用）/ 17434（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)、NPS-3 (NIP v0.10)、NPS-4 (NDP v0.9)
+**Depends-On**: NPS-1 (NCP v0.9)、NPS-3 (NIP v0.11)、NPS-4 (NDP v0.9)
 
 > 本文档为 NWP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
 
@@ -26,6 +26,8 @@ NWP 定义 AI Agent 与神经节点交互时使用的 AI-native 请求/响应语
 
 NWP 是语义协议层，不是只面向 Memory Node 的 REST API。它可以承载在原生 NCP session 上，也可以使用 §2.2 定义的 HTTP Overlay 模式；REST 只是一种便于理解请求/响应语义的类比，或 Bridge Node 的外部协议目标之一。
 
+LLM 服务通过普通 Action Node 或 Complex Node 上的 NWM **LLM/Thinking Profile**（§4.2a）表达，而不是新增第六种基础 `node_type`。这样 `node_type` 继续描述协议职责，同时让模型服务节点拥有标准发现形态。
+
 ### 2.1 节点类型
 
 | 类型 | 职责 | 典型数据源 |
@@ -37,6 +39,8 @@ NWP 是语义协议层，不是只面向 Memory Node 的 REST API。它可以承
 | **Bridge Node** | 在 NPS 帧与非-NPS 协议（HTTP/HTTPS、gRPC、MCP、A2A）之间翻译 | 调用遗留 REST API、gRPC 服务、Model Context Protocol 服务端、Agent-to-Agent 端点 |
 
 一个节点 MAY 同时承担多个角色（例如同一进程既是 Memory Node 又是 Anchor Node，无须分离时）。多角色声明放在 NDP `Announce` 帧的 `node_roles` 字段（NPS-4 §3.1）。
+
+> **Thinking Node** 是产品层别名，不是 wire-level 节点类型。服务 LLM completion 的节点如果只执行模型 action，SHOULD 声明 `node_type: "action"`；如果还拥有记忆、工具编排、路由、图遍历或会话状态，SHOULD 声明 `node_type: "complex"`。它通过标准 NWM `profiles.llm` 块（§4.2a）与对应 NIP capabilities（`llm:*`，NPS-3 §5.1）暴露能力。
 
 > **Anchor Node** 与 **Bridge Node** 由 [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md) 一同引入，替换原 `Gateway Node` 类型：
 > - **Anchor Node** 继承了 Gateway Node 原本承载的"集群入口 + NOP 路由"角色。它在每次请求中无状态，但 MAY 维持一份成员节点的长期注册表。
@@ -77,7 +81,7 @@ Anchor Node MUST：
 
 Bridge Node MUST：
 
-1. 接受携带 `bridge_target` 参数（标识外部协议与端点）的入站 NWP 帧。`bridge_target` 的具体 schema 在本 CR 中实现自定；按协议标准化推迟到后续 CR。
+1. 接受携带 `bridge_target` 参数（标识外部协议与端点）的入站 NWP 帧。规范化 `bridge_target` wire 形状为 `{ "protocol", "endpoint", "extras"? }`：`protocol`（string，必填，取值为 `"http"`、`"grpc"`、`"mcp"`、`"a2a"` 之一）；`endpoint`（string URL，必填）；`extras`（object，可选，承载按协议变化的参数，如 HTTP `method`、`headers`，MCP `tool`，或 gRPC call metadata）。HTTP header MUST 放在 `bridge_target.extras.headers` 内，不能作为顶层 `bridge_target.headers` 字段。第三方 adapter MAY 在 `extras` 中扩展字段；consumer MUST 忽略未知顶层字段与未知 `extras` 成员。
 2. 用目标协议的格式产出对外请求。
 3. 把目标协议的响应翻译回 NWP 帧（通常是 `CapsFrame`）。
 
@@ -159,6 +163,7 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `endpoints` | object | 必填 | 各功能端点 URL |
 | `graph` | object | 可选 | 子节点引用（Complex Node 专用），见 §11 |
 | `tokenizer_support` | array | 可选 | 节点支持的 tokenizer 列表（见 [token-budget.cn.md](token-budget.cn.md)）|
+| `profiles` | object | 可选 | 叠加在基础节点角色上的结构化协议 profile，见 §4.2a。Consumer MUST 忽略无法识别的 profile key。|
 
 ### 4.2 capabilities 字段
 
@@ -174,6 +179,96 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `ext_frame` | bool | 支持扩展帧头（大帧模式）|
 | `e2e_enc` | bool | 支持 NCP E2E 加密（ENC=1，见 NPS-1-NCP §7.4）|
 | `inline_anchor` | bool | 支持在响应中内联返回更新后的 AnchorFrame |
+
+### 4.2a profiles 字段
+
+`profiles` 是可选对象，用于声明叠加在基础节点角色之上的结构化能力 profile。Profile **不会**引入新的 `node_type`。不理解某个 profile key 的 consumer MUST 忽略该 key，并继续使用基础 NWP 角色、action registry 与 capability flags。
+
+#### LLM / Thinking Profile（`profiles.llm`）
+
+携带 `profiles.llm` 的节点是 **具备 LLM 能力的 Action Node 或 Complex Node**。产品文档 MAY 称其为 "Thinking Node"，但规范化 NWM `node_type` 仍然是 `"action"` 或 `"complex"`：
+
+- 端点只运行模型 action 并返回结果时，用 `"action"`。
+- 端点还拥有 memory、工具编排、图遍历、会话状态或其他组合逻辑时，用 `"complex"`。
+- 节点 SHOULD 在 NDP/NIP `capabilities` 中声明 `llm:complete`；当 `profiles.llm.actions` 包含 `"llm.complete"` 时，MUST 实现 §7.5 的 `llm.complete` ActionFrame contract。
+- 若 `supports_stream = true`，节点 SHOULD 同时声明 `llm:stream`；若 `supports_tools = true`，SHOULD 声明 `llm:tool_call`。
+
+**`profiles.llm` 字段**
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `profile_version` | string | 可选 | LLM profile schema 版本。当前值：`"0.1"` |
+| `actions` | array[string] | 可选 | 本节点实现的标准 LLM action id。默认：`["llm.complete"]` |
+| `provider` | string | 可选 | Provider/runtime 家族，如 `"willow"`、`"ollama"`、`"openai-compatible"`。仅作提示 |
+| `default_model` | string | 可选 | 请求未提供 provider-specific 路由提示时使用的模型 id |
+| `models` | array | 可选 | 模型描述对象，见下表 |
+| `supports_stream` | bool | 可选 | `llm.complete` 是否接受 `stream=true` 并返回 StreamFrame 序列 |
+| `supports_tools` | bool | 可选 | 是否支持 tool definition 与 tool-call response |
+| `supports_json_mode` | bool | 可选 | 是否支持结构化 JSON/object completion |
+| `supports_embeddings` | bool | 可选 | 是否支持 `llm.embed` 等 embedding action |
+| `supports_rerank` | bool | 可选 | 是否支持 `llm.rerank` 等 rerank action |
+| `reasoning_visibility` | string | 可选 | `"none"` / `"summary"` / `"trace"`。`trace` 会暴露 provider reasoning artifact，属于部署敏感能力 |
+| `privacy` | object | 可选 | Operator 隐私策略提示，见下表 |
+
+**模型描述对象**
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `id` | string | 必填 | `LlmCompleteActionRequest.model` 可接受的模型 id |
+| `display_name` | string | 可选 | 人类可读模型名称 |
+| `modalities` | array[string] | 可选 | 支持模态，如 `["text"]` 或 `["text","image"]` |
+| `context_window` | uint32 | 可选 | 原生模型 token 计的最大输入上下文窗口 |
+| `max_output_tokens` | uint32 | 可选 | 该节点允许的最大输出 token 数 |
+| `tokenizer` | string | 可选 | 用于估算与 CGN hint 的 tokenizer id |
+| `cgn_profile` | string | 可选 | 已知时，引用 `cgn-profiles.yaml` 中的 CGN 转换 profile id |
+
+**隐私描述对象**
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `retention` | string | Prompt/response 保留策略，如 `"none"` / `"session"` / `"30d"` |
+| `training` | bool | Prompt/response 内容是否可用于模型训练 |
+| `region` | string | 可选处理或存储区域提示 |
+
+**示例**
+
+```json
+{
+  "node_type": "action",
+  "capabilities": { "query": false, "stream_query": false, "token_budget_hint": true },
+  "actions": {
+    "llm.complete": {
+      "description": "Complete a chat conversation",
+      "params_anchor": "nps:system:llm.complete:request",
+      "result_anchor": "nps:system:llm.complete:response",
+      "async": true,
+      "required_capability": "llm:complete"
+    }
+  },
+  "profiles": {
+    "llm": {
+      "profile_version": "0.1",
+      "provider": "willow",
+      "default_model": "willow-small",
+      "actions": ["llm.complete"],
+      "supports_stream": true,
+      "supports_tools": true,
+      "reasoning_visibility": "summary",
+      "models": [
+        {
+          "id": "willow-small",
+          "modalities": ["text"],
+          "context_window": 128000,
+          "max_output_tokens": 8192,
+          "tokenizer": "cl100k_base",
+          "cgn_profile": "oa.reasoning"
+        }
+      ],
+      "privacy": { "retention": "none", "training": false, "region": "us" }
+    }
+  }
+}
+```
 
 ### 4.3 auth 字段
 
@@ -593,6 +688,91 @@ PENDING → RUNNING → COMPLETED
 }
 ```
 
+### 7.5 标准 LLM Completion Action（`llm.complete`）
+
+NWP 标准化 `llm.complete` action，使 SDK 和 agent runtime 不再需要为普通
+模型 completion 自行维护私有 ActionFrame payload codec。
+服务该 action 的节点 SHOULD 同时在 NWM `profiles.llm`（§4.2a）中声明 LLM/Thinking
+Profile，使客户端在发起模型请求前即可发现模型列表、stream/tool 支持、隐私提示与
+reasoning 暴露策略。
+
+**请求绑定**
+
+- wire frame 是 `ActionFrame`，且 `action_id = "llm.complete"`。
+- `ActionFrame.params` MUST 包含 `LlmCompleteActionRequest` 对象。
+- `params.kind` 出现时 MUST 为 `"llm.complete"`。生产者 SHOULD 发出该字段，
+  用作自描述和兼容旧客户端；消费者 MAY 在 `action_id` 已是 `"llm.complete"`
+  时接受缺省 `kind`。
+- `ActionFrame.async = true` 表示异步执行。`params.stream = true` 表示立即
+  返回 `StreamFrame` 序列。两者 MUST NOT 同时使用；服务端 SHOULD 以
+  `NWP-ACTION-PARAMS-INVALID` 拒绝该组合。
+
+**`LlmCompleteActionRequest` 字段**
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `kind` | string | 可选 | 自描述字段，规范值为 `"llm.complete"` |
+| `model` | string | 必填 | 接收端 LLM node 理解的模型标识 |
+| `max_tokens` | uint32 | 可选 | 最大生成 token 数 |
+| `stream` | bool | 可选 | 为 true 时，响应为 `StreamFrame` 序列，而不是同步 `CapsFrame` |
+| `messages` | array | 必填 | 有序对话消息 |
+| `tools` | array | 可选 | 可供模型使用的工具定义 |
+
+**`LlmMessageDto` 字段**
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `role` | string | 必填 | `"system"` / `"user"` / `"assistant"` / `"tool"` |
+| `content` | string | 可选 | 消息文本或序列化后的工具结果 |
+| `tool_call_id` | string | 可选 | `"tool"` 消息引用的 tool-call id |
+| `tool_name` | string | 可选 | `"tool"` 消息引用的工具名 |
+| `tool_calls` | array | 可选 | assistant 消息发出的工具调用 |
+
+**工具字段**
+
+`LlmToolCallDto` 使用 `{ "call_id", "tool_name", "arguments_json" }`。
+`arguments_json` 是 JSON 字符串，用于保留 LLM 后端收到或发出的精确参数对象。
+`LlmToolDefinitionDto` 使用 `{ "name", "description", "parameters" }`，
+其中每个 `ToolParameterDto` 使用 `{ "name", "type", "description", "required" }`。
+标准 `type` 值为 `"string"`、`"number"`、`"boolean"`、`"object"`、`"array"`。
+
+**成功响应语义**
+
+| 请求模式 | 成功响应 |
+|---------|----------|
+| `async=false`, `stream=false` | `CapsFrame`，`anchor_ref = "nps:system:llm.complete:response"`，`data[0]` 为 `LlmCompleteActionResponse` |
+| `async=true`, `stream=false` | `AsyncActionResponse` ack；任务完成后，`system.task.status.result` 为 `LlmCompleteActionResponse` |
+| `stream=true` | `StreamFrame` 序列；首个 chunk 携带 `anchor_ref = "nps:system:llm.complete:stream"`，`data[]` 为 `LlmCompleteStreamChunkDto` |
+
+Fire-and-forget 不是 `llm.complete` 的独立模式。客户端若不关心结果，MAY
+提交异步请求并忽略 poll URL，但服务端仍遵循异步任务契约。
+
+**`LlmCompleteActionResponse` 字段**
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `stop_reason` | enum | 必填 | `"end_turn"` / `"tool_use"` / `"tool_calls"` / `"max_tokens"` / `"length"` / `"error"` |
+| `content` | string | 可选 | 非工具 completion 的最终生成文本 |
+| `tool_calls` | array | 可选 | 模型请求的工具调用 |
+| `error` | string | 可选 | 模型/提供商层 completion error，见下方错误规则 |
+
+流式响应中，`LlmCompleteStreamChunkDto.content_delta` 携带该 chunk 的新增文本。
+最终 chunk SHOULD 设置 `stop_reason`；异常终止 SHOULD 使用 terminal
+`ErrorFrame` 或 `StreamFrame.error_code`。
+
+**错误规则**
+
+协议、校验、鉴权、超时、provider dispatch 失败 SHOULD 按正常 NWP 错误映射
+返回 `ErrorFrame`。`LlmCompleteActionResponse.error` 仅用于“模型层失败本身是
+一次成功 action result”的情况，例如 provider 返回结构化的 model refused/error
+completion，而非抛出传输或服务端错误。
+
+**字段命名与编码**
+
+规范 JSON 字段名为 snake_case。SDK 生产者 MUST 发出 snake_case。SDK 消费者
+SHOULD 兼容 PascalCase/大小写不敏感属性名。MessagePack payload map MUST 使用
+与 JSON 相同的规范 snake_case key。
+
 ---
 
 ## 8. SubscribeFrame (0x12)
@@ -753,6 +933,21 @@ HTTP 状态码由 NPS 状态码映射决定，见 [status-codes.cn.md](status-co
 | `message` | string | 可选 | 人类可读描述 |
 | `details` | object | 可选 | 结构化错误附加信息 |
 | `request_id` | string | 可选 | 回传请求中的 `X-NWP-Request-ID` |
+
+### 9.5 HTTP Binding 拒绝错误码
+
+HTTP overlay 实现 MUST 在请求体被接受为 NWP frame 之前，对传输绑定前置条件使用规范化 NWP 错误码。这些错误归属 NWP，因为它们决定 HTTP exchange 是否能恢复出 NWP `QueryFrame`、`ActionFrame` 或 `SubscribeFrame`；它们不是实现本地 adapter 私有码。
+
+| 拒绝类型 | 触发条件 | 错误码 | NPS 状态码 |
+|----------|----------|--------|------------|
+| Origin 被拒绝 | 面向浏览器的 HTTP binding 因 CORS 或等价 origin policy 拒绝请求来源 | `NWP-HTTP-ORIGIN-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` |
+| Content-Type 不支持 | 请求体 media type 不是受支持的 NWP frame media type | `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` |
+| Accept 无法满足 | `Accept` 拒绝了节点能返回的所有 response media type | `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` |
+| Request-id 回传不匹配 | 客户端观察到响应 `X-NWP-Request-ID` 未回传请求头中的值 | `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` |
+| Frame body 无法解析 | HTTP body 不能解析为任何受支持的 NWP frame envelope 或 NCP 承载的 NWP frame | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` |
+| 已声明但未实现 | NWM 在 discovery 中声明了某 capability 或 profile，但节点当前无法服务 | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` |
+
+`NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` 与 `NWP-QUERY-VECTOR-UNSUPPORTED` 等能力专用 unsupported 错误不同：manifest 如实声明不支持该能力时使用专用错误；只有在 rollout 窗口、后端被禁用或 discovery 状态不一致，导致“已声明但无法服务”时，才使用 `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED`。
 
 ---
 
@@ -1010,6 +1205,12 @@ Anchor Node 集群拓扑的持续变更事件流。
 | `NWP-MANIFEST-NODE-TYPE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` 包含无法识别的值（`"gateway"` 遗留情况请用 `NWP-MANIFEST-NODE-TYPE-REMOVED`）|
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | 超出频率限制 |
 | `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | `QueryFrame` 或 `SubscribeFrame` 的 `type` 为无法识别的 reserved-type 标识符（§12）。与 `NWP-ACTION-NOT-FOUND` 不同——未知操作数是 `type` 而非 `action_id`。|
+| `NWP-HTTP-ORIGIN-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | HTTP overlay origin policy 拒绝调用方（§9.5）|
+| `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | HTTP overlay 请求 `Content-Type` 不是受支持的 NWP frame media type（§9.5）|
+| `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` | HTTP overlay 请求 `Accept` 无法由任何受支持的 response media type 满足（§9.5）|
+| `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | 响应 `X-NWP-Request-ID` 未回传请求 ID（§9.5）|
+| `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body 无法解析为受支持的 NWP frame envelope（§9.5）|
+| `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM 声明了当前节点无法服务的 capability/profile（§9.5）|
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | 调用方无权读取该 Anchor 的拓扑（§12）。授权策略由实现自定，详见 §12.4 |
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | 该 Anchor 不实现请求的 `topology.scope` |
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | 请求的 `topology.depth` 超过该 Anchor 上限 |
@@ -1046,11 +1247,65 @@ Complex Node 解析子节点引用时，MUST 维护允许的节点 URL 前缀白
 
 ---
 
-## 15. 变更历史
+## 16. Bridge Node 合规性
+
+Bridge Node 类型与 `bridge_target` 对象 schema 由 NPS-CR-0001（§2.1）引入，并在 NWP v0.13 标准化。本节形式化合规要求，并提供规范化 `bridge_target` 往返测试向量，确保所有 SDK Bridge 实现对 wire shape 达成一致。
+
+### 16.1 合规要求
+
+合规 Bridge Node MUST：
+
+1. 在 NWM（§4.1）中声明 `node_type: "bridge"`，并通过 NDP `bridge_protocols`（NPS-4 §3.1）声明支持的外部协议。
+2. 接受携带 `bridge_target` 对象的入站 NWP 帧；对于 Bridge-routed action，缺少该对象时 MUST 以 `NWP-ACTION-PARAMS-INVALID` 拒绝。
+3. 校验 `bridge_target.protocol` 是否属于自身声明的协议集合；不支持的协议 MUST 返回 `NWP-ACTION-PARAMS-INVALID`，不得静默 fallthrough。
+4. 把未知 `bridge_target` 字段视为 opaque pass-through，MUST NOT 因未知字段失败（前向兼容）。
+5. 每次请求 **无状态**，且 MUST NOT 参与集群拓扑；纯 Bridge Node 的 `topology.*` MUST 返回 `NWP-RESERVED-TYPE-UNSUPPORTED`。
+
+合规 Bridge Node SHOULD：
+
+1. 在拨打上游前，对 `bridge_target.endpoint` 应用 SSRF 防护（NPS-2 §15.2）。
+2. 对 HTTP 上游请求，原样传递 `bridge_target.extras.headers`，但 MUST 去掉 hop-by-hop headers。
+
+### 16.2 `bridge_target` 测试向量
+
+规范 wire 形状为 `{ "protocol", "endpoint", "extras"? }`（SDK in-memory form）；`headers` 与其他按协议变化的参数位于 `extras` 中。所有六个 SDK MUST 对这些向量做一致往返（`from_dict(to_dict(x)) == x`）：
+
+```json
+{ "protocol": "http", "endpoint": "https://api.example.com/v1/orders" }
+```
+
+```json
+{
+  "protocol": "http",
+  "endpoint": "https://api.example.com/v1/orders",
+  "extras": { "method": "POST", "headers": { "X-Tenant": "acme" } }
+}
+```
+
+```json
+{ "protocol": "grpc", "endpoint": "grpc.example.com:443/orders.OrderService/Create" }
+```
+
+```json
+{ "protocol": "mcp", "endpoint": "https://mcp.example.com/sse", "extras": { "tool": "create_order" } }
+```
+
+向量规则：
+
+- `protocol` 与 `endpoint` 必填，且 MUST 原样保留。
+- `extras` 为空或缺失时 MUST 从序列化结果中省略（不得输出为 `null`）。
+- `BridgeNodeDescriptor` 序列化 `supported_protocols` 时使用 **排序后** 数组，以保证各 SDK 输出稳定。
+
+---
+
+## 17. 变更历史
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 0.14 | 2026-06-12 | 新增 §16 **Bridge Node 合规性**：形式化 MUST/SHOULD 要求 + 规范化 `bridge_target` 往返测试向量（http / grpc / mcp），六个 SDK 必须一致往返。原 §16 变更历史重编号为 §17。无新错误码；`Depends-On` 升级为 NCP v0.8 / NIP v0.10 / NDP v0.9。（正文中文翻译待补，见 version-matrix translation_lag） |
+| 0.17 | 2026-07-05 | 新增 §9.5 HTTP Binding 拒绝错误码，为 HTTP overlay 前置条件拒绝和“已声明但未实现”的 capability rollout 窗口增加 6 个规范化 NWP 错误码：`NWP-HTTP-ORIGIN-FORBIDDEN`、`NWP-HTTP-CONTENT-TYPE-UNSUPPORTED`、`NWP-HTTP-ACCEPT-UNSATISFIABLE`、`NWP-HTTP-REQUEST-ID-MISMATCH`、`NWP-HTTP-FRAME-BODY-MALFORMED`、`NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED`。共享 `error-codes.md` 升级到 v1.6。 |
+| 0.16 | 2026-07-04 | 新增 §4.2a NWM `profiles` 与标准 LLM/Thinking Profile（`profiles.llm`），用于模型服务型 Action/Complex Node。明确 "Thinking Node" 是产品层别名，不是新的 `node_type`；粗粒度发现使用 NIP/NDP `llm:*` capabilities，具体模型、流式、工具、隐私与 reasoning 暴露元数据放在 NWM。无新增 frame type 或错误码。`Depends-On` NIP 升级到 v0.11，以使用 `llm:*` capability 注册表。 |
+| 0.15 | 2026-07-04 | 新增 §7.5，标准化 `llm.complete` ActionFrame contract：typed request/response DTO 形状、stop_reason 枚举、tool call 字段名、同步/异步/流式响应语义、ErrorFrame 与 payload error 的边界，以及 snake_case JSON/MessagePack key 策略。无新增 frame type 或错误码。 |
+| 0.14 | 2026-06-12 | 新增 §16 **Bridge Node 合规性**：形式化 MUST/SHOULD 要求 + 规范化 `bridge_target` 往返测试向量（http / grpc / mcp），六个 SDK 必须一致往返。原变更历史重编号为 §17。无新错误码；`Depends-On` 升级为 NCP v0.8 / NIP v0.10 / NDP v0.9。 |
 | 0.9 | 2026-05-01 | **破坏性更名（pre-1.0）**：拓扑成员对象字段 `node_kind` 更名为 `node_roles`（§12.1）；拓扑流过滤键 `node_kind` 更名为 `node_roles`（§12.2）。§2.1 更新 `node_kind` 引用为 `node_roles`。新增 §2.1 **节点角色解析**：`node_roles`（NDP，发现层，数组）与 `node_type`（NWM，服务层，字符串）是两个独立字段——`node_type` MUST 为 `node_roles` 中的一项；验证方 SHOULD 对照缓存 NDP 数据校验。§4.1 `node_type` 描述更新，补充跨协议约束及 §2.1 指针。§14.7 `node_kind` 引用更新为 `node_roles`。Depends-On NDP 升级为 v0.6。修复 M1 命名消歧问题。 |
 | 0.8 | 2026-04-27 | 新增 §12 **保留查询类型**，引入 `topology.*` 命名空间，强制于 NPS-AaaS Profile L2：`topology.snapshot`（QueryFrame，`type="topology.snapshot"`）与 `topology.stream`（SubscribeFrame，`type="topology.stream"`）。QueryFrame §6.1 与 SubscribeFrame §8.1 各新增可选顶层字段 `type` 用于选入保留类型。DiffFrame §8.2 `event_type` 通过保留订阅类型扩展枚举 —— `topology.stream` 增加 `member_joined` / `member_left` / `member_updated` / `anchor_state` / `resync_required`。新增 4 条错误码：`NWP-TOPOLOGY-UNAUTHORIZED`、`NWP-TOPOLOGY-UNSUPPORTED-SCOPE`、`NWP-TOPOLOGY-DEPTH-UNSUPPORTED`、`NWP-TOPOLOGY-FILTER-UNSUPPORTED`（§13）。新增 §14.7 拓扑读取安全节。原 §12 错误码 / §13 安全考量 / §14 变更历史顺延为 §13 / §14 / §15 以容纳新章节。详见 [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md)。 |
 | 0.7 | 2026-04-26 | **破坏性。** §2.1 节点类型：移除 `Gateway Node`；替换为 **Anchor Node**（集群控制平面 + NOP 路由 —— 继承既有角色）与 **Bridge Node**（NPS↔非-NPS 协议翻译 —— 全新）。NWM `node_type` 枚举更新；遗留 `"gateway"` MUST 拒绝。Anchor Node 详细语义（§2.1 内嵌）覆盖成员分派 + 可选注册表；Bridge Node 语义覆盖 HTTP/gRPC/MCP/A2A 目标适配器。Depends-On 升级为 NDP v0.8，引入 `node_kind` 数组形式 + `cluster_anchor` + `bridge_protocols` 字段。详见 [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)。 |

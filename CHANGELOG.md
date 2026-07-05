@@ -10,6 +10,13 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ---
 
+## [Unreleased]
+
+### Added
+
+- **NWP LLM/Thinking Profile**: NWM now defines `profiles.llm` for model-serving Action/Complex Nodes, with official .NET DTOs/helpers for model descriptors, streaming/tool support, privacy hints, and reasoning-disclosure policy. NIP v0.11 registers the standard `llm:*` capability strings for discovery and authorization.
+- **NWP HTTP binding error registry**: NWP v0.17 / `error-codes.md` v1.6 add canonical codes for HTTP overlay transport rejections (`Origin`, `Content-Type`, `Accept`, request-id echo mismatch, unparseable frame bodies) plus advertised-but-unimplemented capability rollout windows, closing NPS-Dev#84.
+
 ## [1.0.0-alpha.15] — 2026-06-28
 
 ### Added
@@ -34,160 +41,153 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ## [1.0.0-alpha.14] — 2026-06-26
 
-### Spec and Documentation
+### .NET SDK
 
-- Synchronized the Release `spec/` tree from the development SSoT, including
-  the conformance specs, version matrix, CR/RFC updates, and shared protocol
-  artifacts.
-- Updated Release README badges and protocol summary to the current spec
-  versions: NCP v0.8, NWP v0.14, NIP v0.10, NDP v0.9, and NOP v0.7.
-- Added the alpha.14 release boundary to the public docs: typed remote NIP
-  CA clients, native-mode NWP serving helpers, TC-N1/TC-N2 conformance helpers,
-  live revocation, native NCP TLS/mTLS hardening, signed CRL output, and
-  transport-neutral observability.
-- Replaced stale `nps-gateway` references with the current `nps-ingress`
-  daemon name while preserving the distinction from the retired NWP Gateway
-  Node role.
+- **NuGet package family release hardening**: alpha.14 packs the full public .NET family atomically (`NPS.Core`, `NWP`, `NWP.Anchor`, `NWP.Bridge`, `NIP`, SQLite/PostgreSQL NIP storage, `NDP`, `NOP`, `Daemon.Observability`, `NPS.Conformance`, and MCP/A2A/gRPC ingress packages), emits `.snupkg` symbol packages, and validates the package + symbol set before pushing to Nexus or NuGet.org.
+- **`NPS.NWP.Bridge` concrete adapters**: Bridge Node is no longer a type-only package. It now ships `IBridgeDispatcher`, `BridgeDispatcherRegistry`, a host-independent `BridgeNode`, ASP.NET `AddBridgeNode` / `UseBridgeNode`, and built-in HTTP/HTTPS, gRPC JSON unary, MCP JSON-RPC, and A2A JSON-RPC dispatchers. Outbound Bridge calls include endpoint allowlisting plus private/loopback SSRF guards by default.
+- **Bridge target schema documentation**: added the canonical `bridge_target` schema for HTTP, gRPC JSON unary, MCP JSON-RPC, and A2A JSON-RPC dispatch.
+- **Core codec DX**: `NpsFrameCodec` gained default factories and an instance `Peek(...)` helper alongside `PeekHeader(...)`.
+- **Daemon observability decoupling**: health/readiness rendering is available through transport-neutral `HealthProbeRenderer`, while ASP.NET endpoint helpers reuse the same renderer.
+- **NIP TrustFrame open boundary**: docs now distinguish open-source basic pinned-grantor validation from managed NPS Cloud federation, and `TrustFrameValidator` provides local validation helpers for open consumers.
+- **Banyan integration security fixes**: `NipIdentVerifier` can consult a live revocation callback or `INipCaStore`, OCSP transport errors now fail closed by default, `NcpServer` supports a pre-preamble authenticated stream hook for TLS/mTLS, and native-mode Hello reads are bounded by timeout and payload size.
+- **NIP CA revocation artifacts**: `/v1/crl` now includes `issued_at` plus a detached CA signature, `/.well-known/nps-ca` no longer advertises an unmapped `/ocsp` URL, and `INipCaStore` gained `ListAsync()` with a built-in `InMemoryNipCaStore`.
+- **Typed remote NIP CA client**: `NipCaClient` covers CA discovery, CRL retrieval, Ed25519 registration/renewal/revocation/verification, and RFC-0002 X.509 registration flows for .NET consumers.
+- **Native-mode NWP serving**: `NwpNativeNodeServer` lets Memory and Action Nodes serve `QueryFrame` and `ActionFrame` traffic directly over an `NcpSession` or native NCP stream, without hand-rolling the frame loop.
+- **Conformance harness package**: new `LabAcacia.NPS.Conformance` package ships Node L1/L2 case catalogs, run manifests, and validation helpers for CI self-certification.
+- **Local dev stack**: added a Docker Compose dev stack for loopback `npsd`, development NIP CA, and compat ingress smoke testing.
 
-### SDK Alignment Notes
+### Maintenance
 
-- alpha.14 SDK docs now call out the staged parity work for remote
-  CA clients, native NWP serving, and conformance manifest support across the
-  official SDKs.
-- Install snippets now point at the alpha.14 release line where package
-  managers support the published artifact.
+- Centralized warning policy for alpha-stage XML documentation gaps and explicit NuGet audit suppression for `SQLitePCLRaw.lib.e_sqlite3` until an upstream fixed package exists.
+- Updated .NET SDK quickstarts, package tables, and release-process docs for alpha.14.
 
 ## [1.0.0-alpha.13] — 2026-06-13
 
 > **Supersedes the withdrawn `1.0.0-alpha.12`.** alpha.12 NuGet packages shipped early
 > with a vulnerable `MessagePack 3.0.300` (NU1903) and a native-mode handshake bug, before
-> the release review completed; they are deprecated. alpha.13 is the corrected release.
+> the release review completed; they are deprecated. alpha.13 is the corrected release with
+> the same feature set plus the security/handshake fixes.
+
+### SDKs — functional parity (all six official SDKs)
+
+- **Anchor Node server + CGN meter + Bridge types + reputation-policy evaluator** ported from the .NET reference into Python / TypeScript / Go / Java / Rust. The five non-.NET SDKs are promoted from client-only to **client + server**. Server bindings: Python = pure ASGI (zero dep), TypeScript = Web-standard `fetch(Request)→Response`, Go = `net/http` stdlib, Java = JDK `com.sun.net.httpserver`, Rust = framework-agnostic `handle()`. Each Anchor server is wire-verified against that language's existing `AnchorNodeClient`. Added a missing `nwp` error-codes module to TS/Go/Java/Rust and `NWP-CGN-LIMIT-EXCEEDED` + the three `NWP-REPUTATION-*` codes where absent.
 
 ### Spec
 
-- **NCP v0.8** — `NopFrame` (0x07): zero-payload keepalive/heartbeat. Both peers MAY send after handshake. `HelloFrame.ping_interval_ms` uint32 (0 = disabled); dead-peer threshold 3 × interval. Error codes `NCP-KEEPALIVE-TIMEOUT` → `NPS-SERVER-TIMEOUT`, `NCP-REKEY-REQUIRED` → `NPS-CLIENT-BAD-FRAME`.
+- **NCP v0.8** — **NPS-RFC-0006** promoted Draft → Proposed (native-mode transport binding). New §7.5: suite-wide ALPN `nps/1.0` (supersedes provisional `ncp/1`); TLS-wrapped framing mandated for native-mode-over-TCP (STARTTLS prohibited); mutual TLS with NIP certificates + session-NID binding (`NCP-NID-MISMATCH`); TLS 1.3 session-resumption tickets. Gates the `nps-ingress` (L2) daemon.
+- **NWP v0.14** — new §16 Bridge Node Conformance: formal MUST/SHOULD requirements + canonical `bridge_target` round-trip test vectors (http / grpc / mcp) all six SDKs must round-trip identically. No new error codes.
+- **NIP v0.10** — new §6.1 short-lived / renewable cert profile for edge mTLS (1–24 h validity, renewal window, ACME `agent-01` self-renewal, OCSP-staple interaction, resumption-ticket binding). Ties to `nps-ingress` mTLS termination. No new error codes.
+- **NDP v0.9** — AnnounceFrame gains `health` (`healthy`/`degraded`/`draining`) + `last_seen` liveness fields; new §3.2.1 resolve-time staleness — Registry MUST return `NDP-RESOLVE-STALE` when `(last_seen ?? timestamp) + ttl` is in the past rather than serve a dead endpoint.
+- **NOP v0.7** — **NPS-CR-0007** (NOP ↔ L3 runtime integration): §8 task-claim protocol (atomic lease + `dedup_key`, `NOP-CLAIM-CONFLICT`); `spawn_spec_ref` SpawnSpec content schema (OCI image / command / env / resource_limits); idle/max-runtime enforcement (`NOP-RUNTIME-IDLE-TIMEOUT` / `NOP-RUNTIME-MAX-RUNTIME`); idempotent result reporting; `NOP-SPAWN-SPEC-INVALID`. New `services/conformance/NPS-Node-L3.md` (`TC-N3-*`). Gates the `nps-runner` L3 FaaS runtime.
 
-- **NWP v0.14** — `manifest_version` uint32 monotonic counter, `manifest_updated_at` ISO 8601 timestamp in manifest schema. `X-NWM-Version` HTTP response header for cache busting.
+### Daemons (L2/L3)
 
-- **NIP v0.10** — `IdentFrame.node_roles` string[] self-declared node-role tags (Phase 1–2). Excluded from the Ed25519 signed payload (same exclusion pattern as `cert_format`/`cert_chain`). Error code `NIP-CERT-NODE-ROLES-MISMATCH` → `NPS-AUTH-FORBIDDEN`.
-
-- **NDP v0.9** — `AnnounceFrame.spawn_spec_ref` type changed from URI string to structured schema object. `AnnounceFrame.heartbeat_interval_ms` uint32, default 60 000 ms (0 = disabled). Error code `NDP-ANNOUNCE-STALE` → `NPS-CLIENT-NOT-FOUND`.
-
-- **NOP v0.7** — `TaskFrame.result_ttl_seconds` uint32, default 3 600 s; omitted from wire at default. Error codes `NOP-TASK-RESULT-EXPIRED` → `NPS-CLIENT-NOT-FOUND`, `NOP-STREAM-NAK-UNRESOLVABLE` → `NPS-STREAM-SEQ-GAP`.
-
-### SDKs
-
-- **All six SDKs** (Python/TypeScript/Go/Java/Rust/.NET) updated to alpha.13 feature set:
-  NCP NopFrame + `ping_interval_ms`; NIP `node_roles`; NDP `spawn_spec_ref` schema object + `heartbeat_interval_ms`; NOP `result_ttl_seconds`; NWP `X-NWM-Version` constant / `manifest_version` + `manifest_updated_at` fields.
+- **nps-runner (L3)** — NPS-CR-0007 §4 task-claim lease protocol (`LeaseStore`): atomic per-task lease + `dedup_key`, `NOP-CLAIM-CONFLICT` on contention, expired-lease reclaim, terminal-node dedup; wired into the inbox dispatch. 8 unit tests.
+- **nps-ingress (L2)** — NPS-RFC-0006 §6 native-mode TLS terminator (`NcpTlsListener`): ALPN `nps/1.0` over TLS 1.3, mutual TLS with NIP-certificate validation + session-NID binding (`NCP-NID-MISMATCH`), proxy to the local backend. 5 unit tests.
 
 ---
 
-## [1.0.0-alpha.11] — 2026-05-31
+## [1.0.0-alpha.11] — 2026-05-28
 
 ### Spec
 
-- **NCP v0.7** — `max_concurrent_streams` negotiation via HelloFrame/CapsFrame (uint16,
-  default 32; overflow → `NCP-STREAM-LIMIT-EXCEEDED`); QUIC stream mapping (one bidirectional
-  stream per NCP channel, HelloFrame on stream 0); rekeying at 2^32 frames or 24 h
-  (`EXT rekey: true`, `NCP-REKEY-REQUIRED`); mid-stream ErrorFrame MAY→MUST.
-
-- **NWP v0.13** — §13 SubscribeFrame formal specification (CR-0006 Accepted): `subscription_id`
-  UUID v4, QueryFrame-compatible filter, `heartbeat_interval_ms`, `max_events`, opaque `cursor`
-  for lossless resume. `topology:subscribe` SHOULD→MUST in §12.4. NWM `trust_anchors`
-  (CA NID URN array). `bridge_target` schema standardized (`protocol`, `endpoint`, `headers`).
-
-- **NIP v0.9** — `IdentFrame.ocsp_staple` (base64url DER OCSP response); X.509 extension OID
-  table: `id-nps-node-roles` (65715.2.2, ASN.1 SEQUENCE OF UTF8String), `id-nps-capabilities`
-  (65715.2.3); Phase 3 flag day at v1.0.0-beta.1 (`NIP-OCSP-STAPLE-EXPIRED` error code).
-
-- **NDP v0.8** — GraphFrame (0x32) rewritten to §5 topology-snapshot format: `graph_id`,
-  `nodes` (nid/cluster_anchor/node_roles), `edges` (from_nid/to_nid/latency_ms/protocol),
-  `ttl`, `metadata`; max 256 nodes / 1024 edges (`NDP-GRAPH-INVALID`, `NDP-GRAPH-TOO-LARGE`).
-  §9 federation forwarding: `public-federated` registries MUST forward AnnounceFrames;
-  `ndp-forwarded-by` loop detection max 3 hops; `NDP-FEDERATION-LOOP`.
-
-- **NOP v0.6** — AlignStream ack/NAK protocol (`window_size=16`, `ack_seq`/`nak_seq`,
-  `NOP-STREAM-NAK`); `weighted_first_k` + `merge_all` aggregate strategies; DelegateFrame
-  `target_cluster_anchor` for cross-cluster routing; webhook HMAC signing (`callback_secret`,
-  `X-NPS-Signature: sha256=…`, `NOP-CALLBACK-HMAC-MISSING`).
-
+- **NCP v0.7** — `max_concurrent_streams` negotiation via HelloFrame/CapsFrame (uint16, default 32; overflow → `NCP-STREAM-LIMIT-EXCEEDED`); QUIC stream mapping (one bidirectional stream per NCP channel, HelloFrame on stream 0); rekeying at 2^32 frames or 24 h (`EXT rekey: true`, `NCP-REKEY-REQUIRED`); mid-stream ErrorFrame MAY→MUST.
+- **NWP v0.13** — §13 SubscribeFrame formal specification (CR-0006 Accepted): `subscription_id` UUID v4, QueryFrame-compatible filter, `heartbeat_interval_ms`, `max_events`, opaque `cursor` for lossless resume. `topology:subscribe` SHOULD→MUST in §12.4. NWM `trust_anchors` (CA NID URN array). `bridge_target` schema standardized (`protocol`, `endpoint`, `headers`).
+- **NIP v0.9** — `IdentFrame.ocsp_staple` (base64url DER OCSP response); X.509 extension OID table: `id-nps-node-roles` (65715.2.2, ASN.1 SEQUENCE OF UTF8String), `id-nps-capabilities` (65715.2.3); Phase 3 flag day at v1.0.0-beta.1 (`NIP-OCSP-STAPLE-EXPIRED` error code).
+- **NDP v0.8** — GraphFrame (0x32) rewritten to §5 topology-snapshot format: `graph_id`, `nodes` (nid/cluster_anchor/node_roles), `edges` (from_nid/to_nid/latency_ms/protocol), `ttl`, `metadata`; max 256 nodes / 1024 edges (`NDP-GRAPH-INVALID`, `NDP-GRAPH-TOO-LARGE`). §9 federation forwarding: `public-federated` registries MUST forward AnnounceFrames; `ndp-forwarded-by` loop detection max 3 hops; `NDP-FEDERATION-LOOP`.
+- **NOP v0.6** — AlignStream ack/NAK protocol (`window_size=16`, `ack_seq`/`nak_seq`, `NOP-STREAM-NAK`); `weighted_first_k` + `merge_all` aggregate strategies; DelegateFrame `target_cluster_anchor` for cross-cluster routing; webhook HMAC signing (`callback_secret`, `X-NPS-Signature: sha256=…`, `NOP-CALLBACK-HMAC-MISSING`).
 - **CR-0006** (Accepted 2026-05-28) — SubscribeFrame §13 formal spec.
-- **RFC-0006** (Draft) — NCP native-mode transport binding: TCP length-prefix framing, QUIC
-  stream mapping, `max_concurrent_streams`, rekeying protocol.
+- **RFC-0006** (Draft) — NCP native-mode transport binding: TCP length-prefix framing, QUIC stream mapping, `max_concurrent_streams`, rekeying protocol.
 
 ### SDKs
 
-- **All six SDKs** (Python/TypeScript/Go/Java/Rust/.NET) updated to alpha.11 feature set:
-  NOP saga compensation (`CompensationPolicy`, `DagNode.compensate_action`, `TaskState`
-  COMPENSATING/COMPENSATED); NOP cross-cluster (`DelegateFrame.target_cluster_anchor`);
-  NOP AlignStream ack/NAK (`ack_seq`/`nak_seq`, `weighted_first_k`, `merge_all`); NIP
-  `IdentFrame.ocsp_staple`; NIP `IdNpsCapabilities` OID constant (65715.2.3); NDP security
-  profiles (`SecurityProfile` LOCAL_DEV/ORG_PRIVATE/PUBLIC_FEDERATED); NDP `AnnounceFrame`
-  alpha.11 fields (`node_roles`, `cluster_anchor`, etc.); NDP GraphFrame §5 format;
-  NWP `SubscribeFrame` CR-0006 format; NWP `MemoryNodeOptions.trust_anchors`; NWM `trust_anchors`
-  emission.
+- **All six SDKs** (Python / TypeScript / Go / Java / Rust / .NET) updated to alpha.11 feature set: NOP AlignStream ack/NAK (`ack_seq`/`nak_seq`); NOP aggregate strategies (`weighted_first_k`, `merge_all`); NOP `DelegateFrame.target_cluster_anchor`; NIP `IdentFrame.ocsp_staple`; NIP `id-nps-capabilities` OID constant (65715.2.3); NDP GraphFrame §5 format (`GraphNode`, `GraphEdge`); NWP `SubscribeFrame` CR-0006 format (`subscription_id`, `filter`, `heartbeat_interval_ms`, `max_events`, `cursor`); NWP `MemoryNodeOptions.trust_anchors`; NWM `trust_anchors` emission.
 
-- **NuGet packages published** — `LabAcacia.NPS.*` 10 packages at `1.0.0-alpha.11`.
+### .NET SDK
 
-- **`.NET SDK` — NCP native-mode transport** (NPS-1 §4.6 / RFC-0006): `NcpNativeClient` + `NcpServer` + `NcpSession` + `NcpServerConnection` in `NPS.Core`. Client sends preamble + `HelloFrame`, reads `NcpHandshakeCapsFrame`, returns negotiated `NcpSession` with agreed encoding tier. Server accepts TCP connections, validates preamble, deserialises `HelloFrame`, exposes `NcpServerConnection` for application-layer accept/reject. `NcpHandshakeException` carries the wire error code.
+- **`NPS.NWP.Anchor` — `AnchorNodeOptions.TrustAnchors`**: CA NID URN array spliced into the `/.nwm` JSON response (NWP v0.13 §4.1). Receivers validate each URN starts with `urn:nps:`.
+- **`NPS.NWP` — `SubscribeFrame` CR-0006 rewrite**: Old wire format (`action`, `stream_id`, `heartbeat_interval` in seconds, `resume_from_seq`) replaced by CR-0006 format (`subscription_id`, `filter`, `heartbeat_interval_ms`, `max_events`, `cursor`). **Breaking wire change** vs alpha.8–10; no transitional alias.
+- **`NPS.NIP` — `IdentFrame.OcspStaple`**: New nullable field for base64url DER OCSP response (NIP v0.9 §8.2).
+- **`NPS.NIP.X509` — `NpsX509Oids.IdNpsCapabilities`**: New constant `1.3.6.1.4.1.65715.2.3` for the agent capability set extension (NIP v0.9 §8.2).
+- **`NPS.NOP` — AlignStream ack/NAK**: `AlignStreamFrame` gains `AckSeq` / `NakSeq` (NOP v0.6). `TaskFrame` gains `CallbackSecret` (HMAC webhook signing). `DelegateFrame` gains `TargetClusterAnchor`.
+- **`NPS.NDP` — GraphFrame §5**: `NdpGraphNode` rewritten (nid / cluster_anchor / node_roles); `NdpGraphEdge` added (from_nid / to_nid / latency_ms / protocol); `GraphFrame` rewritten (graph_id / nodes / edges / ttl / metadata).
+- **`NPS.NOP.Models` — `AggregateStrategy`**: New constants `WeightedFirstK` and `MergeAll`.
 
 ### Daemons
 
-- **nps-ledger v1.0.0-alpha.11** — `POST /v1/log/federation/push`: batch reputation-entry push
-  from peer ledgers with `X-NPS-Forwarded-By` loop detection (NDP §9, max 3 hops,
-  `NDP-FEDERATION-LOOP`).
+- **nps-ledger v1.0.0-alpha.11** — `POST /v1/log/federation/push`: batch reputation-entry ingestion from peer ledgers; `X-NPS-Forwarded-By` header loop detection (NDP §9, max 3 hops, `NDP-FEDERATION-LOOP`).
 - **nps-probe v0.2** — Check 5: NWM `trust_anchors` validation (NWP v0.13 §4.1).
-- **nps-orchestrator v1.0.0-alpha.11** — version bump and CHANGELOG backfill for alpha.9/10/11.
-- **NPS-NWP-Manager v0.1** — initial stub: `GET /health`, `GET /v1/nodes` (NWM fetch/cache),
-  `GET /v1/nodes/list`. Placeholder flipped to runnable .NET 10 minimal API.
+- **nps-orchestrator v1.0.0-alpha.11** — version bump.
+- **NPS-NWP-Manager v0.1** — initial runnable stub: `GET /health`, `GET /v1/nodes?base_url=` (NWM fetch + in-memory cache), `GET /v1/nodes/list`.
 
 ---
 
-## [1.0.0-alpha.7] — 2026-05-17
-
-### SDKs
-
-- **RFC-0004 Phase 2 — `ReputationLogClient`** lands across all six language SDKs
-  (.NET, Python, TypeScript, Go, Java, Rust). CT-style reputation log client with
-  dual Ed25519 signatures; `SignedTreeHead` + `InclusionProof` + RFC 9162 Merkle fold
-  (`SHA256(0x00‖leaf)`, `SHA256(0x01‖left‖right)`); leaf canonical JSON includes the
-  `signature` field. Full test coverage in each language.
-
-- **SDK parity gate — AnchorNodeClient test coverage** (alpha.7 hard gate):
-  Python, Go, Java, and Rust `AnchorNodeClient` implementations each gain a
-  complete test suite (21–25 tests per language) covering all five topology event
-  types (`member_joined`, `member_left`, `member_updated`, `anchor_state`,
-  `resync_required`), stream cancellation, mid-stream error propagation, event
-  filtering, and URL normalization. TypeScript reference tests shipped in alpha.6.
-
-### NIP CA Server
-
-- **CR-0005 RA model — `db/003_ra_model.sql`**: Idempotent migration adds
-  `nip_bootstrap_tokens` (single-use Tier 2 enrollment tokens, SHA-256 hashed) and
-  `nip_pending_registrations` (Tier 3 operator-approval queue) tables. Apply before
-  upgrading if using RA-gated enrollment.
-
-### Roadmap
-
-- **NPS-Roadmap v0.5**: RFC-0004 `ReputationLogClient` marked ✅ Done (2026-05-17);
-  AnchorNodeClient parity and IANA PEN 65715 OID wire-in marked ✅ Done.
-  Alpha.8 task queue added: NPS-RFC-0005 Reputation Policy Enforcement, #51 CGN
-  Profile conversion spec, NPS Probe v0.1 conformance CLI, NPS-CR-0005 non-.NET
-  CA ports.
-
----
-
-## [1.0.0-alpha.6] — 2026-05-12
+## [1.0.0-alpha.10] — 2026-05-28
 
 ### Spec
 
-- **NPS-Release spec tree synchronized from NPS-Dev** for the alpha.6 release boundary. This brings in the CR-0003 orchestrator group/session NID model, CR-0004 IANA PEN 65715 wire-in, CR-0005 NIP CA RA model draft, NIP v0.7/v0.8 updates, token-budget v0.5, transport profile docs, conformance template translations, and roadmap updates.
+- **NPS-CR-0005 — NIP CA Registration Authority (RA) model**: Three-tier admission control — `allowlist` (pre-approved NIDs), `bootstrap-token` (one-time `nps-bootstrap-*` tokens, SHA-256 hashed), `pending-queue` (operator-approval workflow). NIP CA Server gains `db/003_ra_model.sql` migration adding `nip_bootstrap_tokens` and `nip_pending_registrations` tables.
 
-- **NPS-CR-0004 — IANA PEN 65715 wire-in**: all NPS X.509 OIDs now anchor to assigned arc `1.3.6.1.4.1.65715`, replacing the prior provisional `1.3.6.1.4.1.99999` arc. Certificates minted under the provisional arc must be revoked and re-issued before claiming alpha.6 compliance.
+### SDKs
 
-- **NPS-CR-0003 — Orchestrator group NIDs and short-lived session NIDs**: reserves `group-` and `session-` identifier prefixes, adds `IdentFrame.lineage`, defines parent/session revocation behavior, and specifies the CA endpoints for group registration, session issuance, revocation, and audit listing.
+- **NOP saga compensation** across all six SDKs: `CompensationPolicy` type, `DagNode.compensate_action` / `compensate_params_mapping` fields, `TaskState` COMPENSATING / COMPENSATED states.
+- **NDP security profiles** across all six SDKs: `SecurityProfile` enum — `LOCAL_DEV` / `ORG_PRIVATE` / `PUBLIC_FEDERATED`; ephemeral TTL cap enforced for LOCAL_DEV.
+- **`IdentReputationPolicyHint`** type added across all six SDKs.
+- **`IdentMetadata`** type added across all six SDKs (structured metadata attached to IdentFrame).
 
-- **Release discipline — alpha has no sub-versions**: active alpha labels advance only as `X.Y.Z-alpha.N` to `X.Y.Z-alpha.N+1`; post-alpha.5 release work folds into `1.0.0-alpha.6`, not `1.0.0-alpha.5.x`.
+### .NET SDK
+
+- **`NPS.NIP` — RA three-tier enrollment**: `NipCaOptions.EnrollmentTier`, `BootstrapTokenMaxTtl`, `AllowedNids`. `IBootstrapTokenStore` / `IPendingStore` interfaces + in-memory implementations. RA management endpoints (`POST /v1/ra/bootstrap-tokens`, `GET /v1/ra/pending`, `POST /v1/ra/pending/{id}/approve`, `POST /v1/ra/pending/{id}/reject`). Apply `db/003_ra_model.sql` before upgrading.
+
+---
+
+## [1.0.0-alpha.9] — 2026-05-28
+
+### SDKs
+
+- **RFC-0004 Phase 2 — `ReputationLogClient`** parity across all six SDKs: `SubmitAsync`, `QueryAsync`, `GetSthAsync`, `GetProofAsync`, `GetGossipSthAsync`; static `VerifyInclusion` performs RFC 9162 §2.1.3.2 Merkle audit-path verification. `SignedTreeHead` + `InclusionProof` wire types. Full test coverage in each language.
+- **`AnchorNodeClient` test parity** — Python / Go / Java / Rust implementations each gain complete test suites (21–25 tests per language) covering all five topology event types, stream cancellation, mid-stream error propagation, event filtering, and URL normalization.
+- **RFC-0003 assurance level** — `IdentFrame` assurance extraction and `IdentReputationPolicyHint` interface drafted across SDKs.
+
+---
+
+## [1.0.0-alpha.8] — 2026-05-28
+
+### Spec
+
+- **NPS-RFC-0005** (Reputation Policy Enforcement) promoted Draft → Accepted.
+- **NPS-RFC-0002** (NPS X.509 OID Registry) promoted Draft → Accepted.
+
+### .NET SDK
+
+- **`NPS.NWP.Anchor` — `ReputationPolicyEvaluator` (RFC-0005)**: `IReputationPolicyEvaluator` interface; `DefaultReputationPolicyEvaluator` with in-process ban cache + per-NID log query cache; `AnchorNodeOptions.ReputationPolicy`; NWM `reputation_policy` JSON block publication. Three new error codes: `NWP-REPUTATION-THROTTLED`, `NWP-REPUTATION-REJECTED`, `NWP-REPUTATION-BANNED`. Response headers: `X-NWP-Reputation-Status`, `X-NWP-Ban-Expires`. `cgn_limit` pre-execution enforcement in `AnchorNodeMiddleware` (token-budget.md §7.2).
+- **`NPS.NWP` — `SubscribeFrame` (0x12)**: Initial `SubscribeFrame` type added to the .NET SDK (pre-CR-0006 wire format, later rewritten in alpha.11).
+
+---
+
+## [1.0.0-alpha.7] — 2026-05-18
+
+### .NET SDK
+
+- **`NPS.NWP.Bridge` — Bridge Node HTTP/HTTPS dispatcher** (closes issue #66, NPS-CR-0001 §3.2 Phase 1): Full HTTP/HTTPS protocol adapter ships — `IBridgeDispatcher` / `BridgeDispatcherRegistry` abstractions, `HttpBridgeDispatcher` with SSRF guard (RFC-1918 rejection, `[GeneratedRegex]`), `BridgeNodeMiddleware` (ASP.NET Core — routes `GET /.nwm` and `POST /invoke`, wraps results in CapsFrame), `BridgeServiceExtensions` (`AddBridgeNode` / `UseBridgeNode`). gRPC / MCP / A2A adapters deferred to follow-up CRs per Phase 1 scope. CR-0001 status updated to "Implemented".
+
+### TypeScript SDK
+
+- **`MemoryNodeServer` — framework-agnostic HTTP handler** (closes issue #60): `IMemoryNodeProvider` interface + `MemoryNodeServer` class serving `GET /.nwm`, `GET /.schema`, `POST /query`, `POST /stream`; SHA-256 anchor_id computation; token budget trimming; auth gate; Node.js `http.IncomingMessage` adapter. 14 tests covering all endpoints, auth, budget trimming, and error cases.
+
+### Go SDK
+
+- **`nwp.MemoryNodeServer` — `http.Handler` Memory Node** (closes issue #60): Go equivalent of the TypeScript `MemoryNodeServer`. `IMemoryNodeProvider` + `StreamingProvider` interfaces; `ServeHTTP` routing; `go vet` clean.
+
+### Demos
+
+- **`cross-sdk-interop` — expanded to 4 test scenarios per client** (closes issue #63): All four clients (dotnet / python / node / go) now run `GET /.nwm` discovery + `POST /stream` NDJSON assembly in addition to the original `GET /.schema` + `POST /query` tests. Wire-format equivalence verified across all languages.
+
+### Housekeeping
+
+- Badge blocks added to all SDK and compat READMEs (EN + CN) in NPS-Dev and all mirror repos. Protocol version badges (`NCP v0.6`, `NWP v0.12`, `NIP v0.8`, `NDP v0.7`, `NOP v0.5`) now consistent across all 38 README files.
+- Spec version comments in `README.md` directory tree updated to current (`NWP v0.12`, `NIP v0.8`, `NDP v0.7`).
+- `impl/typescript/src/index.ts` `VERSION` corrected from stale `alpha.2` to `alpha.7`.
 
 ---
 
@@ -195,59 +195,59 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 ### Spec
 
-- **token-budget v0.5 — split CGN into CGN-Estimate and CGN-Billing profiles**: `spec/token-budget.md` §2.1 now defines two named profiles with non-overlapping conformance requirements. **CGN-Estimate** covers budgets / quota / telemetry — sampling permitted, byte-size fallback permitted, ±5 % drift acceptable, no signing requirement. **CGN-Billing** covers commercial settlement — `verified_tokenizer`-tier (NIP §5.1) required, NID-signed metering records, no sampling, no byte-size fallback, audit-log integration, exchange-rate table version pinned inside the signed record. §4.2 adds three new response headers (`X-NWP-Tokens-Profile`, `X-NWP-Billing-Record`, `X-NWP-Billing-Tokenizer-Tier`); silence on the wire defaults to CGN-Estimate. AaaS-Profile bumped to **v0.7** with new **L3-08** requirement.
+- **token-budget v0.5 — split CGN into CGN-Estimate and CGN-Billing profiles** (closes issue #40): `spec/token-budget.md` §2.1 now defines two named profiles with non-overlapping conformance requirements. **CGN-Estimate** covers budgets / quota / telemetry — sampling permitted, byte-size fallback permitted, ±5 % drift acceptable, no signing requirement. **CGN-Billing** covers commercial settlement — `verified_tokenizer`-tier (NIP §5.1) required, NID-signed metering records, no sampling, no byte-size fallback, audit-log integration, exchange-rate table version pinned inside the signed record. §4.2 adds three new response headers (`X-NWP-Tokens-Profile`, `X-NWP-Billing-Record`, `X-NWP-Billing-Tokenizer-Tier`); silence on the wire defaults to CGN-Estimate. §6 implementation notes split into 6.1 General / 6.2 CGN-Estimate / 6.3 CGN-Billing. AaaS-Profile bumped to **v0.7** with new **L3-08** requirement: any commercial settlement flow MUST emit CGN-Billing records (not generic CGN). Chinese version `token-budget.cn.md` synchronized (was v0.3 → now v0.5).
 
-- **NPS-CR-0004 — IANA PEN 65715 wire-in**: IANA assigned PEN **65715** to the *Neuro Protocol Suites Committee* on 2026-05-08, replacing the provisional arc `1.3.6.1.4.1.99999`. All NPS X.509 OIDs now anchor to `1.3.6.1.4.1.65715`. **NPS-RFC-0002** promoted Draft → Proposed (EXPERIMENTAL banner removed; OQ-2 closed). NIP version bumped to **0.8**. **Backwards-incompatible**: certs minted under `1.3.6.1.4.1.99999.*` MUST be revoked and re-issued.
+- **NPS-CR-0004 — IANA PEN 65715 wire-in**: IANA assigned Private Enterprise Number **65715** to the *Neuro Protocol Suites Committee* on 2026-05-08, replacing the prior unregistered provisional arc `1.3.6.1.4.1.99999`. All NPS X.509 OIDs now anchor to the assigned arc `1.3.6.1.4.1.65715`: `id-nps-eku-agent` = `1.3.6.1.4.1.65715.1.1`, `id-nps-eku-node` = `1.3.6.1.4.1.65715.1.2`, `id-nid-assurance-level` = `1.3.6.1.4.1.65715.2.1`, `id-nps-node-roles` = `1.3.6.1.4.1.65715.2.2`. **NPS-RFC-0002** promoted Draft → Proposed (EXPERIMENTAL banner removed; OQ-2 production-use gate closed). NIP version bumped to **0.8**. Roadmap R08 PEN-assignment blocker closed. **Backwards-incompatible** (no dual-OID transitional period): any certificate minted under `1.3.6.1.4.1.99999.*` MUST be revoked and re-issued before claiming compliance. Six NPS-Dev `impl/` SDKs already on 65715 (verified); the six `NPS-sdk-*` mirror repos and the four frozen `nip-ca-server/example/` ports are wired in this release. See `spec/cr/NPS-CR-0004-pen-wirein.md` and `pen-impact.md` (audit checklist, §9 execution order).
 
-- **NPS-CR-0003 — Orchestrator group NIDs and short-lived session NIDs** (Accepted 2026-05-11): Reserves `group-` and `session-` prefixes on `urn:nps:agent:...` NIDs; adds signed `IdentFrame.lineage` object; adds `parent_revoked` revocation reason; four new CA endpoints under `/v1/orchestrators/groups/...`; seven new error codes. Backward-compatible for single-NID flows; opt-in for orchestrators. Reference impl: .NET.
+- **NPS-CR-0003 — Orchestrator group NIDs and short-lived session NIDs**: New CR splitting orchestrator identity from per-execution session identity. Reserves the `group-` and `session-` identifier prefixes on `urn:nps:agent:...` NIDs (NPS-3 §3.1); adds the signed `IdentFrame.lineage` object with `role` / `parent_nid` / `group_nid` / `session_id` / `purpose` / `owner_user_id` / `owner_key_id` (§5.1.3); adds the `parent_revoked` revocation reason (§5.3); inserts step **3a** in the verification flow for chain-check (§7); adds four CA endpoints under `/v1/orchestrators/groups/...` (§8); adds seven new error codes (`NIP-CA-GROUP-REVOKED`, `NIP-CA-PARENT-NOT-FOUND`, `NIP-CA-PARENT-NOT-GROUP`, `NIP-CA-SESSION-VALIDITY-INVALID`, `NIP-CA-JWS-INVALID`, `NIP-CA-JWS-EXPIRED`, `NIP-CERT-PARENT-REVOKED`). NIP version bumped to **0.7**. Backward-compatible for ordinary single-NID flows; opt-in for orchestrators. Reference impl: .NET; other SDKs deferred. See `spec/cr/NPS-CR-0003-orchestrator-group-session-nids.md`.
 
-- **NPS-CR-0002 Phase 2 spec complete (NWP v0.12)**: `cgn_est` field on `DiffFrame`; `anchor_state` and `resync_required` event types; `topology:subscribe` capability in authorization model.
+- **Release discipline — alpha has no sub-versions**: `docs/release-process.md` now makes `X.Y.Z-alpha.N → X.Y.Z-alpha.N+1` the only valid alpha advancement path. Active labels such as `1.0.0-alpha.5.1` or `1.0.0-alpha.5.2` are invalid; post-alpha.5 content folds into `1.0.0-alpha.6`.
 
-- **NPS-3-NIP §5.2 TrustFrame — complete spec**: Ten-field table; Ed25519/JCS canonicalization; five new error codes including `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`.
+- **NPS-CR-0002 Phase 2 spec complete (NWP v0.12)**: §8.2 adds the `cgn_est` field to `DiffFrame` for per-event Cognon estimation; §12.2 registers the `anchor_state` and `resync_required` event types; §12.4 expands the authorization model with the `topology:subscribe` capability, mid-stream rejection semantics, and the reputation-system interaction note; `spec/frame-registry.yaml` 0x02 (DiffFrame) and 0x12 (SubscribeFrame) descriptions bumped to reflect the new fields.
 
-- **NPS-3-NIP §5.3 RevokeFrame — complete spec**: Field table with `parent_nid`; reason enum with forward-compatibility policy; four new error codes.
+- **NPS-3-NIP §5.2 TrustFrame — complete spec**: New ten-field table including `serial` and `signer_nid`; Ed25519/JCS canonicalization rule for the signature; five new error codes (`NIP-TRUST-FRAME-INVALID`, `NIP-TRUST-FRAME-EXPIRED`, `NIP-TRUST-FRAME-GRANTOR-REVOKED`, `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`, `NIP-TRUST-FRAME-NODES-PATTERN-INVALID`); §7 verification flow updated to integrate TrustFrame validation. CN mirror (`NPS-3-NIP.cn.md`) updated in lockstep.
 
-- **NPS-3-NIP §5.1 IdentFrame — `cert_chain` + `cert_format`**: New fields for DER certificate chain and encoding format.
+- **NPS-3-NIP §5.3 RevokeFrame — complete spec**: New field table (including the conditional `parent_nid`); reason enum table with an explicit forward-compatibility policy; signature rule; four new error codes; §7 inbound-push verification step inserted. CN mirror (`NPS-3-NIP.cn.md`) updated in lockstep.
 
-- **`spec/frame-registry.yaml` — six frames promoted draft → proposed**: NWP `0x10`–`0x12` and NIP `0x20`–`0x22` moved from `status: draft` to `status: proposed`.
+- **NPS-3-NIP §5.1 IdentFrame — `cert_chain` + `cert_format`**: IdentFrame field table gains `cert_chain` (DER certificate chain, encoded as a base64url array) and `cert_format` (`x509-der` | `raw-pubkey`).
 
-- **Conformance vectors**: NWP suite +49 vectors; NIP suite +23 vectors (TrustFrame + RevokeFrame).
+- **NPS-CR-0003 — Draft → Accepted (2026-05-11)**: The Orchestrator group / session NIDs CR (above) advanced from Draft to Accepted on 2026-05-11. The .NET reference implementation already shipped in this release; non-.NET SDK ports remain deferred.
+
+- **NPS-CR-0005 — NIP CA RA model (Draft)**: New CR drafted defining the NIP CA Server's Registration-Authority model as three enrollment-authorization tiers: **allowlist**, **bootstrap-token**, and **approval-queue**. Closes the gap where prior CRs left non-orchestrator enrollment policy implementation-defined.
+
+- **`spec/frame-registry.yaml` — six frames promoted draft → proposed**: NWP `0x10` (QueryFrame), `0x11` (ActionFrame), `0x12` (SubscribeFrame) and NIP `0x20` (IdentFrame), `0x21` (TrustFrame), `0x22` (RevokeFrame) all moved from `status: draft` to `status: proposed` following the alpha.6 freeze of their field tables.
+
+- **Conformance vectors**: NWP suite gained **49 new vectors** — `action_frame` (+13), plus new `subscribe_frame` and `query_frame` aggregation coverage. NIP suite gained **11 TrustFrame** vectors and **12 RevokeFrame** vectors, plus extended `IdentFrame` lineage and `assurance-level` coverage.
 
 ### .NET SDK
 
-- **`NPS.NWP.Anchor` — Phase 2 alpha.6 boundary**: `topology.filter.node_kind` compatibility window closed; clients must send `topology.filter.node_roles`.
+- **`NPS.NWP.Anchor` — NPS-CR-0002 Phase 2 alpha.6 boundary**: `topology.stream` push/notify remains wired through `AnchorNodeMiddleware` + `IAnchorTopologyService`, and the alpha.5 compatibility window for `topology.filter.node_kind` is now closed. Clients must send `topology.filter.node_roles`; the deprecated alias returns HTTP 400 / `NWP-TOPOLOGY-FILTER-UNSUPPORTED`.
 
-- **`NPS.NIP` — group / session NID issuance**: `NipCaService` gains `RegisterGroupAsync`, `IssueSessionAsync`, `ListSessionsAsync`. `RevokeAsync` cascades to live sessions. `VerifyAsync` performs §7 step 3a chain check. Storage grows `nid_role` / `parent_nid` / `lineage_json` columns; PostgreSQL migration `db/002_orchestrator_session.sql`.
+- **`NPS.NIP` — group / session NID issuance**: `NipCaService` gains `RegisterGroupAsync` (mints `group-{uuid}` NIDs with longer-default validity), `IssueSessionAsync` (mints `session-{ts}-{rand}` NIDs that chain to a group via signed `lineage`), and `ListSessionsAsync` (audit). `RevokeAsync` cascades to live sessions when the target is a group, marking them with reason `parent_revoked`. `VerifyAsync` performs the new §7 step 3a chain check and returns `NIP-CERT-PARENT-REVOKED` when a session's parent is revoked or expired. New `NipGroupJws` helper performs the `EdDSA` flattened-JWS verification described in CR §3.5; the HTTP layer accepts either a group-JWS body (`Content-Type: application/jose+json`) or an Operator-API-key Bearer for `/v1/orchestrators/groups/{nid}/sessions/issue`. Storage schemas grow `nid_role` / `parent_nid` / `lineage_json` columns; PostgreSQL migration `db/002_orchestrator_session.sql` is idempotent and supports rolling upgrades. SQLite migration is automatic on `OpenAsync` via `PRAGMA table_info` discovery. New `NipCaOptions` knobs: `GroupCertValidityDays` (365), `SessionDefaultValidity` (1h), `SessionMaxValidity` (24h), `SessionMinValidity` (1m), `SessionJwsClockSkew` (5m).
 
 ### NIP CA Server
 
-- **`/v1/orchestrators/groups/...` endpoints live**: `register`, `revoke`, `sessions/issue`, `sessions` listing. Apply `db/002_orchestrator_session.sql` before upgrading from v1.0-alpha.5.
+- **`/v1/orchestrators/groups/...` endpoints live**: Operator-authed `register` and `revoke`, dual-auth (group-JWS or Operator) `sessions/issue`, and Operator-authed audit `sessions` listing. `/.well-known/nps-ca` adds `"orchestrator-group"` to its `capabilities` array so clients can discover support. Apply `db/002_orchestrator_session.sql` before upgrading from v1.0-alpha.5.
 
-### Daemons
+### Tests
 
-- **Operability baseline**: Both `npsd` and `nip-ca-server` now expose `/healthz` (liveness), `/readyz` (readiness), and `/metrics` (Prometheus) endpoints. `SIGTERM` triggers graceful shutdown with a 30-second drain window.
+- **`NPS.Tests.Nip.OrchestratorGroupSessionTests`**: Sixteen new xUnit cases covering all five CR-0003 acceptance scenarios (group issuance, session chained to group, authority rejection, signed-metadata round-trip, group revocation cascading + future-block) plus boundary cases (validity bands, capability subset enforcement, JWS tampering, audit listing).
 
-- **`nip-ca-server` — `/metrics` restricted to management port 17436**: The public CA port (17435) no longer exposes `/metrics`. A dedicated management port (17436, host-local by default) serves `/metrics`, `/healthz`, and `/readyz`.
+### Implementation
+
+- **`npsd` + `nip-ca-server` — operability baseline**: Both daemons now expose `/healthz` (liveness), `/readyz` (readiness), and `/metrics` (Prometheus exposition format) endpoints. `SIGTERM` triggers a graceful shutdown with a 30-second drain window. JSON structured logging is provided via the new `NPS.Daemon.Observability` shared library; verbosity is controlled at startup by the `NPS_LOG_LEVEL` environment variable.
 
 ### Ops
 
 - **`deploy/docker-compose/`**: New `docker-compose.yml` plus `.env.example` enabling one-command startup of the full NPS daemon stack.
 
-- **`deploy/systemd/`**: New systemd unit files for `npsd` and `nip-ca-server` with `install.sh`.
+- **`deploy/systemd/`**: New systemd unit files for `npsd` and `nip-ca-server`, plus an `install.sh` installer that drops the units in place and reloads `systemd`.
 
-- **`Makefile`**: New top-level targets `up`, `down`, and `install-systemd`.
+- **`Makefile`**: New top-level targets `up`, `down`, and `install-systemd` wrapping the docker-compose and systemd flows above.
 
 ---
 
-## [1.0.0-alpha.5] — 2026-05-03
-
-### Changed (Breaking)
-
-- **wire field rename**: `AnchorActionSpec.estimated_npt` → `cgn_est`. Aligns with the
-  CGN naming convention and matches `TopologyEventEnvelope.cgn_est`.
-  **Wire breaking change** — clients pinning to the old key will see the field as null
-  after upgrade. No alias retained.
-  Closes [labacacia/NPS-Dev#17](https://github.com/labacacia/NPS-Dev/issues/17).
+## [1.0.0-alpha.5] — 2026-05-01
 
 ### Spec
 
@@ -261,6 +261,8 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 - **`spec/token-budget.md` §7.2 — per-event `cgn_est` field (SHOULD)**: Push streams SHOULD carry an `cgn_est` field on each `TopologyEventEnvelope` (and similar envelope types) carrying the UTF-8/4 byte estimate of the event payload. This lets agents track live token consumption without counting bytes client-side.
 
+- **wire field rename — `AnchorActionSpec.estimated_npt → cgn_est`** (Breaking): Aligns with the CGN naming convention and matches `TopologyEventEnvelope.cgn_est`. **Wire breaking change** — clients pinning to the old key will see the field as null after upgrade. No alias retained. Closes [labacacia/NPS-Dev#17](https://github.com/labacacia/NPS-Dev/issues/17).
+
 ### .NET SDK
 
 - **`NPS.NWP.Anchor` — `NWP-RESERVED-TYPE-UNSUPPORTED` enforcement**: `AnchorNodeMiddleware` now returns HTTP 501 / `NPS-SERVER-UNSUPPORTED` / `NWP-RESERVED-TYPE-UNSUPPORTED` when `/anchor/query` or `/anchor/subscribe` receive an unrecognised reserved `type` value. Previously returned 404 / `NWP-ACTION-NOT-FOUND` (incorrect per spec).
@@ -271,15 +273,11 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 
 - **`NPS.NIP` — `AssuranceLevels.FromWireOrAnonymous("")` fix**: Empty string `""` now returns `Anonymous` (consistent with `null`). Previously `null` returned Anonymous but `""` would throw or return Unknown depending on the call path. Python, TypeScript, and Java SDKs received the same fix.
 
-### Daemons
+- **`NPS.NIP` — `SqliteNipCaStore`**: New `INipCaStore` implementation backed by SQLite (`Microsoft.Data.Sqlite`). Suitable for single-binary / embedded CA deployments without a PostgreSQL dependency. Capabilities stored as a JSON string; serials generated via an atomic `nip_serial` table. Factory: `await SqliteNipCaStore.OpenAsync(connectionString)`. Closes [labacacia/NPS-Dev#19](https://github.com/labacacia/NPS-Dev/issues/19).
 
-- **Native OS packages**: Added `.deb` (Ubuntu/Debian amd64), `.rpm` (Fedora/RHEL x86_64),
-  and `.msi` (Windows x64) installers for all 4 OSS daemons (`npsd`, `nps-runner`,
-  `nps-gateway`, `nps-registry`). Each package ships a self-contained binary (no .NET
-  runtime dependency), a systemd service unit (Linux), or a Windows service registration
-  (MSI via NT SERVICE virtual account). Packages are uploaded to the
-  [nps-daemons GitHub Release](https://github.com/labacacia/nps-daemons/releases/tag/v1.0.0-alpha.5)
-  alongside the existing Docker images.
+- **`NPS.NIP` — pluggable `INipCaStore` injection**: `NipServiceExtensions` exposes two new overloads: `AddNipCa(configure, INipCaStore store)` accepts any store implementation; `AddNipCaWithSqlite(configure, sqliteConnectionString)` is a convenience wrapper that opens and migrates a SQLite database synchronously at startup. The existing `AddNipCa(configure)` retains its PostgreSQL behaviour but now validates that `ConnectionString` is non-empty and emits a clear error pointing to the alternatives. `NipCaOptions.ConnectionString` changed from `required string` to `string?` — callers using a custom store no longer need to set it. Closes [labacacia/NPS-Dev#18](https://github.com/labacacia/NPS-Dev/issues/18).
+
+### Daemons
 
 - **`daemons/nps-ledger/` — Phase 3: STH Gossip**: New `GossipState` singleton holds the peer configuration (`NPSLEDGER_PEERS` JSON array of `{log_id, endpoint, pub_key?}`) and caches the most recently validated `SignedTreeHead` per peer. New `GossipService` (`BackgroundService`) runs the gossip push cycle on every tick (`NPSLEDGER_GOSSIP_INTERVAL_S`, default 30 s): fetches `GET {peer}/v1/log/gossip/sth`, verifies the Ed25519 signature when `pub_key` is configured (skips with a warning when absent — dev-only), enforces monotonicity, caches on acceptance. New endpoint `GET /v1/log/gossip/sth` returns `{own_sth, peer_sths}`. `/health` updated to `version: "1.0.0-alpha.5"`, `phase: 3`, `gossip_peers`, `gossip_interval_s`. New `NPSLEDGER_PEERS` and `NPSLEDGER_GOSSIP_INTERVAL_S` env vars. csproj version → `1.0.0-alpha.5`.
 
@@ -294,7 +292,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 ### Tests
 
 - Test count: **629 → 656** (all passing).
-  - `GossipStateTests.cs` — 14 new tests: interval clamping, empty state invariants, `AcceptPeerSth` storage and update, `CurrentPeerSths` multi-peer, `ReceivedAt` timestamp, `FromEnvironment` parsing (no peers / valid JSON / pub_key / malformed fallback), NipSigner round-trip through cached STH.
+  - `GossipStateTests.cs` — 13 new tests: interval clamping, empty state invariants, `AcceptPeerSth` storage and update, `CurrentPeerSths` multi-peer, `ReceivedAt` timestamp, `FromEnvironment` parsing (no peers / valid JSON / pub_key / malformed fallback), NipSigner round-trip through cached STH.
   - `AnchorTopologyTests.cs` — `TopologyQuery_UnknownReservedType_Returns501WithCorrectCode` (renamed + updated from 404→501 assertion); new `TopologySnapshot_MissingCapability_Returns403`.
   - `AssuranceLevelTests.cs` — `FromWireOrAnonymous_NullOrEmpty_ReturnsAnonymous` (replaces prior merged test); `FromWireOrAnonymous_UnknownNonEmpty_Throws` (new — verifies spec m6 enforcement).
 
@@ -339,15 +337,6 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 - **M3 — RFC-0004 §4.3/§4.4 Phase 2 features incorrectly presented as Phase 1**: RFC-0004 §4.3 listed all four HTTP endpoints (`POST /v1/log/entries`, `GET /v1/log/entries`, `GET /v1/log/sth`, `GET /v1/log/proof`) in a single block, implying `/sth` and `/proof` are Phase 1. §4.4 described NWM `reputation_policy` and NDP `/.nid/reputation` in present tense without any deferral marker, also implying Phase 1. Per §8.1 phasing table and Appendix A, Merkle tree + STH + inclusion proofs + `/.nid/reputation` + `reputation_policy` are all Phase 2 (targeted v1.0-alpha.5). Fix: §4.3 split into `4.3.1 Phase 1 — Submit and Query (current)` and `4.3.2 [Phase 2] — Merkle Integrity Proofs (deferred)` with an explicit deferral block; §4.4 gains a `[Phase 2 — deferred]` block at the top; §7 Merkle/STH security paragraph tagged `[Phase 2]`; §8.3 test items 2 and 3 tagged `[Phase 2]`. Applies to both EN and CN versions.
 
 - **M1 — `node_kind` / `node_type` naming disambiguation**: `node_kind` (NDP `Announce`) and `node_type` (NWP NWM) had overlapping names but diverged semantics — `node_kind` was a multi-valued discovery-layer role list while `node_type` is a single operative role — with no documented cross-protocol constraint, creating a validation ambiguity. Fix: (1) `NPS-4-NDP.md` v0.5 → v0.6: `node_kind` renamed to `node_roles` (array-only; parsers MUST accept `node_kind` as alias through alpha.5); (2) `NPS-2-NWP.md` v0.8 → v0.9: new §2.1 *Node Role Resolution* table documenting the two-field design; `node_type` description updated — MUST be one of `node_roles` values; topology member table and `topology.filter` key renamed `node_roles`; §14.7 reference updated; (3) `spec/frame-registry.yaml` AnnounceFrame entry updated; (4) `spec/cr/NPS-CR-0001` §3.4 gains a historical migration note.
-
-### Docs
-
-- **GitHub Pages restructured to 7 marketing pages**: `docs/sdks.md` narrowed to a
-  6-language matrix with Wiki deep-dive links; removed inline install snippets and per-feature
-  code examples (content lives in the NPS Wiki). Added `docs/get-started.md`
-  (audience-based onboarding funnel) and `docs/who-uses-nps.md` (case studies placeholder).
-  Added "📖 see Wiki" footer callout to all Pages pages. Updated `docs/navigation.md`.
-  Closes [labacacia/NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26).
 
 ---
 
@@ -444,7 +433,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
     - `daemons/npsd/` — `npsd` (`Npsd.csproj`, package `LabAcacia.NPS.Daemon.Npsd`). Listens on `127.0.0.1:17433`. L1 minimum: root Ed25519 keypair generation (PKCS#8, file mode `0600` so it satisfies NPS-Node-L1 `TC-N1-NIP-01`), `/.nwm` self-manifest, `/health`. Configurable via `NPSD_PORT` / `NPSD_HOST` / `NPSD_DATA_DIR`. NCP native-mode preamble runtime, inbox persistence, sub-NID issuance, and AnnounceFrame emission deferred to alpha.4.
     - `daemons/nps-runner/` — `nps-runner` (`NpsRunner.csproj`, package `LabAcacia.NPS.Daemon.Runner`). Phase 1 skeleton: Generic Host scaffolding with 30s heartbeat. Inbox watcher + `spawn_spec_ref` resolver + worker lifecycle land at L3 stage (alpha.5+).
   - **Layer 2 (network entry):**
-    - `daemons/nps-gateway/` — `nps-gateway` (`NpsGateway.csproj`, package `LabAcacia.NPS.Daemon.Gateway`). Phase 1 skeleton: public HTTP listener on `:8080` + `/health` documenting planned milestones. TLS termination, rate-limit, NeuronHub auth, CGN debit, NPS-RFC-0004 reputation lookup, and NPS-CR-0001 Anchor Node middleware wiring land alpha.4 → alpha.5.
+    - `daemons/nps-ingress/` — `nps-ingress` (`NpsIngress.csproj`, package `LabAcacia.NPS.Daemon.Ingress`). Phase 1 skeleton: public HTTP listener on `:8080` + `/health` documenting planned milestones. TLS termination, rate-limit, NeuronHub auth, CGN debit, NPS-RFC-0004 reputation lookup, and NPS-CR-0001 Anchor Node middleware wiring land alpha.4 → alpha.5.
     - `daemons/nps-registry/` — `nps-registry` (`NpsRegistry.csproj`, package `LabAcacia.NPS.Daemon.Registry`). Phase 1 skeleton: HTTP listener on the NDP optional-dedicated port `17436`; `Resolve`/`Graph`/`Announce` URL surface returns `NDP-REGISTRY-UNAVAILABLE` (HTTP 503) so consumers can wire and gracefully fall back. SQLite-backed real registration lands alpha.4.
   - **Layer 3 (trust anchor — NPS Cloud, 2027 Q1+):**
     - `daemons/nps-cloud-ca/` — `nps-cloud-ca` (`NpsCloudCa.csproj`, package `LabAcacia.NPS.Daemon.CloudCa`). Phase 1 deferral skeleton on the NIP optional-dedicated port `17435`; `/v1/issue`, `/v1/revoke`, `/v1/crl`, `/v1/ocsp` return `NIP-CA-NOT-READY` (HTTP 503) and point at the six per-language `tools/nip-ca-server*` OSS CAs already shipped at alpha.2. The daemon's own X.509 + ACME pipeline arrives with NPS-RFC-0002 in alpha.4.
@@ -486,7 +475,7 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
 - **NPS Daemons promoted to publish repos** —
   [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)
   ([Gitee mirror](https://gitee.com/labacacia/nps-daemons)) bundles the
-  four OSS daemons (`npsd`, `nps-runner`, `nps-gateway`,
+  four OSS daemons (`npsd`, `nps-runner`, `nps-ingress`,
   `nps-registry`) — the Layer-1 + Layer-2 of the NPS reference
   topology. Each subdirectory is self-contained (own README,
   Dockerfile, csproj depending on published `LabAcacia.NPS.*` NuGet
@@ -607,10 +596,7 @@ Initial public alpha. See [Release-v1.0.0-alpha.1](https://github.com/LabAcacia/
 
 ---
 
-[1.0.0-alpha.7]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.7
-[1.0.0-alpha.6]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.6
-[1.0.0-alpha.5]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.5
-[1.0.0-alpha.4]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.4
-[1.0.0-alpha.3]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.3
+[1.0.0-alpha.7]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.7
+[1.0.0-alpha.6]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.6
 [1.0.0-alpha.2]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.1

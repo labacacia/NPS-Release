@@ -4,7 +4,7 @@ English | [中文版](./NPS-3-NIP.cn.md)
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.10
+**Version**: 0.11
 **Date**: 2026-05-11
 **Port**: 17433 (default, shared) / 17435 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
@@ -159,6 +159,11 @@ When more than one tier is available the Node MUST prefer the highest-trust tier
 | `nop:delegate` | May delegate subtasks to other agents |
 | `nop:orchestrate` | May act as an orchestrator and emit TaskFrames |
 | `topology:read` | May read Anchor Node topology data via reserved query types `topology.snapshot` / `topology.stream` (NPS-2 §12); Anchor Nodes MUST require this capability at Phase 1–2 per NPS-2 §12.4. Self-declared and signed at Phase 1–2; CA-attested role binding deferred to Phase 3 (RFC-0002 amendment). |
+| `llm:complete` | May invoke the standard NWP `llm.complete` action on an LLM/Thinking Profile node (NPS-2 §4.2a, §7.5) |
+| `llm:stream` | May receive streaming LLM completion responses (`LlmCompleteActionRequest.stream = true`) |
+| `llm:tool_call` | May submit tool definitions and receive tool-call requests in LLM completion flows |
+| `llm:embed` | May invoke standard embedding actions when a node advertises embedding support |
+| `llm:rerank` | May invoke standard rerank actions when a node advertises rerank support |
 
 **`scope` field**
 
@@ -367,7 +372,7 @@ Cross-CA trust-chain propagation and capability grant. A TrustFrame lets one CA 
 | `frame` | uint8 | required | Fixed `0x21`. |
 | `grantor_nid` | string (NID) | required | NID of the granting CA. MUST be in the verifying Node's `trusted_issuers` for the TrustFrame to take effect. |
 | `grantee_ca` | string (NID) | required | NID of the receiving CA. IdentFrames whose `issued_by` equals `grantee_ca` are admitted under the grant. |
-| `trust_scope` | array of string | required | Capability strings the trust covers. MUST be a subset of the standard `capabilities` enum defined in §5.1 (`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read`). A grantee MUST NOT issue downstream IdentFrames carrying capabilities outside this set. |
+| `trust_scope` | array of string | required | Capability strings the trust covers. MUST be a subset of the standard `capabilities` enum defined in §5.1 (`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read` / `llm:complete` / `llm:stream` / `llm:tool_call` / `llm:embed` / `llm:rerank`). A grantee MUST NOT issue downstream IdentFrames carrying capabilities outside this set. |
 | `nodes` | array of string | required | `nwp://` URL patterns this trust applies to. `*` matches a single path segment; `**` matches multiple segments. Empty array means the grant covers no nodes (effectively inert). |
 | `issued_at` | string (ISO 8601 UTC) | required | Issuance time. |
 | `expires_at` | string (ISO 8601 UTC) | required | Expiry time. After this instant the frame MUST be rejected with `NIP-TRUST-FRAME-EXPIRED`. |
@@ -680,6 +685,7 @@ At every link in the delegation chain, scope MUST NOT exceed that of its parent.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.11 | 2026-07-04 | Adds standard LLM capability strings (`llm:complete`, `llm:stream`, `llm:tool_call`, `llm:embed`, `llm:rerank`) for NWP LLM/Thinking Profile discovery and authorization. TrustFrame `trust_scope` may cover these capabilities. No new frame fields or error codes. |
 | 0.10 | 2026-06-12 | New §6.1 **Short-lived / renewable cert profile (edge mTLS)**: 1–24 h validity tier (default 6 h) for native-mode mTLS terminated at `nps-ingress` (NPS-RFC-0006 §6.3); renewal window = 25% remaining; ACME `agent-01` online self-renewal; lifetime ≤ OCSP cache TTL so short validity is the primary revocation mechanism; OCSP-staple refresh interaction (`NIP-OCSP-STAPLE-EXPIRED`); resumption-ticket bounded to cert validity (NPS-RFC-0006 §6.4). Reuses existing error codes (`NIP-CA-SESSION-VALIDITY-INVALID`, `NIP-CERT-EXPIRED`); no new codes. |
 | 0.10 | 2026-06-03 | `IdentFrame.node_roles` (`string[]`, optional) — self-declared role tags, same vocabulary as `NDP.AnnounceFrame.node_roles`; Phase 3 gate against `id-nps-node-roles` X.509 extension (OID 65715.2.2); `NIP-CERT-NODE-ROLES-MISMATCH` error code. |
 | 0.9 | 2026-05-31 | `IdentFrame.ocsp_staple` (base64url DER OCSPResponse): §5.1.4 stapling rules (signature verify, `nextUpdate` check, `NIP-OCSP-STAPLE-EXPIRED`); X.509 OID table: `id-nid-assurance-level` 65715.2.1, `id-nps-node-roles` 65715.2.2, `id-nps-capabilities` 65715.2.3 (PEN 65715 — NPS-CR-0004). |

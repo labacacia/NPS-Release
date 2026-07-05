@@ -10,6 +10,13 @@
 
 ---
 
+## [未发布]
+
+### 新增
+
+- **NWP LLM/Thinking Profile**：NWM 新增 `profiles.llm`，用于模型服务型 Action/Complex Node；.NET 参考实现补齐模型描述、stream/tool 支持、隐私提示与 reasoning 暴露策略的官方 DTO/helper。NIP v0.11 注册标准 `llm:*` capability 字符串，用于发现与授权。
+- **NWP HTTP binding 错误码注册表**：NWP v0.17 / `error-codes.md` v1.6 新增 HTTP overlay 传输拒绝（Origin、Content-Type、Accept、request-id 回传不匹配、frame body 无法解析）以及“已声明但未实现”capability rollout 窗口的规范化错误码，关闭 NPS-Dev#84。
+
 ## [1.0.0-alpha.15] —— 2026-06-28
 
 ### 新增
@@ -34,103 +41,51 @@
 
 ## [1.0.0-alpha.14] —— 2026-06-26
 
-### 规范与文档
+### .NET SDK
 
-- 从开发仓库 SSoT 同步 Release `spec/` 树，包含 conformance specs、version matrix、CR/RFC 更新与共享协议工件。
-- 更新 Release README badge 与协议摘要到当前规范版本：NCP v0.8、NWP v0.14、NIP v0.10、NDP v0.9、NOP v0.7。
-- 在公共文档中补上 alpha.14 release 边界：类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper、live revocation、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。
-- 将过时的 `nps-gateway` 引用替换为当前 daemon 名 `nps-ingress`，同时保留它与已退役 NWP Gateway Node 逻辑角色之间的区别。
+- **NuGet 包族发布加固**：alpha.14 原子打包完整公开 .NET 包族（`NPS.Core`、`NWP`、`NWP.Anchor`、`NWP.Bridge`、`NIP`、NIP SQLite/PostgreSQL 存储、`NDP`、`NOP`、`Daemon.Observability`、`NPS.Conformance` 以及 MCP/A2A/gRPC ingress 包），产出 `.snupkg` 符号包，并在推送 Nexus / NuGet.org 前校验 package + symbol 集合完整性。
+- **`NPS.NWP.Bridge` concrete adapters**：Bridge Node 不再只是类型包。新增 `IBridgeDispatcher`、`BridgeDispatcherRegistry`、不绑定宿主的 `BridgeNode`、ASP.NET `AddBridgeNode` / `UseBridgeNode`，并内置 HTTP/HTTPS、gRPC JSON unary、MCP JSON-RPC、A2A JSON-RPC dispatcher。出站 Bridge 调用默认带 endpoint allowlist 与 private/loopback SSRF 防护。
+- **Bridge target schema 文档**：新增 HTTP、gRPC JSON unary、MCP JSON-RPC、A2A JSON-RPC 的规范化 `bridge_target` schema。
+- **Core codec DX**：`NpsFrameCodec` 新增默认 factory 与实例 `Peek(...)` helper，保留静态 `PeekHeader(...)`。
+- **Daemon observability 解耦**：health/readiness 渲染抽到 transport-neutral `HealthProbeRenderer`，ASP.NET endpoint helper 复用同一 renderer。
+- **NIP TrustFrame 开源边界**：文档明确开源 pinned-grantor 基础验证与 NPS Cloud 托管 federation 的边界，并新增开放消费者可用的 `TrustFrameValidator`。
+- **Banyan 集成安全修复**：`NipIdentVerifier` 可接入 live revocation callback 或 `INipCaStore`；OCSP transport error 默认 fail-closed；`NcpServer` 支持 pre-preamble authenticated stream hook 以承载 TLS/mTLS；native-mode Hello 读取增加 timeout 与 payload size 上限。
+- **NIP CA 吊销工件**：`/v1/crl` 现在返回 `issued_at` 与 CA detached signature；`/.well-known/nps-ca` 不再广告未映射的 `/ocsp` URL；`INipCaStore` 新增 `ListAsync()`，并提供内置 `InMemoryNipCaStore`。
+- **类型化远程 NIP CA client**：`NipCaClient` 覆盖 CA discovery、CRL 获取、Ed25519 注册/续期/吊销/验证，以及 RFC-0002 X.509 注册流程。
+- **Native-mode NWP serving**：`NwpNativeNodeServer` 让 Memory / Action Node 可以直接通过 `NcpSession` 或 native NCP stream 服务 `QueryFrame` / `ActionFrame`，不用宿主手写 frame loop。
+- **Conformance harness 包**：新增 `LabAcacia.NPS.Conformance`，提供 Node L1/L2 case catalog、run manifest 与 CI 自认证 validation helper。
+- **本地 dev stack**：新增 Docker Compose dev stack，用于 loopback `npsd`、开发 NIP CA 与 compat ingress smoke test。
 
-### SDK 对齐说明
+### 维护
 
-- alpha.14 SDK 文档补充跨官方 SDK 的 remote CA client、native NWP serving 与 conformance manifest 支持。
-- 安装片段在包管理器支持已发布工件的生态中指向 alpha.14 release line。
-
-## [1.0.0-alpha.13] —— 2026-06-03
-
-### 规范
-
-- **NCP v0.8** — `NopFrame`（0x07）：零负载保活/心跳帧，握手后双方均可发送。`HelloFrame.ping_interval_ms` uint32（0 = 禁用）；死节点阈值 3 × 间隔。错误码 `NCP-KEEPALIVE-TIMEOUT` → `NPS-SERVER-TIMEOUT`，`NCP-REKEY-REQUIRED` → `NPS-CLIENT-BAD-FRAME`。
-- **NWP v0.14** — manifest schema 新增 `manifest_version` uint32 单调计数器和 `manifest_updated_at` ISO 8601 时间戳；HTTP 响应头 `X-NWM-Version` 用于缓存失效。
-- **NIP v0.10** — `IdentFrame.node_roles` string[] 自声明节点角色标签（Phase 1–2），不计入 Ed25519 签名负载（与 `cert_format`/`cert_chain` 相同的排除模式）。错误码 `NIP-CERT-NODE-ROLES-MISMATCH` → `NPS-AUTH-FORBIDDEN`。
-- **NDP v0.9** — `AnnounceFrame.spawn_spec_ref` 类型由 URI 字符串改为结构化 schema 对象；`heartbeat_interval_ms` uint32 默认 60 000 ms。错误码 `NDP-ANNOUNCE-STALE` → `NPS-CLIENT-NOT-FOUND`。
-- **NOP v0.7** — `TaskFrame.result_ttl_seconds` uint32 默认 3 600 秒，等于默认值时省略传输。错误码 `NOP-TASK-RESULT-EXPIRED` → `NPS-CLIENT-NOT-FOUND`，`NOP-STREAM-NAK-UNRESOLVABLE` → `NPS-STREAM-SEQ-GAP`。
-
-### SDK
-
-- **全部六个 SDK** 更新至 alpha.13 功能集：NCP NopFrame + `ping_interval_ms`；NIP `node_roles`；NDP `spawn_spec_ref` schema 对象 + `heartbeat_interval_ms`；NOP `result_ttl_seconds`；NWP `X-NWM-Version` 常量 / `manifest_version` + `manifest_updated_at` 字段。
+- 针对 alpha 阶段 XML 文档缺口集中 warning policy；对 `SQLitePCLRaw.lib.e_sqlite3` 增加显式 NuGet audit suppression，直到上游发布修复包。
+- 更新 .NET SDK quickstart、包表与发布流程文档。
 
 ---
 
-## [1.0.0-alpha.11] —— 2026-05-31
+## [1.0.0-alpha.7] —— 2026-05-18
 
-### 规范
+### .NET SDK
 
-- **NCP v0.7** — `max_concurrent_streams` 协商（HelloFrame/CapsFrame，uint16，默认 32；溢出 → `NCP-STREAM-LIMIT-EXCEEDED`）；QUIC 流映射；重新密钥机制（2^32 帧或 24 小时）；mid-stream ErrorFrame MAY→MUST。
-- **NWP v0.13** — §13 SubscribeFrame 正式规范（CR-0006 Accepted）：`subscription_id` UUID v4、`heartbeat_interval_ms`、`max_events`、不透明 `cursor`；§12.4 `topology:subscribe` SHOULD→MUST；NWM `trust_anchors` CA NID URN 数组；`bridge_target` schema 标准化。
-- **NIP v0.9** — `IdentFrame.ocsp_staple`；X.509 扩展 OID `id-nps-capabilities`（65715.2.3）。
-- **NDP v0.8** — GraphFrame §5 拓扑快照格式重写；§9 联邦转发（public-federated 注册表 MUST 转发 AnnounceFrame，最多 3 跳防环）。
-- **NOP v0.6** — AlignStream ack/NAK；`weighted_first_k`/`merge_all` 聚合策略；`DelegateFrame.target_cluster_anchor` 跨集群路由；Webhook HMAC 签名。
-- **CR-0006**（Accepted）/ **RFC-0006**（Draft）—— SubscribeFrame §13 / NCP 原生模式传输绑定。
+- **`NPS.NWP.Bridge` —— Bridge Node HTTP/HTTPS 调度器**（关闭 issue #66，NPS-CR-0001 §3.2 Phase 1）：完整 HTTP/HTTPS 协议适配器发布 —— `IBridgeDispatcher` / `BridgeDispatcherRegistry` 抽象、带 SSRF 防护的 `HttpBridgeDispatcher`（RFC-1918 拒绝，`[GeneratedRegex]`）、`BridgeNodeMiddleware`（ASP.NET Core —— 路由 `GET /.nwm` 与 `POST /invoke`，结果封装为 CapsFrame）、`BridgeServiceExtensions`（`AddBridgeNode` / `UseBridgeNode`）。gRPC / MCP / A2A 适配器按 Phase 1 范围推迟到后续 CR。CR-0001 状态更新为"已实现"。
 
-### SDK
+### TypeScript SDK
 
-- **全部六个 SDK** 更新至 alpha.11 功能集：NOP Saga 补偿、NOP 跨集群路由、NOP AlignStream ack/NAK、NIP `ocsp_staple`、NDP `SecurityProfile`、NDP GraphFrame §5、NWP `SubscribeFrame` CR-0006、NWM `trust_anchors`。
-- **NuGet 包发布** —— `LabAcacia.NPS.*` 10 个包发布至 `1.0.0-alpha.11`。
-- **`.NET SDK` — NCP 原生模式传输**：`NcpNativeClient` + `NcpServer` + `NcpSession` + `NcpServerConnection` 加入 `NPS.Core`。
+- **`MemoryNodeServer` —— 框架无关 HTTP 处理器**（关闭 issue #60）：`IMemoryNodeProvider` 接口 + `MemoryNodeServer` 类，服务 `GET /.nwm`、`GET /.schema`、`POST /query`、`POST /stream`；SHA-256 anchor_id 计算；token 预算裁剪；鉴权门控；Node.js `http.IncomingMessage` 适配器。14 个测试覆盖全部端点、鉴权、预算裁剪及错误场景。
 
-### 守护进程
+### Go SDK
 
-- **nps-ledger v1.0.0-alpha.11** — 联邦声誉条目推送（`POST /v1/log/federation/push`，防环最多 3 跳）。
-- **nps-probe v0.2** — 检查 5：NWM `trust_anchors` 校验。
-- **nps-orchestrator v1.0.0-alpha.11** — 版本号更新。
-- **NPS-NWP-Manager v0.1** — 初始 stub：`GET /health`、`GET /v1/nodes`、`GET /v1/nodes/list`。
+- **`nwp.MemoryNodeServer` —— `http.Handler` Memory Node**（关闭 issue #60）：TypeScript `MemoryNodeServer` 的 Go 等价实现。`IMemoryNodeProvider` + `StreamingProvider` 接口；`ServeHTTP` 路由；`go vet` 通过。
 
----
+### 演示
 
-## [1.0.0-alpha.10] —— 2026-05-28
+- **`cross-sdk-interop` —— 扩展至每客户端 4 个测试场景**（关闭 issue #63）：四语言客户端（dotnet / python / node / go）在原有 `GET /.schema` + `POST /query` 基础上新增 `GET /.nwm` 发现 + `POST /stream` NDJSON 汇总测试。跨语言 wire 格式等价性已验证。
 
-### SDK
+### 日常维护
 
-- **全部六个 SDK** 新增 NOP Saga 补偿类型（`CompensationPolicy`、`DagNode`）、NDP `SecurityProfile`、NIP `IdentReputationPolicyHint`/`IdentMetadata`。
-
----
-
-## [1.0.0-alpha.9] —— 2026-05-28
-
-### SDK
-
-- **全部六个 SDK** 新增 NWP `SubscribeFrame`（0x12）初始版本（pre-CR-0006）；NIP `IdentFrame` 保证级别提取改进。
-
----
-
-## [1.0.0-alpha.8] —— 2026-05-28
-
-### SDK
-
-- **全部六个 SDK** 新增 RFC-0005 声誉策略类型、Bridge Node 描述符、CGN 估算助手。
-
----
-
-## [1.0.0-alpha.7] —— 2026-05-17
-
-### SDK
-
-- **RFC-0004 Phase 2 —— `ReputationLogClient`**：六语言 SDK（.NET、Python、TypeScript、Go、Java、Rust）全部落地 CT 式声誉日志客户端，双 Ed25519 签名；`SignedTreeHead`、`InclusionProof`、RFC 9162 Merkle 折叠（`SHA256(0x00‖leaf)`、`SHA256(0x01‖left‖right)`）；叶规范 JSON 含签名字段。各语言均有完整测试覆盖。
-
-- **SDK 一致性硬门槛 —— AnchorNodeClient 测试覆盖**（alpha.7 门槛）：Python、Go、Java、Rust 四语言 `AnchorNodeClient` 各新增完整测试套件（每语言 21–25 个测试），覆盖五种 topology 事件类型（`member_joined`、`member_left`、`member_updated`、`anchor_state`、`resync_required`）、流取消、中途错误传播、事件过滤和 URL 规范化。TypeScript 参考测试已于 alpha.6 发布。
-
-### NIP CA Server
-
-- **CR-0005 RA 模型 —— `db/003_ra_model.sql`**：幂等迁移脚本，新增 `nip_bootstrap_tokens`（单次使用 Tier 2 注册 token，SHA-256 哈希）和 `nip_pending_registrations`（Tier 3 操作员审批队列）两张表。如需使用 RA 门控注册，请在升级前执行。
-
-### 路线图
-
-- **NPS-Roadmap v0.5**：RFC-0004 `ReputationLogClient` 标记 ✅ 已完成（2026-05-17）；AnchorNodeClient 一致性与 IANA PEN 65715 OID wire-in 标记 ✅ 已完成。新增 alpha.8 任务队列：NPS-RFC-0005 声誉策略执行、#51 CGN Profile 转换规范、NPS Probe v0.1 合规 CLI、NPS-CR-0005 非 .NET CA 移植。
-
----
-
-## [1.0.0-alpha.6] —— 2026-05-12
+- NPS-Dev 及所有镜像仓库的 SDK、compat README（EN + CN）补充 badge 块。38 个 README 文件的协议版本 badge（`NCP v0.6`、`NWP v0.12`、`NIP v0.8`、`NDP v0.7`、`NOP v0.5`）现已全部一致。
+- `README.md` 目录树中的规范版本注释更新至当前版本（`NWP v0.12`、`NIP v0.8`、`NDP v0.7`）。
+- `impl/typescript/src/index.ts` 中的 `VERSION` 从过期的 `alpha.2` 修正为 `alpha.7`。
 
 ---
 
@@ -138,74 +93,45 @@
 
 ### 规范
 
-- **token-budget v0.5 —— CGN-Estimate 与 CGN-Billing 两档配置**：`spec/token-budget.md` §2.1 定义两个命名 Profile。**CGN-Estimate**：预算 / 配额 / 遥测，允许采样和字节回退，±5% 漂移可接受。**CGN-Billing**：商业结算，要求 `verified_tokenizer` 级 NID 签名计量记录，不允许采样，汇率表版本锁定。AaaS-Profile 升至 **v0.7**，新增 L3-08 要求。
+- **NPS-CR-0004 — IANA PEN 65715 wire-in**：IANA 已于 2026-05-08 向 *Neuro Protocol Suites Committee* 分配 Private Enterprise Number **65715**，替换此前未注册的临时 arc `1.3.6.1.4.1.99999`。所有 NPS X.509 OID 现锚定于已分配 arc `1.3.6.1.4.1.65715`：`id-nps-eku-agent` = `1.3.6.1.4.1.65715.1.1`，`id-nps-eku-node` = `1.3.6.1.4.1.65715.1.2`，`id-nid-assurance-level` = `1.3.6.1.4.1.65715.2.1`，`id-nps-node-roles` = `1.3.6.1.4.1.65715.2.2`。**NPS-RFC-0002** 晋级 Draft → Proposed（移除 EXPERIMENTAL 横幅；OQ-2 生产使用门槛关闭）。NIP 版本号升至 **0.8**。Roadmap R08 PEN 分配阻塞已关闭。**破坏性变更**（不保留双 OID 过渡期）：在 `1.3.6.1.4.1.99999.*` 下签发的证书 MUST 撤销并重签后方可主张合规。六个 NPS-Dev `impl/` SDK 已在 65715（已核验）；六个 `NPS-sdk-*` 镜像仓与四个冻结的 `nip-ca-server/example/` 端口在本次发布完成 wire-in。详见 `spec/cr/NPS-CR-0004-pen-wirein.md` 与 `pen-impact.md`（审计清单，§9 执行顺序）。
 
-- **NPS-CR-0004 —— IANA PEN 65715 wire-in**：IANA 于 2026-05-08 向 *Neuro Protocol Suites Committee* 分配 PEN **65715**，替换临时 arc `1.3.6.1.4.1.99999`。所有 NPS X.509 OID 锚定至 `1.3.6.1.4.1.65715`。**NPS-RFC-0002** 晋级 Draft → Proposed（移除 EXPERIMENTAL 横幅，OQ-2 已关闭），NIP 版本升至 **0.8**。**破坏性变更**：`1.3.6.1.4.1.99999.*` 下签发的证书 MUST 撤销并重签。
+- **发布纪律 —— alpha 没有小版本**：`docs/release-process.cn.md` 明确 `X.Y.Z-alpha.N → X.Y.Z-alpha.N+1` 是 alpha 唯一合法推进路径。`1.0.0-alpha.5.1` 或 `1.0.0-alpha.5.2` 这类活跃标签无效；alpha.5 之后仍需补入的内容并入 `1.0.0-alpha.6`。
 
-- **NPS-CR-0003 —— Orchestrator 组 NID 与短时 session NID**（已接受，2026-05-11）：为 `urn:nps:agent:...` NID 保留 `group-` 和 `session-` 前缀；新增签名 `IdentFrame.lineage` 对象；新增 `parent_revoked` 撤销原因；`/v1/orchestrators/groups/...` 下四个新 CA 端点；七个新错误码。对单 NID 流程向后兼容，编排器可选接入。参考实现：.NET。
+- **NPS-CR-0002 Phase 2 规范完成（NWP v0.12）**：§8.2 为 `DiffFrame` 新增 `cgn_est` 字段，用于按事件估算 Cognon；§12.2 注册 `anchor_state` 与 `resync_required` 事件类型；§12.4 扩展授权模型，引入 `topology:subscribe` 能力、流中拒绝（mid-stream rejection）语义以及与声誉系统的交互说明；`spec/frame-registry.yaml` 中 0x02（DiffFrame）和 0x12（SubscribeFrame）的描述同步更新以反映新字段。
 
-- **NPS-CR-0002 Phase 2 规范完成（NWP v0.12）**：`DiffFrame` 新增 `cgn_est` 字段；注册 `anchor_state` 和 `resync_required` 事件类型；授权模型引入 `topology:subscribe` 能力。
+- **NPS-3-NIP §5.2 TrustFrame — 完整规范**：新增十字段表格（含 `serial`、`signer_nid`）；签名采用 Ed25519/JCS 规范化规则；新增五个错误码（`NIP-TRUST-FRAME-INVALID`、`NIP-TRUST-FRAME-EXPIRED`、`NIP-TRUST-FRAME-GRANTOR-REVOKED`、`NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`、`NIP-TRUST-FRAME-NODES-PATTERN-INVALID`）；§7 验证流程更新以接入 TrustFrame 校验。CN 镜像（`NPS-3-NIP.cn.md`）同步更新。
 
-- **NPS-3-NIP §5.2 TrustFrame —— 完整规范**：十字段表；Ed25519/JCS 规范化；五个新错误码（含 `NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`）。
+- **NPS-3-NIP §5.3 RevokeFrame — 完整规范**：新增字段表（含条件字段 `parent_nid`）；reason 枚举表附明确的向后兼容性策略；签名规则；四个新错误码；§7 入站推送验证步骤插入。CN 镜像（`NPS-3-NIP.cn.md`）同步更新。
 
-- **NPS-3-NIP §5.3 RevokeFrame —— 完整规范**：含 `parent_nid` 的字段表；reason 枚举附向后兼容性策略；四个新错误码。
+- **NPS-3-NIP §5.1 IdentFrame — `cert_chain` + `cert_format`**：IdentFrame 字段表新增 `cert_chain`（DER 证书链，以 base64url 编码数组形式承载）和 `cert_format`（`x509-der` | `raw-pubkey`）。
 
-- **NPS-3-NIP §5.1 IdentFrame —— `cert_chain` + `cert_format`**：新增 DER 证书链和编码格式字段。
+- **NPS-CR-0003 — Draft → Accepted 推进（2026-05-11）**：Orchestrator 组 / 短时会话 NID CR 已于 2026-05-11 由 Draft 推进至 Accepted。.NET 参考实现已在本次发布中落地；非 .NET SDK 端口仍延后。
 
-- **`spec/frame-registry.yaml` —— 六个帧 draft → proposed**：NWP `0x10`–`0x12` 与 NIP `0x20`–`0x22` 全部晋级为 `status: proposed`。
+- **NPS-CR-0005 — NIP CA RA 模型（Draft）**：起草新 CR，为 NIP CA Server 的 Registration-Authority 定义三级登记授权模型：**allowlist**、**bootstrap-token**、**approval-queue**。填补此前 CR 对非 Orchestrator 类登记策略未作规范的空白。
 
-- **合规测试向量**：NWP 套件 +49 向量；NIP 套件 +23 向量（TrustFrame + RevokeFrame）。
+- **`spec/frame-registry.yaml` — 六个帧 draft → proposed 晋级**：NWP `0x10`（QueryFrame）、`0x11`（ActionFrame）、`0x12`（SubscribeFrame）以及 NIP `0x20`（IdentFrame）、`0x21`（TrustFrame）、`0x22`（RevokeFrame）在 alpha.6 字段表冻结后，由 `status: draft` 一并晋级为 `status: proposed`。
+
+- **合规测试向量**：NWP 套件新增 **49 个向量** —— `action_frame`（+13），并新增 `subscribe_frame` 与 `query_frame` 聚合路径覆盖。NIP 套件新增 **TrustFrame 11 个**、**RevokeFrame 12 个**，并扩展 `IdentFrame` 的 lineage 与 `assurance-level` 覆盖。
 
 ### .NET SDK
 
-- **`NPS.NWP.Anchor` —— Phase 2 alpha.6 边界**：`topology.filter.node_kind` 兼容窗口已关闭，客户端必须发送 `topology.filter.node_roles`。
+- **`NPS.NWP.Anchor` —— NPS-CR-0002 Phase 2 alpha.6 边界**：`topology.stream` push/notify 继续由 `AnchorNodeMiddleware` + `IAnchorTopologyService` 提供，alpha.5 的 `topology.filter.node_kind` 兼容窗口已关闭。客户端必须发送 `topology.filter.node_roles`；旧别名返回 HTTP 400 / `NWP-TOPOLOGY-FILTER-UNSUPPORTED`。
 
-- **`NPS.NIP` —— 组 / 会话 NID 签发**：`NipCaService` 新增 `RegisterGroupAsync`、`IssueSessionAsync`、`ListSessionsAsync`。`RevokeAsync` 级联撤销存活会话。`VerifyAsync` 执行 §7 步骤 3a 链式检查。存储层新增 `nid_role` / `parent_nid` / `lineage_json` 列；PostgreSQL 迁移脚本 `db/002_orchestrator_session.sql`。
+### 实现
 
-### NIP CA Server
-
-- **`/v1/orchestrators/groups/...` 端点上线**：`register`、`revoke`、`sessions/issue`、`sessions` 审计列表。从 v1.0-alpha.5 升级前需应用 `db/002_orchestrator_session.sql`。
-
-### Daemons
-
-- **运维端点基线**：`npsd` 和 `nip-ca-server` 均新增 `/healthz`（存活）、`/readyz`（就绪）、`/metrics`（Prometheus）端点。`SIGTERM` 触发 30 秒优雅关停。
-
-- **`nip-ca-server` —— `/metrics` 限制至管理端口 17436**：公共 CA 端口（17435）不再暴露 `/metrics`，管理端口（17436，默认仅限本机）提供 `/metrics`、`/healthz`、`/readyz`。
-
-- **原生 OS 安装包**：新增面向 4 个 OSS daemon（`npsd`、`nps-runner`、`nps-gateway`、`nps-registry`）的 `.deb`、`.rpm` 和 `.msi` 安装包。
-
-### 文档
-
-- **GitHub Pages 精简为 7 个营销页面**：`docs/sdks.md` 缩减为 6 语言矩阵 + Wiki 深度文档链接。新增 `docs/get-started.md` 和 `docs/who-uses-nps.md`。关联 [NPS-Dev#26](https://github.com/labacacia/NPS-Dev/issues/26)。
+- **`npsd` + `nip-ca-server` — 运维端点基线**：两个 daemon 现均暴露 `/healthz`（存活）、`/readyz`（就绪）与 `/metrics`（Prometheus 暴露格式）端点。`SIGTERM` 触发优雅关停，含 30 秒 drain 窗口。JSON 结构化日志由新引入的 `NPS.Daemon.Observability` 共享库提供；启动时通过 `NPS_LOG_LEVEL` 环境变量控制日志详细程度。
 
 ### Ops
 
-- **`deploy/docker-compose/`**：新增 `docker-compose.yml` 与 `.env.example`，支持一条命令启动完整 NPS daemon 栈。
+- **`deploy/docker-compose/`**：新增 `docker-compose.yml` 与 `.env.example`，支持一条命令启动完整的 NPS daemon 栈。
 
-- **`deploy/systemd/`**：新增 `npsd` 与 `nip-ca-server` 的 systemd unit 文件，附 `install.sh` 安装脚本。
+- **`deploy/systemd/`**：新增 `npsd` 与 `nip-ca-server` 的 systemd unit 文件，并附 `install.sh` 安装脚本，自动安装 unit 并重新加载 `systemd`。
 
-- **`Makefile`**：新增顶层目标 `up`、`down`、`install-systemd`。
-
-### 规范
-
-- **NPS-Release spec tree 已从 NPS-Dev 同步到 alpha.6 发布边界**：包含 CR-0003 编排器 group/session NID 模型、CR-0004 IANA PEN 65715 wire-in、CR-0005 NIP CA RA 模型草案、NIP v0.7/v0.8 更新、token-budget v0.5、transport profile 文档、合规模板中文翻译以及 roadmap 更新。
-
-- **NPS-CR-0004 —— IANA PEN 65715 wire-in**：所有 NPS X.509 OID 现锚定到已分配 arc `1.3.6.1.4.1.65715`，替换此前临时 arc `1.3.6.1.4.1.99999`。在临时 arc 下签发的证书必须撤销并重签后，才可主张 alpha.6 合规。
-
-- **NPS-CR-0003 —— 编排器 group NID 与短生命周期 session NID**：保留 `group-` 与 `session-` 标识符前缀，新增 `IdentFrame.lineage`，定义父级/session 撤销行为，并规范 group 注册、session 签发、撤销与审计列表 CA 端点。
-
-- **发布纪律 —— alpha 没有小版本**：活跃 alpha 标签只能按 `X.Y.Z-alpha.N` 到 `X.Y.Z-alpha.N+1` 推进；alpha.5 之后的发布工作并入 `1.0.0-alpha.6`，不使用 `1.0.0-alpha.5.x`。
+- **`Makefile`**：新增顶层目标 `up`、`down` 与 `install-systemd`，封装上述 docker-compose 与 systemd 流程。
 
 ---
 
-## [1.0.0-alpha.5] —— 2026-05-03
-
-### 变更（破坏性）
-
-- **wire 字段重命名**：`AnchorActionSpec.estimated_npt` → `cgn_est`。与 CGN 命名规范对齐，
-  同时与 `TopologyEventEnvelope.cgn_est` 保持一致。
-  **Wire 破坏性变更** —— 固定旧字段名的客户端升级后将看到该字段为 null。不保留别名。
-  关联 [labacacia/NPS-Dev#17](https://github.com/labacacia/NPS-Dev/issues/17)。
+## [1.0.0-alpha.5] —— 2026-05-01
 
 ### 规范
 
@@ -219,6 +145,8 @@
 
 - **`spec/token-budget.md` §7.2 — 每事件 `cgn_est` 字段（SHOULD）**：推送流 SHOULD 在每个 `TopologyEventEnvelope`（及类似 envelope 类型）上携带 `cgn_est` 字段，值为事件负载的 UTF-8/4 字节估算。允许 Agent 在不自行计数字节的情况下追踪 token 消耗。
 
+- **wire 字段重命名 —— `AnchorActionSpec.estimated_npt → cgn_est`**（破坏性）：与 CGN 命名规范对齐，同时与 `TopologyEventEnvelope.cgn_est` 保持一致。**Wire 破坏性变更** —— 固定旧字段名的客户端升级后将看到该字段为 null。不保留别名。关联 [labacacia/NPS-Dev#17](https://github.com/labacacia/NPS-Dev/issues/17)。
+
 ### .NET SDK
 
 - **`NPS.NWP.Anchor` — `NWP-RESERVED-TYPE-UNSUPPORTED` 执行**：`AnchorNodeMiddleware` 在 `/anchor/query` 或 `/anchor/subscribe` 收到未实现的保留 `type` 时，现在返回 HTTP 501 / `NPS-SERVER-UNSUPPORTED` / `NWP-RESERVED-TYPE-UNSUPPORTED`。之前错误地返回 404 / `NWP-ACTION-NOT-FOUND`。
@@ -228,6 +156,10 @@
 - **`NPS.NWP.Anchor` — `TopologyEventEnvelope` 上的 `cgn_est`**：`TopologyEventEnvelope` 新增可空字段 `cgn_est: uint?`，每次推送事件时以 `Math.Max(1, UTF8.GetByteCount(payload) / 4)` 填充。
 
 - **`NPS.NIP` — `AssuranceLevels.FromWireOrAnonymous("")` 修复**：空字符串 `""` 现在返回 `Anonymous`（与 `null` 一致）。Python、TypeScript 和 Java SDK 收到同样修复。
+
+- **`NPS.NIP` — `SqliteNipCaStore`**：新增基于 SQLite（`Microsoft.Data.Sqlite`）的 `INipCaStore` 实现，适用于无 PostgreSQL 依赖的单二进制 / 嵌入式 CA 部署场景。Capabilities 以 JSON 字符串形式存储；序列号通过原子 `nip_serial` 表生成。工厂方法：`await SqliteNipCaStore.OpenAsync(connectionString)`。关联 [labacacia/NPS-Dev#19](https://github.com/labacacia/NPS-Dev/issues/19)。
+
+- **`NPS.NIP` — 可插拔 `INipCaStore` 注入**：`NipServiceExtensions` 新增两个重载：`AddNipCa(configure, INipCaStore store)` 接受任意 store 实现；`AddNipCaWithSqlite(configure, sqliteConnectionString)` 是便捷包装，在启动时同步打开并迁移 SQLite 数据库。原有 `AddNipCa(configure)` 保留 PostgreSQL 行为，但新增对 `ConnectionString` 非空的校验，并在不满足时输出清晰的错误提示。`NipCaOptions.ConnectionString` 从 `required string` 改为 `string?`，使用自定义 store 的调用方无需再设置该字段。关联 [labacacia/NPS-Dev#18](https://github.com/labacacia/NPS-Dev/issues/18)。
 
 ### Daemons
 
@@ -243,7 +175,7 @@
 
 ### 测试
 
-- 测试数量：**629 → 655**（全部通过）。
+- 测试数量：**629 → 656**（全部通过）。
   - `GossipStateTests.cs` — 13 个新测试：区间 clamp、空状态不变量、`AcceptPeerSth` 存储与更新、`CurrentPeerSths` 多对端、`ReceivedAt` 时间戳、`FromEnvironment` 解析（无对端 / 有效 JSON / 含 pub_key / 畸形 JSON 兜底）、NipSigner 经缓存 STH 的签名轮回。
   - `AnchorTopologyTests.cs` — `TopologyQuery_UnknownReservedType_Returns501WithCorrectCode`（重命名 + 断言从 404→501）；新增 `TopologySnapshot_MissingCapability_Returns403`。
   - `AssuranceLevelTests.cs` — `FromWireOrAnonymous_NullOrEmpty_ReturnsAnonymous`（替换原合并测试）；`FromWireOrAnonymous_UnknownNonEmpty_Throws`（新增，验证 spec m6 执行）。
@@ -385,7 +317,7 @@
     - `daemons/npsd/` —— `npsd`（`Npsd.csproj`、包 `LabAcacia.NPS.Daemon.Npsd`）。监听 `127.0.0.1:17433`。L1 最小集：root Ed25519 keypair 生成（PKCS#8、文件权限 `0600`，满足 NPS-Node-L1 `TC-N1-NIP-01`）、`/.nwm` 自身 manifest、`/health`。可通过 `NPSD_PORT` / `NPSD_HOST` / `NPSD_DATA_DIR` 配置。NCP 原生模式前导 runtime、inbox 持久化、sub-NID 签发、AnnounceFrame 上发推迟到 alpha.4。
     - `daemons/nps-runner/` —— `nps-runner`（`NpsRunner.csproj`、包 `LabAcacia.NPS.Daemon.Runner`）。Phase 1 骨架：Generic Host 脚手架 + 30 秒 heartbeat。Inbox 监视 + `spawn_spec_ref` 解析 + worker 生命周期在 L3 阶段（alpha.5+）落地。
   - **第二层（接入网关）：**
-    - `daemons/nps-gateway/` —— `nps-gateway`（`NpsGateway.csproj`、包 `LabAcacia.NPS.Daemon.Gateway`）。Phase 1 骨架：公网 HTTP 监听 `:8080` + `/health`，端点本身记录后续里程碑。TLS termination、限速、NeuronHub 鉴权、CGN 扣款、NPS-RFC-0004 声誉查询、NPS-CR-0001 Anchor Node 中间件接入在 alpha.4 → alpha.5 落地。
+    - `daemons/nps-ingress/` —— `nps-ingress`（`NpsIngress.csproj`、包 `LabAcacia.NPS.Daemon.Ingress`）。Phase 1 骨架：公网 HTTP 监听 `:8080` + `/health`，端点本身记录后续里程碑。TLS termination、限速、NeuronHub 鉴权、CGN 扣款、NPS-RFC-0004 声誉查询、NPS-CR-0001 Anchor Node 中间件接入在 alpha.4 → alpha.5 落地。
     - `daemons/nps-registry/` —— `nps-registry`（`NpsRegistry.csproj`、包 `LabAcacia.NPS.Daemon.Registry`）。Phase 1 骨架：HTTP 监听 NDP 可选独立端口 `17436`；`Resolve`/`Graph`/`Announce` URL 已就位但返回 `NDP-REGISTRY-UNAVAILABLE`（HTTP 503），让消费方提前集成 + graceful fallback。SQLite 后端真实注册在 alpha.4 落地。
   - **第三层（信任锚点 —— NPS Cloud，2027 Q1+）：**
     - `daemons/nps-cloud-ca/` —— `nps-cloud-ca`（`NpsCloudCa.csproj`、包 `LabAcacia.NPS.Daemon.CloudCa`）。Phase 1 deferral 骨架，NIP 可选独立端口 `17435`；`/v1/issue`、`/v1/revoke`、`/v1/crl`、`/v1/ocsp` 返回 `NIP-CA-NOT-READY`（HTTP 503）+ 指针指向 alpha.2 已上线的六个多语言 `tools/nip-ca-server*` OSS CA。本 daemon 自己的 X.509 + ACME 流水线随 NPS-RFC-0002 在 alpha.4 落地。
@@ -422,7 +354,7 @@
 - **NPS Daemons 拆出发布仓** ——
   [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)
   ([Gitee 镜像](https://gitee.com/labacacia/nps-daemons)) 把 4 个 OSS
-  daemon（`npsd`、`nps-runner`、`nps-gateway`、`nps-registry`）打成
+  daemon（`npsd`、`nps-runner`、`nps-ingress`、`nps-registry`）打成
   bundle —— NPS 参考拓扑的 Layer-1 + Layer-2。每个子目录自包含（独立
   README、Dockerfile、依赖 nuget.org 上 `LabAcacia.NPS.*` 包的 csproj），
   仓库根的 `docker-compose.yml` 一键拉起 4 个。2 个 Layer-3 信任锚
@@ -539,10 +471,7 @@
 
 ---
 
-[1.0.0-alpha.7]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.7
-[1.0.0-alpha.6]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.6
-[1.0.0-alpha.5]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.5
-[1.0.0-alpha.4]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.4
-[1.0.0-alpha.3]: https://github.com/labacacia/NPS-Release/releases/tag/v1.0.0-alpha.3
+[1.0.0-alpha.7]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.7
+[1.0.0-alpha.6]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.6
 [1.0.0-alpha.2]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.2
 [1.0.0-alpha.1]: https://github.com/LabAcacia/nps/releases/tag/v1.0.0-alpha.1

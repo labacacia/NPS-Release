@@ -4,7 +4,7 @@
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.10
+**Version**: 0.11
 **Date**: 2026-05-11
 **Port**: 17433（默认，共用）/ 17435（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
@@ -157,6 +157,11 @@ metadata 字段不参与签名计算，Agent 可在运行时动态设置。Node 
 | `nop:delegate` | 可委托子任务给其他 Agent |
 | `nop:orchestrate` | 可作为 Orchestrator 发起 TaskFrame |
 | `topology:read` | 可通过保留查询类型 `topology.snapshot` / `topology.stream` 读取 Anchor Node 拓扑数据（NPS-2 §12）；Phase 1–2 的 Anchor Node MUST 按 NPS-2 §12.4 要求此能力。Phase 1–2 中该能力为自声明并签名；CA 背书的角色绑定推迟到 Phase 3（RFC-0002 修订）。 |
+| `llm:complete` | 可调用带 LLM/Thinking Profile 节点上的标准 NWP `llm.complete` action（NPS-2 §4.2a、§7.5）|
+| `llm:stream` | 可接收流式 LLM completion 响应（`LlmCompleteActionRequest.stream = true`）|
+| `llm:tool_call` | 可在 LLM completion 流程中提交工具定义并接收 tool-call 请求 |
+| `llm:embed` | 节点声明 embedding 支持时，可调用标准 embedding action |
+| `llm:rerank` | 节点声明 rerank 支持时，可调用标准 rerank action |
 
 **scope 字段**
 
@@ -341,7 +346,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 | `frame` | uint8 | 必填 | 固定为 `0x21`。|
 | `grantor_nid` | string（NID）| 必填 | 授权方 CA 的 NID。MUST 出现在验证方 Node 的 `trusted_issuers` 中，TrustFrame 才会生效。|
 | `grantee_ca` | string（NID）| 必填 | 受权方 CA 的 NID。`issued_by` 等于 `grantee_ca` 的 IdentFrame 在该授权下被接受。|
-| `trust_scope` | array of string | 必填 | 本次授权覆盖的能力字符串。MUST 是 §5.1 中标准 `capabilities` 枚举的子集（`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read`）。受权方 MUST NOT 颁发携带该集合外能力的下游 IdentFrame。|
+| `trust_scope` | array of string | 必填 | 本次授权覆盖的能力字符串。MUST 是 §5.1 中标准 `capabilities` 枚举的子集（`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read` / `llm:complete` / `llm:stream` / `llm:tool_call` / `llm:embed` / `llm:rerank`）。受权方 MUST NOT 颁发携带该集合外能力的下游 IdentFrame。|
 | `nodes` | array of string | 必填 | 本次信任适用的 `nwp://` URL 模式。`*` 匹配单段路径；`**` 匹配多段路径。空数组表示不覆盖任何 Node（授权事实上失效）。|
 | `issued_at` | string（ISO 8601 UTC）| 必填 | 颁发时间。|
 | `expires_at` | string（ISO 8601 UTC）| 必填 | 过期时间。超过该时刻后帧 MUST 被拒绝并返回 `NIP-TRUST-FRAME-EXPIRED`。|
@@ -610,6 +615,7 @@ OCSP 响应时间 SHOULD 归一化（固定延迟至 200ms），防止通过响�
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.11 | 2026-07-04 | 新增标准 LLM capability 字符串（`llm:complete`、`llm:stream`、`llm:tool_call`、`llm:embed`、`llm:rerank`），用于 NWP LLM/Thinking Profile 的发现与授权。TrustFrame `trust_scope` 可覆盖这些能力。无新增 frame 字段或错误码。 |
 | 0.10 | 2026-06-12 | 新增 §6.1 **边缘 mTLS 短时/可续期证书 profile**：1–24 小时有效期（默认 6 小时），用于 `nps-ingress`（L2）终结的原生模式 mTLS（NPS-RFC-0006 §6.3）；续期窗口 = 剩余有效期 25%；ACME `agent-01` 在线自续期；有效期 ≤ OCSP 缓存 TTL，以短有效期作为主要吊销手段；OCSP staple 刷新交互（`NIP-OCSP-STAPLE-EXPIRED`）；恢复票据受证书有效期约束（NPS-RFC-0006 §6.4）。复用现有错误码；无新错误码。（正文中文翻译待补，见 version-matrix translation_lag） |
 | 0.8 | 2026-05-11 | 扩展 §5.2 TrustFrame：补全字段定义表（10 个字段，新增必填的 `issued_at` / `serial` / `signer_nid` 用于吊销与审计追溯）、签名规范化规则（与 §5.1 IdentFrame 一致）、错误码子表与完整示例。§7 新增 TrustFrame 验证说明（IdentFrame 的 `issued_by` 是 `grantee_ca` 时，存在 `trusted_issuers` 中 `grantor_nid` 颁发、覆盖该请求的有效 TrustFrame 即可准入）。§9 新增 4 个错误码：`NIP-TRUST-FRAME-EXPIRED`、`NIP-TRUST-FRAME-GRANTOR-REVOKED`、`NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`、`NIP-TRUST-FRAME-NODES-PATTERN-INVALID`。|
 | 0.7 | 2026-05-07 | **NPS-CR-0003**：编排器组 NID 与短寿命会话 NID。新增 §3.1，在 `entity-type = agent` 上保留 `group-` / `session-` 标识符前缀。新增带签名的 `IdentFrame.lineage` 对象，含 `role` / `parent_nid` / `group_nid` / `session_id` / `purpose` / `owner_user_id` / `owner_key_id`（§5.1.3）。新增 RevokeFrame 原因 `parent_revoked`（§5.3）。验证流程新增链路检查步骤 **3a**（§7）。CA Server 新增 4 个端点 `/v1/orchestrators/groups/...`（§8）。新增 7 个错误码（§9）：`NIP-CA-GROUP-REVOKED`、`NIP-CA-PARENT-NOT-FOUND`、`NIP-CA-PARENT-NOT-GROUP`、`NIP-CA-SESSION-VALIDITY-INVALID`、`NIP-CA-JWS-INVALID`、`NIP-CA-JWS-EXPIRED`、`NIP-CERT-PARENT-REVOKED`。普通单 NID 注册流程完全向后兼容；编排器场景为可选启用。|

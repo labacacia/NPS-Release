@@ -37,7 +37,7 @@ suite_version: "1.0.0-alpha.15"
 protocols:
   NPS-0:
     name: "Overview"
-    version: "0.3"
+    version: "0.4"
     en_path: "spec/NPS-0-Overview.md"
     cn_path: "spec/NPS-0-Overview.cn.md"
     depends_on: []
@@ -45,7 +45,7 @@ protocols:
   NPS-1:
     name: "NCP — Neural Communication Protocol"
     short: "NCP"
-    version: "0.8"
+    version: "0.9"
     en_path: "spec/NPS-1-NCP.md"
     cn_path: "spec/NPS-1-NCP.cn.md"
     depends_on: []
@@ -53,22 +53,22 @@ protocols:
   NPS-2:
     name: "NWP — Neural Web Protocol"
     short: "NWP"
-    version: "0.14"
+    version: "0.17"
     en_path: "spec/NPS-2-NWP.md"
     cn_path: "spec/NPS-2-NWP.cn.md"
     depends_on:
-      - { spec: "NPS-1", version: "0.8" }   # NCP
-      - { spec: "NPS-3", version: "0.10" }  # NIP
+      - { spec: "NPS-1", version: "0.9" }   # NCP
+      - { spec: "NPS-3", version: "0.11" }  # NIP
       - { spec: "NPS-4", version: "0.9" }   # NDP
 
   NPS-3:
     name: "NIP — Neural Identity Protocol"
     short: "NIP"
-    version: "0.10"
+    version: "0.11"
     en_path: "spec/NPS-3-NIP.md"
     cn_path: "spec/NPS-3-NIP.cn.md"
     depends_on:
-      - { spec: "NPS-1", version: "0.8" }   # NCP
+      - { spec: "NPS-1", version: "0.9" }   # NCP
 
   NPS-4:
     name: "NDP — Neural Discovery Protocol"
@@ -77,8 +77,8 @@ protocols:
     en_path: "spec/NPS-4-NDP.md"
     cn_path: "spec/NPS-4-NDP.cn.md"
     depends_on:
-      - { spec: "NPS-1", version: "0.8" }   # NCP
-      - { spec: "NPS-3", version: "0.10" }  # NIP
+      - { spec: "NPS-1", version: "0.9" }   # NCP
+      - { spec: "NPS-3", version: "0.11" }  # NIP
 
   NPS-5:
     name: "NOP — Neural Orchestration Protocol"
@@ -87,9 +87,9 @@ protocols:
     en_path: "spec/NPS-5-NOP.md"
     cn_path: "spec/NPS-5-NOP.cn.md"
     depends_on:
-      - { spec: "NPS-1", version: "0.8" }   # NCP
-      - { spec: "NPS-2", version: "0.14" }  # NWP
-      - { spec: "NPS-3", version: "0.10" }  # NIP
+      - { spec: "NPS-1", version: "0.9" }   # NCP
+      - { spec: "NPS-2", version: "0.17" }  # NWP
+      - { spec: "NPS-3", version: "0.11" }  # NIP
 
 # Cross-protocol shared documents.
 shared:
@@ -103,17 +103,17 @@ shared:
     cn_path: "spec/token-budget.cn.md"
 
   error-codes:
-    version: "1.5"
+    version: "1.6"
     en_path: "spec/error-codes.md"
     cn_path: "spec/error-codes.cn.md"
 
   status-codes:
-    version: "0.4"
+    version: "0.5"
     en_path: "spec/status-codes.md"
     cn_path: "spec/status-codes.cn.md"
 
   roadmap:
-    version: "0.6"
+    version: "0.7"
     en_path: "spec/NPS-Roadmap.md"
     cn_path: "spec/NPS-Roadmap.cn.md"
 
@@ -133,17 +133,17 @@ min_compatible:
 # EN counterpart, remove its entry from this list.
 translation_lag:
   - protocol: "NPS-1"
-    en_version: "0.8"
-    cn_version: "0.8"
-    note: "CN changelog row + header at 0.8; full §7.5 body (native-mode TLS binding, mTLS, NCP-NID-MISMATCH) CN translation pending. RFC-0006.cn IS fully translated to Proposed v0.2 (incl. §6)."
+    en_version: "0.9"
+    cn_version: "0.9"
+    note: "CN changelog row + header at 0.9; full §7.5 body (native-mode TLS binding, mTLS, NCP-NID-MISMATCH) CN translation pending. RFC-0006.cn IS fully translated to Proposed v0.2 (incl. §6)."
   - protocol: "NPS-2"
-    en_version: "0.14"
-    cn_version: "0.14"
-    note: "CN changelog rows + header at 0.14; full body translation of the 0.10–0.14 delta still pending (topology authz, stability/SLA/billing, CR-0002 Phase 2, SubscribeFrame formal spec, trust_anchors, bridge_target schema, §16 Bridge conformance)."
+    en_version: "0.17"
+    cn_version: "0.17"
+    note: "CN changelog rows + header at 0.17; §4.2a LLM/Thinking Profile, §7.5 llm.complete, §9.5 HTTP binding rejection codes, and §16 Bridge conformance are translated. Full body translation of the remaining 0.10–0.13 delta is still pending (topology authz, stability/SLA/billing, CR-0002 Phase 2, SubscribeFrame formal spec, trust_anchors)."
   - protocol: "NPS-3"
-    en_version: "0.10"
-    cn_version: "0.10"
-    note: "CN changelog row + header at 0.10; full §6.1 body (short-lived/renewable edge-mTLS cert profile) CN translation pending."
+    en_version: "0.11"
+    cn_version: "0.11"
+    note: "CN changelog row + header at 0.11; §5.1 llm:* capability registry is translated. Full §6.1 body (short-lived/renewable edge-mTLS cert profile) CN translation pending."
   - protocol: "NPS-4"
     en_version: "0.9"
     cn_version: "0.9"

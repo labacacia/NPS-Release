@@ -8,7 +8,7 @@
 **Date**: 2026-05-10
 **Port**: 17433（默认，共用）/ 17436（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)、NPS-3 (NIP v0.10)
+**Depends-On**: NPS-1 (NCP v0.9)、NPS-3 (NIP v0.11)
 
 ---
 

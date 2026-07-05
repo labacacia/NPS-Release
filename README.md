@@ -1,181 +1,366 @@
 English | [中文版](./README.cn.md)
 
-# Neural Protocol Suite (NPS) — Protocol Specification
+# NPS — Neural Protocol Suite
+
+> **A complete internet infrastructure protocol suite for the AI era**
+
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.15-orange.svg)](CHANGELOG.md#100-alpha15--2026-06-28)
+[![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.15-orange.svg)](CHANGELOG.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.9-5b8cff.svg)]()
-[![NWP](https://img.shields.io/badge/NWP-v0.14-4af0b0.svg)]()
-[![NIP](https://img.shields.io/badge/NIP-v0.10-7b61ff.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.17-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.11-7b61ff.svg)]()
 [![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
 [![NOP](https://img.shields.io/badge/NOP-v0.7-ff8c42.svg)]()
 
-> **Version:** 1.0.0-alpha.15 | **Latest published release:** 1.0.0-alpha.15 | **Status:** Released | **License:** Apache 2.0
->
-> Copyright 2026 INNO LOTUS PTY LTD — LabAcacia Open Source
+NPS is a complete web infrastructure protocol suite designed for AI Agents and models. It consists of five sub-protocols covering AI communication, web access, identity, node discovery, and multi-agent orchestration.
 
-**NPS (Neural Protocol Suite)** is a purpose-built protocol family for AI agents and neural models — designed to replace the HTTP/REST stack with a semantics-first, agent-native wire protocol.
+> Current release line: `v1.0.0-alpha.15`. Source and spec repos are synced;
+> .NET package artifacts are attached to the GitHub Release and published to
+> the Nexus feed.
 
 ---
 
-## NPS Repositories
+## Protocol Suite Overview
 
-| Repo | Role | Language |
-|------|------|----------|
-| **[NPS-Release](https://github.com/labacacia/NPS-Release)** (this repo) | Protocol specifications — authoritative source of truth for all SDKs | Markdown / YAML |
-| [NPS-sdk-dotnet](https://github.com/labacacia/NPS-sdk-dotnet) | Reference implementation — frame codec, Memory Node middleware, NIP CA | C# / .NET 10 |
-| [NPS-sdk-py](https://github.com/labacacia/NPS-sdk-py) | Async Python SDK | Python 3.11+ |
-| [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts) | Dual-format (ESM + CJS) Node/browser SDK | TypeScript |
-| [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java) | JVM SDK | Java 21+ |
-| [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust) | Async Rust SDK | Rust stable |
-| [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go) | Go SDK | Go 1.25+ |
-| [nip-ca-server](https://github.com/labacacia/nip-ca-server) | NIP Certificate Authority — single-Docker self-hostable CA for issuing NID certificates | C# / .NET 10 + PostgreSQL |
-| [nps-daemons](https://github.com/labacacia/nps-daemons) | Reference deployment binaries — `npsd`, `nps-runner`, `nps-ingress`, `nps-registry` (Layer 1 + Layer 2 of the standard NPS topology) | C# / .NET 10 |
+```
+┌──────────────────────────────────────────────────────────────┐
+│  NOP  Neural Orchestration Protocol   Multi-Agent Orchestration │
+├──────────────────────────────────────────────────────────────┤
+│  NDP  Neural Discovery Protocol       Node Discovery          │
+├──────────────────────────────────────────────────────────────┤
+│  NIP  Neural Identity Protocol        Agent Identity          │
+├──────────────────────────────────────────────────────────────┤
+│  NWP  Neural Web Protocol             Node Request/Response   │
+├──────────────────────────────────────────────────────────────┤
+│  NCP  Neural Communication Protocol   AI-to-AI Communication  │
+└──────────────────────────────────────────────────────────────┘
+```
 
-Naming note: the process-level Internet ingress daemon is `nps-ingress`.
-It is separate from the retired NWP **Gateway Node** logical role; CR-0001
-replaced that role with **Anchor Node** and **Bridge Node**.
+| Protocol | Analogy | Spec Version | Implementation Status | Port (default / standalone) |
+|----------|---------|--------------|-----------------------|-----------------------------|
+| **NCP** Neural Communication Protocol | Wire Format | v0.9 | ✅ Reference impl complete; native-mode connection preamble and Tier-3 BinaryVector v1 (`binary_vector.v1`) landed | 17433 / — |
+| **NWP** Neural Web Protocol | Node request/response | v0.17 | ✅ Memory / Action / Complex / **Anchor** / **Bridge** Node — Anchor renamed from Gateway and Bridge introduced by NPS-CR-0001; Bridge Node includes outbound HTTP/HTTPS, gRPC JSON unary, MCP JSON-RPC, and A2A JSON-RPC dispatchers plus inbound MCP/A2A server adapters; Memory / Action Nodes can also serve native-mode NWP over NCP sessions; `llm.complete` now has official Action/Caps/Stream DTO and payload codec contracts; model-serving Action/Complex Nodes advertise the new NWM `profiles.llm` LLM/Thinking Profile; HTTP overlay binding rejections now have canonical NWP error codes; Anchor Node gained `topology.snapshot` / `topology.stream` reserved query types (NPS-CR-0002); NWM gained optional `stability` / `sla` / `billing` fields for marketplace discovery (issue #36); CR-0002 Phase 2 spec gaps closed — DiffFrame `cgn_est` per-event budget field, `anchor_state` sub-type enum, split topology read/subscribe capability gate, mid-stream auth/reputation rejection (issue #41) | 17433 / 17434 |
+| **NIP** Neural Identity Protocol | TLS / PKI | v0.11 | ✅ CA + identity verifier; assurance levels (NPS-RFC-0003) + reputation log entry (NPS-RFC-0004) reference types landed; standard `llm:*` capability strings registered for NWP LLM/Thinking Profile discovery and authorization | 17433 / 17435 |
+| **NDP** Neural Discovery Protocol | DNS | v0.9 | ✅ Registry + announce validator; AnnounceFrame gained `activation_mode` + `node_roles`/`cluster_anchor`/`bridge_protocols` (NPS-CR-0001; legacy `node_kind` is parse-time alias only); v0.7 adds registry security profiles (`local-dev` / `org-private` / `public-federated`) + anti-poisoning + graph_seq rollback defense (issue #33) | 17433 / 17436 |
+| **NOP** Neural Orchestration Protocol | SMTP / MQ | v0.7 | ✅ Orchestration engine + security hardening implemented; saga compensation semantics added | 17433 / 17437 |
 
-The .NET SDK ships the underlying CA library (`LabAcacia.NPS.NIP`); the
-standalone [`nip-ca-server`](https://github.com/labacacia/nip-ca-server)
-repo wraps it as a deployable service. Five frozen reference ports
-(Python / TypeScript / Java / Rust / Go) live under that repo's
-`example/` directory.
+### Local dev stack
 
-The Layer-3 trust-anchor daemons (`nps-cloud-ca` and `nps-ledger`) live
-in the `innolotus` GitHub organisation as **private** repos and ship
-publicly with **NPS Cloud** GA (planned 2027 Q1+). For self-host CA
-needs today, use [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server).
+Run a loopback stack with `npsd` + a development NIP CA:
+
+```bash
+docker compose -f deploy/dev-stack/docker-compose.yml up --build -d npsd nip-ca
+```
+
+For a one-shot MCP/A2A/gRPC smoke test against an NWP echo action:
+
+```bash
+docker compose -f deploy/dev-stack/docker-compose.yml --profile smoke run --rm ingress-echo
+```
+
+See [`docs/dev-stack.md`](docs/dev-stack.md).
+
+### Reference daemon deployment
+
+NPS in production runs as **six resident services across three layers** —
+see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) for
+the full design, [`tools/daemons/`](tools/daemons/) for the binaries.
+
+| Layer | Daemon | Port | Status (alpha.15 release) |
+|-------|--------|------|------------------|
+| 1 (host-local) | [`npsd`](tools/daemons/npsd/)             | 17433 | L1 minimum plus loopback dev-stack support |
+| 1 (host-local) | [`nps-runner`](tools/daemons/nps-runner/) | —     | L3 task-claim / lease semantics aligned to NPS-CR-0007 |
+| 2 (network entry) | [`nps-ingress`](tools/daemons/nps-ingress/)   | 8080  | Native-mode TLS/mTLS ingress boundary aligned to RFC-0006 |
+| 2 (network entry) | [`nps-registry`](tools/daemons/nps-registry/) | 17436 | NDP registry with liveness / staleness semantics |
+| 3 (trust anchor) | [`nps-cloud-ca`](tools/daemons/nps-cloud-ca/)  | 17435 | Deferral skeleton (points at [`tools/nip-ca-server`](tools/nip-ca-server/)) |
+| 3 (trust anchor) | [`nps-ledger`](tools/daemons/nps-ledger/)      | 17440 | In-memory NPS-RFC-0004 reputation log |
 
 ---
 
 ## Why NPS?
 
-Existing web protocols (HTTP, REST, GraphQL) were built for human browsers. AI agents consume them with significant overhead:
+Existing web protocols were designed for human browsers. When AI Agents access them, three fundamental problems arise:
 
-| Problem | Impact |
-|---------|--------|
-| Schema repeated on every response | Token waste, increased latency |
-| No native agent identity concept | Bolted-on auth, no trust chain |
-| Semantic interpretation left to agents | Prompt complexity, hallucination risk |
-| Single-request model | No native streaming or task orchestration |
+- **Semantic parsing overhead**: HTML/CSS/JS presentation layers are meaningless to AI and waste large numbers of tokens.
+- **Repeated schema transmission**: Every response carries a full structure definition — a significant waste in high-frequency access scenarios.
+- **No Agent identity concept**: The protocol layer cannot distinguish AI access from human access, nor declare Agent capabilities or permission scopes.
 
-NPS solves all four at the wire level: one-time schema anchors, Ed25519 identity baked into every hop, semantic annotations in the frame itself, and a unified DAG-based task frame.
+NPS is designed from the ground up to address these problems through **AnchorFrame schema anchoring**, **Cognon (CGN) standardized metering**, and the **NID identity system** — rebuilding the AI internet infrastructure layer.
 
 ---
 
-## Protocol Family
+## Key Features
 
-| Protocol | Analogue | Version | Summary |
-|----------|----------|---------|---------|
-| **NCP** — Neural Communication Protocol | Wire / Framing | v0.8 | Binary frame format, dual-tier codec (JSON / MsgPack), streaming, native-mode preamble, bounded Hello, keepalive `NopFrame`, and TLS/mTLS native transport binding |
-| **NWP** — Neural Web Protocol | HTTP / NCP | v0.14 | Semantic request/response, AnchorFrame schema cache, Memory / Action / Anchor / Bridge nodes, SubscribeFrame §13, manifest versioning, `bridge_target` schema, and native-mode serving over NCP |
-| **NIP** — Neural Identity Protocol | TLS / PKI | v0.10 | Ed25519 identity, certificate lifecycle, CA, OCSP, signed CRL, live revocation hooks, X.509/ACME, assurance levels, reputation, and short-lived edge-mTLS profile |
-| **NDP** — Neural Discovery Protocol | DNS | v0.9 | Node announcement, signed records, GraphFrame §5 topology snapshot, liveness fields, resolve-time staleness handling, and federation forwarding |
-| **NOP** — Neural Orchestration Protocol | SMTP / MQ | v0.7 | DAG task orchestration, delegation, streaming results, AlignStream ack/NAK, saga compensation, webhook HMAC, result TTL, and L3 runtime claim semantics |
+**Token Economy First**
+- **Schema Anchoring**: After the first request, subsequent calls pass only a SHA-256 reference. Typical scenarios reduce token consumption by 30–60%.
+- **Cognon (CGN)**: A cross-model standardized token metering unit with budget-aware response trimming (Token Budget).
 
-**Dependency chain:** `NCP ← NWP ← NIP ← NDP` / `NCP + NWP + NIP ← NOP`
+**Five Neural Node Roles**
+- `Memory Node`: Data storage and retrieval (RDS / NoSQL / files / vector databases)
+- `Action Node`: Operation and service invocation
+- `Complex Node`: Combined data and processing with node-graph traversal (Depth control)
+- `Anchor Node`: Cluster entry point and NOP routing control plane
+- `Bridge Node`: NPS-to-external dispatch and external-to-NPS server ingress (HTTP/gRPC/MCP/A2A; MCP/A2A inbound first)
 
-### Alpha.14 release focus
+**AI-Native Identity**
+Every Agent holds a **NID** (Neural Identity Descriptor) in the form `urn:nps:agent:{issuer}:{id}`, issued by a NIP CA. The NID carries capability declarations and access scopes enforced at the protocol layer.
 
-The alpha.15 release tracks the Banyan integration asks and SDK-alignment
-work:
-
-- typed remote NIP CA clients across SDKs, including discovery, CRL,
-  Ed25519 and RFC-0002 X.509 registration flows;
-- native-mode NWP serving helpers so nodes can handle `QueryFrame` and
-  `ActionFrame` over established NCP sessions;
-- TC-N1/TC-N2 conformance catalogs, manifests, and validation helpers;
-- .NET hardening for live revocation, native NCP TLS/mTLS hooks, bounded
-  native handshakes, signed CRL output, and transport-neutral observability.
+**Unified Port & Dual Transport Mode**
+- **Unified Port**: All protocols share port **17433**, routed naturally by frame type code.
+- **Dual Transport**: **HTTP mode** (overlay-friendly, firewall-compatible) and **Native mode** (high-performance TCP/QUIC).
 
 ---
 
-## Documentation
+## Repository Structure
+
+```
+nps/
+├── spec/                    # Language-agnostic specification (SSoT)
+│   ├── NPS-0-Overview.md    # Suite overview v0.4
+│   ├── NPS-1-NCP.md         # NCP spec v0.9
+│   ├── NPS-2-NWP.md         # NWP spec v0.17
+│   ├── NPS-3-NIP.md         # NIP spec v0.11
+│   ├── NPS-4-NDP.md         # NDP spec v0.9
+│   ├── NPS-5-NOP.md         # NOP spec v0.7
+│   ├── frame-registry.yaml  # Machine-readable frame registry v0.13
+│   ├── version-matrix.yaml  # Machine-readable suite/spec version oracle
+│   ├── error-codes.md       # Unified error code namespace
+│   ├── status-codes.md      # NPS native status codes + HTTP mapping
+│   ├── token-budget.md      # CGN metering spec
+│   ├── conformance/         # Shared wire vectors and conformance fixtures
+│   ├── services/
+│   │   └── NPS-AaaS-Profile.md  # AaaS compliance profile v0.2
+│   └── rfcs/                # RFC process + 4 drafts (NCP preamble, X.509/ACME NID, assurance levels, reputation log)
+├── impl/
+│   ├── dotnet/              # C# / .NET 10 reference implementation (includes samples/ + benchmarks/)
+│   ├── python/              # Python SDK v1.0.0-alpha.15 release line synced
+│   ├── typescript/          # TypeScript SDK v1.0.0-alpha.15 release line synced
+│   ├── java/                # Java SDK v1.0.0-alpha.15 release line synced
+│   ├── rust/                # Rust SDK v1.0.0-alpha.15 release line synced
+│   └── go/                  # Go SDK v1.0.0-alpha.15 release line synced
+├── tools/
+│   ├── daemons/                # Six resident services. 4 OSS published as labacacia/nps-daemons bundle (npsd / nps-runner / nps-ingress / nps-registry); 2 cloud daemons published as private innolotus/nps-cloud-ca + innolotus/nps-ledger
+│   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core; published standalone at labacacia/nip-ca-server (subdir example/ holds 5 frozen reference ports)
+│   ├── release/                # Release sync scripts (dev → standalone publish repos)
+│   └── mirror-to-gitee/        # Gitee mirror sync script (GitHub → Gitee with labacacia URL rewrite)
+├── compat/
+│   ├── mcp-ingress/          # MCP Ingress v1.0.0-alpha.15 (LabAcacia.McpIngress)
+│   ├── a2a-ingress/          # A2A Ingress v1.0.0-alpha.15 (LabAcacia.A2aIngress)
+│   └── grpc-ingress/         # gRPC Ingress v1.0.0-alpha.15 (LabAcacia.GrpcIngress)
+└── demos/                  # Also published standalone at github.com/labacacia/NPS-examples
+    ├── nps-demo/            # End-to-end business demo — NIP identity → AnchorFrame → NOP → DiffFrame
+    ├── nwp-graph-walk/      # NWP Complex Node §11 — depth-scoped fanout + X-NWP-Trace cycle detection
+    ├── ingress-playground/   # One NWP Action Node fronted simultaneously by MCP + A2A + gRPC
+    └── cross-sdk-interop/   # Four language clients (dotnet/python/node/go) diffed against one Memory Node
+```
+
+> **Standalone showcase.** The three Tier-1 demos (`nwp-graph-walk`,
+> `ingress-playground`, `cross-sdk-interop`) are also published as a
+> curated repo at [`labacacia/NPS-examples`](https://github.com/labacacia/NPS-examples)
+> ([Gitee mirror](https://gitee.com/labacacia/NPS-examples)). The
+> source of truth stays here; the standalone repo exists for
+> discoverability and has per-demo READMEs with principle / purpose /
+> what-it-demonstrates / captured results structure.
+
+---
+
+## Implementation Status
+
+The table below describes the current source tree. The `1.0.0-alpha.15`
+release artifacts have been produced; the .NET package bundle is attached to
+the GitHub Release and published to Nexus.
+
+### C# / .NET (`impl/dotnet/`)
+
+| Component | Version | Status | Contents |
+|-----------|---------|--------|----------|
+| `NPS.Core` | 1.0.0-alpha.15 | ✅ Available | Frame codec (MsgPack/JSON), dual-header mode (4B/8B), frame registry, Anchor cache |
+| `NPS.NWP` | 1.0.0-alpha.15 | ✅ Available | Memory / Action / Complex / Anchor / Bridge Node middleware; native-mode NWP serving over NCP sessions; `/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`; graph traversal + X-NWP-Depth + cycle detection; SSRF + idempotency + priority + async task lifecycle |
+| `NPS.NIP` | 1.0.0-alpha.15 | ✅ Available | CA library (key generation, certificate issuance/revocation, typed remote CA client, OCSP, CRL), `NipIdentVerifier` 6-step identity verification |
+| `NPS.NDP` | 1.0.0-alpha.15 | ✅ Available | NDP frame types (Announce/Resolve/Graph), in-memory registry (TTL eviction), announce signature validator |
+| `NPS.NOP` | 1.0.0-alpha.15 | ✅ Available | DAG orchestration engine (condition eval, input mapping, K-of-N sync, retry/backoff) + §8.2 delegation chain depth limit + §8.4 callback SSRF guard and exponential backoff retry |
+| `NPS.Conformance` | 1.0.0-alpha.15 | ✅ Available | Node L1/L2 conformance case catalog, run manifest model, and CI validation helpers |
+| `tools/nip-ca-server` | 1.0.0-alpha.15 | ✅ Available | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
+| Compat ingresses | 1.0.0-alpha.15 | ✅ Available | MCP Ingress (JSON-RPC 2.0, MCP 2024-11-05), A2A Ingress (Google A2A v0.2), gRPC Ingress (HTTP/2, 4 unary RPCs); renamed from `*-bridge` by NPS-CR-0001 — see `docs/compat/index.en.md` |
+| Daemons | 1.0.0-alpha.15 | ✅ Available | Six resident services: `npsd` (L1 minimum), `nps-runner`, `nps-ingress`, `nps-registry`, `nps-cloud-ca`, `nps-ledger` (RFC-0004 in-memory log); see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) |
+| Samples | — | ✅ Available | `samples/NPS.Samples.NopDag` — 3-node NOP DAG end-to-end over real HTTP; `demos/nps-demo` — 4-scene business demo (NIP → AnchorFrame → NOP → DiffFrame) |
+| Benchmarks | — | ✅ Available | `benchmarks/NPS.Benchmarks.TokenSavings` → **45.0% token saving vs REST** (exceeds Phase 1 ≥30% exit criterion); `benchmarks/NPS.Benchmarks.WireSize` → **63.6% MsgPack vs JSON** (exceeds Phase 2 ≤50% exit criterion) |
+
+.NET SDK test gate: **696 tests** across NPS.Core / NWP / NIP (incl. AssuranceLevel, Reputation, X.509/ACME, revocation, storage, remote CA client) / NDP / NOP / Anchor / Bridge / native NCP / native NWP / conformance / samples / benchmarks; plus **48 ingress tests** (15 mcp + 18 a2a + 15 grpc).
+
+### Python (`impl/python/`)
+
+| Component | Version | Status | Contents |
+|-----------|---------|--------|----------|
+| `nps-lib` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, asyncio + httpx, Ed25519 signing, 162 tests, 97% coverage. Python import module remains `nps_sdk`. |
+
+### TypeScript (`impl/typescript/`)
+
+| Component | Version | Status | Contents |
+|-----------|---------|--------|----------|
+| `@labacacia/nps-sdk` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 271 tests. The earlier npm `1.0.0-alpha.11` tarball omitted `dist/` and was deprecated; `1.0.0-alpha.15` ships `dist/` and the `alpha` dist-tag now resolves to it. |
+
+### Java (`impl/java/`)
+
+| Component | Version | Status | Contents |
+|-----------|---------|--------|----------|
+| `nps-java` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 87 tests |
+
+### Rust (`impl/rust/`)
+
+| Component | Version | Status | Contents |
+|-----------|---------|--------|----------|
+| `nps-rs` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 88 tests |
+
+### Go (`impl/go/`)
+
+| Component | Version | Status | Contents |
+|-----------|---------|--------|----------|
+| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Go 1.25+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 75 tests |
+
+---
+
+## Quick Start (C#)
+
+### 1. Register NCP core and NWP services
+
+```csharp
+services.AddNpsCore(opt => {
+    opt.DefaultTier = EncodingTier.MsgPack;
+});
+
+services.AddNwp(opt => {
+    opt.DefaultTokenBudget = 1000;
+});
+```
+
+### 2. Build and encode an NWP query frame
+
+```csharp
+var query = new QueryFrame {
+    AnchorRef = "sha256:a3f9b2c1...",
+    Filter = JsonSerializer.SerializeToElement(new { status = "active" }),
+    Limit = 50
+};
+
+byte[] wire = codec.Encode(query); // auto-handles 4-byte / 8-byte frame headers
+```
+
+---
+
+## Roadmap
+
+**Phase 0 — Spec Unification (Complete)**
+- [x] All 5 sub-protocol spec documents at v0.2+ draft
+- [x] `frame-registry.yaml` machine-readable frame registry v0.2
+- [x] `error-codes.md` / `status-codes.md` error codes with HTTP mapping
+- [x] `token-budget.md` CGN metering spec
+- [x] `services/NPS-AaaS-Profile.md` AaaS compliance profile v0.1
+
+**Phase 1 — Core Build (In progress, target 2026 Q3)**
+- [x] `NPS.Core` C# reference implementation — frame codec library
+- [x] `NPS.NWP` C# reference implementation — Memory / Action / Complex / Anchor / Bridge Node middleware
+- [x] `NPS.NIP` C# reference implementation — CA library + identity verifier (OCSP / CRL)
+- [x] `NPS.NDP` C# reference implementation — frame types + registry + announce validator
+- [x] `NPS.NOP` C# reference implementation — full orchestration engine + security hardening
+- [x] NIP CA Server OSS v0.1 — **6 language variants** (C# / Python / TypeScript / Java / Rust / Go)
+- [x] Python SDK `nps-lib` v1.0.0-alpha.15 (Phase 1) (NCP + NWP + NIP + NDP + NOP, 162 tests; import module `nps_sdk`)
+- [x] Token-savings benchmark → 45.0% aggregate saving vs REST (Phase 1 ≥30% exit criterion met)
+- [x] NuGet registry publish (`NPS.Core`, `NPS.NWP`, etc.) — 14 packages published to Nexus; 14 symbol packages generated and retained in the GitHub Release bundle
+- [ ] PyPI release (`nps-lib`)
+
+**Phase 2 — Ecosystem Expansion (In progress)**
+- [x] TypeScript SDK v1.0.0-alpha.15 (Phase 2; supersedes the deprecated npm `1.0.0-alpha.11` which omitted `dist/`; `alpha` dist-tag now resolves to `1.0.0-alpha.15`)
+- [x] Java SDK v1.0.0-alpha.15 (Phase 2; nps-java: NCP + NWP + NIP + NDP + NOP, Java 21, Ed25519, 87 tests)
+- [x] Rust SDK v1.0.0-alpha.15 (Phase 2; nps-rs: NCP + NWP + NIP + NDP + NOP, Rust stable, Ed25519, 88 tests)
+- [x] Go SDK v1.0.0-alpha.15 (Phase 2; github.com/labacacia/NPS-sdk-go: NCP + NWP + NIP + NDP + NOP, Go 1.25+, Ed25519, 75 tests)
+- [x] **MCP Ingress** v1.0.0-alpha.15 (`LabAcacia.McpIngress`, MCP 2024-11-05, JSON-RPC 2.0; renamed by NPS-CR-0001)
+- [x] **A2A Ingress** v1.0.0-alpha.15 (`LabAcacia.A2aIngress`, Google A2A v0.2; renamed by NPS-CR-0001)
+- [x] **gRPC Ingress** v1.0.0-alpha.15 (`LabAcacia.GrpcIngress`, 4 unary RPCs; renamed by NPS-CR-0001)
+- [x] **Six daemon binaries** under `tools/daemons/` (`npsd` / `nps-runner` / `nps-ingress` / `nps-registry` / `nps-cloud-ca` / `nps-ledger`) — see [`docs/daemons/architecture.md`](docs/daemons/architecture.md)
+- [x] **NPS-RFC-0001** Accepted (NCP connection preamble) — Phase 1 .NET helper
+- [x] **NPS-RFC-0003** Accepted (Agent identity assurance levels) — Phase 1 .NET reference types
+- [x] **NPS-RFC-0004** Accepted (NID reputation log) — Phase 1 .NET entry types + sign/verify
+- [x] **NPS-CR-0001** Implemented (Anchor + Bridge Node split; `compat/*-bridge` → `compat/*-ingress` rename)
+- [x] **NPS-CR-0002** Implemented (`topology.snapshot` / `topology.stream` reserved query types on Anchor Node; .NET reference impl + L2 conformance suite — daemon-side adoption deferred)
+- [x] 3-node NOP DAG sample (`samples/NPS.Samples.NopDag`) — Phase 2 DAG exit criterion met
+- [x] Wire-size benchmark → 63.6% MsgPack-vs-JSON reduction (Phase 2 ≤50% exit criterion met)
+- [x] RFC-0001..0004 drafts responding to 2026-04-20 review (NCP preamble / X.509+ACME NID / assurance levels / reputation log)
+- [ ] NPS Cloud hosted service
+- [ ] Protocol specs promoted to Proposed / Stable status
+
+---
+
+## Documentation Index
+
+### Concept Guides
+
+| Topic | Description |
+|-------|-------------|
+| [Frame Model](docs/concepts/frame-model.en.md) | NCP frame structure, encoding tiers, flags bitmap, schema anchoring |
+| [NID Identity System](docs/concepts/nid-identity.en.md) | NID format, certificate structure, 6-step verification, OCSP, scope wildcards |
+| [DAG Orchestration](docs/concepts/dag-orchestration.en.md) | Execution flow, input mapping, K-of-N sync, callbacks and aggregation strategies |
+| [Node Types](docs/concepts/node-types.en.md) | Memory / Action / Complex / Anchor / Bridge node comparison |
+
+### .NET SDK Reference
+
+| Package | Description |
+|---------|-------------|
+| [.NET SDK Index](docs/sdk/dotnet/index.en.md) | Environment requirements, package dependencies, DI registration overview |
+| [NPS.Core](docs/sdk/dotnet/nps-core.en.md) | Frame types, codecs, AnchorCache, exception hierarchy |
+| [NPS.NWP](docs/sdk/dotnet/nps-nwp.en.md) | QueryFrame, Filter DSL, MemoryNodeMiddleware, NWM manifest |
+| [NPS.NIP](docs/sdk/dotnet/nps-nip.en.md) | NipIdentVerifier 6-step verification, NipCaService, NipSigner, CA HTTP routes |
+| [NPS.NDP](docs/sdk/dotnet/nps-ndp.en.md) | AnnounceFrame, INdpRegistry, NdpAnnounceValidator |
+| [NPS.NOP](docs/sdk/dotnet/nps-nop.en.md) | TaskFrame/DAG model, NopOrchestrator, callback validator, condition/input mapping |
+
+### Compatibility Bridges
+
+| Topic | Description |
+|-------|-------------|
+| [Compat overview](docs/compat/index.en.md) | When to pick MCP / A2A / gRPC; shared design and non-goals |
+| [MCP Ingress deep dive](docs/compat/mcp-ingress.en.md) | 1:N upstream model, tool-name encoding, async lifecycle, header semantics |
+| [A2A Ingress deep dive](docs/compat/a2a-ingress.en.md) | 1:1 AgentCard mapping, skill lookup, task state translation, in-memory binding |
+| [gRPC Ingress deep dive](docs/compat/grpc-ingress.en.md) | Bytes-passthrough rationale, dual error mapping, multi-language clients |
+
+### Benchmarks
+
+| Report | Result |
+|--------|--------|
+| [REST vs NWP token savings](docs/benchmarks/token-savings.md) | Aggregate **45.0%** CGN reduction (S1 43.1% / S2 44.0% / S3 54.2%) — exceeds Phase 1 ≥30% exit criterion |
+| [Tier-1 JSON vs Tier-2 MsgPack wire size](docs/benchmarks/wire-size.md) | Aggregate **63.6%** byte reduction on steady-state frames — exceeds Phase 2 ≤50% exit criterion |
 
 ### Protocol Specifications
 
 | Document | Description |
 |----------|-------------|
-| [NPS-0 Overview](./spec/NPS-0-Overview.md) | Suite overview — start here |
-| [NPS-1 NCP](./spec/NPS-1-NCP.md) | Wire format, frame header, encoding tiers |
-| [NPS-2 NWP](./spec/NPS-2-NWP.md) | Neural Web Protocol |
-| [NPS-3 NIP](./spec/NPS-3-NIP.md) | Neural Identity Protocol |
-| [NPS-4 NDP](./spec/NPS-4-NDP.md) | Neural Discovery Protocol |
-| [NPS-5 NOP](./spec/NPS-5-NOP.md) | Neural Orchestration Protocol |
-
-### Reference Documents
-
-| Document | Description |
-|----------|-------------|
-| [Frame Registry](./spec/frame-registry.yaml) | Machine-readable frame type registry |
-| [Error Codes](./spec/error-codes.md) | Unified protocol error code namespace |
-| [Status Codes](./spec/status-codes.md) | NPS native status codes + HTTP mapping |
-| [Token Budget](./spec/token-budget.md) | CGN token budget specification |
-| [Version Matrix](./spec/version-matrix.yaml) | Machine-readable suite/spec version oracle |
-| [Node Conformance](./spec/conformance/README.md) | TC-N1/TC-N2/TC-N3 conformance entry point |
-| [Roadmap](./docs/roadmap.md) | Phase 0–4 development roadmap |
-
-### Service Specifications
-
-| Document | Description |
-|----------|-------------|
-| [AaaS Profile](./spec/services/NPS-AaaS-Profile.md) | Agent-as-a-Service compliance profile (Anchor Node, Bridge Node, Vector Proxy Layer, L1/L2/L3 compliance) |
+| [NPS Overview](spec/NPS-0-Overview.md) | Suite entry point, frame namespace at a glance |
+| [NCP Spec](spec/NPS-1-NCP.md) | Frame wire format, encoding tiers, dual-header mode |
+| [NWP Spec](spec/NPS-2-NWP.md) | Node request/response semantics, Filter DSL, streaming responses |
+| [NIP Spec](spec/NPS-3-NIP.md) | Identity protocol, Ed25519 signing, CRL/OCSP |
+| [NDP Spec](spec/NPS-4-NDP.md) | Node discovery, TTL broadcast, graph sync |
+| [NOP Spec](spec/NPS-5-NOP.md) | DAG orchestration, delegation chains, K-of-N |
+| [Cognon (CGN) Metering](spec/token-budget.md) | Cross-model standardized token metering unit |
+| [Error Code Namespace](spec/error-codes.md) | Unified error codes across all protocols |
+| [Status Code Mapping](spec/status-codes.md) | NPS native status codes with HTTP mapping |
+| [AaaS Compliance Profile](spec/services/NPS-AaaS-Profile.md) | Anchor Node + Bridge Node, Vector Proxy, L1/L2/L3 compliance levels |
+| [Daemon architecture](docs/daemons/architecture.md) | Six-daemon, three-layer reference deployment topology |
+| [RFC process + drafts](spec/rfcs/README.md) | RFC-0001 NCP preamble · 0002 X.509+ACME NID · 0003 assurance levels · 0004 reputation log |
 
 ---
 
-## Key Design Decisions
+## Attribution
 
-| Decision | Choice | Rationale |
-|----------|--------|-----------|
-| Default port | **17433** | Shared across all protocols; frame type routes internally |
-| Transport | HTTP overlay + native mode | Overlay: firewall-friendly; Native: low-latency |
-| Schema ownership | Node publishes AnchorFrame | Node owns its data model; agents reference by id |
-| Token metering | **CGN** (Cognon) | Unified cross-model metering unit |
-| Primary signature | **Ed25519** | Performance-first for high-frequency agent verification |
-| Default encoding | **MsgPack** (Tier-2) | ~60% size reduction vs JSON in production |
-| Default frame size | 64 KB (EXT=0) | Extended: 4 GB (EXT=1) for large payloads |
-| Max DAG nodes | 32 | DoS prevention |
-| Max delegation depth | 3 | Prevents infinite delegation chains |
-| Max graph traversal depth | 5 | X-NWP-Depth upper bound |
-| AnchorFrame TTL | 3600 s | Balances cache hit rate with schema freshness |
+| Output | Owner |
+|--------|-------|
+| NPS Specification | LabAcacia / INNO LOTUS PTY LTD |
+| Reference Implementations (OSS) | LabAcacia |
+| NPS Cloud Service | INNO LOTUS PTY LTD |
 
----
-
-## Frame Type Namespace (Quick Reference)
-
-| Range | Protocol | Frames |
-|-------|----------|--------|
-| `0x01–0x0F` | **NCP** | Anchor(0x01), Diff(0x02), Stream(0x03), Caps(0x04), Align(0x05, deprecated), Hello(0x06), Nop(0x07) |
-| `0x10–0x1F` | **NWP** | Query(0x10), Action(0x11), Subscribe(0x12) |
-| `0x20–0x2F` | **NIP** | Ident(0x20), Trust(0x21), Revoke(0x22) |
-| `0x30–0x3F` | **NDP** | Announce(0x30), Resolve(0x31), Graph(0x32) |
-| `0x40–0x4F` | **NOP** | Task(0x40), Delegate(0x41), Sync(0x42), AlignStream(0x43) |
-| `0xFE`      | System   | ErrorFrame — unified error across all layers |
-
-See [`spec/frame-registry.yaml`](./spec/frame-registry.yaml) for the complete machine-readable registry.
-
----
-
-## Contributing
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for contribution guidelines and the RFC process for breaking changes.
-
-Issue prefixes:
-- `spec:` — specification questions and design discussion
-- `impl:` — reference implementation bugs
-- `sdk:` — SDK-specific (Python / TypeScript / …)
-- `docs:` — documentation improvements
-
-Breaking changes to `spec/` **must** open an RFC issue first.
+**LabAcacia** is the open-source lab under INNO LOTUS PTY LTD. Licensed under Apache 2.0.
 
 ---
 
 ## License
 
-Copyright 2026 INNO LOTUS PTY LTD
-
-Licensed under the Apache License, Version 2.0. See [LICENSE](./LICENSE) for details.
-
-- **Specifications & reference implementations** — LabAcacia open source
-- **Commercial services (NPS Cloud)** — operated by INNO LOTUS PTY LTD
-- **Primary author** — Ori Lynn
+[Apache 2.0](LICENSE) © 2026 INNO LOTUS PTY LTD

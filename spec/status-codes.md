@@ -2,8 +2,8 @@ English | [中文版](./status-codes.cn.md)
 
 # NPS Native Status Codes and HTTP Mapping
 
-**Version**: 0.4  
-**Date**: 2026-04-26  
+**Version**: 0.5  
+**Date**: 2026-07-05  
 
 NPS defines a native status-code system independent of HTTP. Native mode uses NPS status codes directly; HTTP / Overlay mode additionally provides a mapping to HTTP status codes.
 
@@ -133,6 +133,12 @@ Each protocol's specific error code (e.g. `NCP-ANCHOR-NOT-FOUND`) maps to the co
 | `NWP-AUTH-NID-*` | `NPS-AUTH-*` (maps per specific error) |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` |
 | `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` |
+| `NWP-HTTP-ORIGIN-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` |
+| `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` |
+| `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` |
+| `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` |
+| `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` |
+| `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` |
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` |
 | `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` |
 | `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` |

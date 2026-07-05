@@ -2,8 +2,8 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 1.5
-**Date**: 2026-05-11
+**Version**: 1.6
+**Date**: 2026-07-05
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -82,6 +82,12 @@ NPS 采用两级错误体系：
 | `NWP-MANIFEST-NODE-TYPE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` 包含无法识别的值（非已知遗留移除值——遗留移除情况请用 `NWP-MANIFEST-NODE-TYPE-REMOVED`）。|
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | 超出频率限制，X-NWP-Rate-Reset 头包含重置时间 |
 | `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | `QueryFrame` 或 `SubscribeFrame` 的 `type` 字段包含不可识别的 reserved-type 标识符；当前节点未实现所请求的保留操作（NWP §12）。与 `NWP-ACTION-NOT-FOUND` 不同——当 `type` 字段是未知操作数（而非 `action_id`）时使用此码。|
+| `NWP-HTTP-ORIGIN-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | HTTP overlay origin policy 在接收 NWP frame 之前拒绝调用方（NWP §9.5）|
+| `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | HTTP overlay 请求 `Content-Type` 不是受支持的 NWP frame media type（NWP §9.5）|
+| `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` | HTTP overlay 请求 `Accept` 无法由任何受支持的 response media type 满足（NWP §9.5）|
+| `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | 响应 `X-NWP-Request-ID` 未回传请求 ID（NWP §9.5）|
+| `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body 无法解析为受支持的 NWP frame envelope（NWP §9.5）|
+| `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM 声明了当前节点无法服务的 capability/profile；不同于 `NWP-QUERY-VECTOR-UNSUPPORTED` 等如实声明不支持的专用错误码（NWP §9.5）|
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | 调用方无权读取该 Anchor 的拓扑信息（NPS-2 §12）；授权策略由实现方按 §12.4 自定义（NPS-CR-0002）|
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` 的值该 Anchor Node 未实现（NPS-CR-0002）|
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | 请求的 `topology.depth` 超出该 Anchor Node 配置的最大值（NPS-CR-0002）|

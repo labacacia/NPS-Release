@@ -2,8 +2,8 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 1.5
-**Date**: 2026-06-12
+**Version**: 1.6
+**Date**: 2026-07-05
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -88,6 +88,12 @@ NPS uses a two-level error system:
 | `NWP-MANIFEST-NODE-TYPE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | NWM `node_type` contains an unrecognized value (not a known-removed legacy value — use `NWP-MANIFEST-NODE-TYPE-REMOVED` for that case). |
 | `NWP-RATE-LIMIT-EXCEEDED` | `NPS-LIMIT-RATE` | Rate limit exceeded; reset timestamp is in the `X-NWP-Rate-Reset` header |
 | `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | `QueryFrame` or `SubscribeFrame` `type` field contains an unrecognized reserved-type identifier; this node does not implement the requested reserved operation (NWP §12). Distinct from `NWP-ACTION-NOT-FOUND` — use this code when the `type` field is the unknown operand, not `action_id`. |
+| `NWP-HTTP-ORIGIN-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | HTTP overlay origin policy rejected the caller before a NWP frame was admitted (NWP §9.5) |
+| `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | HTTP overlay request `Content-Type` is not a supported NWP frame media type (NWP §9.5) |
+| `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` | HTTP overlay request `Accept` cannot be satisfied by any supported response media type (NWP §9.5) |
+| `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | Response `X-NWP-Request-ID` does not echo the request ID (NWP §9.5) |
+| `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body cannot be parsed as a supported NWP frame envelope (NWP §9.5) |
+| `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM advertises a capability/profile that the node currently cannot serve; distinct from truthful unsupported-feature codes such as `NWP-QUERY-VECTOR-UNSUPPORTED` (NWP §9.5) |
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | Caller lacks permission to read this Anchor's topology (NPS-2 §12); authorization policy is implementation-defined per §12.4 (NPS-CR-0002) |
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` value is not implemented by this Anchor Node (NPS-CR-0002) |
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Requested `topology.depth` exceeds this Anchor Node's configured maximum (NPS-CR-0002) |
