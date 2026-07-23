@@ -3,7 +3,7 @@ English
 # NPS-CR-0008: Tier-3 BinaryVector v1 Encoding
 
 **Status**: Proposed  
-**Target**: v1.0-alpha.15 or later  
+**Target**: v1.0-alpha.16 or later  
 **Date**: 2026-06-27  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **Touches**: NPS-1 NCP, NPS-0 Overview, SDK core codecs, NCP conformance vectors

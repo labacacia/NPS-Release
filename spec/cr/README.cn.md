@@ -52,7 +52,7 @@
 | [NPS-CR-0005](./NPS-CR-0005-nip-ca-ra-model.md) | NIP CA RA 注册授权模型（三层准入） | v1.0-alpha.7 | Implemented |
 | [NPS-CR-0006](./NPS-CR-0006-subscribe-frame.md) | SubscribeFrame（NWP §13）正式规范 | v1.0.0-alpha.11 | Accepted（2026-05-28）|
 | [NPS-CR-0007](./NPS-CR-0007-nop-l3-runtime-integration.md) | NOP ↔ Node Profile L3 runtime 集成 | v1.0.0-alpha.12 | Accepted |
-| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 编码 | v1.0-alpha.15 或之后 | Proposed |
+| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 编码 | v1.0-alpha.16 或之后 | Proposed |
 
 ## 起草新 CR 的方法
 

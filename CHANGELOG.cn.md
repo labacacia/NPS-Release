@@ -8,6 +8,13 @@
 
 在 NPS 达到 v1.0 稳定版之前，套件内所有仓库 —— 规范、各 SDK（.NET / Python / TypeScript / Java / Rust / Go）、CA Server、兼容 Bridge —— 同步使用同一个预发布版本号。
 
+## [1.0.0-alpha.16] —— 2026-07-23
+
+### 修复
+
+- 由于 alpha.15 包已存在于公开 registry，本次以 alpha.16 重新发布整套版本。
+- 修复 nps-daemons 分发仓测试隔离：nps-ingress 与 nps-runner 不再把测试源码编入应用项目，同时通过显式测试程序集可见性保留 internal 覆盖。
+
 ## [1.0.0-alpha.15] —— 2026-06-28
 
 ### 新增

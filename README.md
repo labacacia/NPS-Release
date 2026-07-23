@@ -6,7 +6,7 @@ English | [中文版](./README.cn.md)
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.15-orange.svg)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.16-orange.svg)](CHANGELOG.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.9-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.17-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.11-7b61ff.svg)]()
@@ -15,7 +15,7 @@ English | [中文版](./README.cn.md)
 
 NPS is a complete web infrastructure protocol suite designed for AI Agents and models. It consists of five sub-protocols covering AI communication, web access, identity, node discovery, and multi-agent orchestration.
 
-> Current release line: `v1.0.0-alpha.15`. Source and spec repos are synced;
+> Current release line: `v1.0.0-alpha.16`. Source and spec repos are synced;
 > .NET package artifacts are attached to the GitHub Release and published to
 > the Nexus feed.
 
@@ -67,7 +67,7 @@ NPS in production runs as **six resident services across three layers** —
 see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) for
 the full design, [`tools/daemons/`](tools/daemons/) for the binaries.
 
-| Layer | Daemon | Port | Status (alpha.15 release) |
+| Layer | Daemon | Port | Status (alpha.16 release) |
 |-------|--------|------|------------------|
 | 1 (host-local) | [`npsd`](tools/daemons/npsd/)             | 17433 | L1 minimum plus loopback dev-stack support |
 | 1 (host-local) | [`nps-runner`](tools/daemons/nps-runner/) | —     | L3 task-claim / lease semantics aligned to NPS-CR-0007 |
@@ -134,20 +134,20 @@ nps/
 │   └── rfcs/                # RFC process + 4 drafts (NCP preamble, X.509/ACME NID, assurance levels, reputation log)
 ├── impl/
 │   ├── dotnet/              # C# / .NET 10 reference implementation (includes samples/ + benchmarks/)
-│   ├── python/              # Python SDK v1.0.0-alpha.15 release line synced
-│   ├── typescript/          # TypeScript SDK v1.0.0-alpha.15 release line synced
-│   ├── java/                # Java SDK v1.0.0-alpha.15 release line synced
-│   ├── rust/                # Rust SDK v1.0.0-alpha.15 release line synced
-│   └── go/                  # Go SDK v1.0.0-alpha.15 release line synced
+│   ├── python/              # Python SDK v1.0.0-alpha.16 release line synced
+│   ├── typescript/          # TypeScript SDK v1.0.0-alpha.16 release line synced
+│   ├── java/                # Java SDK v1.0.0-alpha.16 release line synced
+│   ├── rust/                # Rust SDK v1.0.0-alpha.16 release line synced
+│   └── go/                  # Go SDK v1.0.0-alpha.16 release line synced
 ├── tools/
 │   ├── daemons/                # Six resident services. 4 OSS published as labacacia/nps-daemons bundle (npsd / nps-runner / nps-ingress / nps-registry); 2 cloud daemons published as private innolotus/nps-cloud-ca + innolotus/nps-ledger
 │   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core; published standalone at labacacia/nip-ca-server (subdir example/ holds 5 frozen reference ports)
 │   ├── release/                # Release sync scripts (dev → standalone publish repos)
 │   └── mirror-to-gitee/        # Gitee mirror sync script (GitHub → Gitee with labacacia URL rewrite)
 ├── compat/
-│   ├── mcp-ingress/          # MCP Ingress v1.0.0-alpha.15 (LabAcacia.McpIngress)
-│   ├── a2a-ingress/          # A2A Ingress v1.0.0-alpha.15 (LabAcacia.A2aIngress)
-│   └── grpc-ingress/         # gRPC Ingress v1.0.0-alpha.15 (LabAcacia.GrpcIngress)
+│   ├── mcp-ingress/          # MCP Ingress v1.0.0-alpha.16 (LabAcacia.McpIngress)
+│   ├── a2a-ingress/          # A2A Ingress v1.0.0-alpha.16 (LabAcacia.A2aIngress)
+│   └── grpc-ingress/         # gRPC Ingress v1.0.0-alpha.16 (LabAcacia.GrpcIngress)
 └── demos/                  # Also published standalone at github.com/labacacia/NPS-examples
     ├── nps-demo/            # End-to-end business demo — NIP identity → AnchorFrame → NOP → DiffFrame
     ├── nwp-graph-walk/      # NWP Complex Node §11 — depth-scoped fanout + X-NWP-Trace cycle detection
@@ -167,7 +167,7 @@ nps/
 
 ## Implementation Status
 
-The table below describes the current source tree. The `1.0.0-alpha.15`
+The table below describes the current source tree. The `1.0.0-alpha.16`
 release artifacts have been produced; the .NET package bundle is attached to
 the GitHub Release and published to Nexus.
 
@@ -175,15 +175,15 @@ the GitHub Release and published to Nexus.
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `NPS.Core` | 1.0.0-alpha.15 | ✅ Available | Frame codec (MsgPack/JSON), dual-header mode (4B/8B), frame registry, Anchor cache |
-| `NPS.NWP` | 1.0.0-alpha.15 | ✅ Available | Memory / Action / Complex / Anchor / Bridge Node middleware; native-mode NWP serving over NCP sessions; `/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`; graph traversal + X-NWP-Depth + cycle detection; SSRF + idempotency + priority + async task lifecycle |
-| `NPS.NIP` | 1.0.0-alpha.15 | ✅ Available | CA library (key generation, certificate issuance/revocation, typed remote CA client, OCSP, CRL), `NipIdentVerifier` 6-step identity verification |
-| `NPS.NDP` | 1.0.0-alpha.15 | ✅ Available | NDP frame types (Announce/Resolve/Graph), in-memory registry (TTL eviction), announce signature validator |
-| `NPS.NOP` | 1.0.0-alpha.15 | ✅ Available | DAG orchestration engine (condition eval, input mapping, K-of-N sync, retry/backoff) + §8.2 delegation chain depth limit + §8.4 callback SSRF guard and exponential backoff retry |
-| `NPS.Conformance` | 1.0.0-alpha.15 | ✅ Available | Node L1/L2 conformance case catalog, run manifest model, and CI validation helpers |
-| `tools/nip-ca-server` | 1.0.0-alpha.15 | ✅ Available | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
-| Compat ingresses | 1.0.0-alpha.15 | ✅ Available | MCP Ingress (JSON-RPC 2.0, MCP 2024-11-05), A2A Ingress (Google A2A v0.2), gRPC Ingress (HTTP/2, 4 unary RPCs); renamed from `*-bridge` by NPS-CR-0001 — see `docs/compat/index.en.md` |
-| Daemons | 1.0.0-alpha.15 | ✅ Available | Six resident services: `npsd` (L1 minimum), `nps-runner`, `nps-ingress`, `nps-registry`, `nps-cloud-ca`, `nps-ledger` (RFC-0004 in-memory log); see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) |
+| `NPS.Core` | 1.0.0-alpha.16 | ✅ Available | Frame codec (MsgPack/JSON), dual-header mode (4B/8B), frame registry, Anchor cache |
+| `NPS.NWP` | 1.0.0-alpha.16 | ✅ Available | Memory / Action / Complex / Anchor / Bridge Node middleware; native-mode NWP serving over NCP sessions; `/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`; graph traversal + X-NWP-Depth + cycle detection; SSRF + idempotency + priority + async task lifecycle |
+| `NPS.NIP` | 1.0.0-alpha.16 | ✅ Available | CA library (key generation, certificate issuance/revocation, typed remote CA client, OCSP, CRL), `NipIdentVerifier` 6-step identity verification |
+| `NPS.NDP` | 1.0.0-alpha.16 | ✅ Available | NDP frame types (Announce/Resolve/Graph), in-memory registry (TTL eviction), announce signature validator |
+| `NPS.NOP` | 1.0.0-alpha.16 | ✅ Available | DAG orchestration engine (condition eval, input mapping, K-of-N sync, retry/backoff) + §8.2 delegation chain depth limit + §8.4 callback SSRF guard and exponential backoff retry |
+| `NPS.Conformance` | 1.0.0-alpha.16 | ✅ Available | Node L1/L2 conformance case catalog, run manifest model, and CI validation helpers |
+| `tools/nip-ca-server` | 1.0.0-alpha.16 | ✅ Available | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
+| Compat ingresses | 1.0.0-alpha.16 | ✅ Available | MCP Ingress (JSON-RPC 2.0, MCP 2024-11-05), A2A Ingress (Google A2A v0.2), gRPC Ingress (HTTP/2, 4 unary RPCs); renamed from `*-bridge` by NPS-CR-0001 — see `docs/compat/index.en.md` |
+| Daemons | 1.0.0-alpha.16 | ✅ Available | Six resident services: `npsd` (L1 minimum), `nps-runner`, `nps-ingress`, `nps-registry`, `nps-cloud-ca`, `nps-ledger` (RFC-0004 in-memory log); see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) |
 | Samples | — | ✅ Available | `samples/NPS.Samples.NopDag` — 3-node NOP DAG end-to-end over real HTTP; `demos/nps-demo` — 4-scene business demo (NIP → AnchorFrame → NOP → DiffFrame) |
 | Benchmarks | — | ✅ Available | `benchmarks/NPS.Benchmarks.TokenSavings` → **45.0% token saving vs REST** (exceeds Phase 1 ≥30% exit criterion); `benchmarks/NPS.Benchmarks.WireSize` → **63.6% MsgPack vs JSON** (exceeds Phase 2 ≤50% exit criterion) |
 
@@ -193,31 +193,31 @@ the GitHub Release and published to Nexus.
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-lib` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, asyncio + httpx, Ed25519 signing, 162 tests, 97% coverage. Python import module remains `nps_sdk`. |
+| `nps-lib` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, asyncio + httpx, Ed25519 signing, 162 tests, 97% coverage. Python import module remains `nps_sdk`. |
 
 ### TypeScript (`impl/typescript/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `@labacacia/nps-sdk` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 271 tests. The earlier npm `1.0.0-alpha.11` tarball omitted `dist/` and was deprecated; `1.0.0-alpha.15` ships `dist/` and the `alpha` dist-tag now resolves to it. |
+| `@labacacia/nps-sdk` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 271 tests. The earlier npm `1.0.0-alpha.11` tarball omitted `dist/` and was deprecated; `1.0.0-alpha.16` ships `dist/` and the `alpha` dist-tag now resolves to it. |
 
 ### Java (`impl/java/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-java` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 87 tests |
+| `nps-java` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 87 tests |
 
 ### Rust (`impl/rust/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-rs` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 88 tests |
+| `nps-rs` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 88 tests |
 
 ### Go (`impl/go/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.15 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Go 1.25+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 75 tests |
+| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Go 1.25+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 75 tests |
 
 ---
 
@@ -265,19 +265,19 @@ byte[] wire = codec.Encode(query); // auto-handles 4-byte / 8-byte frame headers
 - [x] `NPS.NDP` C# reference implementation — frame types + registry + announce validator
 - [x] `NPS.NOP` C# reference implementation — full orchestration engine + security hardening
 - [x] NIP CA Server OSS v0.1 — **6 language variants** (C# / Python / TypeScript / Java / Rust / Go)
-- [x] Python SDK `nps-lib` v1.0.0-alpha.15 (Phase 1) (NCP + NWP + NIP + NDP + NOP, 162 tests; import module `nps_sdk`)
+- [x] Python SDK `nps-lib` v1.0.0-alpha.16 (Phase 1) (NCP + NWP + NIP + NDP + NOP, 162 tests; import module `nps_sdk`)
 - [x] Token-savings benchmark → 45.0% aggregate saving vs REST (Phase 1 ≥30% exit criterion met)
 - [x] NuGet registry publish (`NPS.Core`, `NPS.NWP`, etc.) — 14 packages published to Nexus; 14 symbol packages generated and retained in the GitHub Release bundle
 - [ ] PyPI release (`nps-lib`)
 
 **Phase 2 — Ecosystem Expansion (In progress)**
-- [x] TypeScript SDK v1.0.0-alpha.15 (Phase 2; supersedes the deprecated npm `1.0.0-alpha.11` which omitted `dist/`; `alpha` dist-tag now resolves to `1.0.0-alpha.15`)
-- [x] Java SDK v1.0.0-alpha.15 (Phase 2; nps-java: NCP + NWP + NIP + NDP + NOP, Java 21, Ed25519, 87 tests)
-- [x] Rust SDK v1.0.0-alpha.15 (Phase 2; nps-rs: NCP + NWP + NIP + NDP + NOP, Rust stable, Ed25519, 88 tests)
-- [x] Go SDK v1.0.0-alpha.15 (Phase 2; github.com/labacacia/NPS-sdk-go: NCP + NWP + NIP + NDP + NOP, Go 1.25+, Ed25519, 75 tests)
-- [x] **MCP Ingress** v1.0.0-alpha.15 (`LabAcacia.McpIngress`, MCP 2024-11-05, JSON-RPC 2.0; renamed by NPS-CR-0001)
-- [x] **A2A Ingress** v1.0.0-alpha.15 (`LabAcacia.A2aIngress`, Google A2A v0.2; renamed by NPS-CR-0001)
-- [x] **gRPC Ingress** v1.0.0-alpha.15 (`LabAcacia.GrpcIngress`, 4 unary RPCs; renamed by NPS-CR-0001)
+- [x] TypeScript SDK v1.0.0-alpha.16 (Phase 2; supersedes the deprecated npm `1.0.0-alpha.11` which omitted `dist/`; `alpha` dist-tag now resolves to `1.0.0-alpha.16`)
+- [x] Java SDK v1.0.0-alpha.16 (Phase 2; nps-java: NCP + NWP + NIP + NDP + NOP, Java 21, Ed25519, 87 tests)
+- [x] Rust SDK v1.0.0-alpha.16 (Phase 2; nps-rs: NCP + NWP + NIP + NDP + NOP, Rust stable, Ed25519, 88 tests)
+- [x] Go SDK v1.0.0-alpha.16 (Phase 2; github.com/labacacia/NPS-sdk-go: NCP + NWP + NIP + NDP + NOP, Go 1.25+, Ed25519, 75 tests)
+- [x] **MCP Ingress** v1.0.0-alpha.16 (`LabAcacia.McpIngress`, MCP 2024-11-05, JSON-RPC 2.0; renamed by NPS-CR-0001)
+- [x] **A2A Ingress** v1.0.0-alpha.16 (`LabAcacia.A2aIngress`, Google A2A v0.2; renamed by NPS-CR-0001)
+- [x] **gRPC Ingress** v1.0.0-alpha.16 (`LabAcacia.GrpcIngress`, 4 unary RPCs; renamed by NPS-CR-0001)
 - [x] **Six daemon binaries** under `tools/daemons/` (`npsd` / `nps-runner` / `nps-ingress` / `nps-registry` / `nps-cloud-ca` / `nps-ledger`) — see [`docs/daemons/architecture.md`](docs/daemons/architecture.md)
 - [x] **NPS-RFC-0001** Accepted (NCP connection preamble) — Phase 1 .NET helper
 - [x] **NPS-RFC-0003** Accepted (Agent identity assurance levels) — Phase 1 .NET reference types

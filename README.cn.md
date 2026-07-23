@@ -6,7 +6,7 @@
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.15-orange.svg)](CHANGELOG.cn.md)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.16-orange.svg)](CHANGELOG.cn.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.9-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.17-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.11-7b61ff.svg)]()
@@ -15,7 +15,7 @@
 
 NPS 是面向 AI Agent 和模型的完整 Web 基础协议族，由五个子协议组成，覆盖 AI 通信、Web 访问、身份认证、节点发现与多 Agent 编排。
 
-> 当前 release line：`v1.0.0-alpha.15`。源码与规范仓库已经同步；
+> 当前 release line：`v1.0.0-alpha.16`。源码与规范仓库已经同步；
 > .NET 包工件已挂到 GitHub Release，并已发布到 Nexus feed。
 
 ---
@@ -66,7 +66,7 @@ NPS 在生产环境跑作 **三层、六个常驻服务** —— 完整设计见
 [`docs/daemons/architecture.cn.md`](docs/daemons/architecture.cn.md)，
 二进制在 [`tools/daemons/`](tools/daemons/)。
 
-| 层 | Daemon | 端口 | 状态（alpha.15 release）|
+| 层 | Daemon | 端口 | 状态（alpha.16 release）|
 |----|--------|------|-----------------|
 | 1（本机基础设施）| [`npsd`](tools/daemons/npsd/)             | 17433 | L1 最小集 + loopback dev-stack 支持 |
 | 1（本机基础设施）| [`nps-runner`](tools/daemons/nps-runner/) | —     | L3 task-claim / lease 语义对齐 NPS-CR-0007 |
@@ -133,20 +133,20 @@ nps/
 │   └── rfcs/                # RFC 流程 + 4 份草案（NCP 前导 / X.509+ACME NID / 身份保证等级 / 声誉日志）
 ├── impl/
 │   ├── dotnet/              # C# / .NET 10 参考实现（含 samples/ + benchmarks/）
-│   ├── python/              # Python SDK v1.0.0-alpha.15 release line 已同步
-│   ├── typescript/          # TypeScript SDK v1.0.0-alpha.15 release line 已同步
-│   ├── java/                # Java SDK v1.0.0-alpha.15 release line 已同步
-│   ├── rust/                # Rust SDK v1.0.0-alpha.15 release line 已同步
-│   └── go/                  # Go SDK v1.0.0-alpha.15 release line 已同步
+│   ├── python/              # Python SDK v1.0.0-alpha.16 release line 已同步
+│   ├── typescript/          # TypeScript SDK v1.0.0-alpha.16 release line 已同步
+│   ├── java/                # Java SDK v1.0.0-alpha.16 release line 已同步
+│   ├── rust/                # Rust SDK v1.0.0-alpha.16 release line 已同步
+│   └── go/                  # Go SDK v1.0.0-alpha.16 release line 已同步
 ├── tools/
 │   ├── daemons/                # 六个常驻服务。4 个 OSS 打 bundle 发到 labacacia/nps-daemons（npsd / nps-runner / nps-ingress / nps-registry）；2 个 cloud daemon 私有发到 innolotus/nps-cloud-ca + innolotus/nps-ledger
 │   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core；独立发布到 labacacia/nip-ca-server（example/ 收录 5 个冻结的参考移植）
 │   ├── release/                # 发布同步脚本（dev → 各独立发布仓）
 │   └── mirror-to-gitee/        # Gitee 镜像同步脚本（GitHub → Gitee，labacacia URL 改写）
 ├── compat/
-│   ├── mcp-ingress/          # MCP Ingress v1.0.0-alpha.15（LabAcacia.McpIngress）
-│   ├── a2a-ingress/          # A2A Ingress v1.0.0-alpha.15（LabAcacia.A2aIngress）
-│   └── grpc-ingress/         # gRPC Ingress v1.0.0-alpha.15（LabAcacia.GrpcIngress）
+│   ├── mcp-ingress/          # MCP Ingress v1.0.0-alpha.16（LabAcacia.McpIngress）
+│   ├── a2a-ingress/          # A2A Ingress v1.0.0-alpha.16（LabAcacia.A2aIngress）
+│   └── grpc-ingress/         # gRPC Ingress v1.0.0-alpha.16（LabAcacia.GrpcIngress）
 └── demos/                  # 同时单独发布在 github.com/labacacia/NPS-examples
     ├── nps-demo/            # 端到端业务 demo —— NIP 身份 → AnchorFrame → NOP → DiffFrame
     ├── nwp-graph-walk/      # NWP Complex Node §11 —— depth 扇出 + X-NWP-Trace 环路检测
@@ -165,22 +165,22 @@ nps/
 
 ## 实现状态
 
-下表描述当前源码树。`1.0.0-alpha.15` release 工件已经切出；.NET 包
+下表描述当前源码树。`1.0.0-alpha.16` release 工件已经切出；.NET 包
 bundle 已挂到 GitHub Release，并已发布到 Nexus。
 
 ### C# / .NET（`impl/dotnet/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `NPS.Core` | 1.0.0-alpha.15 | ✅ 可用 | 帧编解码（MsgPack/JSON）、双头模式（4B/8B）、帧注册表、Anchor 缓存 |
-| `NPS.NWP` | 1.0.0-alpha.15 | ✅ 可用 | Memory / Action / Complex / Anchor / Bridge Node 中间件；通过 NCP session 的 native-mode NWP serving；`/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`；图谱遍历 + X-NWP-Depth + 环路检测；SSRF + 幂等 + priority + 异步任务生命周期 |
-| `NPS.NIP` | 1.0.0-alpha.15 | ✅ 可用 | CA 库（密钥生成、证书签发/吊销、类型化远程 CA client、OCSP、CRL）、`NipIdentVerifier` 6 步身份验证 |
-| `NPS.NDP` | 1.0.0-alpha.15 | ✅ 可用 | NDP 帧类型（Announce/Resolve/Graph）、内存注册表（TTL 淘汰）、公告签名验证器 |
-| `NPS.NOP` | 1.0.0-alpha.15 | ✅ 可用 | DAG 编排引擎（条件求值、输入映射、K-of-N 同步、重试/退避）+ §8.2 委托链深度限制 + §8.4 callback SSRF 防护及指数退避重试 |
-| `NPS.Conformance` | 1.0.0-alpha.15 | ✅ 可用 | Node L1/L2 conformance case catalog、run manifest model 与 CI validation helper |
-| `tools/nip-ca-server` | 1.0.0-alpha.15 | ✅ 可用 | NIP CA Server —— C# / ASP.NET Core 10、PostgreSQL、Docker。独立发布到 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)（唯一打 release 的实现）；5 个其它语言参考移植（Python / TypeScript / Java / Rust / Go）冻结在 `1.0.0-alpha.11`，放在 `tools/nip-ca-server/example/` 下。|
-| Compat 接入 | 1.0.0-alpha.15 | ✅ 可用 | MCP Ingress（JSON-RPC 2.0，MCP 2024-11-05）、A2A Ingress（Google A2A v0.2）、gRPC Ingress（HTTP/2，4 个 unary RPC）；由 NPS-CR-0001 从 `*-bridge` 重命名 —— 详见 `docs/compat/index.md` |
-| Daemons | 1.0.0-alpha.15 | ✅ 可用 | 六个常驻服务：`npsd`（L1 最小集）、`nps-runner`、`nps-ingress`、`nps-registry`、`nps-cloud-ca`、`nps-ledger`（RFC-0004 内存日志）；详见 [`docs/daemons/architecture.cn.md`](docs/daemons/architecture.cn.md) |
+| `NPS.Core` | 1.0.0-alpha.16 | ✅ 可用 | 帧编解码（MsgPack/JSON）、双头模式（4B/8B）、帧注册表、Anchor 缓存 |
+| `NPS.NWP` | 1.0.0-alpha.16 | ✅ 可用 | Memory / Action / Complex / Anchor / Bridge Node 中间件；通过 NCP session 的 native-mode NWP serving；`/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`；图谱遍历 + X-NWP-Depth + 环路检测；SSRF + 幂等 + priority + 异步任务生命周期 |
+| `NPS.NIP` | 1.0.0-alpha.16 | ✅ 可用 | CA 库（密钥生成、证书签发/吊销、类型化远程 CA client、OCSP、CRL）、`NipIdentVerifier` 6 步身份验证 |
+| `NPS.NDP` | 1.0.0-alpha.16 | ✅ 可用 | NDP 帧类型（Announce/Resolve/Graph）、内存注册表（TTL 淘汰）、公告签名验证器 |
+| `NPS.NOP` | 1.0.0-alpha.16 | ✅ 可用 | DAG 编排引擎（条件求值、输入映射、K-of-N 同步、重试/退避）+ §8.2 委托链深度限制 + §8.4 callback SSRF 防护及指数退避重试 |
+| `NPS.Conformance` | 1.0.0-alpha.16 | ✅ 可用 | Node L1/L2 conformance case catalog、run manifest model 与 CI validation helper |
+| `tools/nip-ca-server` | 1.0.0-alpha.16 | ✅ 可用 | NIP CA Server —— C# / ASP.NET Core 10、PostgreSQL、Docker。独立发布到 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)（唯一打 release 的实现）；5 个其它语言参考移植（Python / TypeScript / Java / Rust / Go）冻结在 `1.0.0-alpha.11`，放在 `tools/nip-ca-server/example/` 下。|
+| Compat 接入 | 1.0.0-alpha.16 | ✅ 可用 | MCP Ingress（JSON-RPC 2.0，MCP 2024-11-05）、A2A Ingress（Google A2A v0.2）、gRPC Ingress（HTTP/2，4 个 unary RPC）；由 NPS-CR-0001 从 `*-bridge` 重命名 —— 详见 `docs/compat/index.md` |
+| Daemons | 1.0.0-alpha.16 | ✅ 可用 | 六个常驻服务：`npsd`（L1 最小集）、`nps-runner`、`nps-ingress`、`nps-registry`、`nps-cloud-ca`、`nps-ledger`（RFC-0004 内存日志）；详见 [`docs/daemons/architecture.cn.md`](docs/daemons/architecture.cn.md) |
 | Samples | — | ✅ 可用 | `samples/NPS.Samples.NopDag` —— 真 HTTP 的 3 节点 NOP DAG 端到端；`demos/nps-demo` —— 4 幕业务 demo（NIP → AnchorFrame → NOP → DiffFrame）|
 | Benchmarks | — | ✅ 可用 | `benchmarks/NPS.Benchmarks.TokenSavings` → **相对 REST 节省 45.0% CGN**（超过 Phase 1 ≥30% 出口）；`benchmarks/NPS.Benchmarks.WireSize` → **MsgPack 相对 JSON 减少 63.6%**（超过 Phase 2 ≤50% 出口）|
 
@@ -190,31 +190,31 @@ bundle 已挂到 GitHub Release，并已发布到 Nexus。
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `nps-lib` | 1.0.0-alpha.15 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，asyncio + httpx，Ed25519 签名，162 测试，97% 覆盖率。Python 导入模块仍为 `nps_sdk`。 |
+| `nps-lib` | 1.0.0-alpha.16 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，asyncio + httpx，Ed25519 签名，162 测试，97% 覆盖率。Python 导入模块仍为 `nps_sdk`。 |
 
 ### TypeScript（`impl/typescript/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `@labacacia/nps-sdk` | 1.0.0-alpha.15 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，Node.js 22+，MsgPack + JSON 双编码，Ed25519 签名，271 测试。此前 npm `1.0.0-alpha.11` tarball 缺少 `dist/` 已 deprecated；`1.0.0-alpha.15` 已包含 `dist/`，`alpha` dist-tag 现已指向它。 |
+| `@labacacia/nps-sdk` | 1.0.0-alpha.16 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，Node.js 22+，MsgPack + JSON 双编码，Ed25519 签名，271 测试。此前 npm `1.0.0-alpha.11` tarball 缺少 `dist/` 已 deprecated；`1.0.0-alpha.16` 已包含 `dist/`，`alpha` dist-tag 现已指向它。 |
 
 ### Java（`impl/java/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `nps-java` | 1.0.0-alpha.15 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，Java 21，MsgPack + JSON 双编码，Ed25519 内置签名，AES-256-GCM 密钥加密，87 测试 |
+| `nps-java` | 1.0.0-alpha.16 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，Java 21，MsgPack + JSON 双编码，Ed25519 内置签名，AES-256-GCM 密钥加密，87 测试 |
 
 ### Rust（`impl/rust/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `nps-rs` | 1.0.0-alpha.15 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，Rust stable，MsgPack + JSON 双编码，Ed25519 签名，AES-256-GCM 密钥加密，Tokio 异步，88 测试 |
+| `nps-rs` | 1.0.0-alpha.16 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，Rust stable，MsgPack + JSON 双编码，Ed25519 签名，AES-256-GCM 密钥加密，Tokio 异步，88 测试 |
 
 ### Go（`impl/go/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.15 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，Go 1.25+，MsgPack + JSON 双编码，Ed25519 内置签名，AES-256-GCM 密钥加密，75 测试 |
+| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.16 | ✅ 可用 | NCP + NWP + NIP + NDP + NOP 全协议实现，Go 1.25+，MsgPack + JSON 双编码，Ed25519 内置签名，AES-256-GCM 密钥加密，75 测试 |
 
 ---
 
@@ -260,19 +260,19 @@ byte[] wire = codec.Encode(query); // 自动处理 4-byte/8-byte 帧头
 - [x] `NPS.NDP` C# 参考实现 — 帧类型 + 注册表 + 公告验证器
 - [x] `NPS.NOP` C# 参考实现 — 编排引擎全量实现 + 安全加固
 - [x] NIP CA Server OSS v0.1 —— **6 个语言变体**（C# / Python / TypeScript / Java / Rust / Go）
-- [x] Python SDK `nps-lib` v1.0.0-alpha.15 (Phase 1)（NCP + NWP + NIP + NDP + NOP，162 测试；import 模块 `nps_sdk`）
+- [x] Python SDK `nps-lib` v1.0.0-alpha.16 (Phase 1)（NCP + NWP + NIP + NDP + NOP，162 测试；import 模块 `nps_sdk`）
 - [x] Token-savings 基准 → 相对 REST 聚合节省 45.0%（达成 Phase 1 ≥30% 出口标准）
 - [x] NuGet registry 发布（`NPS.Core`、`NPS.NWP` 等）—— 14 个包已发布到 Nexus；14 个符号包已生成并保留在 GitHub Release bundle
 - [ ] PyPI 正式发布（`nps-lib`）
 
 **Phase 2 — 生态扩展（进行中）**
-- [x] TypeScript SDK v1.0.0-alpha.15（Phase 2；取代此前缺 `dist/` 已 deprecated 的 npm `1.0.0-alpha.11`；`alpha` dist-tag 现已指向 `1.0.0-alpha.15`）
-- [x] Java SDK v1.0.0-alpha.15（Phase 2；nps-java：NCP + NWP + NIP + NDP + NOP，Java 21，Ed25519，87 tests）
-- [x] Rust SDK v1.0.0-alpha.15（Phase 2；nps-rs：NCP + NWP + NIP + NDP + NOP，Rust stable，Ed25519，88 tests）
-- [x] Go SDK v1.0.0-alpha.15（Phase 2；github.com/labacacia/NPS-sdk-go：NCP + NWP + NIP + NDP + NOP，Go 1.25+，Ed25519，75 tests）
-- [x] **MCP Ingress** v1.0.0-alpha.15（`LabAcacia.McpIngress`，MCP 2024-11-05，JSON-RPC 2.0；NPS-CR-0001 重命名）
-- [x] **A2A Ingress** v1.0.0-alpha.15（`LabAcacia.A2aIngress`，Google A2A v0.2；NPS-CR-0001 重命名）
-- [x] **gRPC Ingress** v1.0.0-alpha.15（`LabAcacia.GrpcIngress`，4 个 unary RPC；NPS-CR-0001 重命名）
+- [x] TypeScript SDK v1.0.0-alpha.16（Phase 2；取代此前缺 `dist/` 已 deprecated 的 npm `1.0.0-alpha.11`；`alpha` dist-tag 现已指向 `1.0.0-alpha.16`）
+- [x] Java SDK v1.0.0-alpha.16（Phase 2；nps-java：NCP + NWP + NIP + NDP + NOP，Java 21，Ed25519，87 tests）
+- [x] Rust SDK v1.0.0-alpha.16（Phase 2；nps-rs：NCP + NWP + NIP + NDP + NOP，Rust stable，Ed25519，88 tests）
+- [x] Go SDK v1.0.0-alpha.16（Phase 2；github.com/labacacia/NPS-sdk-go：NCP + NWP + NIP + NDP + NOP，Go 1.25+，Ed25519，75 tests）
+- [x] **MCP Ingress** v1.0.0-alpha.16（`LabAcacia.McpIngress`，MCP 2024-11-05，JSON-RPC 2.0；NPS-CR-0001 重命名）
+- [x] **A2A Ingress** v1.0.0-alpha.16（`LabAcacia.A2aIngress`，Google A2A v0.2；NPS-CR-0001 重命名）
+- [x] **gRPC Ingress** v1.0.0-alpha.16（`LabAcacia.GrpcIngress`，4 个 unary RPC；NPS-CR-0001 重命名）
 - [x] **6 个 daemon 二进制** 在 `tools/daemons/`（`npsd` / `nps-runner` / `nps-ingress` / `nps-registry` / `nps-cloud-ca` / `nps-ledger`）—— 详见 [`docs/daemons/architecture.cn.md`](docs/daemons/architecture.cn.md)
 - [x] **NPS-RFC-0001** Accepted（NCP 连接前导）—— Phase 1 .NET helper
 - [x] **NPS-RFC-0003** Accepted（Agent 身份保证等级）—— Phase 1 .NET 参考类型
