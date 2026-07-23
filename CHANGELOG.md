@@ -8,19 +8,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NET / Python / TypeScript / Java / Rust / Go), CA Servers, and compat bridges — is synchronized to the same pre-release version tag.
 
----
-
-## [Unreleased]
+## [1.0.0-alpha.15] — 2026-06-28
 
 ### Added
 
 - **NWP LLM/Thinking Profile**: NWM now defines `profiles.llm` for model-serving Action/Complex Nodes, with official .NET DTOs/helpers for model descriptors, streaming/tool support, privacy hints, and reasoning-disclosure policy. NIP v0.11 registers the standard `llm:*` capability strings for discovery and authorization.
 - **NWP HTTP binding error registry**: NWP v0.17 / `error-codes.md` v1.6 add canonical codes for HTTP overlay transport rejections (`Origin`, `Content-Type`, `Accept`, request-id echo mismatch, unparseable frame bodies) plus advertised-but-unimplemented capability rollout windows, closing NPS-Dev#84.
-
-## [1.0.0-alpha.15] — 2026-06-28
-
-### Added
-
 - **NCP Tier-3 BinaryVector**: implemented `binary_vector.v1` across the SDK source trees and distribution repos, including malformed-frame/client-error conformance coverage.
 - **Inbound NWP Bridge server adapters**: added MCP and A2A server-side Bridge adapters with ASP.NET hosting, JSON-RPC framing helpers, tool/agent-card metadata, and local action dispatch.
 

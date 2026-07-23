@@ -8,19 +8,12 @@
 
 在 NPS 达到 v1.0 稳定版之前，套件内所有仓库 —— 规范、各 SDK（.NET / Python / TypeScript / Java / Rust / Go）、CA Server、兼容 Bridge —— 同步使用同一个预发布版本号。
 
----
-
-## [未发布]
+## [1.0.0-alpha.15] —— 2026-06-28
 
 ### 新增
 
 - **NWP LLM/Thinking Profile**：NWM 新增 `profiles.llm`，用于模型服务型 Action/Complex Node；.NET 参考实现补齐模型描述、stream/tool 支持、隐私提示与 reasoning 暴露策略的官方 DTO/helper。NIP v0.11 注册标准 `llm:*` capability 字符串，用于发现与授权。
 - **NWP HTTP binding 错误码注册表**：NWP v0.17 / `error-codes.md` v1.6 新增 HTTP overlay 传输拒绝（Origin、Content-Type、Accept、request-id 回传不匹配、frame body 无法解析）以及“已声明但未实现”capability rollout 窗口的规范化错误码，关闭 NPS-Dev#84。
-
-## [1.0.0-alpha.15] —— 2026-06-28
-
-### 新增
-
 - 在 SDK 源树与分发仓中实现 NCP Tier-3 BinaryVector policy，并补齐 malformed-frame / client-error conformance 覆盖。
 - 新增入站 NWP Bridge server adapters：MCP 与 A2A server-side Bridge adapter，包含 ASP.NET hosting、JSON-RPC framing helper、tool / AgentCard metadata 与本地 action dispatch。
 
