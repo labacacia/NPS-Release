@@ -242,9 +242,11 @@ Each phase breaks into three segments:
 
 ---
 
-## alpha.13 — 🚧 next (target 2026-06)
+## alpha.13 — 2026-06-13 ✅ (Parity & Edge; delivered across alpha.13–15)
 
 > **Theme**: *Parity & Edge* — bring the six reference SDKs to true **functional** parity (not just source presence), advance all five protocol specs, and stand up the L2/L3 daemon edge.
+>
+> **Outcome (shipped in full across alpha.13–15)**: six-SDK functional parity; all five protocol specs advanced (NCP v0.9 / NWP v0.14 / NIP v0.10 / NDP v0.9 / NOP v0.7); and the L2/L3 daemon edge — `nps-ingress` NCP-over-TLS terminator (`NcpTlsListener`, ALPN `nps/1.0`, mTLS, `NCP-NID-MISMATCH` session-NID binding) and `nps-runner` L3 (CR-0007 lease + renewal, `SpawnSpec`, worker lifecycle). Remaining finishing touch — full `TC-N2-*` conformance vectors — carries into alpha.16.
 >
 > Detailed implementation plan: [`docs/roadmap.md`](../docs/roadmap.md).
 
@@ -269,6 +271,55 @@ Each phase breaks into three segments:
 | **NIP v0.10** | §6.1 short-lived / renewable edge-mTLS cert profile; `IdentFrame.node_roles` (array[string]) self-declared Phase 1–2; Phase 3 CA-attested via `id-nps-node-roles` extension (65715.2.2); `NIP-CERT-NODE-ROLES-MISMATCH` error code |
 | **NDP v0.9** | `AnnounceFrame` liveness fields `health` / `last_seen` + §3.2.1 resolve-time staleness `NDP-RESOLVE-STALE`; `heartbeat_interval_ms` (uint32, default 60000) + announce-time `NDP-ANNOUNCE-STALE`; `spawn_spec_ref` (string ref) resolving to a SpawnSpec, formal schema §3.1.2 (oci_image, command, resource_limits: cpu_millicores/memory_mb, Profile L3); §9 federation forwarding loop detection |
 | **NOP v0.7** | **NPS-CR-0007** NOP ↔ L3 runtime (§8: task-claim lease, `NOP-CLAIM-CONFLICT`, `NOP-SPAWN-SPEC-INVALID`, `NOP-RUNTIME-IDLE-TIMEOUT`, `NOP-RUNTIME-MAX-RUNTIME`; conformance `TC-N3-*`); `TaskFrame.result_ttl_seconds` (uint32, default 3600), `NOP-TASK-RESULT-EXPIRED`; `NOP-STREAM-NAK-UNRESOLVABLE` for evicted-frame NAK; frame-registry: NopFrame 0x07 registered as stable |
+
+---
+
+## alpha.14 — 2026-06-26 ✅
+
+| Item | Notes |
+|------|-------|
+| **NCP Tier-3 BinaryVector — SDK impl** | `binary_vector.v1` codec across the six SDK source trees + malformed-frame/client-error conformance coverage (spec landed alpha.13) |
+| **Inbound NWP Bridge server adapters** | `McpServerBridge` / `A2aServerBridge` + ASP.NET `AddBridgeServer` — external MCP/A2A clients invoke local NPS actions; secure-by-default (NID + verifier, bounded body, dispatch timeout, sanitized errors) |
+| **Native-mode NWP serving** | `NwpNativeNodeServer` serves `QueryFrame`/`ActionFrame` over an `NcpSession` |
+| **Typed remote NIP CA client** | `NipCaClient` (discovery, CRL, register/renew/revoke/verify, RFC-0002 X.509); `/v1/crl` gains `issued_at` + detached CA signature |
+| **Daemon observability + conformance harness** | transport-neutral `HealthProbeRenderer`; `LabAcacia.NPS.Conformance` (Node L1/L2 catalogs) |
+
+## alpha.15 — 2026-06-28 ✅
+
+> **Theme**: *Consistency* — cross-SDK wire correctness.
+
+| Item | Notes |
+|------|-------|
+| **NIP TrustFrame/RevokeFrame signed-payload realignment** (breaking) | Signed payload aligned to the current NPS-3 fields (`issued_at`, `serial`, `signer_nid`, `target_nid`); `NIP-CERT-REVOKED` naming. Old alpha.14-era signed frames no longer verify |
+| **NDP AnnounceFrame signed canonical form — normative & cross-SDK consistent** (breaking) | Signed body excludes `signature`/`health`/`last_seen`/`frame`; null optionals omitted; `heartbeat_interval_ms` default `60000` only when absent, explicit `0` signed literally. Aligned across all six SDKs |
+| **NDP graph + NIP revoke guard enforcement** | GraphFrame 256-node/1024-edge bounds (`NDP-GRAPH-TOO-LARGE`), 3-hop federation loop (`NDP-FEDERATION-LOOP`), RevokeFrame `parent_nid`↔`parent_revoked` rule |
+
+---
+
+## alpha.16 — 🚧 next (target 2026-07)
+
+> **Theme**: *HA & Hardening* — the specs and the L2/L3 edge are built (alpha.13–15); alpha.16 makes clusters **survive Anchor loss**, advances NIP toward the Phase-3 flag day, and closes the conformance + status-hygiene gaps.
+
+**Release gates** (all must ship before tagging):
+
+1. **Multi-Anchor HA** (flagship, [NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)) — a cluster survives loss of its active Anchor. Finalise the two Phase-3-placeholder topology sub-types (`anchor_failover`, `anchor_quorum_lost`) behind a `cluster_epoch` fence; NDP resolves the highest-epoch Anchor. Drives **NWP v0.15 + NDP v0.10**.
+2. **Five-protocol advancement** (release rule) — substantive spec + SDK content for every protocol (table below).
+3. **Conformance completion** — `nps-ingress` full `TC-N2-*` L2 vectors + new `TC-N2-HA-*` multi-Anchor vectors (CR-0009 §4).
+4. **Status hygiene** — promote **RFC-0006** Draft→Accepted (implemented in `nps-ingress`); **CR-0008** Proposed→Implemented (shipped alpha.14/15); fix the stale `spec/rfcs/README.md` + `spec/cr/README.md` tables; refresh `CLAUDE.md` (stale at alpha.13).
+
+**Per-protocol deliverables**:
+
+| Protocol | Target | Notes |
+|---|---|---|
+| **NCP** | v0.10 | Promote **RFC-0006** → Accepted; complete the QUIC stream-mapping conformance vectors (TCP framing already shipped); native-transport `TC-*` vectors |
+| **NWP** | v0.15 | **CR-0009**: finalise `anchor_failover` / `anchor_quorum_lost` wire shapes + the `cluster_epoch` fence; `NWP-ANCHOR-NOT-LEADER`, `NWP-ANCHOR-EPOCH-FENCED` |
+| **NIP** | v0.11 | **Phase-3-prep** (ahead of the v1.0.0-beta.1 flag day): implement — behind a config flag — CA-attested verification of `id-nps-node-roles` / `id-nps-capabilities` extensions and OCSP-staple enforcement, so the beta.1 flag day is a switch, not new code |
+| **NDP** | v0.10 | **CR-0009**: `cluster_epoch` on `AnnounceFrame`; highest-epoch resolution rule; `NDP-CLUSTER-SPLIT`; extends §9 federation |
+| **NOP** | v0.8 | `nps-runner` L3 hardening — `SpawnSpec` OCI-image resolution, lease-renewal edge cases; delegation to a failed-over cluster (interacts with CR-0009) |
+
+**Daemons**: `nps-ingress` — finish TC-N2 + HA test vectors; `nps-registry` — CR-0009 highest-epoch resolution + `NDP-CLUSTER-SPLIT`; `nps-runner` — SpawnSpec OCI resolution + lease renewal.
+
+**Out of scope (→ beta.1)**: the NIP Phase-3 **flag day** itself (making enforcement MUST); multi-region NPS Cloud CA (Phase 3); QUIC production hardening beyond conformance.
 
 ---
 

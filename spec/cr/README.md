@@ -56,7 +56,9 @@ late in 0.x is still pending when v1.0 is cut).
 | [NPS-CR-0005](./NPS-CR-0005-nip-ca-ra-model.md) | NIP CA Registration Authority (RA) model — three-tier admission (allowlist / bootstrap token / pending queue) | v1.0-alpha.7 | Implemented |
 | [NPS-CR-0006](./NPS-CR-0006-subscribe-frame.md) | SubscribeFrame (NWP §13) formal specification — field table, lifecycle, cursor resume; frame-registry promotion `proposed → stable` | v1.0.0-alpha.11 | Accepted (2026-05-28) |
 | [NPS-CR-0007](./NPS-CR-0007-nop-l3-runtime-integration.md) | NOP ↔ Node Profile L3 runtime integration | v1.0.0-alpha.12 | Accepted |
-| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 encoding | v1.0-alpha.16 or later | Proposed |
+| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 encoding | v1.0-alpha.14 | Implemented (2026-06-26) |
+| [NPS-CR-0009](./NPS-CR-0009-multi-anchor-ha.md) | Multi-Anchor high availability (`anchor_failover` / `anchor_quorum_lost`, `cluster_epoch` fence, NDP resolution) | v1.0.0-alpha.17 | Proposed |
+| [NPS-CR-0010](./NPS-CR-0010-bridge-bidirectional.md) | Bridge Node is bidirectional — resolve the outbound-only contradiction, add `bridge_inbound_protocols` direction declaration, split §16 conformance, consolidate `compat/*-ingress` into the Bridge package | v1.0.0-alpha.17 | Proposed |
 
 ## Authoring a new CR
 

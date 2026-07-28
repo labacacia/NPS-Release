@@ -4,11 +4,11 @@ English | [中文版](./NPS-4-NDP.cn.md)
 
 **Spec Number**: NPS-4
 **Status**: Proposed
-**Version**: 0.9
-**Date**: 2026-05-10
+**Version**: 0.11
+**Date**: 2026-07-12
 **Port**: 17433 (default, shared) / 17436 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9), NPS-3 (NIP v0.11)
+**Depends-On**: NPS-1 (NCP v0.10), NPS-3 (NIP v0.12)
 
 ---
 
@@ -50,12 +50,14 @@ A node or agent broadcasts its presence and capabilities.
 | `activation_mode` | string | conditional | One of `ephemeral` / `resident` / `hybrid`. REQUIRED for publishers claiming NPS-Node Profile L1+ compliance. OPTIONAL for pre-L1 publishers. Receivers MUST treat an absent field as `ephemeral` (backward compatibility with NPS v1.0-alpha.2 publishers). See §3.1.1. |
 | `node_roles` | array of strings | optional | Node-functionality role(s) carried by this publisher. Each value is one of `"memory"`, `"action"`, `"complex"`, `"anchor"`, `"bridge"`. The legacy value `"gateway"` was removed in v1.0-alpha.3 (NPS-CR-0001); parsers MUST reject it with `NDP-ANNOUNCE-ROLE-REMOVED`. Any other unrecognized value MUST be rejected with `NDP-ANNOUNCE-ROLE-UNKNOWN`. Single-role nodes may send a one-element array (`"node_roles": ["memory"]`). Absent means "single role per `node_type`" — i.e. the receiver SHOULD fall back to the `node_type` field. Parsers MUST also accept the legacy field name `node_kind` as an alias for `node_roles` during the alpha transition window. (NPS-CR-0001; renamed from `node_kind` in NDP v0.8 — see M1 naming fix) |
 | `cluster_anchor` | string (NID) | optional | For non-Anchor nodes joining a cluster, identifies the Anchor Node they register with. Absent for standalone nodes and for Anchor Nodes themselves. (NPS-CR-0001) |
-| `bridge_protocols` | array of strings | optional | For nodes declaring `"bridge"` in `node_roles`, lists supported external protocols. Standard values: `"http"`, `"grpc"`, `"mcp"`, `"a2a"`. Open-ended; third-party adapters MAY register additional values via future CRs. MUST be absent for nodes that do not declare `"bridge"`. (NPS-CR-0001) |
+| `bridge_protocols` | array of strings | optional | For nodes declaring `"bridge"` in `node_roles`, lists the external protocols this node translates **outbound** (NPS → external). Standard values: `"http"`, `"grpc"`, `"mcp"`, `"a2a"`. Open-ended; third-party adapters MAY register additional values via future CRs. MUST be absent for nodes that do not declare `"bridge"`. Semantics unchanged by NPS-CR-0010. (NPS-CR-0001) |
+| `bridge_inbound_protocols` | array of strings | optional | For nodes declaring `"bridge"` in `node_roles`, lists the external protocols this node **serves inbound** (external → NPS) — i.e. protocols for which it exposes a native server endpoint that foreign clients can call without any NPS knowledge. Same value domain as `bridge_protocols`. Absent or empty ⇒ the node exposes no inbound surface (an outbound-only Bridge Node, the only kind that existed through alpha.15). A protocol MAY appear in both arrays. A node declaring `"bridge"` MUST have at least one of `bridge_protocols` / `bridge_inbound_protocols` non-empty. MUST be absent for nodes that do not declare `"bridge"`. (NPS-CR-0010) |
 | `activation_endpoint` | object | conditional | Push target for `resident` / `hybrid` publishers; same shape as an `addresses[]` entry. REQUIRED when `activation_mode ∈ {resident, hybrid}`; MUST be absent otherwise. |
 | `heartbeat_interval_ms` | uint32 | optional | How often this node will re-announce itself (milliseconds); default 60000. Receivers SHOULD treat the node as offline if no AnnounceFrame is received within 3× this interval. |
 | `spawn_spec_ref` | string | optional | Opaque reference the publishing daemon resolves to a **SpawnSpec** to construct an agent process on demand. Meaningful for `ephemeral` and `hybrid` cold start. The resolved SpawnSpec schema is defined in §3.1.2; the resolution rules (inline `spawnspec:` base64url-JSON data URI or an `https://`/`nwp://` URL) are standardized by [NPS-CR-0007](cr/NPS-CR-0007-nop-l3-runtime-integration.md) §5 (NPS-Node Profile L3). |
 | `health` | string | optional | Publisher liveness self-report (NDP v0.9). One of `"healthy"` / `"degraded"` / `"draining"`. Absent ⇒ receivers treat as `"healthy"` (backward compatible). `"draining"` signals the node is shutting down and SHOULD NOT receive new traffic. |
 | `last_seen` | string | optional | ISO 8601 UTC timestamp of the publisher's most recent liveness beat (NDP v0.9). When present, a Registry uses `last_seen + ttl` (rather than `timestamp + ttl`) as the freshness deadline for resolve-time staleness (§3.2). Absent ⇒ fall back to `timestamp`. |
+| `cluster_epoch` | uint64 | optional | Multi-Anchor cluster ownership fence (NPS-CR-0009). The epoch under which this Anchor holds ownership of its `cluster_anchor` cluster; starts at 1, strictly increases on each ownership transfer. Absent ⇒ treated as 1 (single-Anchor). Registries resolve a `cluster_anchor` NID to the entry with the highest `cluster_epoch` (§9). |
 | `signature` | string | required | Signature with IdentFrame private key; prevents forgery |
 
 **Example (L1+ publisher, ephemeral)**
@@ -253,6 +255,9 @@ _nps-ca.mycompany.com.      IN TXT  "v=nps1 ca=https://ca.mycompany.com/.well-kn
 
 ## 9. Federation Forwarding
 
+**Multi-Anchor cluster resolution (NPS-CR-0009).** When resolving a `cluster_anchor` NID with more than one live Anchor announcement, a Registry MUST return the announcement with the highest `cluster_epoch`. Two live announcements advertising the **same** `cluster_epoch` for one cluster is a split-brain fault and MUST be reported with `NDP-CLUSTER-SPLIT` (→ `NPS-CLIENT-CONFLICT`) rather than resolved arbitrarily. Federated Registries propagate the `(cluster_anchor, cluster_epoch, active_nid)` tuple; a Registry MUST prefer a higher `cluster_epoch` received from a peer and MUST NOT downgrade a cluster to a lower epoch (monotonic per cluster). See [NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md).
+
+
 When a `public-federated` registry receives an AnnounceFrame from a peer registry (forwarded across a federation link), it MUST:
 
 1. Forward the frame to its own subscribers by appending the forwarding NID to the `ndp-forwarded-by` request header (comma-separated list of NIDs).
@@ -365,6 +370,8 @@ A Registry MUST NOT advertise a profile whose operator trust requirements it can
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.11 | 2026-07-12 | **NPS-CR-0010 Bridge Node is bidirectional**: AnnounceFrame (0x30) gains optional `bridge_inbound_protocols` (array of strings, same value domain as `bridge_protocols`) — the external protocols the node **serves inbound** (external → NPS). `bridge_protocols` keeps its exact prior meaning (protocols bridged **outbound**). Absent/empty `bridge_inbound_protocols` ⇒ no inbound surface, i.e. exactly a pre-alpha.16 outbound-only Bridge Node. A node declaring `"bridge"` MUST have at least one of the two arrays non-empty. Additive / backward-compatible; no new NDP error codes. |
+| 0.10 | 2026-07-05 | **NPS-CR-0009 multi-Anchor HA**: AnnounceFrame (0x30) gains optional `cluster_epoch` (uint64, default 1) — the cluster-ownership fence. New §9 resolution rule: resolve the highest-`cluster_epoch` live Anchor for a `cluster_anchor` NID; equal-epoch split-brain → `NDP-CLUSTER-SPLIT`; federated Registries propagate `(cluster_anchor, cluster_epoch, active_nid)` and prefer higher epoch (monotonic per cluster). One new error code `NDP-CLUSTER-SPLIT`. Additive / backward-compatible (single-Anchor clusters keep epoch 1). |
 | 0.9 | 2026-06-12 | AnnounceFrame (0x30) gains two additive liveness fields — `health` (`healthy`/`degraded`/`draining`, absent ⇒ `healthy`) and `last_seen` (ISO 8601 liveness beat). New §3.2.1 **resolve-time staleness**: a Registry MUST return `NDP-RESOLVE-STALE` when a resolved entry's freshness deadline `(last_seen ?? timestamp) + ttl` is in the past, rather than serve a dead endpoint; the resolved object SHOULD echo `health`. One new error code `NDP-RESOLVE-STALE`. Backward-compatible (both fields optional). |
 | 0.9 | 2026-06-03 | AnnounceFrame gains `heartbeat_interval_ms` (uint32, default 60000) and `spawn_spec_ref` (string ref resolving to a SpawnSpec; §3.1.2 schema — OCI image + command + resource_limits; resolution per NPS-CR-0007 §5); `NDP-ANNOUNCE-STALE` error code (announce-time staleness, distinct from §3.2.1 resolve-time `NDP-RESOLVE-STALE`). |
 | 0.8 | 2026-05-31 | §3.3 GraphFrame rewritten to topology-snapshot format: `graph_id` (UUID v4), `nodes` (array of NdpGraphNode with nid/cluster_anchor/node_roles), `edges` (array of NdpGraphEdge with from_nid/to_nid/latency_ms/protocol), `ttl`, `metadata`; max 256 nodes / 1024 edges; `NDP-GRAPH-TOO-LARGE` and `NDP-GRAPH-INVALID` error codes; §9 federation forwarding (public-federated MUST forward AnnounceFrames, `ndp-forwarded-by` header, max 3 hops, `NDP-FEDERATION-LOOP`). |

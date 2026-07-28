@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.11
-**Date**: 2026-05-11
+**Version**: 0.12
+**Date**: 2026-07-23
 **Port**: 17433（默认，共用）/ 17435（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)
+**Depends-On**: NPS-1 (NCP v0.10)
 
 ---
 
@@ -518,6 +518,31 @@ R5 生效后，任何针对 `target_nid`（或被限定的 `serial`）的后续 
 
 ---
 
+### 7.5 Phase-3 强制校验模式(NIP v0.11)
+
+Phase-3 flag day(`v1.0.0-beta.1`,NPS-RFC-0003 §8.1)将强制的 CA 证明校验,统一收敛到接收端
+的一个校验策略开关 **`phase3_enforcement`** 上,部署方 MAY 在 flag day 之前提前开启——
+使 flag day 成为一次配置默认值的切换,而不是代码变更。
+
+- **Phase 1–2(当前)** —— `phase3_enforcement` 默认 `false`。接收端 SHOULD 执行下列检查,
+  MAY 拒绝;开关为 `false` 时检查失败仅作告警(日志/指标),MUST NOT 单独据此拒绝 IdentFrame。
+- **`phase3_enforcement = true`**(现在可选开启;flag day 后为默认)—— 接收端 MUST 对
+  X.509 NID 证书(NPS-RFC-0002)强制以下检查。每项检查**仅当对应证书扩展存在时**适用,
+  因此不带证明扩展的自声明(Phase 1–2)NID 不受影响:
+
+  | 检查 | 要求 | 错误码 |
+  |------|------|--------|
+  | Assurance | `IdentFrame.assurance_level` 等于 `id-nid-assurance-level` 扩展 | `NIP-ASSURANCE-MISMATCH` |
+  | Node roles | `IdentFrame.node_roles` 的每一项均出现在 `id-nps-node-roles`(`65715.2.2`)中——不得声明未证明的角色 | `NIP-CERT-NODE-ROLES-MISMATCH` |
+  | Capabilities | `IdentFrame.capabilities` 的每一项均出现在 `id-nps-capabilities`(`65715.2.3`)中——不得声明未证明的能力 | `NIP-CERT-CAPABILITIES-EXCEEDED` |
+  | OCSP staple | `IdentFrame.ocsp_staple` 存在且未过期(`nextUpdate` 在未来) | `NIP-OCSP-STAPLE-EXPIRED` |
+
+- **Flag day(`v1.0.0-beta.1`)** —— `phase3_enforcement` 默认变为 `true`;
+  `public-federated` 部署(NDP §7)MUST NOT 将其关闭。`local-dev` / `org-private` MAY 保持 `false`。
+
+角色与能力检查为**子集**检查(frame 声明不得超过 CA 证明范围);少声明是允许的。这在不改变
+wire 格式的前提下,收口了 Phase 1–2 遗留的自声明缺口(§5.1、NPS-2 §12.4)。
+
 ## 8. NIP CA Server OSS API
 
 | 方法 | 路径 | 认证 | 描述 |
@@ -615,6 +640,7 @@ OCSP 响应时间 SHOULD 归一化（固定延迟至 200ms），防止通过响�
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.12 | 2026-07-23 | 新增 §7.5 **Phase-3 强制模式**：接收侧 `phase3_enforcement` 验证策略开关，把 Phase-1–2 可选的 CA 声明校验（assurance / node_roles / capabilities / OCSP-staple）在 `v1.0.0-beta.1` flag day 之前提前变为硬性 MUST —— flag day 因此只是默认值切换而非代码变更。角色/能力检查为子集检查（不得声称未经 CA 见证的内容）；各检查仅在对应证书扩展存在时生效（自声明 NID 不受影响）。新增错误码 `NIP-CERT-CAPABILITIES-EXCEEDED`（`NPS-AUTH-FORBIDDEN`）。增量、向后兼容。（由 edge 线 0.11 重编号 —— 已发布的 alpha.16 线独立地把 0.11 用于下面的 LLM capability 字符串。）§7.5 正文中文翻译待补（见 version-matrix translation_lag）。 |
 | 0.11 | 2026-07-04 | 新增标准 LLM capability 字符串（`llm:complete`、`llm:stream`、`llm:tool_call`、`llm:embed`、`llm:rerank`），用于 NWP LLM/Thinking Profile 的发现与授权。TrustFrame `trust_scope` 可覆盖这些能力。无新增 frame 字段或错误码。 |
 | 0.10 | 2026-06-12 | 新增 §6.1 **边缘 mTLS 短时/可续期证书 profile**：1–24 小时有效期（默认 6 小时），用于 `nps-ingress`（L2）终结的原生模式 mTLS（NPS-RFC-0006 §6.3）；续期窗口 = 剩余有效期 25%；ACME `agent-01` 在线自续期；有效期 ≤ OCSP 缓存 TTL，以短有效期作为主要吊销手段；OCSP staple 刷新交互（`NIP-OCSP-STAPLE-EXPIRED`）；恢复票据受证书有效期约束（NPS-RFC-0006 §6.4）。复用现有错误码；无新错误码。（正文中文翻译待补，见 version-matrix translation_lag） |
 | 0.8 | 2026-05-11 | 扩展 §5.2 TrustFrame：补全字段定义表（10 个字段，新增必填的 `issued_at` / `serial` / `signer_nid` 用于吊销与审计追溯）、签名规范化规则（与 §5.1 IdentFrame 一致）、错误码子表与完整示例。§7 新增 TrustFrame 验证说明（IdentFrame 的 `issued_by` 是 `grantee_ca` 时，存在 `trusted_issuers` 中 `grantor_nid` 颁发、覆盖该请求的有效 TrustFrame 即可准入）。§9 新增 4 个错误码：`NIP-TRUST-FRAME-EXPIRED`、`NIP-TRUST-FRAME-GRANTOR-REVOKED`、`NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`、`NIP-TRUST-FRAME-NODES-PATTERN-INVALID`。|

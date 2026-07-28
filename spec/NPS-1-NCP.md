@@ -4,8 +4,8 @@ English | [中文版](./NPS-1-NCP.cn.md)
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.9
-**Date**: 2026-06-27
+**Version**: 0.10
+**Date**: 2026-07-05
 **Port**: 17433 (default, shared across the protocol suite)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 
@@ -135,7 +135,7 @@ Client (Agent)                        Server (Node)
 **Identity and authorization binding**
 
 - `HelloFrame` is a transport/session capability negotiation frame only. It MUST NOT carry bearer tokens, authorization scopes, or other credentials beyond the optional `agent_id` routing hint.
-- In native mode, when the selected higher-layer protocol requires authentication, the client MUST present a NIP `IdentFrame` once per connection after the server's handshake `CapsFrame` and before the first authenticated NWP/NOP frame. The server binds the verified NID, capabilities, scope, and assurance level from that `IdentFrame` to the NCP session.
+- In native mode, when the selected higher-layer protocol requires authentication, the client MUST present a NIP `IdentFrame` once per connection after the server's handshake `CapsFrame` and before the first authenticated NWP/NOP frame. The server binds the verified NID, capabilities, scope, and assurance level from that `IdentFrame` to the NCP session. When that Anchor subsequently transfers cluster ownership (multi-Anchor HA, [NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)), the server MAY close the native connection; on connection loss or an `NCP-NID-MISMATCH` after a resumption attempt, the client MUST re-resolve the cluster (NDP §9, highest `cluster_epoch`) or use the `successor_nid` from the NWP `anchor_failover` event (NPS-2 §12.2) and re-establish the session against the new active Anchor. Native-mode transport is normative per NPS-RFC-0006 (Accepted).
 - NWP `QueryFrame`, `ActionFrame`, and `SubscribeFrame` do not contain per-message auth-token fields. Authorization for native-mode messages is evaluated against the session-bound identity plus any per-message target/scope data.
 - HTTP/Overlay mode does not use `HelloFrame`; deployments that use bearer credentials present them in the HTTP transport envelope (for example `Authorization: Bearer ...`) alongside the NWP request headers. Bearer credentials are not embedded inside NWP frame payloads.
 
@@ -890,6 +890,7 @@ For NCP v0.9, the standard binding is NWP `QueryFrame.vector_search.vector`. The
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.10 | 2026-07-05 | Native-mode transport adopted as normative (NPS-RFC-0006 **Accepted**). New native-mode **session continuity across Anchor failover** (NPS-CR-0009): on connection loss / `NCP-NID-MISMATCH` after a multi-Anchor ownership transfer, the client re-resolves via NDP §9 (highest `cluster_epoch`) or the NWP `anchor_failover` `successor_nid` and re-establishes the session. No new frames or error codes (`NCP-NID-MISMATCH` reused). |
 | 0.9 | 2026-06-27 | Activated Tier-3 BinaryVector v1 (`Flags.T1T0 = 10`) with negotiation token `binary_vector.v1`; defined the `NPBV` payload layout, MessagePack metadata marker, float32 little-endian vector segments, and NWP `QueryFrame.vector_search.vector` binding; `0b11` remains reserved. |
 | 0.8 | 2026-06-12 | New §7.5 Native-Mode TLS Binding & Mutual Authentication, summarising **NPS-RFC-0006 §6** (promoted Draft → Proposed): suite-wide ALPN `nps/1.0` (supersedes provisional `ncp/1`), TLS-wrapped framing mandated for native-mode-over-TCP, mTLS with NIP certificates + session-NID binding, TLS 1.3 session-resumption tickets; added error code `NCP-NID-MISMATCH`. Gates the `nps-ingress` (L2) daemon. |
 | 0.8 | 2026-06-03 | **NopFrame (0x07)** keepalive/heartbeat: null payload, bidirectional; `HelloFrame.ping_interval_ms` declares preferred interval (0 = disabled, default); `NCP-KEEPALIVE-TIMEOUT` error code when no frame received within 3 × interval; §7.6 dead-peer detection rules. |

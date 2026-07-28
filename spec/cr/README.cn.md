@@ -52,7 +52,9 @@
 | [NPS-CR-0005](./NPS-CR-0005-nip-ca-ra-model.md) | NIP CA RA 注册授权模型（三层准入） | v1.0-alpha.7 | Implemented |
 | [NPS-CR-0006](./NPS-CR-0006-subscribe-frame.md) | SubscribeFrame（NWP §13）正式规范 | v1.0.0-alpha.11 | Accepted（2026-05-28）|
 | [NPS-CR-0007](./NPS-CR-0007-nop-l3-runtime-integration.md) | NOP ↔ Node Profile L3 runtime 集成 | v1.0.0-alpha.12 | Accepted |
-| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 编码 | v1.0-alpha.16 或之后 | Proposed |
+| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 编码 | v1.0-alpha.14 | Implemented（2026-06-26）|
+| [NPS-CR-0009](./NPS-CR-0009-multi-anchor-ha.md) | 多 Anchor 高可用（`anchor_failover` / `anchor_quorum_lost`、`cluster_epoch` 栅栏、NDP 解析规则） | v1.0.0-alpha.17 | Proposed |
+| [NPS-CR-0010](./NPS-CR-0010-bridge-bidirectional.md) | Bridge Node 是双向的 —— 修正"仅出向"的自相矛盾，新增 `bridge_inbound_protocols` 方向声明，拆分 §16 合规 profile，把 `compat/*-ingress` 合并进 Bridge 包 | v1.0.0-alpha.17 | Proposed |
 
 ## 起草新 CR 的方法
 

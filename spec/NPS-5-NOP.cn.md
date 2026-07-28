@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.7
+**Version**: 0.8
 **Date**: 2026-05-10
 **Port**: 17433（默认，共用）/ 17437（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)、NPS-2 (NWP v0.17)、NPS-3 (NIP v0.11)
+**Depends-On**: NPS-1 (NCP v0.10)、NPS-2 (NWP v0.19)、NPS-3 (NIP v0.12)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > 本文档为 NOP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。

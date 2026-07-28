@@ -4,11 +4,11 @@ English | [中文版](./NPS-3-NIP.cn.md)
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.11
-**Date**: 2026-05-11
+**Version**: 0.12
+**Date**: 2026-07-23
 **Port**: 17433 (default, shared) / 17435 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)
+**Depends-On**: NPS-1 (NCP v0.10)
 
 ---
 
@@ -571,6 +571,37 @@ Node receives RevokeFrame (push channel)
 
 After R5 takes effect, any subsequent IdentFrame for `target_nid` (or for the specific `serial` if scoped) will fail step 4 of the IdentFrame verification flow above with `NIP-CERT-REVOKED`.
 
+### 7.5 Phase-3 enforcement mode (NIP v0.11)
+
+The CA-attestation checks that become mandatory at the Phase-3 flag day
+(`v1.0.0-beta.1`, NPS-RFC-0003 §8.1) are gated on a single receiver-side
+verification-policy flag, **`phase3_enforcement`**, so a deployment MAY opt into the
+stricter behaviour **ahead of** the flag day — making the flag day a configuration
+default change rather than a code change.
+
+- **Phase 1–2 (current)** — `phase3_enforcement` defaults to `false`. Receivers SHOULD
+  perform the checks below and MAY reject on failure; while `false`, a check failure is
+  advisory (log / metric) and MUST NOT by itself reject the IdentFrame.
+- **`phase3_enforcement = true`** (opt-in now; the default at the flag day) — a receiver
+  MUST enforce all of the following against an X.509 NID certificate (NPS-RFC-0002).
+  Each check applies **only when the corresponding certificate extension is present**, so
+  a self-declared (Phase-1–2) NID that carries no attestation extensions is unaffected:
+
+  | Check | Requirement | Error code |
+  |-------|-------------|------------|
+  | Assurance | `IdentFrame.assurance_level` equals the `id-nid-assurance-level` extension | `NIP-ASSURANCE-MISMATCH` |
+  | Node roles | every entry in `IdentFrame.node_roles` appears in `id-nps-node-roles` (`65715.2.2`) — no un-attested role | `NIP-CERT-NODE-ROLES-MISMATCH` |
+  | Capabilities | every entry in `IdentFrame.capabilities` appears in `id-nps-capabilities` (`65715.2.3`) — no un-attested capability | `NIP-CERT-CAPABILITIES-EXCEEDED` |
+  | OCSP staple | `IdentFrame.ocsp_staple` is present and unexpired (`nextUpdate` in the future) | `NIP-OCSP-STAPLE-EXPIRED` |
+
+- **Flag day (`v1.0.0-beta.1`)** — `phase3_enforcement` defaults to `true`;
+  `public-federated` deployments (NDP §7) MUST NOT set it to `false`. `local-dev` /
+  `org-private` MAY keep it `false`.
+
+The role and capability checks are **subset** checks (the frame MUST NOT claim more than
+the CA attested); under-claiming is allowed. This closes the self-declaration gap that
+Phase-1–2 leaves open (§5.1, §12.4 of NPS-2) without a wire-format change.
+
 ---
 
 ## 8. NIP CA Server OSS API
@@ -635,6 +666,7 @@ The three tiers (allowlist / bootstrap token / pending queue), the new error cod
 | `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | Issuer not in the trust list |
 | `NIP-CERT-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Certificate missing a required capability |
 | `NIP-CERT-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | Certificate scope does not cover the target path |
+| `NIP-CERT-CAPABILITIES-EXCEEDED` | `NPS-AUTH-FORBIDDEN` | `IdentFrame.capabilities` claims a capability not present in the CA-attested `id-nps-capabilities` extension; Phase-3 enforcement (NIP v0.11 §7.5) |
 | `NIP-CA-NID-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | NID does not exist |
 | `NIP-CA-NID-ALREADY-EXISTS` | `NPS-CLIENT-CONFLICT` | NID already exists (duplicate registration) |
 | `NIP-CA-SERIAL-DUPLICATE` | `NPS-CLIENT-CONFLICT` | Certificate serial already in use |
@@ -685,6 +717,7 @@ At every link in the delegation chain, scope MUST NOT exceed that of its parent.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.12 | 2026-07-23 | New §7.5 **Phase-3 enforcement mode**: a receiver-side `phase3_enforcement` verification-policy flag that turns the Phase-1–2 opt-in CA-attestation checks (assurance / node_roles / capabilities / OCSP-staple) into hard MUSTs ahead of the `v1.0.0-beta.1` flag day — so the flag day is a default change, not a code change. Role/capability checks are subset checks (no un-attested claims); each applies only when the corresponding cert extension is present (self-declared NIDs unaffected). One new error code `NIP-CERT-CAPABILITIES-EXCEEDED` (`NPS-AUTH-FORBIDDEN`). Additive / backward-compatible. (Renumbered from the edge-line 0.11 — the released alpha.16 line had independently used 0.11 for the LLM capability strings below.) |
 | 0.11 | 2026-07-04 | Adds standard LLM capability strings (`llm:complete`, `llm:stream`, `llm:tool_call`, `llm:embed`, `llm:rerank`) for NWP LLM/Thinking Profile discovery and authorization. TrustFrame `trust_scope` may cover these capabilities. No new frame fields or error codes. |
 | 0.10 | 2026-06-12 | New §6.1 **Short-lived / renewable cert profile (edge mTLS)**: 1–24 h validity tier (default 6 h) for native-mode mTLS terminated at `nps-ingress` (NPS-RFC-0006 §6.3); renewal window = 25% remaining; ACME `agent-01` online self-renewal; lifetime ≤ OCSP cache TTL so short validity is the primary revocation mechanism; OCSP-staple refresh interaction (`NIP-OCSP-STAPLE-EXPIRED`); resumption-ticket bounded to cert validity (NPS-RFC-0006 §6.4). Reuses existing error codes (`NIP-CA-SESSION-VALIDITY-INVALID`, `NIP-CERT-EXPIRED`); no new codes. |
 | 0.10 | 2026-06-03 | `IdentFrame.node_roles` (`string[]`, optional) — self-declared role tags, same vocabulary as `NDP.AnnounceFrame.node_roles`; Phase 3 gate against `id-nps-node-roles` X.509 extension (OID 65715.2.2); `NIP-CERT-NODE-ROLES-MISMATCH` error code. |

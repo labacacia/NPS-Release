@@ -2,8 +2,8 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 1.6
-**Date**: 2026-07-05
+**Version**: 1.7
+**Date**: 2026-07-23
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -89,9 +89,19 @@ NPS 采用两级错误体系：
 | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body 无法解析为受支持的 NWP frame envelope（NWP §9.5）|
 | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM 声明了当前节点无法服务的 capability/profile；不同于 `NWP-QUERY-VECTOR-UNSUPPORTED` 等如实声明不支持的专用错误码（NWP §9.5）|
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | 调用方无权读取该 Anchor 的拓扑信息（NPS-2 §12）；授权策略由实现方按 §12.4 自定义（NPS-CR-0002）|
+| `NWP-ANCHOR-NOT-LEADER` | `NPS-CLIENT-CONFLICT` | 拓扑写入被发送到 standby 或只读降级的 Anchor；只有当前活跃的集群 owner 接受写入（NPS-CR-0009）|
+| `NWP-ANCHOR-EPOCH-FENCED` | `NPS-CLIENT-CONFLICT` | 入站帧携带的 `cluster_epoch` 高于接收 Anchor 自身的值；接收方是已被取代的 leader，被栅栏隔离（NPS-CR-0009）|
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` 的值该 Anchor Node 未实现（NPS-CR-0002）|
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | 请求的 `topology.depth` 超出该 Anchor Node 配置的最大值（NPS-CR-0002）|
 | `NWP-TOPOLOGY-FILTER-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | `topology.filter` 包含未识别的键或不支持的运算符（NPS-CR-0002）|
+| `NWP-BRIDGE-DIRECTION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 请求指向了本 Bridge Node 未声明的「协议 × 方向」组合 —— 入向请求命中了不在 `bridge_inbound_protocols` 中的协议，或出向 `bridge_target.protocol` 不在 `bridge_protocols` 中（NPS-4 §3.1）。响应 SHOULD 在 `hint` 中携带两个已声明的数组。与 `NWP-ACTION-PARAMS-INVALID` 的区别：该协议/方向本身格式合法，只是本节点不提供服务，而非请求畸形。（NPS-CR-0010）|
+| `NWP-BRIDGE-TARGET-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | **出向。** 调用未携带合法的 `bridge_target` 对象，或其 schema 校验失败（缺 `protocol` / `endpoint`）。*由 NPS-CR-0010 正式登记；.NET Bridge 自 alpha.7 起一直在发这个码，却从未登记在本表中。* |
+| `NWP-BRIDGE-PROTOCOL-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | **出向。** `bridge_target.protocol` 格式合法，但本 Bridge Node 没有为它注册 dispatcher。与 `NWP-BRIDGE-DIRECTION-UNSUPPORTED` 的区别：后者针对**已声明**的协议/方向集合，本码针对 dispatcher 注册表。*由 NPS-CR-0010 登记。* |
+| `NWP-BRIDGE-ENDPOINT-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | **出向。** `bridge_target.endpoint` 不是合法 URL，或被 Bridge 的 SSRF 策略拒绝（NWP §15.2）。*由 NPS-CR-0010 登记。* |
+| `NWP-BRIDGE-UPSTREAM-FAILED` | `NPS-DOWNSTREAM-UNAVAILABLE` | **出向。** 对外调用在传输层失败、超时，或返回了 Bridge 无法翻译回 NWP 帧的响应。注意区别：若上游返回的是一个能被**成功翻译**的错误状态，则按 NWP §16.3 映射，不用本码。*由 NPS-CR-0010 登记。* |
+| `NWP-BRIDGE-SERVER-TOOL-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | **入向。** 外部客户端点名了本 Bridge 并未暴露的 tool / action / resource。*由 NPS-CR-0010 登记。* |
+| `NWP-BRIDGE-SERVER-DISPATCHER-MISSING` | `NPS-SERVER-INTERNAL` | **入向。** Bridge 启动时未配置其所代理的 NPS 节点后端 —— 这是部署故障，不是客户端错误。*由 NPS-CR-0010 登记；.NET Bridge 此前在这里发的是根本不存在的状态码 `NPS-SERVER-NOT-IMPLEMENTED`。* |
+| `NWP-BRIDGE-SERVER-DISPATCH-FAILED` | `NPS-SERVER-INTERNAL` | **入向。** 向所代理的 NPS 节点分发时发生非预期失败。*由 NPS-CR-0010 登记。* |
 
 ---
 
@@ -100,6 +110,7 @@ NPS 采用两级错误体系：
 | 错误码 | NPS 状态码 | 描述 |
 |--------|-----------|------|
 | `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | 证书已过期（expires_at < now）|
+| `NIP-CERT-CAPABILITIES-EXCEEDED` | `NPS-AUTH-FORBIDDEN` | `IdentFrame.capabilities` 声称了 CA 见证扩展 `id-nps-capabilities` 中不存在的能力；Phase-3 强制（NIP v0.12）|
 | `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | 证书已被吊销（在 CRL 或 OCSP 中）|
 | `NIP-CERT-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | 证书签名验证失败 |
 | `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | 颁发者��在 trusted_issuers 列表中 |
@@ -141,6 +152,7 @@ NPS 采用两级错误体系：
 | `NDP-RESOLVE-AMBIGUOUS` | `NPS-CLIENT-CONFLICT` | 解析结果存在冲突（多个不一致的注册）|
 | `NDP-RESOLVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | 解析请求超时 |
 | `NDP-RESOLVE-STALE` | `NPS-CLIENT-NOT-FOUND` | 被解析条目的新鲜度截止 `(last_seen ?? timestamp) + ttl` 已过期；Registry MUST NOT 返回该失效注册（NDP v0.9 §3.2.1）|
+| `NDP-CLUSTER-SPLIT` | `NPS-CLIENT-CONFLICT` | 同一 `cluster_anchor` 集群存在两个宣告相同 `cluster_epoch` 的活跃 Anchor（脑裂）；Registry 拒绝任意裁决（NPS-CR-0009）|
 | `NDP-ANNOUNCE-STALE` | `NPS-CLIENT-NOT-FOUND` | 超过 `heartbeat_interval_ms × 3` 未收到重新公告，AnnounceFrame 心跳已过期（NDP v0.9）|
 | `NDP-ANNOUNCE-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | AnnounceFrame 签名验证失败 |
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 中 NID 与签名证书不一致 |

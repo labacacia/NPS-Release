@@ -4,7 +4,7 @@
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.9
+**Version**: 0.10
 **Date**: 2026-06-27
 **Port**: 17433（默认，全协议族共用）  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  

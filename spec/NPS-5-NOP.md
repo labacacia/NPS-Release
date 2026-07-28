@@ -4,11 +4,11 @@ English | [中文版](./NPS-5-NOP.cn.md)
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.7
-**Date**: 2026-06-12
+**Version**: 0.8
+**Date**: 2026-07-05
 **Port**: 17433 (default, shared) / 17437 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9), NPS-2 (NWP v0.17), NPS-3 (NIP v0.11)
+**Depends-On**: NPS-1 (NCP v0.10), NPS-2 (NWP v0.19), NPS-3 (NIP v0.12)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
@@ -289,7 +289,7 @@ The Orchestrator delegates a single DAG subtask to a Worker Agent.
 | `deadline_at` | string | Required | Subtask deadline (ISO 8601 UTC) |
 | `idempotency_key` | string | Optional | Idempotency key (use the same value on retries) |
 | `priority` | string | Optional | Inherited from TaskFrame.priority |
-| `target_cluster_anchor` | string | Optional | NID of the cluster anchor to route this subtask to (cross-cluster delegation, NOP v0.6). When present, the Orchestrator MUST route the DelegateFrame to a Worker Agent registered under the specified cluster anchor. |
+| `target_cluster_anchor` | string | Optional | NID of the cluster anchor to route this subtask to (cross-cluster delegation, NOP v0.6). When present, the Orchestrator MUST route the DelegateFrame to a Worker Agent registered under the specified cluster anchor. Under multi-Anchor HA ([NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)) the Orchestrator MUST resolve `target_cluster_anchor` to the cluster's **current active** Anchor (highest `cluster_epoch`, NDP §9); on an `anchor_failover`, in-flight delegations to that cluster MUST re-resolve to the successor before retry. |
 | `context` | object | Optional | Pass-through context (inherited from TaskFrame.context with span_id updated to the current Delegate span) |
 
 **Scope Carving Principle**
@@ -622,7 +622,7 @@ A runner leases the head of a per-NID inbox atomically: `{ task_id, runner_nid, 
 (clamped [10,600]), dedup_key = sha256(task_id ‖ dag_hash) }`. Outcomes:
 
 - **Granted** — inbox marks the task `LEASED (runner_nid, lease_expiry)`; the runner MUST renew
-  the lease before expiry while the node runs.
+  the lease before expiry while the node runs. A renewal extends `lease_expiry` by `lease_seconds`, MUST carry the same `runner_nid`, and — if it arrives after the lease already expired and was reclaimed — MUST be rejected with `NOP-CLAIM-CONFLICT`.
 - **Conflict** — a live lease already exists ⇒ `NOP-CLAIM-CONFLICT`; the runner backs off.
 - **Reclaim** — an expired lease is reclaimable; the `dedup_key` ensures a side-effect-bearing
   node already in a terminal state is **not** re-executed (at-least-once with dedup).
@@ -693,6 +693,7 @@ Every delegation level must pass NIP CA verification that `delegated_scope` does
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.8 | 2026-07-05 | Multi-Anchor HA interaction (NPS-CR-0009): `DelegateFrame.target_cluster_anchor` MUST resolve to the target cluster's current active Anchor (highest `cluster_epoch`, NDP §9), and in-flight delegations MUST re-resolve to the `successor_nid` on `anchor_failover` before retry. Lease-renewal semantics formalised (§8): a renewal extends `lease_expiry`, MUST match `runner_nid`, and is rejected with `NOP-CLAIM-CONFLICT` if the lease already expired and was reclaimed. No new codes. |
 | 0.7 | 2026-06-12 | **NPS-CR-0007 — NOP ↔ L3 runtime integration**: new §8 (task-claim protocol with lease + `dedup_key`; `spawn_spec_ref` SpawnSpec content schema; idle/max-runtime enforcement; idempotent result reporting); 4 new error codes (`NOP-CLAIM-CONFLICT`, `NOP-SPAWN-SPEC-INVALID`, `NOP-RUNTIME-IDLE-TIMEOUT`, `NOP-RUNTIME-MAX-RUNTIME`); new `services/conformance/NPS-Node-L3.md` (`TC-N3-*`); Security/Changelog renumbered §9/§10. Gates the `nps-runner` L3 FaaS runtime. |
 | 0.7 | 2026-06-03 | `result_ttl_seconds` (uint32, default 3600) on TaskFrame — `NOP-TASK-RESULT-EXPIRED` after TTL; `NOP-STREAM-NAK-UNRESOLVABLE` error code for evicted-frame NAK retransmission |
 | 0.6 | 2026-05-31 | `callback_secret` (HMAC-SHA256 key) on TaskFrame — `X-NPS-Signature` header on webhook callbacks, `NOP-CALLBACK-HMAC-MISSING`; `target_cluster_anchor` on DelegateFrame for cross-cluster routing; `weighted_first_k` / `merge_all` SyncFrame aggregate strategies (§3.3.2); `ack_seq` / `nak_seq` sliding-window ACK on AlignStream (§3.4.2) |

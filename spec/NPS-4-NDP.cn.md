@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-4
 **Status**: Proposed
-**Version**: 0.9
+**Version**: 0.11
 **Date**: 2026-05-10
 **Port**: 17433（默认，共用）/ 17436（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)、NPS-3 (NIP v0.11)
+**Depends-On**: NPS-1 (NCP v0.10)、NPS-3 (NIP v0.12)
 
 ---
 
@@ -50,7 +50,8 @@ NDP 是 NPS 的发现与注册协议。Agent、Node 与 Registry 通过 NDP 发�
 | `activation_mode` | string | 条件必填 | 取值 `ephemeral` / `resident` / `hybrid` 之一。声明符合 NPS-Node Profile L1+ 的发布者 MUST 携带；未合规发布者可不带。接收方 MUST 把缺失字段按 `ephemeral` 处理（与 NPS v1.0-alpha.2 发布者保持向后兼容）。见 §3.1.1。 |
 | `node_roles` | string 数组 | 可选 | 该发布者承担的节点功能角色列表。每个值取自 `"memory"`、`"action"`、`"complex"`、`"anchor"`、`"bridge"`。遗留值 `"gateway"` 在 v1.0-alpha.3 移除（NPS-CR-0001），解析器 MUST 以 `NDP-ANNOUNCE-ROLE-REMOVED` 拒绝；其他无法识别的值 MUST 以 `NDP-ANNOUNCE-ROLE-UNKNOWN` 拒绝。单角色节点发送一元素数组（`"node_roles": ["memory"]`）。缺省表示"按 `node_type` 字段单角色"，接收方 SHOULD 回退到 `node_type`。解析器 MUST 在 alpha 过渡期内把遗留字段名 `node_kind` 当作 `node_roles` 的别名接受。（NPS-CR-0001；在 NDP v0.8 由 `node_kind` 更名而来——见 M1 命名消歧修复）|
 | `cluster_anchor` | string (NID) | 可选 | 加入集群的非-Anchor 节点，标识它注册到的 Anchor Node 的 NID。独立节点和 Anchor Node 自己 MUST 不带。（NPS-CR-0001）|
-| `bridge_protocols` | string 数组 | 可选 | 在 `node_roles` 中声明 `"bridge"` 的节点列出支持的外部协议。标准值 `"http"` / `"grpc"` / `"mcp"` / `"a2a"`。开放枚举；第三方适配器 MAY 通过未来 CR 注册更多值。未声明 `"bridge"` 的节点 MUST 不带。（NPS-CR-0001）|
+| `bridge_protocols` | string 数组 | 可选 | 在 `node_roles` 中声明 `"bridge"` 的节点列出该节点**出向**（NPS → 外部）翻译的外部协议。标准值 `"http"` / `"grpc"` / `"mcp"` / `"a2a"`。开放枚举；第三方适配器 MAY 通过未来 CR 注册更多值。未声明 `"bridge"` 的节点 MUST 不带。语义未被 NPS-CR-0010 改变。（NPS-CR-0001）|
+| `bridge_inbound_protocols` | string 数组 | 可选 | 在 `node_roles` 中声明 `"bridge"` 的节点列出该节点**入向服务**（外部 → NPS）的外部协议 —— 即它为哪些协议暴露原生服务端端点，使外部客户端无需任何 NPS 知识即可调用。取值域与 `bridge_protocols` 相同。缺省或为空 ⇒ 该节点不暴露入向面（即纯出向 Bridge Node，也是 alpha.15 之前唯一存在的形态）。同一协议 MAY 同时出现在两个数组中。声明 `"bridge"` 的节点 MUST 保证 `bridge_protocols` / `bridge_inbound_protocols` 至少一个非空。未声明 `"bridge"` 的节点 MUST 不带。（NPS-CR-0010）|
 | `activation_endpoint` | object | 条件必填 | `resident` / `hybrid` 模式的推送目标，结构同 `addresses[]` 每项。`activation_mode ∈ {resident, hybrid}` 时 MUST 存在；其他模式下 MUST 不出现。 |
 | `heartbeat_interval_ms` | uint32 | 可选 | 发布方重新发送 AnnounceFrame 的心跳间隔（毫秒）；默认 60000。接收方 SHOULD 在 3× 该间隔内未收到重新公告时把节点视为离线。 |
 | `spawn_spec_ref` | string | 可选 | 发布方 daemon 用于按需具现化 Agent 进程的不透明引用。对 `ephemeral` 以及 `hybrid` 冷启动有意义。解析后的 SpawnSpec schema 见 §3.1.2；解析规则（内联 `spawnspec:` base64url-JSON data URI 或 `https://` / `nwp://` URL）由 [NPS-CR-0007](cr/NPS-CR-0007-nop-l3-runtime-integration.md) §5 标准化。 |
@@ -360,6 +361,8 @@ Registry MUST NOT 声明其无法满足相应运营方信任要求的 profile。
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.11 | 2026-07-12 | **NPS-CR-0010 Bridge Node 是双向的**：AnnounceFrame (0x30) 新增可选 `bridge_inbound_protocols`（string 数组，取值域同 `bridge_protocols`）—— 该节点**入向服务**（外部 → NPS）的外部协议集。`bridge_protocols` 保持其原有含义不变（**出向**桥接的协议集）。缺省/为空 ⇒ 不暴露入向面，即 alpha.16 之前的纯出向 Bridge Node。声明 `"bridge"` 的节点 MUST 保证两个数组至少一个非空。Additive / 向后兼容；无新增 NDP 错误码。|
+| 0.10 | 2026-07-05 | **NPS-CR-0009 多 Anchor 高可用**：AnnounceFrame (0x30) 新增可选 `cluster_epoch`（uint64，默认 1）—— 集群所有权栅栏。新增 §9 解析规则：对一个 `cluster_anchor` NID 解析出 `cluster_epoch` 最高的存活 Anchor；同 epoch 的脑裂 → `NDP-CLUSTER-SPLIT`；联邦 Registry 传播 `(cluster_anchor, cluster_epoch, active_nid)` 三元组并优先取更高 epoch（每集群单调）。新增一个错误码 `NDP-CLUSTER-SPLIT`。Additive / 向后兼容（单 Anchor 集群保持 epoch 1）。|
 | 0.9 | 2026-06-12 | AnnounceFrame (0x30) 新增两个可选 liveness 字段 —— `health`（`healthy`/`degraded`/`draining`，缺省 ⇒ `healthy`）和 `last_seen`（ISO 8601 心跳时间）。新增 §3.2.1 **解析期陈旧检查**：当被解析条目的新鲜度截止 `(last_seen ?? timestamp) + ttl` 已过期时，Registry MUST 返回 `NDP-RESOLVE-STALE` 而非提供已失效端点；resolved 对象 SHOULD 回显 `health`。1 个新错误码 `NDP-RESOLVE-STALE`。向后兼容（两字段均可选）。|
 | 0.9 | 2026-06-03 | AnnounceFrame 新增 `heartbeat_interval_ms`（uint32，默认 60000）和 `spawn_spec_ref`（解析为 SpawnSpec 的字符串引用；§3.1.2 schema —— OCI image + command + resource_limits；解析规则见 NPS-CR-0007 §5）；新增 `NDP-ANNOUNCE-STALE` 错误码（公告期陈旧，区别于 §3.2.1 解析期 `NDP-RESOLVE-STALE`）。|
 | 0.8 | 2026-05-31 | §3.3 GraphFrame 改写为拓扑快照格式：`graph_id`（UUID v4）、`nodes`（NdpGraphNode 数组，含 nid/cluster_anchor/node_roles）、`edges`（NdpGraphEdge 数组，含 from_nid/to_nid/latency_ms/protocol）、`ttl`、`metadata`；最大 256 nodes / 1024 edges；新增 `NDP-GRAPH-TOO-LARGE` 与 `NDP-GRAPH-INVALID` 错误码；新增 §9 联邦转发（public-federated MUST 转发 AnnounceFrame、`ndp-forwarded-by` header、最多 3 hops、`NDP-FEDERATION-LOOP`）。|
