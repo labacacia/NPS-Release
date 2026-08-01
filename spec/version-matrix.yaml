@@ -113,7 +113,7 @@ shared:
     cn_path: "spec/status-codes.cn.md"
 
   roadmap:
-    version: "0.7"
+    version: "0.8"
     en_path: "spec/NPS-Roadmap.md"
     cn_path: "spec/NPS-Roadmap.cn.md"
 

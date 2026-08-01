@@ -2,8 +2,8 @@ English | [中文版](./NPS-Roadmap.cn.md)
 
 # NPS Roadmap
 
-**Version**: 0.7
-**Date**: 2026-06-27
+**Version**: 0.8
+**Date**: 2026-08-01
 **Owner**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -242,9 +242,11 @@ Each phase breaks into three segments:
 
 ---
 
-## alpha.13 — 🚧 next (target 2026-06)
+## alpha.13 — 2026-06-13 ✅ (Parity & Edge; delivered across alpha.13–15)
 
 > **Theme**: *Parity & Edge* — bring the six reference SDKs to true **functional** parity (not just source presence), advance all five protocol specs, and stand up the L2/L3 daemon edge.
+>
+> **Outcome (shipped in full across alpha.13–15)**: six-SDK functional parity; all five protocol specs advanced (NCP v0.9 / NWP v0.14 / NIP v0.10 / NDP v0.9 / NOP v0.7); and the L2/L3 daemon edge — `nps-ingress` NCP-over-TLS terminator (`NcpTlsListener`, ALPN `nps/1.0`, mTLS, `NCP-NID-MISMATCH` session-NID binding) and `nps-runner` L3 (CR-0007 lease + renewal, `SpawnSpec`, worker lifecycle). Remaining finishing touch — full `TC-N2-*` conformance vectors — carries into alpha.16.
 >
 > Detailed implementation plan: [`docs/roadmap.md`](../docs/roadmap.md).
 
@@ -269,6 +271,100 @@ Each phase breaks into three segments:
 | **NIP v0.10** | §6.1 short-lived / renewable edge-mTLS cert profile; `IdentFrame.node_roles` (array[string]) self-declared Phase 1–2; Phase 3 CA-attested via `id-nps-node-roles` extension (65715.2.2); `NIP-CERT-NODE-ROLES-MISMATCH` error code |
 | **NDP v0.9** | `AnnounceFrame` liveness fields `health` / `last_seen` + §3.2.1 resolve-time staleness `NDP-RESOLVE-STALE`; `heartbeat_interval_ms` (uint32, default 60000) + announce-time `NDP-ANNOUNCE-STALE`; `spawn_spec_ref` (string ref) resolving to a SpawnSpec, formal schema §3.1.2 (oci_image, command, resource_limits: cpu_millicores/memory_mb, Profile L3); §9 federation forwarding loop detection |
 | **NOP v0.7** | **NPS-CR-0007** NOP ↔ L3 runtime (§8: task-claim lease, `NOP-CLAIM-CONFLICT`, `NOP-SPAWN-SPEC-INVALID`, `NOP-RUNTIME-IDLE-TIMEOUT`, `NOP-RUNTIME-MAX-RUNTIME`; conformance `TC-N3-*`); `TaskFrame.result_ttl_seconds` (uint32, default 3600), `NOP-TASK-RESULT-EXPIRED`; `NOP-STREAM-NAK-UNRESOLVABLE` for evicted-frame NAK; frame-registry: NopFrame 0x07 registered as stable |
+
+---
+
+## alpha.14 — 2026-06-26 ✅
+
+| Item | Notes |
+|------|-------|
+| **NCP Tier-3 BinaryVector — SDK impl** | `binary_vector.v1` codec across the six SDK source trees + malformed-frame/client-error conformance coverage (spec landed alpha.13) |
+| **Inbound NWP Bridge server adapters** | `McpServerBridge` / `A2aServerBridge` + ASP.NET `AddBridgeServer` — external MCP/A2A clients invoke local NPS actions; secure-by-default (NID + verifier, bounded body, dispatch timeout, sanitized errors) |
+| **Native-mode NWP serving** | `NwpNativeNodeServer` serves `QueryFrame`/`ActionFrame` over an `NcpSession` |
+| **Typed remote NIP CA client** | `NipCaClient` (discovery, CRL, register/renew/revoke/verify, RFC-0002 X.509); `/v1/crl` gains `issued_at` + detached CA signature |
+| **Daemon observability + conformance harness** | transport-neutral `HealthProbeRenderer`; `LabAcacia.NPS.Conformance` (Node L1/L2 catalogs) |
+
+## alpha.15 — 2026-06-28 ✅
+
+> **Theme**: *Consistency* — cross-SDK wire correctness.
+>
+> **Numbering note**: the `1.0.0-alpha.15` CHANGELOG heading kept accumulating after the tag — the
+> LLM/Thinking Profile series filed under it (NWP v0.15–v0.17, NIP v0.11) is dated 2026-07-04/05 and
+> did **not** reach any registry as alpha.15. It shipped as **alpha.16** (see the next section).
+> The three rows below are what alpha.15 actually published.
+
+| Item | Notes |
+|------|-------|
+| **NIP TrustFrame/RevokeFrame signed-payload realignment** (breaking) | Signed payload aligned to the current NPS-3 fields (`issued_at`, `serial`, `signer_nid`, `target_nid`); `NIP-CERT-REVOKED` naming. Old alpha.14-era signed frames no longer verify |
+| **NDP AnnounceFrame signed canonical form — normative & cross-SDK consistent** (breaking) | Signed body excludes `signature`/`health`/`last_seen`/`frame`; null optionals omitted; `heartbeat_interval_ms` default `60000` only when absent, explicit `0` signed literally. Aligned across all six SDKs |
+| **NDP graph + NIP revoke guard enforcement** | GraphFrame 256-node/1024-edge bounds (`NDP-GRAPH-TOO-LARGE`), 3-hop federation loop (`NDP-FEDERATION-LOOP`), RevokeFrame `parent_nid`↔`parent_revoked` rule |
+
+---
+
+## alpha.16 — 2026-07-23 ✅
+
+> **Theme**: *LLM / Thinking Profile* — make model-serving Nodes first-class in the NWM, and close the
+> HTTP-overlay error registry.
+>
+> **This is what alpha.16 actually published** — not the *HA & Hardening* content the earlier revision of
+> this roadmap pencilled in under the alpha.16 heading. That content moved to the **alpha.17** section below.
+>
+> **Why the number**: the alpha.15 package numbers were already taken on the public registries, so this
+> content — filed under the `1.0.0-alpha.15` CHANGELOG heading — was re-issued as alpha.16.
+>
+> **Published protocol set**: NCP v0.9 / NWP v0.17 / NIP v0.11 / NDP v0.9 / NOP v0.7; `error-codes.md` v1.6.
+
+| Item | Notes |
+|------|-------|
+| **NWP v0.15 — `llm.complete` ActionFrame contract** | New §7.5: typed request/response DTO shape, `stop_reason` enum, tool-call field names, sync / async / streaming response semantics, ErrorFrame-vs-payload-error rule, snake_case JSON/MessagePack key policy. No new frame type or error code |
+| **NWP v0.16 — NWM `profiles` + LLM/Thinking Profile** | New §4.2a `profiles.llm` for model-serving Action/Complex Nodes; "Thinking Node" is a product-facing alias, **not** a new `node_type`; coarse discovery via NIP/NDP `llm:*` capabilities, detailed model / streaming / tool / privacy / reasoning-disclosure metadata lives in the NWM. .NET DTOs + helpers shipped |
+| **NIP v0.11 — `llm:*` capability registry** | `llm:complete`, `llm:stream`, `llm:tool_call`, `llm:embed`, `llm:rerank`; TrustFrame `trust_scope` may cover them. No new frame fields or error codes |
+| **NWP v0.17 — HTTP binding rejection codes** | New §9.5 + `error-codes.md` v1.6: `NWP-HTTP-ORIGIN-FORBIDDEN`, `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED`, `NWP-HTTP-ACCEPT-UNSATISFIABLE`, `NWP-HTTP-REQUEST-ID-MISMATCH`, `NWP-HTTP-FRAME-BODY-MALFORMED`, `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` (advertised-but-unimplemented rollout window). Closes NPS-Dev#84 |
+| **NIP CA — RA store persistence** | Three-tier RA enrollment stores (NPS-CR-0005) persisted in the CA storage backends instead of memory-only |
+| **Bridge schema fixes + daemon test isolation** | `bridge_target` payload-contract corrections; `nps-ingress` / `nps-runner` distribution builds no longer compile test sources into the application projects (internal coverage preserved via explicit test-assembly visibility) |
+
+**Known defect shipped in alpha.16** (fixed, ships in alpha.17): the published **Go / Rust / TypeScript / Java** SDKs emit NOP `DelegateFrame` wire keys `task_id` / `target_nid`, where NPS-5 requires `parent_task_id` / `target_agent_nid` — verified against each SDK's `v1.0.0-alpha.16` tag. Rust additionally diverges on `SyncFrame.subtask_ids` (spec: `wait_for`) and `AlignStream.sync_id` / `source_nid` (spec: `stream_id` / `sender_nid`). .NET and Python are conformant, so **cross-language NOP delegation between a .NET/Python peer and a Go/Rust/TS/Java peer does not interoperate at alpha.16**.
+
+---
+
+## alpha.17 — 🚧 next (target 2026-08)
+
+> **Theme**: *HA & Hardening + Bidirectional Bridge* — a cluster survives Anchor loss (**NPS-CR-0009**), the Bridge Node becomes a two-way protocol boundary (**NPS-CR-0010**), NIP gains its Phase-3 enforcement switch ahead of the `v1.0.0-beta.1` flag day, and the cross-SDK NOP wire-key defect shipped in alpha.16 is fixed.
+>
+> **Status**: the spec work for all five protocols is complete and frozen for this cycle; what remains is
+> cross-SDK implementation and release engineering. The spec gate is green, the implementation and
+> distribution gates are not — they are tracked separately below.
+>
+> **Renumbering**: the edge line had independently used NWP 0.16 / NIP 0.11 / NDP 0.10; after the merge
+> they were rebased **on top of** the released alpha.16 numbers, becoming NWP 0.18 (CR-0009) + 0.19
+> (CR-0010), NIP 0.12, NDP 0.10 (CR-0009) + 0.11 (CR-0010). Any pre-merge reference to "NWP 0.15 for
+> CR-0009" is stale.
+
+**Release gates** (all must clear before tagging):
+
+1. **Spec content** — ✅ **done**. Five-protocol advancement satisfied at the spec layer: NCP v0.10 / NWP v0.18 + v0.19 / NIP v0.12 / NDP v0.10 + v0.11 / NOP v0.8; `error-codes.md` v1.7; `frame-registry.yaml` v0.14.
+2. **Cross-SDK implementation parity** (hard gate — the standing release rule is *spec **and** SDK*) — ⚠️ **open**. CR-0009 `cluster_epoch` / Anchor-failover handling and the NIP v0.12 `phase3_enforcement` policy exist in the .NET reference only; Python / TypeScript / Go / Java / Rust have no `cluster_epoch` surface yet. CR-0010 is further along — all six SDKs carry the `bridge_inbound_protocols` declaration surface, but the inbound MCP / A2A / gRPC servers are .NET-only. Either the other five SDKs are brought up, or the release notes record an explicit, scoped ".NET-reference-first" exception; shipping silently would break the rule established at alpha.11.
+3. **NOP wire-key fix must reach the *published* packages** (hard gate) — ⚠️ **partial**. The fix is written; it has not yet reached every published SDK. Go and TypeScript are conformant (TypeScript keeps a legacy-key decode fallback); Java `DelegateFrame` and the Rust `nps-nop` frames are still on the old keys. This is what makes alpha.17 an SDK release and not a spec-only one.
+4. **Conformance** — ⚠️ **partial**. CR-0010 shipped `TC-N2-BridgeIn-01..06` (NPS-Node-L2 §16.4 vectors, both EN and CN). CR-0009 §4's `TC-N2-HA-*` multi-Anchor vectors **do not exist yet**, and `nps-registry` has no highest-epoch resolution / `NDP-CLUSTER-SPLIT` implementation — the daemon side of CR-0009 is unbuilt.
+5. **Distribution** — spec sync into this repo; SDK source sync into the six SDK repos; ingress / tool distribution repos; README banners, package manifests, lockfiles; the documentation surfaces (spec repo, wiki, GitHub Pages); Gitee mirror. Then the release runbook.
+6. **CN translation debt** — at minimum the CR-0009 and CR-0010 bodies. Per `version-matrix.yaml` `translation_lag`: CR-0010 is **fully translated** (NWP §2.1 + whole §16 incl. §16.4 vectors; NDP `bridge_inbound_protocols` row), CR-0009 is **headers/changelog rows only** — NWP 0.18 multi-Anchor body, NDP `cluster_epoch` + §9 resolution body, NCP 0.10 session-continuity body, NOP 0.8 HA-interaction body all pending.
+7. **Status hygiene** — **RFC-0006** Draft→**Accepted** ✅ (native mode is normative as of NCP v0.10); **CR-0008** Proposed→Implemented; **CR-0009 / CR-0010** → Implemented; refresh the `spec/rfcs/README.md` + `spec/cr/README.md` status tables.
+
+**Per-protocol deliverables** (spec complete):
+
+| Protocol | Version | Notes |
+|---|---|---|
+| **NCP** | v0.10 | **RFC-0006 Accepted** — native-mode transport is normative. New **session continuity across Anchor failover** (CR-0009): on connection loss / `NCP-NID-MISMATCH` after an ownership transfer, the client re-resolves via NDP §9 (highest `cluster_epoch`) or the NWP `anchor_failover` `successor_nid` and re-establishes. No new frames or error codes |
+| **NWP** | v0.18 + v0.19 | **0.18 (CR-0009)**: `anchor_failover` (`successor_nid` / `cluster_epoch` / `reason`) and `anchor_quorum_lost` (`quorum_size` / `available`) finalised — the Phase-3 "MUST NOT emit" restriction is lifted; `cluster_epoch` (uint64) ownership fence on topology responses/writes; `NWP-ANCHOR-NOT-LEADER`, `NWP-ANCHOR-EPOCH-FENCED`. Single-Anchor clusters stay at epoch 1, unaffected. **0.19 (CR-0010)**: Bridge Node is bidirectional — semantics split into Outbound (unchanged) + Inbound (new) MUST lists, MCP inbound MUST serve `resources/*` as well as `tools/*`; §16 split into independent outbound (§16.1.1) / inbound (§16.1.2) conformance profiles + normative direction declaration (§16.2) + per-protocol error-mapping tables (§16.3); `compat/*-ingress` absorbed into `NPS.NWP.Bridge`; `NWP-BRIDGE-DIRECTION-UNSUPPORTED` |
+| **NIP** | v0.12 | New §7.5 **Phase-3 enforcement mode**: receiver-side `phase3_enforcement` verification-policy flag turning the Phase-1–2 opt-in CA-attestation checks (assurance / `node_roles` / capabilities / OCSP staple) into hard MUSTs — so the beta.1 flag day is a default change, not a code change. Role/capability checks are subset checks, each applying only when the corresponding cert extension is present (self-declared NIDs unaffected); `NIP-CERT-CAPABILITIES-EXCEEDED` |
+| **NDP** | v0.10 + v0.11 | **0.10 (CR-0009)**: `cluster_epoch` (uint64, default 1) on AnnounceFrame; new §9 rule — resolve the highest-epoch live Anchor for a `cluster_anchor` NID, equal-epoch split-brain → `NDP-CLUSTER-SPLIT`; federated Registries propagate `(cluster_anchor, cluster_epoch, active_nid)` and prefer the higher epoch. **0.11 (CR-0010)**: `bridge_inbound_protocols` (same value domain as `bridge_protocols`); a node declaring `"bridge"` MUST have at least one of the two arrays non-empty; absent ⇒ outbound-only, i.e. exactly a pre-alpha.17 Bridge Node |
+| **NOP** | v0.8 | CR-0009 interaction: `DelegateFrame.target_cluster_anchor` MUST resolve to the target cluster's current active Anchor (highest `cluster_epoch`), and in-flight delegations MUST re-resolve to `successor_nid` on `anchor_failover` before retry. §8 lease-renewal semantics formalised (renewal extends `lease_expiry`, MUST match `runner_nid`, `NOP-CLAIM-CONFLICT` if already expired and reclaimed). No new codes |
+| **Implementation fix** | — | **NOP frame wire keys** aligned to NPS-5 in Go / Rust / TS / Java: `DelegateFrame` `task_id`→`parent_task_id`, `target_nid`\|`agent_nid`→`target_agent_nid`; `SyncFrame` `subtask_ids`→`wait_for`; `AlignStream` `sync_id`→`stream_id`, `source_nid`→`sender_nid`. Pure conformance fix — no spec or frame-registry change; TS/Java keep a legacy-key decode fallback |
+| **Shared** | error-codes v1.7 · frame-registry v0.14 | Five new codes: `NWP-ANCHOR-NOT-LEADER`, `NWP-ANCHOR-EPOCH-FENCED`, `NWP-BRIDGE-DIRECTION-UNSUPPORTED`, `NDP-CLUSTER-SPLIT`, `NIP-CERT-CAPABILITIES-EXCEEDED` |
+
+**Daemons** — the least-built area of this cycle: `nps-registry` needs CR-0009 highest-epoch resolution + `NDP-CLUSTER-SPLIT` (unbuilt); `nps-ingress` needs the full `TC-N2-*` L2 vectors + the new `TC-N2-HA-*` multi-Anchor vectors (unbuilt); `nps-runner` needs `SpawnSpec` OCI-image resolution + lease-renewal edge cases.
+
+**Out of scope (→ beta.1)**: the NIP Phase-3 **flag day** itself (making enforcement MUST by default); multi-region NPS Cloud CA (Phase 3); QUIC production hardening beyond conformance vectors.
 
 ---
 
