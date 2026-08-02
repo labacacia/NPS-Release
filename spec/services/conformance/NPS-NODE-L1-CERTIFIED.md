@@ -69,7 +69,7 @@ _Check each box that passed; write `N/A` for optional cases the IUT declined._
 - [ ] `TC-N1-NDP-01` — AnnounceFrame carries activation_mode
 - [ ] `TC-N1-NDP-02` — AnnounceFrame signature
 - [ ] `TC-N1-NDP-03` — ResolveFrame response
-- [ ] `TC-N1-NDP-04` — GraphFrame subscription (optional; `N/A` acceptable)
+- [ ] `TC-N1-NDP-04` — GraphFrame topology snapshot (optional; `N/A` acceptable)
 
 ### NWP — Inbox and delivery
 - [ ] `TC-N1-NWP-01` — Inbox accepts ActionFrame

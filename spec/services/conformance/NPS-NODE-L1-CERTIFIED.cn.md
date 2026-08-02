@@ -67,7 +67,7 @@ _勾选每一项通过的测试用例；对 IUT 主动放弃的可选用例填�
 - [ ] `TC-N1-NDP-01` — AnnounceFrame carries activation_mode
 - [ ] `TC-N1-NDP-02` — AnnounceFrame signature
 - [ ] `TC-N1-NDP-03` — ResolveFrame response
-- [ ] `TC-N1-NDP-04` — GraphFrame subscription（可选；可填写 `N/A`）
+- [ ] `TC-N1-NDP-04` — GraphFrame 拓扑快照（可选；可填写 `N/A`）
 
 ### NWP — Inbox and delivery（信箱与投递）
 - [ ] `TC-N1-NWP-01` — Inbox accepts ActionFrame

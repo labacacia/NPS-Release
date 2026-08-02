@@ -1,0 +1,246 @@
+{
+  "name": "nwp-bridge-lifecycle",
+  "version": "0.20.0",
+  "spec_ref": "spec/NPS-2-NWP.md §16.5.2",
+  "description": "Portable outbound Bridge preflight and lifecycle decisions. Endpoint checks use literal hosts and require no DNS. elapsed_ms is evaluated against timeout_ms before an upstream dial; cancellation always wins over timeout.",
+  "vectors": [
+    {
+      "id": "nwp.bridge-lifecycle.001",
+      "description": "A registered protocol with a public HTTPS endpoint is dispatched synchronously.",
+      "kind": "positive",
+      "input": {
+        "protocol": "http",
+        "endpoint": "https://203.0.113.10/v1/orders",
+        "registered_protocols": ["http", "mcp"],
+        "allow_http": false,
+        "reject_private": true,
+        "timeout_ms": 30000,
+        "elapsed_ms": 0,
+        "correlation_id": "bridge-sync",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "dispatch",
+        "status": "NPS-OK",
+        "correlation_id": "bridge-sync",
+        "task_mode": "sync",
+        "telemetry_outcome": "success"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.002",
+      "description": "A missing protocol makes the bridge_target invalid.",
+      "kind": "negative",
+      "input": {
+        "protocol": "",
+        "endpoint": "https://203.0.113.10/v1/orders",
+        "registered_protocols": ["http"],
+        "allow_http": false,
+        "reject_private": true,
+        "timeout_ms": 30000,
+        "elapsed_ms": 0,
+        "correlation_id": "bridge-missing-protocol",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 422,
+        "status": "NPS-CLIENT-UNPROCESSABLE",
+        "error": "NWP-BRIDGE-TARGET-INVALID",
+        "correlation_id": "bridge-missing-protocol",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.003",
+      "description": "A well-formed but unregistered protocol is unsupported by the server.",
+      "kind": "negative",
+      "input": {
+        "protocol": "grpc",
+        "endpoint": "https://203.0.113.10/orders.OrderService/Create",
+        "registered_protocols": ["http", "mcp"],
+        "allow_http": false,
+        "reject_private": true,
+        "timeout_ms": 30000,
+        "elapsed_ms": 0,
+        "correlation_id": "bridge-unsupported",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 501,
+        "status": "NPS-SERVER-UNSUPPORTED",
+        "error": "NWP-BRIDGE-PROTOCOL-UNSUPPORTED",
+        "correlation_id": "bridge-unsupported",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.004",
+      "description": "A non-HTTP endpoint scheme is rejected by the portable HTTP Bridge profile.",
+      "kind": "negative",
+      "input": {
+        "protocol": "http",
+        "endpoint": "ftp://203.0.113.10/orders",
+        "registered_protocols": ["http"],
+        "allow_http": true,
+        "reject_private": true,
+        "timeout_ms": 30000,
+        "elapsed_ms": 0,
+        "correlation_id": "bridge-scheme",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 422,
+        "status": "NPS-CLIENT-UNPROCESSABLE",
+        "error": "NWP-BRIDGE-ENDPOINT-INVALID",
+        "correlation_id": "bridge-scheme",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.005",
+      "description": "Loopback endpoints are rejected when private-address protection is enabled.",
+      "kind": "negative",
+      "input": {
+        "protocol": "http",
+        "endpoint": "https://127.0.0.1/admin",
+        "registered_protocols": ["http"],
+        "allow_http": false,
+        "reject_private": true,
+        "timeout_ms": 30000,
+        "elapsed_ms": 0,
+        "correlation_id": "bridge-loopback",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 422,
+        "status": "NPS-CLIENT-UNPROCESSABLE",
+        "error": "NWP-BRIDGE-ENDPOINT-INVALID",
+        "correlation_id": "bridge-loopback",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.006",
+      "description": "Plain HTTP is rejected when allow_http is false.",
+      "kind": "negative",
+      "input": {
+        "protocol": "http",
+        "endpoint": "http://203.0.113.10/orders",
+        "registered_protocols": ["http"],
+        "allow_http": false,
+        "reject_private": true,
+        "timeout_ms": 30000,
+        "elapsed_ms": 0,
+        "correlation_id": "bridge-http-disabled",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 422,
+        "status": "NPS-CLIENT-UNPROCESSABLE",
+        "error": "NWP-BRIDGE-ENDPOINT-INVALID",
+        "correlation_id": "bridge-http-disabled",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.007",
+      "description": "An endpoint outside the configured prefix allowlist is rejected.",
+      "kind": "negative",
+      "input": {
+        "protocol": "http",
+        "endpoint": "https://203.0.113.10/private/orders",
+        "registered_protocols": ["http"],
+        "allow_http": false,
+        "reject_private": true,
+        "allowed_prefixes": ["https://203.0.113.10/public"],
+        "timeout_ms": 30000,
+        "elapsed_ms": 0,
+        "correlation_id": "bridge-prefix",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 422,
+        "status": "NPS-CLIENT-UNPROCESSABLE",
+        "error": "NWP-BRIDGE-ENDPOINT-INVALID",
+        "correlation_id": "bridge-prefix",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.008",
+      "description": "An exhausted Bridge deadline is reported as a server timeout before dialing upstream.",
+      "kind": "negative",
+      "input": {
+        "protocol": "http",
+        "endpoint": "https://203.0.113.10/orders",
+        "registered_protocols": ["http"],
+        "allow_http": false,
+        "reject_private": true,
+        "timeout_ms": 250,
+        "elapsed_ms": 250,
+        "correlation_id": "bridge-timeout",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 504,
+        "status": "NPS-SERVER-TIMEOUT",
+        "error": "NWP-BRIDGE-UPSTREAM-FAILED",
+        "correlation_id": "bridge-timeout",
+        "telemetry_outcome": "timeout"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.009",
+      "description": "Caller cancellation aborts Bridge work without synthesizing a protocol response.",
+      "kind": "negative",
+      "input": {
+        "protocol": "http",
+        "endpoint": "https://203.0.113.10/orders",
+        "registered_protocols": ["http"],
+        "allow_http": false,
+        "reject_private": true,
+        "timeout_ms": 250,
+        "elapsed_ms": 250,
+        "cancelled": true,
+        "correlation_id": "bridge-cancelled",
+        "task_mode": "sync"
+      },
+      "expected": {
+        "decision": "abort",
+        "response": "none",
+        "correlation_id": "bridge-cancelled",
+        "telemetry_outcome": "cancelled"
+      }
+    },
+    {
+      "id": "nwp.bridge-lifecycle.010",
+      "description": "An admitted asynchronous action preserves task mode and correlation identity.",
+      "kind": "positive",
+      "input": {
+        "protocol": "a2a",
+        "endpoint": "https://203.0.113.20/a2a",
+        "registered_protocols": ["a2a"],
+        "allow_http": false,
+        "reject_private": true,
+        "timeout_ms": 30000,
+        "elapsed_ms": 1,
+        "correlation_id": "bridge-async",
+        "task_mode": "async"
+      },
+      "expected": {
+        "decision": "dispatch",
+        "status": "NPS-OK-ACCEPTED",
+        "correlation_id": "bridge-async",
+        "task_mode": "async",
+        "telemetry_outcome": "success"
+      }
+    }
+  ]
+}

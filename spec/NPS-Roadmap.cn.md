@@ -259,7 +259,7 @@ v1.0.0-alpha.7 待开展任务：
 | 事项 | 备注 |
 |------|------|
 | **NCP Tier-3 BinaryVector —— SDK 实现** | `binary_vector.v1` 编解码落到六个 SDK 源码树 + 畸形帧/客户端错误合规覆盖（规范在 alpha.13 落地） |
-| **入站 NWP Bridge 服务端适配器** | `McpServerBridge` / `A2aServerBridge` + ASP.NET `AddBridgeServer` —— 外部 MCP/A2A 客户端调用本地 NPS action；默认安全（NID + verifier、请求体上限、派发超时、错误信息脱敏） |
+| **入站 NWP Bridge 服务端适配器** | `McpInboundServer` / `A2aInboundServer` / `GrpcInboundService` + host `BridgeServerHandler` / `BridgeServerApp` —— 外部 MCP/A2A/gRPC 客户端调用被 Bridge front 的 NPS node；默认安全（NID + verifier、请求体上限、派发超时、错误信息脱敏） |
 | **原生模式 NWP 服务端** | `NwpNativeNodeServer` 在 `NcpSession` 上直接服务 `QueryFrame` / `ActionFrame` |
 | **强类型远程 NIP CA 客户端** | `NipCaClient`（发现、CRL、注册/续期/吊销/验证、RFC-0002 X.509）；`/v1/crl` 新增 `issued_at` + 分离式 CA 签名 |
 | **Daemon 可观测性 + 合规测试框架** | 传输中立的 `HealthProbeRenderer`；`LabAcacia.NPS.Conformance`（Node L1/L2 用例目录） |
@@ -299,41 +299,41 @@ v1.0.0-alpha.7 待开展任务：
 | **NIP CA —— RA store 持久化** | 三级 RA enrollment store（NPS-CR-0005）改为落到 CA 存储后端，不再仅内存 |
 | **Bridge schema 修复 + daemon 测试隔离** | `bridge_target` 载荷契约修正；`nps-ingress` / `nps-runner` 发行构建不再把测试源码编进应用工程（内部覆盖率通过显式 test-assembly 可见性保留） |
 
-**alpha.16 已发布的已知缺陷**（已修，随 alpha.17 发布）：已发布的 **Go / Rust / TypeScript / Java** SDK 的 NOP `DelegateFrame` 发的是 `task_id` / `target_nid`，而 NPS-5 要求 `parent_task_id` / `target_agent_nid` —— 已对各 SDK 的 `v1.0.0-alpha.16` 标签逐一核对。Rust 另有 `SyncFrame.subtask_ids`（规范：`wait_for`）与 `AlignStream.sync_id` / `source_nid`（规范：`stream_id` / `sender_nid`）的偏差。.NET 与 Python 是正确的，因此 **alpha.16 下 .NET/Python 节点与 Go/Rust/TS/Java 节点之间的 NOP 委托无法互通**。
+**alpha.16 已发布的已知缺陷**（`main` 上已修，随 alpha.17 发布）：已发布的 **Go / Rust / TypeScript / Java** SDK 的 NOP `DelegateFrame` 发的是 `task_id` / `target_nid`，而 NPS-5 要求 `parent_task_id` / `target_agent_nid` —— 已对各 SDK 的 `v1.0.0-alpha.16` 标签逐一核对。Rust 另有 `SyncFrame.subtask_ids`（规范：`wait_for`）与 `AlignStream.sync_id` / `source_nid`（规范：`stream_id` / `sender_nid`）的偏差。.NET 与 Python 是正确的，因此 **alpha.16 下 .NET/Python 节点与 Go/Rust/TS/Java 节点之间的 NOP 委托无法互通**。
 
 ---
 
-## alpha.17 — 🚧 下一个（目标 2026-08）
+## alpha.17 — 🚧 下一个（目标 2026-08）—— **并集集成完成于发布候选，未发布**
 
-> **主题**：*HA & Hardening + 双向 Bridge* —— 集群在 Anchor 失联后仍存活（**NPS-CR-0009**）、Bridge Node 成为双向协议边界（**NPS-CR-0010**）、NIP 在 `v1.0.0-beta.1` flag day 之前拿到 Phase-3 强制开关，并修复 alpha.16 发布出去的跨 SDK NOP wire-key 缺陷。
+> **主题**：*HA & Hardening + 双向 Bridge + 可移植 Server/Conformance Profile* —— 集群在 Anchor 失联后仍存活（[NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)）、Bridge Node 成为双向协议边界（[NPS-CR-0010](cr/NPS-CR-0010-bridge-bidirectional.md)）、NIP 在 `v1.0.0-beta.1` flag day 之前拿到 Phase-3 强制开关、修复 alpha.16 发布出去的跨 SDK NOP wire-key 缺陷，并且每个协议都获得一套**可移植 server / conformance profile**，让六个 SDK 以完全一致的方式实现彼此的服务端面。
 >
-> **状态**：五个协议的规范工作已完成并在本周期冻结；剩下的是跨 SDK 实现与发布工程。**两半分开跟踪：规范闸已绿，实现闸与分发闸没绿。**
+> **本次发布如何建成 —— 两条并行线的合并。** alpha.17 在两个 workspace 并行开发，最终 reconcile 成一条候选。一条线交付 CR-0009 多 Anchor HA、CR-0010 双向 Bridge（合并版 `bridge_inbound` 服务端，**替换**了早先重复的 `McpServerBridge` / `A2aServerBridge`）、NIP Phase-3、`TC-N2-HA-*` 向量、`nps-registry` 集群解析、CR-0009 CN 正文；另一条线交付跨六 SDK 的**可移植 server / conformance profile 波**（NWP §16.5、NCP §2.6.2、NDP registry conformance + `graph_seq`、NOP orchestrator profile、NIP §7.6）。并集在六语言全绿。
 >
-> **重编号**：边缘线曾独立使用 NWP 0.16 / NIP 0.11 / NDP 0.10；合并后它们被重排到已发布的 alpha.16 号段**之上**，成为 NWP 0.18（CR-0009）+ 0.19（CR-0010）、NIP 0.12、NDP 0.10（CR-0009）+ 0.11（CR-0010）。任何"CR-0009 对应 NWP 0.15"的旧说法都已过期。
+> **重编号**：CR-0009/0010 边缘线先重排到已发布的 alpha.16 号段之上，成为 NWP 0.18/0.19、NIP 0.12、NDP 0.10/0.11、NCP 0.10、NOP 0.8。可移植 profile 波随后在每个协议上**各再 +1**：NCP **0.11**、NWP **0.20**、NIP **0.13**、NDP **0.12**、NOP **0.9**；`error-codes.md` **1.8**、`frame-registry.yaml` 0.14。任何 "0.18-0.19 / 0.12 / 0.10-0.11 / 0.10 / 0.8 / 1.7" 的旧号是 profile 波之前的编号，已过期。
 
-**发布闸**（打标签前全部必须通过）：
+**发布闸**：
 
-1. **规范内容** —— ✅ **已完成**。规范层满足五协议推进：NCP v0.10 / NWP v0.18 + v0.19 / NIP v0.12 / NDP v0.10 + v0.11 / NOP v0.8；`error-codes.md` v1.7；`frame-registry.yaml` v0.14。
-2. **跨 SDK 实现对等**（硬闸 —— 既定发布规则是*规范**与**SDK*）—— ⚠️ **未完成**。CR-0009 的 `cluster_epoch` / Anchor failover 处理与 NIP v0.12 的 `phase3_enforcement` 策略目前只有 .NET 参考实现；Python / TypeScript / Go / Java / Rust 尚无 `cluster_epoch` 面。CR-0010 进度更好：六个 SDK 都带了 `bridge_inbound_protocols` 声明面，但入站 MCP / A2A / gRPC 服务器仍是 .NET 独有。要么补齐另外五个 SDK，要么在发布说明里明确记一条 ".NET 参考先行" 的范围例外 —— 默不作声地发会破坏 alpha.11 立下的规则。
-3. **NOP wire-key 修复必须进到*已发布*的包**（硬闸）—— ⚠️ **部分完成**。修复已写好，但尚未进到每一个已发布 SDK：Go 与 TypeScript 已正确（TS 保留旧键解码回退），**Java 的 `DelegateFrame` 与 Rust `nps-nop` 的帧仍是旧键**。这正是 alpha.17 必须是 SDK 发布、而非纯规范发布的原因。
-4. **合规** —— ⚠️ **部分完成**。CR-0010 已交付 `TC-N2-BridgeIn-01..06`（NPS-Node-L2 §16.4 向量，EN/CN 双语齐全）。CR-0009 §4 的 `TC-N2-HA-*` 多 Anchor 向量**尚不存在**，`nps-registry` 也没有最高 epoch 解析 / `NDP-CLUSTER-SPLIT` 实现 —— CR-0009 的 daemon 侧是空白。
-5. **分发** —— 规范同步进本仓；SDK 源码同步进六个 SDK 仓；ingress / 工具分发仓；README 横幅、包清单、lockfile；文档面（规范仓、wiki、GitHub Pages）；Gitee 镜像。然后按发布 runbook 走。
-6. **CN 翻译欠账** —— 至少补上 CR-0009 与 CR-0010 正文。按 `version-matrix.yaml` 的 `translation_lag`：CR-0010 **已全译**（NWP §2.1 + 整个 §16 含 §16.4 向量；NDP `bridge_inbound_protocols` 字段行），CR-0009 **仅有头部/changelog 行** —— NWP 0.18 多 Anchor 正文、NDP `cluster_epoch` + §9 解析规则正文、NCP 0.10 会话续接正文、NOP 0.8 HA 交互正文均待译。
-7. **状态卫生** —— **RFC-0006** Draft→**Accepted** ✅（NCP v0.10 起原生模式为规范性）；**CR-0008** Proposed→Implemented；**CR-0009 / CR-0010** → Implemented；刷新 `spec/rfcs/README.md` + `spec/cr/README.md` 的状态表。
+1. **规范内容** —— ✅ **已完成**。五协议推进：NCP v0.11 / NWP v0.20 / NIP v0.13 / NDP v0.12 / NOP v0.9；`error-codes.md` v1.8；`frame-registry.yaml` v0.14。
+2. **跨 SDK 实现对等**（硬闸 —— 既定发布规则是*规范**与**SDK*）—— ✅ **已完成**。CR-0009 的 `cluster_epoch` / failover、NIP 的 `phase3_enforcement`、CR-0010 的入站服务器（`McpInboundServer` / `A2aInboundServer` / `GrpcInboundService`）、以及可移植 server / conformance profile，均已在六个 SDK（Go / Java / Python / Rust / TypeScript / .NET）实现，各自测试通过。
+3. **NOP wire-key 修复进到*已发布*的包**（硬闸）—— ✅ **已完成**。`DelegateFrame`（`parent_task_id` / `target_agent_nid`）、`SyncFrame`（`wait_for`）、`AlignStream`（`stream_id` / `sender_nid`）的 wire key 在所有 SDK 对齐 NPS-5；TS/Java 保留旧键解码回退。
+4. **合规** —— ✅ **已完成**。`TC-N2-BridgeIn-01..06` 与 `TC-N2-HA-01..09`（EN/CN 双语齐全）；`nps-registry` 已实现最高 epoch 解析 + `NDP-CLUSTER-SPLIT`，HA 族有参考对象可测。
+5. **分发**（剩余工作）—— Dev → `NPS-Release/spec` 同步；候选 `impl/` → 五个 standalone SDK 仓；ingress/工具分发仓；README 横幅、包清单、lockfile；文档四面（本地 / wiki / GitHub Pages / Joplin KB）；Gitee 镜像。**最后一步**再把 `NPS-Release/version.yaml` 的 `suite_version` bump 到 `1.0.0-alpha.17`（impl 包清单 MUST 跟随 oracle，不得抢先），然后按[发布 runbook](../docs/release-process.md) 走。
+6. **CN 翻译** —— ✅ CR-0009 / CR-0010 正文与 NIP §7.5 均已译；剩余 profile 波正文记在 `version-matrix.yaml` 的 `translation_lag`。
+7. **状态卫生** —— ✅ **RFC-0006** Accepted（NCP v0.10 起原生模式为规范性）；**CR-0008 / CR-0009 / CR-0010** → Implemented；`spec/rfcs/README.md` + `spec/cr/README.md` 表已刷新；`CLAUDE.md` 已更新。
 
-**逐协议交付**（规范已完成）：
+**逐协议交付**（均在发布候选上）：
 
 | 协议 | 版本 | 备注 |
 |---|---|---|
-| **NCP** | v0.10 | **RFC-0006 Accepted** —— 原生模式传输成为规范性内容。新增 **Anchor failover 期间的会话续接**（CR-0009）：所有权转移后连接断开 / `NCP-NID-MISMATCH` 时，客户端经 NDP §9（最高 `cluster_epoch`）或 NWP `anchor_failover` 的 `successor_nid` 重新解析并重建会话。无新帧、无新错误码 |
-| **NWP** | v0.18 + v0.19 | **0.18（CR-0009）**：定稿 `anchor_failover`（`successor_nid` / `cluster_epoch` / `reason`）与 `anchor_quorum_lost`（`quorum_size` / `available`）两个子类型，解除 Phase-3 "MUST NOT emit" 限制；拓扑响应/写入上的 `cluster_epoch`（uint64）所有权栅栏；`NWP-ANCHOR-NOT-LEADER`、`NWP-ANCHOR-EPOCH-FENCED`。单 Anchor 集群保持 epoch 1，不受影响。**0.19（CR-0010）**：Bridge Node 双向化 —— 语义拆成 Outbound（不变）+ Inbound（新增）两组 MUST 列表，MCP 入站 MUST 同时服务 `resources/*` 与 `tools/*`；§16 拆为独立的出站（§16.1.1）/ 入站（§16.1.2）合规 profile + 规范性方向声明（§16.2）+ 逐协议错误映射表（§16.3）；`compat/*-ingress` 并入 `NPS.NWP.Bridge`；`NWP-BRIDGE-DIRECTION-UNSUPPORTED` |
-| **NIP** | v0.12 | 新增 §7.5 **Phase-3 强制模式**：接收侧 `phase3_enforcement` 验证策略开关，把 Phase 1–2 的可选 CA 证明检查（assurance / `node_roles` / capabilities / OCSP staple）转为硬性 MUST —— 使 beta.1 flag day 变成"改默认值"而非"改代码"。角色/能力检查是子集检查，且仅在对应证书扩展存在时生效（自声明 NID 不受影响）；`NIP-CERT-CAPABILITIES-EXCEEDED` |
-| **NDP** | v0.10 + v0.11 | **0.10（CR-0009）**：AnnounceFrame 新增 `cluster_epoch`（uint64，默认 1）；新增 §9 规则 —— 对某 `cluster_anchor` NID 解析最高 epoch 的存活 Anchor，同 epoch 脑裂 → `NDP-CLUSTER-SPLIT`；联邦 Registry 传播 `(cluster_anchor, cluster_epoch, active_nid)` 并优先高 epoch。**0.11（CR-0010）**：`bridge_inbound_protocols`（取值域同 `bridge_protocols`）；声明 `"bridge"` 的节点两个数组 MUST 至少一个非空；缺省 ⇒ 仅出站，即等同 alpha.17 之前的 Bridge Node |
-| **NOP** | v0.8 | CR-0009 交互：`DelegateFrame.target_cluster_anchor` MUST 解析到目标集群当前活跃 Anchor（最高 `cluster_epoch`），发生 `anchor_failover` 时在途委托 MUST 在重试前重解析到 `successor_nid`。§8 租约续约语义规范化（续约延长 `lease_expiry`、MUST 匹配 `runner_nid`、若已过期并被回收则 `NOP-CLAIM-CONFLICT`）。无新错误码 |
-| **实现修复** | —— | **NOP 帧 wire key** 在 Go / Rust / TS / Java 对齐 NPS-5：`DelegateFrame` `task_id`→`parent_task_id`、`target_nid`\|`agent_nid`→`target_agent_nid`；`SyncFrame` `subtask_ids`→`wait_for`；`AlignStream` `sync_id`→`stream_id`、`source_nid`→`sender_nid`。纯合规修复 —— 不动规范与 frame-registry；TS/Java 保留旧键解码回退 |
-| **共享** | error-codes v1.7 · frame-registry v0.14 | 五个新错误码：`NWP-ANCHOR-NOT-LEADER`、`NWP-ANCHOR-EPOCH-FENCED`、`NWP-BRIDGE-DIRECTION-UNSUPPORTED`、`NDP-CLUSTER-SPLIT`、`NIP-CERT-CAPABILITIES-EXCEEDED` |
+| **NCP** | v0.10 + v0.11 | **0.10**：RFC-0006 Accepted（原生模式传输成为规范性）；**Anchor failover 期间会话续接**（CR-0009）—— 所有权转移后连接断开 / `NCP-NID-MISMATCH` 时经 NDP §9（最高 `cluster_epoch`）或 NWP `anchor_failover` 的 `successor_nid` 重新解析。**0.11**：§2.6.2 **Native Server 互操作 profile** —— 认证先于 preamble 的顺序、有界 preamble/Hello 读取、分配安全的 Hello 上限、准入前失败静默处理 |
+| **NWP** | v0.18 + v0.19 + v0.20 | **0.18（CR-0009）**：定稿 `anchor_failover`（`successor_nid` / `cluster_epoch` / `reason`）与 `anchor_quorum_lost`（`quorum_size` / `available`）；`cluster_epoch`（uint64）所有权栅栏；`NWP-ANCHOR-NOT-LEADER`、`NWP-ANCHOR-EPOCH-FENCED`。单 Anchor 集群保持 epoch 1。**0.19（CR-0010）**：Bridge Node 双向化 —— Outbound + Inbound 两组 MUST 列表，MCP 入站 MUST 同时服务 `resources/*` 与 `tools/*`；§16 拆为出站（§16.1.1）/ 入站（§16.1.2）profile + 方向声明（§16.2）+ 错误映射表（§16.3）；`compat/*-ingress` 并入 `NPS.NWP.Bridge`；`NWP-BRIDGE-DIRECTION-UNSUPPORTED`。**0.20**：§16.5 **可移植 Node/Bridge server profile** + 跨语言共享向量 —— 标准化 HTTP/原生准入、角色分派、canonical/legacy MIME 处理、有限 body 上限 |
+| **NIP** | v0.12 + v0.13 | **0.12**：§7.5 **Phase-3 强制模式** —— 接收侧 `phase3_enforcement` 开关，把 Phase 1–2 的可选 CA 证明检查（assurance / `node_roles` / capabilities / OCSP staple）转为硬性 MUST；子集检查，仅在对应证书扩展存在时生效；`NIP-CERT-CAPABILITIES-EXCEEDED`。**0.13**：§7.6 **可移植 CA 与验证 profile** —— 确定性的验证/来源顺序、`if_configured` 与 fail-closed `required` 吊销模式、签名的确定性 CRL 语义、完整 CA-store 枚举、带认证的 `GET /v1/certificates` |
+| **NDP** | v0.10 + v0.11 + v0.12 | **0.10（CR-0009）**：AnnounceFrame 新增 `cluster_epoch`（uint64，默认 1）；§9 最高 epoch 解析，同 epoch 脑裂 → `NDP-CLUSTER-SPLIT`；联邦传播 `(cluster_anchor, cluster_epoch, active_nid)`。**0.11（CR-0010）**：`bridge_inbound_protocols`；声明 `"bridge"` 的节点两数组 MUST 至少一非空。**0.12**：**Registry Conformance profile** —— 新增 `graph_seq` wire 字段 + 兼容行为；确定性签名体 canonicalization；有序的 signature/profile/replay/conflict/staleness 检查 |
+| **NOP** | v0.8 + v0.9 | **0.8（CR-0009）**：`DelegateFrame.target_cluster_anchor` MUST 解析到集群当前活跃 Anchor（最高 `cluster_epoch`）；`anchor_failover` 时在途委托 MUST 在重试前重解析到 `successor_nid`；§8 租约续约语义规范化（`NOP-CLAIM-CONFLICT`）。**0.9**：**可移植 orchestrator profile** —— 确定性 DAG preflight 与合规调度；单次求值的 condition/input mapping；retry / timeout / cancellation / K-of-N / aggregate 规则 |
+| **实现修复** | —— | **NOP 帧 wire key** 在 Go / Rust / TS / Java 对齐 NPS-5：`DelegateFrame` `task_id`→`parent_task_id`、`target_nid`\|`agent_nid`→`target_agent_nid`；`SyncFrame` `subtask_ids`→`wait_for`；`AlignStream` `sync_id`→`stream_id`、`source_nid`→`sender_nid`。纯合规修复；TS/Java 保留旧键解码回退 |
+| **共享** | error-codes v1.8 · frame-registry v0.14 | CR-0009 的五个错误码（`NWP-ANCHOR-NOT-LEADER`、`NWP-ANCHOR-EPOCH-FENCED`、`NWP-BRIDGE-DIRECTION-UNSUPPORTED`、`NDP-CLUSTER-SPLIT`、`NIP-CERT-CAPABILITIES-EXCEEDED`）加上 profile 波的新增 |
 
-**Daemons** —— 本周期建设最少的一块：`nps-registry` 需要 CR-0009 最高 epoch 解析 + `NDP-CLUSTER-SPLIT`（未建）；`nps-ingress` 需要完整 `TC-N2-*` L2 向量 + 新的 `TC-N2-HA-*` 多 Anchor 向量（未建）；`nps-runner` 需要 `SpawnSpec` OCI 镜像解析 + 租约续约边界情况。
+**Daemons** —— ✅ `nps-registry` 已实现 CR-0009 最高 epoch 解析 + `NDP-CLUSTER-SPLIT`。仍待后续：`nps-ingress` 的完整 `TC-N2-*` / `TC-N2-HA-*` L2 向量覆盖；`nps-runner` 的 `SpawnSpec` OCI 镜像解析 + 租约续约边界情况。
 
 **不在范围内（→ beta.1）**：NIP Phase-3 **flag day** 本身（把强制变为默认 MUST）；多区域 NPS Cloud CA（Phase 3）；超出合规向量的 QUIC 生产级加固。
 

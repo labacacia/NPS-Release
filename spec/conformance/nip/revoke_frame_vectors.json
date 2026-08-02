@@ -112,7 +112,7 @@
     },
     {
       "id": "nip.revoke.006",
-      "description": "Negative: `signer_nid` is not the issuing CA of `target_nid`, not an operator under that CA, and not the CA that issued any claimed `parent_nid`. R2 of the §7 inbound flow MUST reject with NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER. A third party MUST NOT be able to forge revocations.",
+      "description": "Negative: `signer_nid` is not the issuing CA of `target_nid`, not an authorised delegated agent under that CA, and not the CA that issued any claimed `parent_nid`. R2 of the §7 inbound flow MUST reject with NIP-REVOKE-FRAME-UNAUTHORIZED-ISSUER. A third party MUST NOT be able to forge revocations.",
       "kind": "negative",
       "input": {
         "revoke_frame": {
@@ -132,7 +132,7 @@
     },
     {
       "id": "nip.revoke.007",
-      "description": "Positive: `signer_nid` is an operator NID under the issuing CA, holding the `nip:revoke` capability per §5.3. Receiver MUST admit the revocation at R2. This is the delegated-revocation path used by CA operations teams.",
+      "description": "Positive: `signer_nid` is an agent NID under the issuing CA's domain, recognised by policy as an operator/delegated signer, and holding the `nip:revoke` capability per §5.3. Receiver MUST admit the revocation at R2. This is the delegated-revocation path used by CA operations teams.",
       "kind": "positive",
       "input": {
         "revoke_frame": {
@@ -140,7 +140,7 @@
           "target_nid": "urn:nps:agent:ca.innolotus.com:550e8400",
           "reason": "key_compromise",
           "revoked_at": "2026-04-10T12:00:00Z",
-          "signer_nid": "urn:nps:operator:ca.innolotus.com:revoker-1",
+          "signer_nid": "urn:nps:agent:ca.innolotus.com:revoker-1",
           "signature": "ed25519:validsigplaceholderforotherwisecorrectframe"
         },
         "operator_capabilities": ["nip:revoke"],
@@ -148,7 +148,7 @@
       },
       "expected": {
         "signer_authorised": true,
-        "delegation_path": "operator under target's issuing CA holding nip:revoke"
+        "delegation_path": "delegated agent under target's issuing CA holding nip:revoke"
       }
     },
     {

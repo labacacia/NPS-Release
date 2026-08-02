@@ -1,0 +1,141 @@
+{
+  "name": "ncp-binary-vector-payload",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-1-NCP.md §8.1",
+  "description": "Tier-3 BinaryVector v1 payload fixtures. Payload layout: magic NPBV, version=1, flags=0, vector_count:uint16_be, metadata_len:uint32_be, reserved:uint32_be=0, MessagePack metadata map, then repeated dim:uint32_be plus little-endian float32 vector data.",
+  "vectors": [
+    {
+      "id": "ncp.binary_vector.001",
+      "description": "Positive: NWP QueryFrame vector_search.vector encoded as a BinaryVector v1 segment. Metadata preserves anchor_ref, limit, and vector_search fields; vector marker references segment 0.",
+      "kind": "positive",
+      "input": {
+        "frame_type": 16,
+        "tier": "binary_vector.v1",
+        "payload_hex": "4e50425601000001000000bf0000000083aa616e63686f725f726566d9477368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161a56c696d697403ad766563746f725f73656172636884a56669656c64a9656d62656464696e67a6766563746f7283b2246e70735f62696e6172795f766563746f7200a56474797065a7666c6f61743332a364696d03a5746f705f6b02a66d6574726963a6636f73696e65000000030000803e0000c0bf00004040"
+      },
+      "expected": {
+        "magic": "NPBV",
+        "version": 1,
+        "vector_count": 1,
+        "metadata_len": 191,
+        "metadata": {
+          "anchor_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "limit": 3,
+          "vector_search": {
+            "field": "embedding",
+            "vector": {
+              "$nps_binary_vector": 0,
+              "dtype": "float32",
+              "dim": 3
+            },
+            "top_k": 2,
+            "metric": "cosine"
+          }
+        },
+        "vectors": [
+          [0.25, -1.5, 3.0]
+        ],
+        "decoded_frame": {
+          "anchor_ref": "sha256:aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+          "limit": 3,
+          "vector_search": {
+            "field": "embedding",
+            "vector": [0.25, -1.5, 3.0],
+            "top_k": 2,
+            "metric": "cosine"
+          }
+        }
+      }
+    },
+    {
+      "id": "ncp.binary_vector.002",
+      "description": "Negative: payload magic is not NPBV.",
+      "kind": "negative",
+      "input": {
+        "frame_type": 16,
+        "tier": "binary_vector.v1",
+        "payload_hex": "4241442101000001000000bf0000000083aa616e63686f725f726566d9477368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161a56c696d697403ad766563746f725f73656172636884a56669656c64a9656d62656464696e67a6766563746f7283b2246e70735f62696e6172795f766563746f7200a56474797065a7666c6f61743332a364696d03a5746f705f6b02a66d6574726963a6636f73696e65000000030000803e0000c0bf00004040"
+      },
+      "expected": {
+        "error": "NCP-BINARY-VECTOR-MALFORMED",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "reason": "magic_mismatch"
+      }
+    },
+    {
+      "id": "ncp.binary_vector.003",
+      "description": "Negative: v1 payload flags byte is non-zero.",
+      "kind": "negative",
+      "input": {
+        "frame_type": 16,
+        "tier": "binary_vector.v1",
+        "payload_hex": "4e50425601010001000000bf0000000083aa616e63686f725f726566d9477368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161a56c696d697403ad766563746f725f73656172636884a56669656c64a9656d62656464696e67a6766563746f7283b2246e70735f62696e6172795f766563746f7200a56474797065a7666c6f61743332a364696d03a5746f705f6b02a66d6574726963a6636f73696e65000000030000803e0000c0bf00004040"
+      },
+      "expected": {
+        "error": "NCP-BINARY-VECTOR-MALFORMED",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "reason": "reserved_flags_nonzero"
+      }
+    },
+    {
+      "id": "ncp.binary_vector.004",
+      "description": "Negative: marker dimension does not match the referenced vector segment dimension.",
+      "kind": "negative",
+      "input": {
+        "frame_type": 16,
+        "tier": "binary_vector.v1",
+        "payload_hex": "4e50425601000001000000bf0000000083aa616e63686f725f726566d9477368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161a56c696d697403ad766563746f725f73656172636884a56669656c64a9656d62656464696e67a6766563746f7283b2246e70735f62696e6172795f766563746f7200a56474797065a7666c6f61743332a364696d04a5746f705f6b02a66d6574726963a6636f73696e65000000030000803e0000c0bf00004040"
+      },
+      "expected": {
+        "error": "NCP-BINARY-VECTOR-DIM-MISMATCH",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "reason": "marker_dim_mismatch"
+      }
+    },
+    {
+      "id": "ncp.binary_vector.005",
+      "description": "Negative: marker references vector segment index 1, but vector_count is 1.",
+      "kind": "negative",
+      "input": {
+        "frame_type": 16,
+        "tier": "binary_vector.v1",
+        "payload_hex": "4e50425601000001000000bf0000000083aa616e63686f725f726566d9477368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161a56c696d697403ad766563746f725f73656172636884a56669656c64a9656d62656464696e67a6766563746f7283b2246e70735f62696e6172795f766563746f7201a56474797065a7666c6f61743332a364696d03a5746f705f6b02a66d6574726963a6636f73696e65000000030000803e0000c0bf00004040"
+      },
+      "expected": {
+        "error": "NCP-BINARY-VECTOR-INDEX-INVALID",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "reason": "marker_index_out_of_range"
+      }
+    },
+    {
+      "id": "ncp.binary_vector.006",
+      "description": "Negative: marker dtype is float16; BinaryVector v1 only supports dtype=float32.",
+      "kind": "negative",
+      "input": {
+        "frame_type": 16,
+        "tier": "binary_vector.v1",
+        "payload_hex": "4e50425601000001000000bf0000000083aa616e63686f725f726566d9477368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161a56c696d697403ad766563746f725f73656172636884a56669656c64a9656d62656464696e67a6766563746f7283b2246e70735f62696e6172795f766563746f7200a56474797065a7666c6f61743136a364696d03a5746f705f6b02a66d6574726963a6636f73696e65000000030000803e0000c0bf00004040"
+      },
+      "expected": {
+        "error": "NCP-BINARY-VECTOR-DTYPE-UNSUPPORTED",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "reason": "unsupported_dtype"
+      }
+    },
+    {
+      "id": "ncp.binary_vector.007",
+      "description": "Negative: vector segment is truncated; marker declares dim=3 but payload carries only two float32 values.",
+      "kind": "negative",
+      "input": {
+        "frame_type": 16,
+        "tier": "binary_vector.v1",
+        "payload_hex": "4e50425601000001000000bf0000000083aa616e63686f725f726566d9477368613235363a61616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161616161a56c696d697403ad766563746f725f73656172636884a56669656c64a9656d62656464696e67a6766563746f7283b2246e70735f62696e6172795f766563746f7200a56474797065a7666c6f61743332a364696d03a5746f705f6b02a66d6574726963a6636f73696e65000000030000803e0000c0bf"
+      },
+      "expected": {
+        "error": "NCP-BINARY-VECTOR-TRUNCATED",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "reason": "truncated_vector_segment"
+      }
+    }
+  ]
+}

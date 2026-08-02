@@ -1,0 +1,200 @@
+{
+  "name": "nip-revocation-policy",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-3-NIP.md §7.6",
+  "description": "Deterministic Step-4 live revocation policy. Sources are presented in configured order and a runner must stop at the first rejecting outcome. `required` rejects when no source is configured; only OCSP unavailability may use the explicit fail-open compatibility switch.",
+  "vectors": [
+    {
+      "id": "nip.revocation_policy.001",
+      "description": "Compatibility mode continues when no revocation source is configured.",
+      "kind": "positive",
+      "input": {
+        "revocation_mode": "if_configured",
+        "ocsp_fail_open": false,
+        "sources": []
+      },
+      "expected": {
+        "valid": true,
+        "consulted_sources": []
+      }
+    },
+    {
+      "id": "nip.revocation_policy.002",
+      "description": "Required mode fails closed when no revocation source is configured.",
+      "kind": "negative",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": false,
+        "sources": []
+      },
+      "expected": {
+        "valid": false,
+        "failed_step": 4,
+        "error": "NIP-OCSP-UNAVAILABLE",
+        "consulted_sources": []
+      }
+    },
+    {
+      "id": "nip.revocation_policy.003",
+      "description": "A local CRL hit rejects immediately.",
+      "kind": "negative",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": false,
+        "sources": [
+          { "source": "local_crl", "outcome": "revoked" }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "failed_step": 4,
+        "error": "NIP-CERT-REVOKED",
+        "consulted_sources": ["local_crl"]
+      }
+    },
+    {
+      "id": "nip.revocation_policy.004",
+      "description": "A clear local CRL is followed by a configured callback, whose revoked result rejects.",
+      "kind": "negative",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": false,
+        "sources": [
+          { "source": "local_crl", "outcome": "good" },
+          { "source": "callback", "outcome": "revoked" }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "failed_step": 4,
+        "error": "NIP-CERT-REVOKED",
+        "consulted_sources": ["local_crl", "callback"]
+      }
+    },
+    {
+      "id": "nip.revocation_policy.005",
+      "description": "Configured sources are consulted in local, callback, store order and a store hit rejects.",
+      "kind": "negative",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": false,
+        "sources": [
+          { "source": "local_crl", "outcome": "good" },
+          { "source": "callback", "outcome": "good" },
+          { "source": "ca_store", "outcome": "revoked" }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "failed_step": 4,
+        "error": "NIP-CERT-REVOKED",
+        "consulted_sources": ["local_crl", "callback", "ca_store"]
+      }
+    },
+    {
+      "id": "nip.revocation_policy.006",
+      "description": "A current configured local CRL satisfies required mode when the serial is clear.",
+      "kind": "positive",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": false,
+        "sources": [
+          { "source": "local_crl", "outcome": "good" }
+        ]
+      },
+      "expected": {
+        "valid": true,
+        "consulted_sources": ["local_crl"]
+      }
+    },
+    {
+      "id": "nip.revocation_policy.007",
+      "description": "A CA-store exception fails closed and is not covered by the OCSP escape hatch.",
+      "kind": "negative",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": true,
+        "sources": [
+          { "source": "ca_store", "outcome": "unavailable" }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "failed_step": 4,
+        "error": "NIP-OCSP-UNAVAILABLE",
+        "consulted_sources": ["ca_store"]
+      }
+    },
+    {
+      "id": "nip.revocation_policy.008",
+      "description": "OCSP transport failure uses the secure fail-closed default.",
+      "kind": "negative",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": false,
+        "sources": [
+          { "source": "ocsp", "outcome": "unavailable" }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "failed_step": 4,
+        "error": "NIP-OCSP-UNAVAILABLE",
+        "consulted_sources": ["ocsp"]
+      }
+    },
+    {
+      "id": "nip.revocation_policy.009",
+      "description": "The explicit OCSP compatibility escape may continue after OCSP unavailability.",
+      "kind": "positive",
+      "input": {
+        "revocation_mode": "if_configured",
+        "ocsp_fail_open": true,
+        "sources": [
+          { "source": "ocsp", "outcome": "unavailable" }
+        ]
+      },
+      "expected": {
+        "valid": true,
+        "consulted_sources": ["ocsp"]
+      }
+    },
+    {
+      "id": "nip.revocation_policy.010",
+      "description": "Revocation short-circuits later configured online sources.",
+      "kind": "negative",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": false,
+        "sources": [
+          { "source": "local_crl", "outcome": "revoked" },
+          { "source": "callback", "outcome": "good" },
+          { "source": "ca_store", "outcome": "good" },
+          { "source": "ocsp", "outcome": "good" }
+        ]
+      },
+      "expected": {
+        "valid": false,
+        "failed_step": 4,
+        "error": "NIP-CERT-REVOKED",
+        "consulted_sources": ["local_crl"]
+      }
+    },
+    {
+      "id": "nip.revocation_policy.011",
+      "description": "A valid OCSP response satisfies required mode.",
+      "kind": "positive",
+      "input": {
+        "revocation_mode": "required",
+        "ocsp_fail_open": false,
+        "sources": [
+          { "source": "ocsp", "outcome": "good" }
+        ]
+      },
+      "expected": {
+        "valid": true,
+        "consulted_sources": ["ocsp"]
+      }
+    }
+  ]
+}

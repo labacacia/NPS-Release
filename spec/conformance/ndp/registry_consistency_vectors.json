@@ -1,0 +1,576 @@
+{
+  "name": "ndp-registry-consistency",
+  "version": "0.12.0",
+  "spec_ref": "spec/NPS-4-NDP.md §3.2.1, §7.3-§7.5, §9",
+  "description": "Independent NDP 0.12 registry transcripts. Each vector starts with an empty registry, applies announce steps in order, then evaluates the requested live-state, cluster, and Bridge discovery assertions at input.now.",
+  "vectors": [
+    {
+      "id": "ndp.registry.001",
+      "description": "A fresh signed announcement is accepted.",
+      "kind": "positive",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "capabilities": ["nwp:query"],
+              "node_roles": ["memory"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["accepted"],
+        "errors": [null],
+        "live_nids": ["urn:nps:node:api.test:a"],
+        "highest_sequences": {"urn:nps:node:api.test:a": 1}
+      }
+    },
+    {
+      "id": "ndp.registry.002",
+      "description": "A byte-equivalent retransmission is suppressed without becoming rollback.",
+      "kind": "positive",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "capabilities": ["nwp:query"],
+              "node_roles": ["memory"]
+            }
+          },
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "capabilities": ["nwp:query"],
+              "node_roles": ["memory"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["accepted", "duplicate"],
+        "errors": [null, null],
+        "live_nids": ["urn:nps:node:api.test:a"],
+        "highest_sequences": {"urn:nps:node:api.test:a": 1}
+      }
+    },
+    {
+      "id": "ndp.registry.003",
+      "description": "A same-sequence announcement with changed signed content is rejected as conflict.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 2,
+              "capabilities": ["nwp:query"],
+              "node_roles": ["memory"]
+            }
+          },
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 2,
+              "capabilities": ["nwp:action"],
+              "node_roles": ["action"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["accepted", "rejected"],
+        "errors": [null, "NDP-ANNOUNCE-CONFLICT"],
+        "live_nids": ["urn:nps:node:api.test:a"],
+        "highest_sequences": {"urn:nps:node:api.test:a": 2}
+      }
+    },
+    {
+      "id": "ndp.registry.004",
+      "description": "A lower sequence is rejected as rollback and cannot replace current state.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 4,
+              "capabilities": ["nwp:query"]
+            }
+          },
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:40Z",
+              "ttl": 120,
+              "graph_seq": 3,
+              "capabilities": ["nwp:query"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["accepted", "rejected"],
+        "errors": [null, "NDP-GRAPH-SEQ-ROLLBACK"],
+        "live_nids": ["urn:nps:node:api.test:a"],
+        "highest_sequences": {"urn:nps:node:api.test:a": 4}
+      }
+    },
+    {
+      "id": "ndp.registry.005",
+      "description": "An invalid signature is rejected before sequence or registry mutation.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": false,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 99,
+              "capabilities": ["nwp:query"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["rejected"],
+        "errors": ["NDP-ANNOUNCE-SIGNATURE-INVALID"],
+        "live_nids": [],
+        "highest_sequences": {}
+      }
+    },
+    {
+      "id": "ndp.registry.006",
+      "description": "An announcement already beyond its TTL is rejected as stale.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:03:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:00Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "capabilities": ["nwp:query"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["rejected"],
+        "errors": ["NDP-ANNOUNCE-STALE"],
+        "live_nids": [],
+        "highest_sequences": {}
+      }
+    },
+    {
+      "id": "ndp.registry.007",
+      "description": "A changed last_seen refreshes liveness at the same signed sequence.",
+      "kind": "positive",
+      "input": {
+        "now": "2026-07-29T12:02:10Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:00Z",
+              "last_seen": "2026-07-29T12:01:00Z",
+              "health": "healthy",
+              "ttl": 120,
+              "graph_seq": 5,
+              "capabilities": ["nwp:query"]
+            }
+          },
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:00Z",
+              "last_seen": "2026-07-29T12:02:00Z",
+              "health": "degraded",
+              "ttl": 120,
+              "graph_seq": 5,
+              "capabilities": ["nwp:query"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["accepted", "refreshed"],
+        "errors": [null, null],
+        "live_nids": ["urn:nps:node:api.test:a"],
+        "highest_sequences": {"urn:nps:node:api.test:a": 5}
+      }
+    },
+    {
+      "id": "ndp.registry.008",
+      "description": "A higher-sequence TTL zero announcement removes the entry while retaining the replay fence.",
+      "kind": "positive",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 8,
+              "capabilities": ["nwp:query"]
+            }
+          },
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:50Z",
+              "ttl": 0,
+              "graph_seq": 9,
+              "capabilities": ["nwp:query"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["accepted", "removed"],
+        "errors": [null, null],
+        "live_nids": [],
+        "highest_sequences": {"urn:nps:node:api.test:a": 9}
+      }
+    },
+    {
+      "id": "ndp.registry.009",
+      "description": "Resolve-time expiry uses last_seen plus TTL rather than local receipt time.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:04:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "received_at": "2026-07-29T12:01:00Z",
+            "frame": {
+              "nid": "urn:nps:node:api.test:a",
+              "timestamp": "2026-07-29T12:00:00Z",
+              "last_seen": "2026-07-29T12:01:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "capabilities": ["nwp:query"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["accepted"],
+        "errors": [null],
+        "live_nids": [],
+        "highest_sequences": {"urn:nps:node:api.test:a": 1},
+        "resolve_error": "NDP-RESOLVE-STALE"
+      }
+    },
+    {
+      "id": "ndp.registry.010",
+      "description": "Cluster resolution chooses the single live Anchor at the highest epoch.",
+      "kind": "positive",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:anchor-a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "node_roles": ["anchor"],
+              "cluster_anchor": "urn:nps:cluster:api.test:main",
+              "cluster_epoch": 2
+            }
+          },
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:anchor-b",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "node_roles": ["anchor"],
+              "cluster_anchor": "urn:nps:cluster:api.test:main",
+              "cluster_epoch": 3
+            }
+          }
+        ],
+        "cluster_query": "urn:nps:cluster:api.test:main"
+      },
+      "expected": {
+        "decisions": ["accepted", "accepted"],
+        "errors": [null, null],
+        "live_nids": [
+          "urn:nps:node:api.test:anchor-a",
+          "urn:nps:node:api.test:anchor-b"
+        ],
+        "highest_sequences": {
+          "urn:nps:node:api.test:anchor-a": 1,
+          "urn:nps:node:api.test:anchor-b": 1
+        },
+        "selected_nid": "urn:nps:node:api.test:anchor-b",
+        "selected_epoch": 3
+      }
+    },
+    {
+      "id": "ndp.registry.011",
+      "description": "Two live Anchors at the top epoch produce a split-brain error.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:anchor-a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "node_roles": ["anchor"],
+              "cluster_anchor": "urn:nps:cluster:api.test:main",
+              "cluster_epoch": 4
+            }
+          },
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:anchor-b",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "node_roles": ["anchor"],
+              "cluster_anchor": "urn:nps:cluster:api.test:main",
+              "cluster_epoch": 4
+            }
+          }
+        ],
+        "cluster_query": "urn:nps:cluster:api.test:main"
+      },
+      "expected": {
+        "decisions": ["accepted", "accepted"],
+        "errors": [null, null],
+        "live_nids": [
+          "urn:nps:node:api.test:anchor-a",
+          "urn:nps:node:api.test:anchor-b"
+        ],
+        "highest_sequences": {
+          "urn:nps:node:api.test:anchor-a": 1,
+          "urn:nps:node:api.test:anchor-b": 1
+        },
+        "cluster_error": "NDP-CLUSTER-SPLIT"
+      }
+    },
+    {
+      "id": "ndp.registry.012",
+      "description": "Bridge discovery separates inbound and outbound protocol claims and sorts candidates by NID.",
+      "kind": "positive",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:bridge-b",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "node_roles": ["bridge"],
+              "bridge_protocols": ["mcp"],
+              "bridge_inbound_protocols": ["a2a"]
+            }
+          },
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:bridge-a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "node_roles": ["bridge"],
+              "bridge_protocols": ["a2a"],
+              "bridge_inbound_protocols": ["mcp"]
+            }
+          }
+        ],
+        "bridge_queries": [
+          {"direction": "inbound", "protocol": "mcp"},
+          {"direction": "outbound", "protocol": "mcp"}
+        ]
+      },
+      "expected": {
+        "decisions": ["accepted", "accepted"],
+        "errors": [null, null],
+        "live_nids": [
+          "urn:nps:node:api.test:bridge-a",
+          "urn:nps:node:api.test:bridge-b"
+        ],
+        "highest_sequences": {
+          "urn:nps:node:api.test:bridge-a": 1,
+          "urn:nps:node:api.test:bridge-b": 1
+        },
+        "bridge_results": [
+          ["urn:nps:node:api.test:bridge-a"],
+          ["urn:nps:node:api.test:bridge-b"]
+        ]
+      }
+    },
+    {
+      "id": "ndp.registry.013",
+      "description": "A Bridge role with neither inbound nor outbound protocols violates the portable profile.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:bridge-a",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "node_roles": ["bridge"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["rejected"],
+        "errors": ["NDP-ANNOUNCE-PROFILE-VIOLATION"],
+        "live_nids": [],
+        "highest_sequences": {}
+      }
+    },
+    {
+      "id": "ndp.registry.014",
+      "description": "A present graph_seq with a non-integer value is a profile violation and is not the local-dev missing-field compatibility case.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "org-private",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:fractional-sequence",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1.5,
+              "capabilities": ["nwp:query"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["rejected"],
+        "errors": ["NDP-ANNOUNCE-PROFILE-VIOLATION"],
+        "live_nids": [],
+        "highest_sequences": {}
+      }
+    },
+    {
+      "id": "ndp.registry.015",
+      "description": "ttl is a required uint32 and a numeric string cannot be interpreted as an offline or live announcement.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:string-ttl",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": "120",
+              "graph_seq": 1,
+              "capabilities": ["nwp:query"]
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["rejected"],
+        "errors": ["NDP-ANNOUNCE-PROFILE-VIOLATION"],
+        "live_nids": [],
+        "highest_sequences": {}
+      }
+    },
+    {
+      "id": "ndp.registry.016",
+      "description": "Bridge protocol declarations must be arrays of non-empty strings rather than scalar strings.",
+      "kind": "negative",
+      "input": {
+        "now": "2026-07-29T12:01:00Z",
+        "profile": "local-dev",
+        "announces": [
+          {
+            "signature_valid": true,
+            "frame": {
+              "nid": "urn:nps:node:api.test:bridge-scalar",
+              "timestamp": "2026-07-29T12:00:30Z",
+              "ttl": 120,
+              "graph_seq": 1,
+              "node_roles": ["bridge"],
+              "bridge_protocols": "mcp"
+            }
+          }
+        ]
+      },
+      "expected": {
+        "decisions": ["rejected"],
+        "errors": ["NDP-ANNOUNCE-PROFILE-VIOLATION"],
+        "live_nids": [],
+        "highest_sequences": {}
+      }
+    }
+  ]
+}

@@ -2,7 +2,7 @@
   "name": "ncp-hello-caps",
   "version": "0.1.0",
   "spec_ref": "spec/NPS-1-NCP.md §4.4, §4.6",
-  "description": "Native-mode capability negotiation: client sends HelloFrame (0x06) declaring its versions and capabilities; server responds with a connection-negotiation CapsFrame (0x04) carrying the intersection. Vectors cover the three deterministic negotiation rules: NPS version = min(client.nps_version, server.nps_version); encoding = first client preference also in server.supported; max_frame_payload = min(client, server). Unsupported version overlap → ErrorFrame.",
+  "description": "Native-mode capability negotiation: client sends HelloFrame (0x06) declaring its versions and capabilities; server responds with a connection-negotiation CapsFrame (0x04) carrying the intersection. Vectors cover deterministic negotiation rules: NPS version = min(client.nps_version, server.nps_version); default encoding = first stable client preference (msgpack/json) also in server.supported; optional encodings such as binary_vector.v1 are enabled extensions; max_frame_payload = min(client, server). Unsupported version overlap → ErrorFrame.",
   "vectors": [
     {
       "id": "ncp.hello_caps.001",
@@ -40,6 +40,7 @@
             "session_version": "0.4",
             "max_frame_payload": 65535,
             "negotiated_encoding": "msgpack",
+            "enabled_encodings": ["msgpack"],
             "supported_protocols": ["ncp", "nwp", "nip"],
             "ext_support": true,
             "max_concurrent_streams": 32
@@ -80,6 +81,7 @@
             "session_version": "0.3",
             "max_frame_payload": 32768,
             "negotiated_encoding": "json",
+            "enabled_encodings": ["json"],
             "supported_protocols": ["ncp", "nwp"],
             "ext_support": false,
             "max_concurrent_streams": 32
@@ -118,6 +120,7 @@
             "session_version": "0.4",
             "max_frame_payload": 65535,
             "negotiated_encoding": "json",
+            "enabled_encodings": ["json"],
             "supported_protocols": ["ncp", "nwp"],
             "ext_support": true,
             "max_concurrent_streams": 32
@@ -174,6 +177,45 @@
           "frame": "0xFE",
           "status": "NPS-SERVER-ENCODING-UNSUPPORTED",
           "error": "NCP-ENCODING-UNSUPPORTED"
+        }
+      }
+    },
+    {
+      "id": "ncp.hello_caps.006",
+      "description": "BinaryVector extension: client lists binary_vector.v1 before msgpack, and server supports both. Stable default remains msgpack; binary_vector.v1 is enabled as a policy extension for bound frame classes.",
+      "kind": "positive",
+      "input": {
+        "client_hello": {
+          "frame": "0x06",
+          "nps_version": "0.9",
+          "supported_encodings": ["binary_vector.v1", "msgpack", "json"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 65535,
+          "ext_support": true
+        },
+        "server_caps": {
+          "nps_version": "0.9",
+          "supported_encodings": ["binary_vector.v1", "msgpack", "json"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 65535,
+          "ext_support": true
+        }
+      },
+      "expected": {
+        "caps_frame": {
+          "frame": "0x04",
+          "anchor_ref": "nps:system:caps",
+          "count": 1,
+          "data": [{
+            "nps_version": "0.9",
+            "session_version": "0.9",
+            "max_frame_payload": 65535,
+            "negotiated_encoding": "msgpack",
+            "enabled_encodings": ["msgpack", "binary_vector.v1"],
+            "supported_protocols": ["ncp", "nwp"],
+            "ext_support": true,
+            "max_concurrent_streams": 32
+          }]
         }
       }
     }

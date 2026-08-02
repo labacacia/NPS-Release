@@ -28,24 +28,41 @@ spec/conformance/
 ├── README.md                            # this file — vector format + consumption rules
 ├── ncp/
 │   ├── anchor_id_vectors.json           # AnchorFrame anchor_id (RFC 8785 JCS + SHA-256)
+│   ├── binary_vector_payload_vectors.json # Tier-3 BinaryVector v1 payload layout + malformed-payload cases
+│   ├── encoding_policy_vectors.json     # Negotiated encoding policy + unnegotiated Tier-3 rejection
 │   ├── frame_header_vectors.json        # 4-byte / 8-byte fixed header encode + decode
-│   └── hello_caps_vectors.json          # HelloFrame ↔ CapsFrame capability negotiation
+│   ├── hello_caps_vectors.json          # HelloFrame ↔ CapsFrame capability negotiation
+│   └── native_server_handshake_vectors.json # Native admission, bounds, and deterministic negotiation
 ├── nip/
 │   ├── ident_signature_vectors.json     # IdentFrame Ed25519 signature canonical form
-│   └── scope_matching_vectors.json      # NID scope.nodes glob match (positive + negative)
+│   ├── revocation_policy_vectors.json   # Ordered live-revocation and fail-open/closed policy
+│   ├── scope_matching_vectors.json      # NID scope.nodes glob match (positive + negative)
+│   └── signed_crl_vectors.json           # Deterministic signed CA revocation artifacts
 ├── nwp/
 │   ├── filter_dsl_vectors.json          # QueryFrame filter DSL parse + evaluate
 │   ├── action_frame_vectors.json        # ActionFrame: idempotency, async lifecycle, system.task.*, callback_url
 │   ├── subscribe_frame_vectors.json     # SubscribeFrame: seq monotonicity, cursor, SSE wire, topology.stream events
-│   └── query_frame_aggregation_vectors.json  # QueryFrame aggregation + topology.snapshot shape
+│   ├── query_frame_aggregation_vectors.json  # QueryFrame aggregation + topology.snapshot shape
+│   ├── portable_node_server_vectors.json # HTTP/native Node admission and dispatch profile
+│   └── bridge_lifecycle_vectors.json     # Bridge preflight, SSRF, deadline, cancellation, correlation
 ├── ndp/
-│   └── (reserved — Phase 2)
+│   ├── announce_canonicalization_vectors.json # Announce signed body + Ed25519 verification
+│   └── registry_consistency_vectors.json      # Registry convergence, expiry, epoch, and Bridge discovery
 └── nop/
-    └── dag_validation_vectors.json      # DAG cycle detection + max-node + chain-depth
+    ├── dag_validation_vectors.json      # DAG cycle detection + max-node + chain-depth
+    ├── orchestrator_transcripts.json    # Deterministic DAG/retry/aggregation/saga sessions
+    └── runtime_security_vectors.json    # Callback, lease, delegation, SpawnSpec, lifecycle
 ```
 
-`ndp/` is reserved for Phase 2 (Announce / Query frame vectors land with the
-NDP federation work; see `spec/NPS-Roadmap.md`).
+`ndp/` carries the NDP 0.12 Registry Conformance profile. Its transcript
+vectors begin with an empty registry and assert deterministic admission
+decisions, replay fences, live contents, cluster resolution, and Bridge
+capability discovery.
+
+`nop/` carries the NOP 0.9 Orchestrator Conformance profile. Its transcripts
+assert deterministic event order and terminal results, while the runtime
+vectors cover fail-closed callback validation, HMAC, Anchor re-resolution,
+scope carving, leases, SpawnSpec validation, lifecycle limits, and dedup keys.
 
 ## Vector file format
 

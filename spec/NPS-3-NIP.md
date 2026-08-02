@@ -4,11 +4,11 @@ English | [中文版](./NPS-3-NIP.cn.md)
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.11
-**Date**: 2026-05-11
+**Version**: 0.13
+**Date**: 2026-07-23
 **Port**: 17433 (default, shared) / 17435 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)
+**Depends-On**: NPS-1 (NCP v0.11)
 
 ---
 
@@ -571,6 +571,125 @@ Node receives RevokeFrame (push channel)
 
 After R5 takes effect, any subsequent IdentFrame for `target_nid` (or for the specific `serial` if scoped) will fail step 4 of the IdentFrame verification flow above with `NIP-CERT-REVOKED`.
 
+### 7.5 Phase-3 enforcement mode (NIP v0.11)
+
+The CA-attestation checks that become mandatory at the Phase-3 flag day
+(`v1.0.0-beta.1`, NPS-RFC-0003 §8.1) are gated on a single receiver-side
+verification-policy flag, **`phase3_enforcement`**, so a deployment MAY opt into the
+stricter behaviour **ahead of** the flag day — making the flag day a configuration
+default change rather than a code change.
+
+- **Phase 1–2 (current)** — `phase3_enforcement` defaults to `false`. Receivers SHOULD
+  perform the checks below and MAY reject on failure; while `false`, a check failure is
+  advisory (log / metric) and MUST NOT by itself reject the IdentFrame.
+- **`phase3_enforcement = true`** (opt-in now; the default at the flag day) — a receiver
+  MUST enforce all of the following against an X.509 NID certificate (NPS-RFC-0002).
+  Each check applies **only when the corresponding certificate extension is present**, so
+  a self-declared (Phase-1–2) NID that carries no attestation extensions is unaffected:
+
+  | Check | Requirement | Error code |
+  |-------|-------------|------------|
+  | Assurance | `IdentFrame.assurance_level` equals the `id-nid-assurance-level` extension | `NIP-ASSURANCE-MISMATCH` |
+  | Node roles | every entry in `IdentFrame.node_roles` appears in `id-nps-node-roles` (`65715.2.2`) — no un-attested role | `NIP-CERT-NODE-ROLES-MISMATCH` |
+  | Capabilities | every entry in `IdentFrame.capabilities` appears in `id-nps-capabilities` (`65715.2.3`) — no un-attested capability | `NIP-CERT-CAPABILITIES-EXCEEDED` |
+  | OCSP staple | `IdentFrame.ocsp_staple` is present and unexpired (`nextUpdate` in the future) | `NIP-OCSP-STAPLE-EXPIRED` |
+
+- **Flag day (`v1.0.0-beta.1`)** — `phase3_enforcement` defaults to `true`;
+  `public-federated` deployments (NDP §7) MUST NOT set it to `false`. `local-dev` /
+  `org-private` MAY keep it `false`.
+
+The role and capability checks are **subset** checks (the frame MUST NOT claim more than
+the CA attested); under-claiming is allowed. This closes the self-declaration gap that
+Phase-1–2 leaves open (§5.1, §12.4 of NPS-2) without a wire-format change.
+
+### 7.6 Portable CA and Verification Profile (NIP v0.13)
+
+This profile makes the §7 verifier and the open CA lifecycle deterministic
+across SDKs. The language-neutral
+[`revocation_policy_vectors.json`](conformance/nip/revocation_policy_vectors.json)
+and [`signed_crl_vectors.json`](conformance/nip/signed_crl_vectors.json) cases
+are normative.
+
+**Verification order**
+
+A full verifier MUST evaluate applicable checks in this order and stop at the
+first failure:
+
+1. expiry;
+2. directly trusted issuer or a valid pinned-grantor TrustFrame path;
+3. frame signature, optional X.509 chain, and Phase-3 checks;
+4. parent/group status when lineage is present;
+5. live revocation policy;
+6. required capabilities;
+7. target-node scope.
+
+The public result keeps the existing §7 step numbers: live revocation remains
+step 4, capabilities step 5, and scope step 6.
+
+**Revocation modes**
+
+Receivers MUST expose a `revocation_mode` policy with two values:
+
+- `if_configured` is the alpha compatibility default. With no configured source,
+  verification continues after recording a diagnostic.
+- `required` rejects when no source is configured with
+  `NIP-OCSP-UNAVAILABLE`. Public-federated deployments MUST use this mode.
+
+Configured sources are consulted in the following fixed order:
+
+1. a verified local CRL/cache;
+2. a live revocation callback;
+3. an `INipCaStore`-equivalent lookup by serial;
+4. the CA's advertised OCSP endpoint.
+
+A revoked result stops immediately with `NIP-CERT-REVOKED`. An exception,
+transport failure, non-success HTTP response, or malformed response from a
+configured source fails closed with `NIP-OCSP-UNAVAILABLE`. The existing
+`ocsp_fail_open` compatibility escape applies only to OCSP availability
+failures; it MUST default to `false` and MUST NOT be enabled in
+public-federated deployments. A configured, current local CRL that does not
+contain the serial satisfies `required` mode without an online lookup.
+
+**Portable open CA lifecycle**
+
+- Register MUST reject a duplicate NID and duplicate serial.
+- Renew MUST append a new serial while retaining prior records for audit.
+- Revoke MUST update the current live record and make it observable to live
+  verification and the next CRL response.
+- CA stores MUST support lookup by NID and serial, revoked enumeration, parent
+  enumeration, and full enumeration. Administrative full enumeration is exposed
+  as `GET /v1/certificates` and requires Operator authorization.
+- `/.well-known/nps-ca.endpoints.ocsp` MUST identify a served endpoint. A CA
+  MUST omit an endpoint it does not serve.
+
+`GET /v1/crl` returns a signed JSON artifact:
+
+```json
+{
+  "issued_by": "urn:nps:org:ca.example.com",
+  "issued_at": "2026-07-29T01:00:00Z",
+  "entries": [
+    {
+      "nid": "urn:nps:agent:ca.example.com:agent-001",
+      "serial": "0x0001",
+      "revoked_at": "2026-07-29T00:00:00Z",
+      "reason": "key_compromise"
+    }
+  ],
+  "signature": "ed25519:..."
+}
+```
+
+The signature covers the RFC 8785 canonical JSON object formed by removing
+`signature` and recursively sorting `issued_by`, `issued_at`, and `entries`
+content. Clients MUST verify it with the CA public key from
+`/.well-known/nps-ca` before treating the entries as a local revocation source.
+Entries MUST be emitted in ascending `(revoked_at, serial, nid)` order so the
+same CA state and `issued_at` produce a deterministic artifact body.
+
+This profile adds one administrative HTTP endpoint and no frame field or error
+code.
+
 ---
 
 ## 8. NIP CA Server OSS API
@@ -587,6 +706,7 @@ After R5 takes effect, any subsequent IdentFrame for `target_nid` (or for the sp
 | POST | `/v1/orchestrators/groups/{group_nid}/revoke` | Operator Cert | (NPS-CR-0003) Revoke the group AND cascade-revoke every live session under it |
 | GET | `/v1/orchestrators/groups/{group_nid}/sessions` | Operator Cert | (NPS-CR-0003) List sessions issued under this group (audit) |
 | GET | `/v1/ca/cert` | None | CA public-key certificate |
+| GET | `/v1/certificates` | Operator Cert | Enumerate issued certificate records for audit |
 | GET | `/v1/crl` | None | Certificate revocation list |
 | GET | `/.well-known/nps-ca` | None | CA discovery endpoint |
 
@@ -635,6 +755,7 @@ The three tiers (allowlist / bootstrap token / pending queue), the new error cod
 | `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | Issuer not in the trust list |
 | `NIP-CERT-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Certificate missing a required capability |
 | `NIP-CERT-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | Certificate scope does not cover the target path |
+| `NIP-CERT-CAPABILITIES-EXCEEDED` | `NPS-AUTH-FORBIDDEN` | `IdentFrame.capabilities` claims a capability not present in the CA-attested `id-nps-capabilities` extension; Phase-3 enforcement (NIP v0.12 §7.5) |
 | `NIP-CA-NID-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | NID does not exist |
 | `NIP-CA-NID-ALREADY-EXISTS` | `NPS-CLIENT-CONFLICT` | NID already exists (duplicate registration) |
 | `NIP-CA-SERIAL-DUPLICATE` | `NPS-CLIENT-CONFLICT` | Certificate serial already in use |
@@ -685,6 +806,8 @@ At every link in the delegation chain, scope MUST NOT exceed that of its parent.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.13 | 2026-07-29 | Added §7.6 Portable CA and Verification Profile: deterministic verification/source order, `if_configured` and fail-closed `required` revocation modes, signed deterministic CRL semantics, full CA-store enumeration, and authenticated `GET /v1/certificates`. Added shared revocation-policy and signed-CRL vectors. No new frame field or error code. |
+| 0.12 | 2026-07-23 | New §7.5 **Phase-3 enforcement mode**: a receiver-side `phase3_enforcement` verification-policy flag that turns the Phase-1–2 opt-in CA-attestation checks (assurance / node_roles / capabilities / OCSP-staple) into hard MUSTs ahead of the `v1.0.0-beta.1` flag day — so the flag day is a default change, not a code change. Role/capability checks are subset checks (no un-attested claims); each applies only when the corresponding cert extension is present (self-declared NIDs unaffected). One new error code `NIP-CERT-CAPABILITIES-EXCEEDED` (`NPS-AUTH-FORBIDDEN`). Additive / backward-compatible. (Renumbered from the edge-line 0.11 — the released alpha.16 line had independently used 0.11 for the LLM capability strings below.) |
 | 0.11 | 2026-07-04 | Adds standard LLM capability strings (`llm:complete`, `llm:stream`, `llm:tool_call`, `llm:embed`, `llm:rerank`) for NWP LLM/Thinking Profile discovery and authorization. TrustFrame `trust_scope` may cover these capabilities. No new frame fields or error codes. |
 | 0.10 | 2026-06-12 | New §6.1 **Short-lived / renewable cert profile (edge mTLS)**: 1–24 h validity tier (default 6 h) for native-mode mTLS terminated at `nps-ingress` (NPS-RFC-0006 §6.3); renewal window = 25% remaining; ACME `agent-01` online self-renewal; lifetime ≤ OCSP cache TTL so short validity is the primary revocation mechanism; OCSP-staple refresh interaction (`NIP-OCSP-STAPLE-EXPIRED`); resumption-ticket bounded to cert validity (NPS-RFC-0006 §6.4). Reuses existing error codes (`NIP-CA-SESSION-VALIDITY-INVALID`, `NIP-CERT-EXPIRED`); no new codes. |
 | 0.10 | 2026-06-03 | `IdentFrame.node_roles` (`string[]`, optional) — self-declared role tags, same vocabulary as `NDP.AnnounceFrame.node_roles`; Phase 3 gate against `id-nps-node-roles` X.509 extension (OID 65715.2.2); `NIP-CERT-NODE-ROLES-MISMATCH` error code. |

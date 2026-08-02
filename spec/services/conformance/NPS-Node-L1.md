@@ -142,12 +142,12 @@ Each case lists the requirement ID from [NPS-Node Profile §3](../NPS-Node-Profi
 - Response for `A` contains the agent's physical endpoint and a non-expired TTL.
 - Response for `Z` is an ErrorFrame with `NDP-RESOLVE-NOT-FOUND`.
 
-#### TC-N1-NDP-04 — GraphFrame subscription (optional at L1)
+#### TC-N1-NDP-04 — GraphFrame topology snapshot (optional at L1)
 **Req**: N1-NDP-04
-**Fixture**: IUT's GraphFrame subscription capability.
+**Fixture**: IUT's GraphFrame topology snapshot capability.
 **Action**: Skipped or attempted as per capability. Full behavior is validated at L2.
 **Pass**:
-- If attempted: IUT returns a well-formed initial GraphFrame; **N/A** if declined at L1.
+- If attempted: IUT returns a well-formed GraphFrame topology snapshot; **N/A** if declined at L1.
 
 ### 3.4 NWP — Inbox and delivery
 

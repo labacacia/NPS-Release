@@ -1,0 +1,306 @@
+{
+  "name": "nwp-portable-node-server",
+  "version": "0.20.0",
+  "spec_ref": "spec/NPS-2-NWP.md §16.5.1",
+  "description": "Transport-independent admission and dispatch decisions for Memory, Action, and Complex Node servers. HTTP inputs are evaluated before frame decoding; native inputs are evaluated after NCP decoding. correlation_id represents X-NWP-Request-ID in HTTP mode and request_id in native frames.",
+  "vectors": [
+    {
+      "id": "nwp.portable-node.001",
+      "description": "A Memory Node serves its manifest without requiring a frame body.",
+      "kind": "positive",
+      "input": {
+        "transport": "http",
+        "node_role": "memory",
+        "method": "GET",
+        "path": "/.nwm",
+        "accept": "application/nwp-manifest+json",
+        "correlation_id": "req-memory-manifest"
+      },
+      "expected": {
+        "decision": "serve_manifest",
+        "http_status": 200,
+        "content_type": "application/nwp-manifest+json",
+        "correlation_id": "req-memory-manifest",
+        "telemetry_outcome": "success"
+      }
+    },
+    {
+      "id": "nwp.portable-node.002",
+      "description": "A canonical HTTP QueryFrame is admitted by a Memory Node.",
+      "kind": "positive",
+      "input": {
+        "transport": "http",
+        "node_role": "memory",
+        "method": "POST",
+        "path": "/query",
+        "content_type": "application/nwp-frame",
+        "accept": "application/nwp-capsule",
+        "body_bytes": 256,
+        "max_body_bytes": 1048576,
+        "frame_kind": "query",
+        "body_valid": true,
+        "correlation_id": "req-memory-query"
+      },
+      "expected": {
+        "decision": "dispatch_query",
+        "http_status": 200,
+        "content_type": "application/nwp-capsule",
+        "correlation_id": "req-memory-query",
+        "telemetry_outcome": "success"
+      }
+    },
+    {
+      "id": "nwp.portable-node.003",
+      "description": "The alpha.17 compatibility window accepts the legacy request media type but emits only the canonical response media type.",
+      "kind": "positive",
+      "input": {
+        "transport": "http",
+        "node_role": "action",
+        "method": "POST",
+        "path": "/invoke",
+        "content_type": "application/x-nps-frame",
+        "accept": "*/*",
+        "body_bytes": 192,
+        "max_body_bytes": 1048576,
+        "frame_kind": "action",
+        "body_valid": true,
+        "correlation_id": "req-action-legacy"
+      },
+      "expected": {
+        "decision": "dispatch_action",
+        "http_status": 200,
+        "content_type": "application/nwp-capsule",
+        "correlation_id": "req-action-legacy",
+        "telemetry_outcome": "success",
+        "legacy_media_type_accepted": true
+      }
+    },
+    {
+      "id": "nwp.portable-node.004",
+      "description": "Routing rejects a non-POST query before frame admission and advertises the allowed method.",
+      "kind": "negative",
+      "input": {
+        "transport": "http",
+        "node_role": "complex",
+        "method": "GET",
+        "path": "/query",
+        "correlation_id": "req-method"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 405,
+        "allow": "POST",
+        "correlation_id": "req-method",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.portable-node.005",
+      "description": "An unsupported request media type is rejected before decoding.",
+      "kind": "negative",
+      "input": {
+        "transport": "http",
+        "node_role": "memory",
+        "method": "POST",
+        "path": "/query",
+        "content_type": "application/json",
+        "accept": "application/nwp-capsule",
+        "body_bytes": 120,
+        "max_body_bytes": 1048576,
+        "frame_kind": "query",
+        "body_valid": true,
+        "correlation_id": "req-content-type"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 400,
+        "content_type": "application/nwp-error+json",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "error": "NWP-HTTP-CONTENT-TYPE-UNSUPPORTED",
+        "correlation_id": "req-content-type",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.portable-node.006",
+      "description": "A body larger than the configured portable-server limit is rejected without decoding.",
+      "kind": "negative",
+      "input": {
+        "transport": "http",
+        "node_role": "action",
+        "method": "POST",
+        "path": "/invoke",
+        "content_type": "application/nwp-frame",
+        "accept": "application/nwp-capsule",
+        "body_bytes": 1048577,
+        "max_body_bytes": 1048576,
+        "frame_kind": "action",
+        "body_valid": true,
+        "correlation_id": "req-oversize"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 413,
+        "content_type": "application/nwp-error+json",
+        "status": "NPS-LIMIT-PAYLOAD",
+        "error": "NWP-HTTP-BODY-TOO-LARGE",
+        "correlation_id": "req-oversize",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.portable-node.007",
+      "description": "A malformed admitted frame body returns the canonical binding error.",
+      "kind": "negative",
+      "input": {
+        "transport": "http",
+        "node_role": "complex",
+        "method": "POST",
+        "path": "/query",
+        "content_type": "application/nwp-frame",
+        "accept": "application/nwp-capsule",
+        "body_bytes": 24,
+        "max_body_bytes": 1048576,
+        "frame_kind": "query",
+        "body_valid": false,
+        "correlation_id": "req-malformed"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 400,
+        "content_type": "application/nwp-error+json",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "error": "NWP-HTTP-FRAME-BODY-MALFORMED",
+        "correlation_id": "req-malformed",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.portable-node.008",
+      "description": "A response Accept header that excludes every NWP response type is rejected.",
+      "kind": "negative",
+      "input": {
+        "transport": "http",
+        "node_role": "memory",
+        "method": "POST",
+        "path": "/query",
+        "content_type": "application/nwp-frame",
+        "accept": "text/plain",
+        "body_bytes": 96,
+        "max_body_bytes": 1048576,
+        "frame_kind": "query",
+        "body_valid": true,
+        "correlation_id": "req-accept"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 400,
+        "content_type": "application/nwp-error+json",
+        "status": "NPS-CLIENT-BAD-PARAM",
+        "error": "NWP-HTTP-ACCEPT-UNSATISFIABLE",
+        "correlation_id": "req-accept",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.portable-node.009",
+      "description": "Cancellation before dispatch aborts the request without synthesizing a protocol response.",
+      "kind": "negative",
+      "input": {
+        "transport": "http",
+        "node_role": "action",
+        "method": "POST",
+        "path": "/invoke",
+        "content_type": "application/nwp-frame",
+        "accept": "application/nwp-capsule",
+        "body_bytes": 96,
+        "max_body_bytes": 1048576,
+        "frame_kind": "action",
+        "body_valid": true,
+        "cancelled": true,
+        "correlation_id": "req-cancelled"
+      },
+      "expected": {
+        "decision": "abort",
+        "response": "none",
+        "correlation_id": "req-cancelled",
+        "telemetry_outcome": "cancelled"
+      }
+    },
+    {
+      "id": "nwp.portable-node.010",
+      "description": "A native QueryFrame is dispatched by Memory and Complex Nodes.",
+      "kind": "positive",
+      "input": {
+        "transport": "native",
+        "node_role": "complex",
+        "frame_kind": "query",
+        "body_valid": true,
+        "correlation_id": "req-native-query"
+      },
+      "expected": {
+        "decision": "dispatch_query",
+        "response_frame": "caps",
+        "correlation_id": "req-native-query",
+        "telemetry_outcome": "success"
+      }
+    },
+    {
+      "id": "nwp.portable-node.011",
+      "description": "A native ActionFrame is dispatched by Action and Complex Nodes.",
+      "kind": "positive",
+      "input": {
+        "transport": "native",
+        "node_role": "action",
+        "frame_kind": "action",
+        "body_valid": true,
+        "correlation_id": "req-native-action"
+      },
+      "expected": {
+        "decision": "dispatch_action",
+        "response_frame": "caps",
+        "correlation_id": "req-native-action",
+        "telemetry_outcome": "success"
+      }
+    },
+    {
+      "id": "nwp.portable-node.012",
+      "description": "A decoded native frame outside the portable node dispatch surface returns an ErrorFrame.",
+      "kind": "negative",
+      "input": {
+        "transport": "native",
+        "node_role": "memory",
+        "frame_kind": "announce",
+        "body_valid": true,
+        "correlation_id": "req-native-unsupported"
+      },
+      "expected": {
+        "decision": "error_frame",
+        "response_frame": "error",
+        "status": "NPS-CLIENT-BAD-FRAME",
+        "error": "NWP-NATIVE-FRAME-UNSUPPORTED",
+        "correlation_id": "req-native-unsupported",
+        "telemetry_outcome": "rejected"
+      }
+    },
+    {
+      "id": "nwp.portable-node.013",
+      "description": "The manifest endpoint rejects a non-GET request and advertises GET independently of the query and invoke methods.",
+      "kind": "negative",
+      "input": {
+        "transport": "http",
+        "node_role": "memory",
+        "method": "POST",
+        "path": "/.nwm",
+        "correlation_id": "req-manifest-method"
+      },
+      "expected": {
+        "decision": "reject",
+        "http_status": 405,
+        "allow": "GET",
+        "correlation_id": "req-manifest-method",
+        "telemetry_outcome": "rejected"
+      }
+    }
+  ]
+}

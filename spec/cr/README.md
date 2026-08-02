@@ -51,12 +51,14 @@ late in 0.x is still pending when v1.0 is cut).
 |---|---|---|---|
 | [NPS-CR-0001](./NPS-CR-0001-anchor-bridge-split.md) | Split Gateway Node into Anchor Node + Bridge Node | v1.0-alpha.3 | Implemented (2026-04-26) |
 | [NPS-CR-0002](./NPS-CR-0002-anchor-topology-queries.md) | Standard topology query types for Anchor Node (`topology.snapshot` / `topology.stream`) | v1.0-alpha.4 | Implemented (2026-04-27) |
-| [NPS-CR-0003](./NPS-CR-0003-orchestrator-group-session-nids.md) | Orchestrator group NIDs and short-lived session NIDs | v1.0-alpha.6 | Accepted (2026-05-11) |
+| [NPS-CR-0003](./NPS-CR-0003-orchestrator-group-session-nids.md) | Orchestrator group NIDs and short-lived session NIDs | v1.0-alpha.6 | Implemented (2026-05-28) |
 | [NPS-CR-0004](./NPS-CR-0004-pen-wirein.md) | Wire in IANA-assigned PEN 65715 (replace provisional `1.3.6.1.4.1.99999`) | v1.0-alpha.6 | Implemented (2026-05-08) |
 | [NPS-CR-0005](./NPS-CR-0005-nip-ca-ra-model.md) | NIP CA Registration Authority (RA) model — three-tier admission (allowlist / bootstrap token / pending queue) | v1.0-alpha.7 | Implemented |
-| [NPS-CR-0006](./NPS-CR-0006-subscribe-frame.md) | SubscribeFrame (NWP §13) formal specification — field table, lifecycle, cursor resume; frame-registry promotion `proposed → stable` | v1.0.0-alpha.11 | Accepted (2026-05-28) |
-| [NPS-CR-0007](./NPS-CR-0007-nop-l3-runtime-integration.md) | NOP ↔ Node Profile L3 runtime integration | v1.0.0-alpha.12 | Accepted |
-| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 encoding | v1.0-alpha.16 or later | Proposed |
+| [NPS-CR-0006](./NPS-CR-0006-subscribe-frame.md) | SubscribeFrame (NWP §13) formal specification — field table, lifecycle, cursor resume; frame-registry promotion `proposed → stable` | v1.0.0-alpha.11 | Implemented (2026-05-28) |
+| [NPS-CR-0007](./NPS-CR-0007-nop-l3-runtime-integration.md) | NOP ↔ Node Profile L3 runtime integration | v1.0.0-alpha.13 | Implemented (2026-06-13) |
+| [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 encoding | v1.0-alpha.14 | Implemented (2026-06-26) |
+| [NPS-CR-0009](./NPS-CR-0009-multi-anchor-ha.md) | Multi-Anchor high availability (`anchor_failover` / `anchor_quorum_lost`, `cluster_epoch` fence, NDP resolution) | v1.0.0-alpha.17 | Implemented |
+| [NPS-CR-0010](./NPS-CR-0010-bridge-bidirectional.md) | Bridge Node is bidirectional — resolve the outbound-only contradiction, add `bridge_inbound_protocols` direction declaration, split §16 conformance, consolidate `compat/*-ingress` into the Bridge package | v1.0.0-alpha.17 | Implemented |
 
 ## Authoring a new CR
 

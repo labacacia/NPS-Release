@@ -4,11 +4,11 @@ English | [中文版](./NPS-2-NWP.cn.md)
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.17
-**Date**: 2026-07-05
+**Version**: 0.20
+**Date**: 2026-07-29
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9), NPS-3 (NIP v0.11), NPS-4 (NDP v0.9)
+**Depends-On**: NPS-1 (NCP v0.11), NPS-3 (NIP v0.13), NPS-4 (NDP v0.12)
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -44,7 +44,7 @@ A node MAY simultaneously carry more than one role (for example, a single deploy
 
 > **Anchor Node** and **Bridge Node** were introduced together by [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md), replacing the original `Gateway Node` type:
 > - **Anchor Node** inherits the cluster-entry / NOP-routing role that Gateway Node was carrying. It is stateless per request but MAY maintain a long-lived registry of member nodes.
-> - **Bridge Node** is a new type whose role is **NPS → external protocol** translation. It is stateless per request and does not participate in cluster topology. (Direction note: this is the inverse of the bridges historically published under `compat/*-bridge`, which are external-protocol → NPS ingress adapters; those have been renamed `compat/*-ingress` to free the "Bridge" word for this new node type.)
+> - **Bridge Node** is a new type whose role is **NPS ↔ non-NPS protocol translation, in both directions**. It is stateless per request and does not participate in cluster topology. Direction is declared per protocol in NDP `Announce` (`bridge_protocols` for outbound, `bridge_inbound_protocols` for inbound). ([NPS-CR-0010](cr/NPS-CR-0010-bridge-bidirectional.md) settled this: alpha.3–alpha.15 shipped a normative "outbound-only" narrowing that existed solely to keep the name `Bridge` distinct from the then-separate `compat/*-ingress` packages; those packages are now absorbed into the Bridge package, and the restriction is lifted.)
 > - The original `Gateway Node` term is retired; the wire value `"gateway"` is removed and parsers MUST reject it with a clear error referencing CR-0001.
 
 #### Removed types
@@ -79,13 +79,26 @@ Anchor Nodes that maintain a member registry MUST expose it via the reserved que
 
 #### Bridge Node — detailed semantics
 
-A Bridge Node MUST:
+A Bridge Node translates in **both directions** between NPS frames and non-NPS protocols. It MUST implement at least one direction, and MUST declare which protocols it serves in which direction via NDP `Announce` (NPS-4 §3.1): `bridge_protocols` for outbound, `bridge_inbound_protocols` for inbound. A Bridge Node MUST NOT be assumed to serve a direction it did not declare. (NPS-CR-0010)
+
+**Outbound — NPS → external protocol.** A Bridge Node serving outbound MUST:
 
 1. Accept inbound NWP frames carrying a `bridge_target` parameter that identifies the external protocol and endpoint. The canonical `bridge_target` wire shape is `{ "protocol", "endpoint", "extras"? }`: `protocol` (string, required — one of `"http"`, `"grpc"`, `"mcp"`, `"a2a"`); `endpoint` (string URL, required); `extras` (object, optional — per-protocol knobs such as HTTP `method`, `headers`, MCP `tool`, or gRPC call metadata). HTTP headers MUST travel inside `bridge_target.extras.headers`, not as a top-level `bridge_target.headers` field. Third-party adapters MAY add fields inside `extras`; unknown top-level fields and unknown `extras` members MUST be ignored by consumers.
 2. Produce outbound requests in the target protocol's format.
 3. Translate target-protocol responses back into NWP frames (typically `CapsFrame`).
 
-Bridge Nodes are stateless per request and do not participate in cluster topology. A single Bridge Node MAY translate to multiple distinct external protocols; deployments MAY operate dedicated Bridge Nodes per protocol for isolation.
+**Inbound — external protocol → NPS.** A Bridge Node serving inbound MUST:
+
+4. Expose a server endpoint for each protocol listed in `bridge_inbound_protocols`, speaking that protocol's native wire format.
+5. Translate a foreign-protocol request into NWP frames addressed to the NPS nodes it fronts — Memory Node `Query` for reads, Action / Complex Node `Invoke` for calls — and translate the NWP response back into the foreign protocol's response format.
+6. NOT require the foreign client to possess any NPS addressing, NID, or frame knowledge. The foreign client MUST be able to treat the Bridge as a native server of its own protocol.
+7. Map NWP / NPS error codes onto the foreign protocol's error space using the normative mapping for that protocol (§16.3).
+
+For **MCP inbound**, a conformant Bridge Node MUST serve `initialize`, `ping`, `tools/list`, `tools/call`, `resources/list`, and `resources/read`. Memory Nodes are projected as MCP resources; Action / Complex Nodes are projected as MCP tools.
+
+A deployment MAY run inbound translation as a plain hosting library in front of NPS nodes, with no NID and no `Announce`. Such a deployment is **not** a Bridge Node — it is the Bridge library, and the MUSTs above do not bind it. Only a deployment that announces `node_roles: ["bridge"]` is a Bridge Node. (NPS-CR-0010 §3.3)
+
+Bridge Nodes are stateless per request and do not participate in cluster topology, in **both** directions. A single Bridge Node MAY serve several protocols and both directions; deployments MAY operate dedicated Bridge Nodes per protocol or per direction for isolation.
 
 Standard external protocols expected to be supported by reference Bridge Node implementations:
 
@@ -94,7 +107,7 @@ Standard external protocols expected to be supported by reference Bridge Node im
 - MCP (Model Context Protocol)
 - A2A (Agent-to-Agent protocol)
 
-Additional protocol adapters MAY be registered through future CRs. The set of supported protocols is declared in NDP `Announce.bridge_protocols` (NPS-4 §3.1).
+Additional protocol adapters MAY be registered through future CRs. The set of supported protocols is declared in NDP `Announce.bridge_protocols` / `Announce.bridge_inbound_protocols` (NPS-4 §3.1).
 
 ### 2.2 Overlay Mode
 
@@ -930,6 +943,7 @@ HTTP overlay implementations MUST use canonical NWP error codes for transport-bi
 | Accept unsatisfiable | `Accept` refuses every response media type this node can emit | `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` |
 | Request-id echo mismatch | Client observes that the response `X-NWP-Request-ID` does not match the request header | `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` |
 | Unparseable frame body | HTTP body cannot be parsed as any supported NWP frame envelope or NCP-carried NWP frame | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` |
+| Body too large | Request body exceeds the server's advertised or configured NWP body limit | `NWP-HTTP-BODY-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` |
 | Advertised but unimplemented | NWM advertises a capability or profile that this node accepts in discovery but cannot currently serve | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` |
 
 `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` is distinct from capability-specific unsupported codes such as `NWP-QUERY-VECTOR-UNSUPPORTED`: use the specific code when the manifest truthfully declares the feature unsupported, and use `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` only for rollout windows, disabled backends, or inconsistent discovery state where the feature was advertised but cannot be served.
@@ -1130,8 +1144,10 @@ For `type = "topology.stream"`, `cursor` is the canonical v0.13 resume mechanism
 | `field` | Phase | Trigger | `details` shape |
 |---------|-------|---------|-----------------|
 | `version_rebased` | Phase 1–2 | Anchor restarted and reset its monotonic `version` counter (§12.3). Subscribers MUST treat as equivalent to `resync_required` | `{ "previous_version": <uint64>, "new_version": <uint64> }` |
-| `anchor_failover` | Phase 3 (reserved slot) | Active Anchor handed cluster ownership to a peer Anchor (multi-Anchor HA). Phase 1–2 implementations MUST NOT emit this sub-type; subscribers receiving it MAY ignore it | `{ "successor_nid": "urn:nps:..." }` (placeholder; finalised in Phase 3 CR) |
-| `anchor_quorum_lost` | Phase 3 (reserved slot) | Anchor cluster lost quorum and is operating in degraded read-only mode. Phase 1–2 implementations MUST NOT emit this sub-type | `{ "quorum_size": <uint32>, "available": <uint32> }` (placeholder; finalised in Phase 3 CR) |
+| `anchor_failover` | Finalised (NPS-CR-0009) | Active Anchor handed cluster ownership to a peer (multi-Anchor HA, AaaS L3). Emitted at each ownership transfer; the fenced prior leader sends a terminal `anchor_failover` then closes its streams | `{ "successor_nid": "urn:nps:...", "cluster_epoch": <uint64>, "reason": "planned" \| "active_lost" }` |
+| `anchor_quorum_lost` | Finalised (NPS-CR-0009) | Anchor cluster cannot maintain the ownership quorum; cluster is read-only (degraded). Anchors reject topology writes with `NWP-ANCHOR-NOT-LEADER` and mark `health: "degraded"` (NDP §3.2) | `{ "quorum_size": <uint32>, "available": <uint32> }` |
+
+**Cluster ownership fence (NPS-CR-0009).** In a multi-Anchor cluster at most one Anchor is the active owner at any instant, identified by a monotonically increasing `cluster_epoch` (uint64, starts at 1). Every `topology.snapshot` / `topology.stream` response and every topology-mutating write carries the current `cluster_epoch`. A standby (or read-only-degraded) Anchor MUST reject topology writes with `NWP-ANCHOR-NOT-LEADER` (→ `NPS-CLIENT-CONFLICT`); an active Anchor MUST reject any inbound frame bearing a **higher** `cluster_epoch` with `NWP-ANCHOR-EPOCH-FENCED` (fencing a superseded leader). Single-Anchor clusters keep `cluster_epoch = 1` and never emit `anchor_failover` / `anchor_quorum_lost`. See [NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md).
 
 Implementations MUST treat unknown `anchor_state.field` values as forward-compatible and ignore them rather than tearing down the subscription, so future Phase 3 sub-types can be introduced without a wire break.
 
@@ -1273,11 +1289,15 @@ The following error codes (defined in §14) apply to SubscribeFrame operations:
 | `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` | HTTP overlay request `Accept` cannot be satisfied by any supported response media type (§9.5) |
 | `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | Response `X-NWP-Request-ID` does not echo the request ID (§9.5) |
 | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body cannot be parsed as a supported NWP frame envelope (§9.5) |
+| `NWP-HTTP-BODY-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | HTTP request body exceeds the server's NWP body limit (§9.5, §16.5.1) |
 | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM advertises a capability/profile that the node currently cannot serve (§9.5) |
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | Caller lacks permission to read this Anchor's topology (§12). Authorization policy is implementation-defined per §12.4 |
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` value is not implemented by this Anchor |
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Requested `topology.depth` exceeds this Anchor's maximum |
 | `NWP-TOPOLOGY-FILTER-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | `topology.filter` contains an unrecognized key |
+| `NWP-ANCHOR-NOT-LEADER` | `NPS-CLIENT-CONFLICT` | A topology-mutating write reached a standby (or read-only-degraded) Anchor; only the active owner of the current `cluster_epoch` may accept writes (§12.2, NPS-CR-0009) |
+| `NWP-ANCHOR-EPOCH-FENCED` | `NPS-CLIENT-CONFLICT` | An inbound frame carries a `cluster_epoch` higher than the receiving Anchor's own; the receiver is a superseded leader and fences itself (§12.2, NPS-CR-0009) |
+| `NWP-BRIDGE-DIRECTION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | The request arrived on a direction/protocol this Bridge Node does not declare — see §16.2; the response SHOULD carry both `bridge_protocols` and `bridge_inbound_protocols` in `hint` (NPS-CR-0010) |
 
 ---
 
@@ -1313,32 +1333,128 @@ Anchor Nodes implementing §12 MUST treat `topology.snapshot` and `topology.stre
 ## 16. Bridge Node Conformance
 
 The Bridge Node type and the `bridge_target` object schema were introduced by NPS-CR-0001 (§2.1)
-and standardized at NWP v0.13. This section formalises the conformance requirements and provides
-canonical `bridge_target` round-trip test vectors so that all SDK Bridge implementations agree on
-the wire shape.
+and standardized at NWP v0.13. [NPS-CR-0010](cr/NPS-CR-0010-bridge-bidirectional.md) settled Bridge
+Node as **bidirectional** and split this section into two independent conformance profiles. This
+section formalises both, provides the normative error mapping shared by them, and provides canonical
+`bridge_target` round-trip test vectors so that all SDK Bridge implementations agree on the wire shape.
 
-### 16.1 Conformance requirements
+### 16.1 Conformance profiles
 
-A conformant Bridge Node MUST:
+A Bridge Node MUST claim at least one of the two profiles below and MUST declare it on the wire
+(§2.1, NPS-4 §3.1). Claiming neither is not a conformant Bridge Node. A Bridge Node MAY claim both.
+An implementation that claims only **Outbound** — the only profile that existed through alpha.15 —
+remains fully conformant with no change.
+
+#### 16.1.1 Outbound profile (NPS → external)
+
+Claimed by declaring a non-empty `bridge_protocols`. A conformant outbound Bridge Node MUST:
 
 1. Advertise `node_type: "bridge"` in its NWM (§4.1) and the supported external protocols via
    NDP `bridge_protocols` (NPS-4 §3.1).
-2. Accept inbound NWP frames carrying a `bridge_target` object and reject a frame missing it (for
-   a Bridge-routed action) with `NWP-ACTION-PARAMS-INVALID`.
-3. Validate `bridge_target.protocol` against its advertised set; an unsupported protocol MUST
-   return `NWP-ACTION-PARAMS-INVALID` (not a silent fallthrough).
+2. Accept inbound NWP frames carrying a `bridge_target` object and reject a frame missing it, or
+   one that fails `bridge_target` schema validation, with `NWP-BRIDGE-TARGET-INVALID`.
+3. Validate `bridge_target.protocol` against its advertised set; a protocol with no registered
+   dispatcher MUST return `NWP-BRIDGE-PROTOCOL-UNSUPPORTED` (not a silent fallthrough).
 4. Treat unknown `bridge_target` fields as opaque pass-through and MUST NOT fail on them
    (forward compatibility).
 5. Be **stateless per request** and MUST NOT participate in cluster topology (`topology.*` MUST
    return `NWP-RESERVED-TYPE-UNSUPPORTED` on a pure Bridge Node).
 
-A conformant Bridge Node SHOULD:
+A conformant outbound Bridge Node SHOULD:
 
 1. Apply SSRF protection to `bridge_target.endpoint` (NPS-2 §15.2) before dialing the upstream.
 2. Propagate `bridge_target.extras.headers` to the upstream HTTP request verbatim, minus
    hop-by-hop headers.
 
-### 16.2 `bridge_target` test vectors
+#### 16.1.2 Inbound profile (external → NPS)
+
+Claimed by declaring a non-empty `bridge_inbound_protocols`. A conformant inbound Bridge Node MUST:
+
+1. Advertise `node_type: "bridge"` in its NWM (§4.1) and the served protocols via NDP
+   `bridge_inbound_protocols` (NPS-4 §3.1).
+2. Expose a server endpoint for each declared protocol, speaking that protocol's native wire format,
+   and require **no** NPS addressing, NID, or frame knowledge of the foreign client.
+3. Project the NPS nodes it fronts onto the foreign protocol's object model: Memory Nodes onto the
+   protocol's read surface, Action / Complex Nodes onto its call surface. For **MCP** this means
+   serving `initialize`, `ping`, `tools/list`, `tools/call`, `resources/list`, and `resources/read` —
+   an inbound MCP Bridge that omits `resources/*` is **not** conformant.
+4. Map NWP / NPS error codes onto the foreign protocol's error space per §16.3, deterministically.
+5. Reject a request for a protocol it did not declare in `bridge_inbound_protocols` with
+   `NWP-BRIDGE-DIRECTION-UNSUPPORTED`; the response SHOULD carry both declared arrays in `hint`.
+6. Be **stateless per request** and MUST NOT participate in cluster topology.
+
+A conformant inbound Bridge Node SHOULD:
+
+1. Apply the fronted node's own authorization (§7) to the translated NWP frame rather than granting
+   the foreign client ambient authority.
+2. Preserve NPS status-code semantics through the mapping — a mapping that collapses distinct NPS
+   status classes onto one foreign error is a conformance failure, not a quality-of-implementation
+   matter.
+
+### 16.2 Direction declaration
+
+`bridge_protocols` and `bridge_inbound_protocols` are independent sets over the same value domain
+(`"http"`, `"grpc"`, `"mcp"`, `"a2a"`). A protocol MAY appear in both (bridged in both directions).
+A node declaring `node_roles: ["bridge"]` MUST have at least one of the two non-empty. Receivers MUST
+treat an absent `bridge_inbound_protocols` as `[]` — which is exactly a pre-alpha.16, outbound-only
+Bridge Node. (NPS-CR-0010 §3.2)
+
+### 16.3 Error mapping (normative)
+
+Both directions translate NPS status codes into (or out of) a foreign protocol's error space. Through
+alpha.15 this mapping was implemented twice per protocol — once in the outbound dispatcher, once in
+the then-separate `compat/*-ingress` package — and the two copies drifted. The mapping is therefore
+normative, and a single implementation of it MUST serve both directions.
+
+**MCP (JSON-RPC 2.0).** NPS status → JSON-RPC error code:
+
+| NPS status | JSON-RPC code | Notes |
+|---|---|---|
+| `NPS-CLIENT-BAD-FRAME` | `-32600` (Invalid Request) | |
+| `NPS-CLIENT-BAD-PARAM`, `NPS-CLIENT-UNPROCESSABLE` | `-32602` (Invalid params) | |
+| `NPS-CLIENT-NOT-FOUND` | `-32601` (Method not found) for an unknown tool in `tools/call`; `-32602` for an unknown URI in `resources/read` | The distinction matters: an unknown *tool* is a missing method to an MCP client, an unknown *resource* is a bad argument |
+| `NPS-CLIENT-GONE` | `-32602` | |
+| `NPS-CLIENT-CONFLICT` | `-32004` (implementation-defined) | |
+| `NPS-AUTH-UNAUTHENTICATED` | `-32001` (implementation-defined) | MUST be a JSON-RPC error, never a successful result carrying an error payload |
+| `NPS-AUTH-FORBIDDEN` | `-32003` (implementation-defined) | MUST NOT be collapsed onto `-32001` |
+| `NPS-LIMIT-RATE`, `NPS-LIMIT-BUDGET`, `NPS-LIMIT-PAYLOAD` | `-32005` (implementation-defined) | |
+| `NPS-SERVER-UNSUPPORTED` | `-32601` (Method not found) | Includes `NWP-BRIDGE-DIRECTION-UNSUPPORTED` |
+| `NPS-SERVER-INTERNAL`, `NPS-SERVER-UNAVAILABLE`, `NPS-SERVER-TIMEOUT`, `NPS-DOWNSTREAM-UNAVAILABLE` | `-32603` (Internal error) | Upstream node failure |
+| parse failure before dispatch | `-32700` (Parse error) | |
+
+The application-defined code `-32002` is **reserved and MUST NOT be emitted**. Through alpha.15 the
+.NET Bridge used it for "tool not found"; NPS-CR-0010 maps an unknown tool to `-32601`
+(Method not found) instead — which is what an MCP client already understands — and leaves `-32002`
+reserved rather than reassigning it, so a client pinned to the old behaviour cannot silently misread
+some other error as a missing tool.
+
+The reverse direction (JSON-RPC error → NPS status) is the inverse of this table; where the inverse is
+not injective, an implementation MUST choose the **most specific** NPS status, never a generic
+`NPS-SERVER-INTERNAL`.
+
+**gRPC.** NPS status → gRPC status code:
+
+| NPS status | gRPC status |
+|---|---|
+| `NPS-CLIENT-BAD-FRAME`, `NPS-CLIENT-BAD-PARAM`, `NPS-CLIENT-UNPROCESSABLE` | `INVALID_ARGUMENT` |
+| `NPS-CLIENT-NOT-FOUND`, `NPS-CLIENT-GONE` | `NOT_FOUND` |
+| `NPS-CLIENT-CONFLICT` | `ABORTED` |
+| `NPS-AUTH-UNAUTHENTICATED` | `UNAUTHENTICATED` |
+| `NPS-AUTH-FORBIDDEN` | `PERMISSION_DENIED` |
+| `NPS-LIMIT-RATE`, `NPS-LIMIT-BUDGET`, `NPS-LIMIT-PAYLOAD` | `RESOURCE_EXHAUSTED` |
+| `NPS-SERVER-UNSUPPORTED` | `UNIMPLEMENTED` |
+| `NPS-SERVER-INTERNAL` | `INTERNAL` |
+| `NPS-SERVER-UNAVAILABLE`, `NPS-DOWNSTREAM-UNAVAILABLE` | `UNAVAILABLE` |
+| `NPS-SERVER-TIMEOUT` | `DEADLINE_EXCEEDED` |
+
+**A2A.** NPS status → A2A task state: client-class errors terminate the task as `failed` with the NPS
+code preserved verbatim in the failure detail; server-class errors terminate as `failed` and are
+retryable. An A2A Bridge MUST NOT silently downgrade an error to a `completed` task.
+
+An implementation MUST NOT collapse distinct NPS status classes onto a single foreign error code
+(§16.1.2 SHOULD-2 makes this observable); doing so is a conformance failure.
+
+### 16.4 `bridge_target` test vectors
 
 The canonical wire shape is `{ "protocol", "endpoint", "extras"? }` (the SDK in-memory form;
 `headers` and other per-protocol knobs travel inside `extras`). All six SDKs MUST round-trip
@@ -1370,12 +1486,81 @@ Vector rules:
 - A `BridgeNodeDescriptor` serialises `supported_protocols` as a **sorted** array for stable
   output across SDKs.
 
+### 16.5 Portable Node and Bridge server profile
+
+NWP v0.20 defines a transport-independent decision profile for SDK-hosted servers. It does not add
+a frame type. Implementations MAY expose framework-specific middleware, but their admission,
+dispatch, cancellation, and error decisions MUST match the shared vectors in
+`spec/conformance/nwp/`.
+
+#### 16.5.1 Node admission and dispatch
+
+Memory, Action, and Complex Node servers claiming the portable profile MUST:
+
+1. Serve `/.nwm` with `application/nwp-manifest+json` and require `GET`; a method rejection MUST
+   return HTTP 405 with `Allow: GET`. Memory and Complex Nodes MUST dispatch `QueryFrame`; Action
+   and Complex Nodes MUST dispatch `ActionFrame`.
+2. Require `POST` for `/query` and `/invoke`. A method rejection occurs before frame admission,
+   returns HTTP 405, and MUST include `Allow: POST`.
+3. Accept `application/nwp-frame`. During the alpha.17 compatibility window they MUST also accept
+   legacy request media type `application/x-nps-frame`, but MUST emit only the canonical
+   `application/nwp-capsule`, `application/nwp-error+json`, and
+   `application/nwp-manifest+json` response media types. The legacy alias is deprecated and is
+   removed from the required profile in alpha.18.
+4. Enforce a finite, configurable HTTP body limit before decoding. An oversized body MUST return
+   HTTP 413 with `NPS-LIMIT-PAYLOAD` / `NWP-HTTP-BODY-TOO-LARGE`.
+5. Return canonical §9.5 errors for unsupported `Content-Type`, unsatisfied `Accept`, and malformed
+   bodies. HTTP error bodies MUST use `application/nwp-error+json`.
+6. Preserve the request correlation identifier end to end: `X-NWP-Request-ID` in HTTP mode and the
+   frame `request_id` in native mode. Responses that have a correlation field MUST echo it.
+7. Propagate caller cancellation into decode and provider/handler work. If cancellation is observed
+   before a response is committed, the server MUST abort without synthesizing an ErrorFrame or HTTP
+   error response.
+8. Record one terminal telemetry outcome from `success`, `rejected`, `cancelled`, or `timeout`; the
+   correlation identifier SHOULD be attached when the telemetry system permits it.
+
+In native mode, unsupported decoded frame types MUST produce an `ErrorFrame` with
+`NPS-CLIENT-BAD-FRAME` / `NWP-NATIVE-FRAME-UNSUPPORTED`. A provider failure after successful
+admission remains `NWP-NATIVE-DISPATCH-FAILED` unless a more specific protocol error is available.
+
+The normative cases are `portable_node_server_vectors.json`.
+
+#### 16.5.2 Bridge preflight and lifecycle
+
+An outbound Bridge server claiming the portable profile MUST perform the following checks before
+dialing an upstream:
+
+1. Validate the `bridge_target` shape, then resolve `protocol` in the registered dispatcher set.
+   A missing protocol is `NPS-CLIENT-UNPROCESSABLE` / `NWP-BRIDGE-TARGET-INVALID`; a well-formed but
+   unregistered protocol is `NPS-SERVER-UNSUPPORTED` /
+   `NWP-BRIDGE-PROTOCOL-UNSUPPORTED`.
+2. Validate an absolute endpoint scheme and apply configured HTTPS, prefix-allowlist, and
+   private/loopback address policy. Rejection is `NPS-CLIENT-UNPROCESSABLE` /
+   `NWP-BRIDGE-ENDPOINT-INVALID`. SDK policy evaluation MUST be deterministic and MUST NOT require
+   DNS for literal-address inputs; hosts resolved at dial time remain subject to rebinding-safe
+   address checks.
+3. Apply a finite deadline across preflight, connection, response headers, body translation, and
+   response emission. An exhausted deadline is HTTP 504 with `NPS-SERVER-TIMEOUT` /
+   `NWP-BRIDGE-UPSTREAM-FAILED`; cancellation takes precedence over timeout and produces no
+   synthesized response.
+4. Preserve correlation identity into the external request where the target protocol has a
+   correlation or metadata mechanism, and preserve synchronous versus asynchronous Action task
+   mode. An admitted async action reports `NPS-OK-ACCEPTED`.
+5. Emit one terminal telemetry outcome under the same rule as §16.5.1.
+
+The normative cases are `bridge_lifecycle_vectors.json`. All six reference SDKs MUST execute both
+v0.20 vector sets in CI. Equivalent decisions, status/error pairs, response media types, and
+correlation behavior are required across HTTP and native hosts.
+
 ---
 
 ## 17. Changelog
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.20 | 2026-07-29 | Added §16.5 portable Node/Bridge server profile and shared cross-language vectors. Standardized HTTP/native admission, role dispatch, canonical/legacy MIME handling for the alpha.17 compatibility window, finite body limits, cancellation, correlation propagation, Bridge dispatcher/SSRF/deadline preflight, async task mode, and terminal telemetry outcomes. Added `NWP-HTTP-BODY-TOO-LARGE` → `NPS-LIMIT-PAYLOAD`; no new frame type. Depends-On advanced to NCP v0.11 and NIP v0.13. |
+| 0.19 | 2026-07-23 | **NPS-CR-0010 Bridge Node is bidirectional**: resolved the spec's own contradiction — the §2.1 taxonomy, the "Removed types" note, and NPS-CR-0001 all defined Bridge Node as NPS↔non-NPS translation, while the §2.1 callout and the normative MUST list narrowed it to NPS→external only. The narrowing existed solely to keep the name `Bridge` distinct from the then-separate `compat/*-ingress` packages; those are now absorbed into the Bridge package and the restriction is lifted. Bridge Node semantics restructured into **Outbound** (unchanged) + **Inbound** (new) MUST lists; MCP inbound MUST serve `resources/*` as well as `tools/*`. §16 split into two independent conformance profiles (§16.1.1 outbound / §16.1.2 inbound), a normative direction declaration (§16.2), and normative per-protocol error-mapping tables (§16.3) that a single implementation MUST serve in both directions. Role-vs-library boundary made explicit: only a deployment announcing `node_roles: ["bridge"]` is a Bridge Node. `Depends-On` NDP bumped to v0.11 (defines `bridge_inbound_protocols`). One new error code `NWP-BRIDGE-DIRECTION-UNSUPPORTED`. Additive and backward-compatible: an outbound-only Bridge Node remains conformant unchanged. (Renumbered from the edge-line 0.16 — the released alpha.16 line had independently used 0.15–0.17 for the LLM profile series below.) |
+| 0.18 | 2026-07-23 | **NPS-CR-0009 multi-Anchor HA**: finalised the two §12.2 `anchor_state` sub-types `anchor_failover` (`successor_nid` / `cluster_epoch` / `reason`) and `anchor_quorum_lost` (`quorum_size` / `available`), removing the Phase-3-placeholder “MUST NOT emit” restriction. New `cluster_epoch` (uint64) ownership fence on topology responses/writes; standby writes rejected with `NWP-ANCHOR-NOT-LEADER`, superseded leaders fenced with `NWP-ANCHOR-EPOCH-FENCED`. Additive and Phase-gated: single-Anchor clusters keep `cluster_epoch = 1` and are unaffected. `Depends-On` NDP bumped to v0.10 (defines `cluster_epoch` on AnnounceFrame + highest-epoch resolution). Two new error codes. |
 | 0.17 | 2026-07-05 | Added §9.5 HTTP Binding Rejection Codes and six canonical NWP error codes for HTTP overlay preconditions and advertised-but-unimplemented capability rollout windows: `NWP-HTTP-ORIGIN-FORBIDDEN`, `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED`, `NWP-HTTP-ACCEPT-UNSATISFIABLE`, `NWP-HTTP-REQUEST-ID-MISMATCH`, `NWP-HTTP-FRAME-BODY-MALFORMED`, and `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED`. Shared `error-codes.md` bumped to v1.6. |
 | 0.16 | 2026-07-04 | Adds §4.2a NWM `profiles` and the standard LLM/Thinking Profile (`profiles.llm`) for model-serving Action/Complex Nodes. Clarifies that "Thinking Node" is a product-facing alias, not a new `node_type`; coarse discovery uses NIP/NDP `llm:*` capabilities while detailed model, streaming, tool, privacy, and reasoning-disclosure metadata lives in NWM. No new frame type or error code. Depends-On NIP bumped to v0.11 for the `llm:*` capability registry. |
 | 0.15 | 2026-07-04 | New §7.5 standardizes the `llm.complete` ActionFrame contract: typed request/response DTO shape, stop_reason enum, tool call field names, sync/async/streaming response semantics, ErrorFrame-vs-payload-error rule, and snake_case JSON/MessagePack key policy. No new frame type or error code. |

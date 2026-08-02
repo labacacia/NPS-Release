@@ -9,7 +9,7 @@ Licensed under the Apache License, Version 2.0
 # NPS-RFC-0006: NCP Native Mode Transport Binding
 
 **RFC ID**: NPS-RFC-0006
-**Status**: Proposed
+**Status**: Accepted
 **Version**: 0.2
 **Date**: 2026-06-12
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD

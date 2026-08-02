@@ -1,0 +1,410 @@
+{
+  "name": "nop-runtime-security-vectors",
+  "version": "0.9.0",
+  "spec_ref": "spec/NPS-5-NOP.md §3.5.5, §8, §9.4",
+  "description": "Fail-closed callback, HMAC, delegation, lease, SpawnSpec, lifecycle, and dedup-key vectors.",
+  "vectors": [
+    {
+      "id": "nop.callback.001",
+      "description": "A public HTTPS literal is accepted.",
+      "kind": "positive",
+      "category": "callback",
+      "input": {
+        "url": "https://8.8.8.8/callback",
+        "resolved_ips": ["8.8.8.8"]
+      },
+      "expected": { "allowed": true, "error": null }
+    },
+    {
+      "id": "nop.callback.002",
+      "description": "Plain HTTP is rejected.",
+      "kind": "negative",
+      "category": "callback",
+      "input": {
+        "url": "http://8.8.8.8/callback",
+        "resolved_ips": ["8.8.8.8"]
+      },
+      "expected": { "allowed": false, "error": "NOP-CALLBACK-INVALID" }
+    },
+    {
+      "id": "nop.callback.003",
+      "description": "URL user-info is rejected.",
+      "kind": "negative",
+      "category": "callback",
+      "input": {
+        "url": "https://user:secret@example.test/callback",
+        "resolved_ips": ["8.8.4.4"]
+      },
+      "expected": { "allowed": false, "error": "NOP-CALLBACK-INVALID" }
+    },
+    {
+      "id": "nop.callback.004",
+      "description": "A private literal is rejected.",
+      "kind": "negative",
+      "category": "callback",
+      "input": {
+        "url": "https://10.0.0.8/callback",
+        "resolved_ips": ["10.0.0.8"]
+      },
+      "expected": { "allowed": false, "error": "NOP-CALLBACK-INVALID" }
+    },
+    {
+      "id": "nop.callback.005",
+      "description": "A hostname resolving to a private address is rejected.",
+      "kind": "negative",
+      "category": "callback",
+      "input": {
+        "url": "https://callback.example.test/hook",
+        "resolved_ips": ["192.168.1.20"]
+      },
+      "expected": { "allowed": false, "error": "NOP-CALLBACK-INVALID" }
+    },
+    {
+      "id": "nop.callback.006",
+      "description": "Mixed public and private DNS answers fail closed.",
+      "kind": "negative",
+      "category": "callback",
+      "input": {
+        "url": "https://callback.example.test/hook",
+        "resolved_ips": ["8.8.4.4", "127.0.0.1"]
+      },
+      "expected": { "allowed": false, "error": "NOP-CALLBACK-INVALID" }
+    },
+    {
+      "id": "nop.callback.007",
+      "description": "A redirect target is independently validated.",
+      "kind": "negative",
+      "category": "callback",
+      "input": {
+        "url": "https://callback.example.test/hook",
+        "resolved_ips": ["8.8.4.4"],
+        "redirect_url": "https://169.254.169.254/latest/meta-data",
+        "redirect_resolved_ips": ["169.254.169.254"]
+      },
+      "expected": { "allowed": false, "error": "NOP-CALLBACK-INVALID" }
+    },
+    {
+      "id": "nop.hmac.001",
+      "description": "HMAC covers the exact raw callback body.",
+      "kind": "positive",
+      "category": "hmac",
+      "input": {
+        "secret_base64url": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "raw_body": "{\"task_id\":\"task-callback\",\"state\":\"completed\"}",
+        "signature": "sha256=7c6eb105f5e2f06f2e75fa7112058c4b0ad6701140494968e044d94e56879a59"
+      },
+      "expected": { "valid": true, "error": null }
+    },
+    {
+      "id": "nop.hmac.002",
+      "description": "A missing HMAC fails closed.",
+      "kind": "negative",
+      "category": "hmac",
+      "input": {
+        "secret_base64url": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "raw_body": "{\"task_id\":\"task-callback\",\"state\":\"completed\"}",
+        "signature": null
+      },
+      "expected": { "valid": false, "error": "NOP-CALLBACK-HMAC-MISSING" }
+    },
+    {
+      "id": "nop.hmac.003",
+      "description": "Body tampering invalidates the HMAC.",
+      "kind": "negative",
+      "category": "hmac",
+      "input": {
+        "secret_base64url": "AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA",
+        "raw_body": "{\"task_id\":\"task-callback\",\"state\":\"failed\"}",
+        "signature": "sha256=7c6eb105f5e2f06f2e75fa7112058c4b0ad6701140494968e044d94e56879a59"
+      },
+      "expected": { "valid": false, "error": "NOP-CALLBACK-HMAC-INVALID" }
+    },
+    {
+      "id": "nop.lease.001",
+      "description": "Live-owner renewal succeeds; expired or non-owner renewal conflicts.",
+      "kind": "positive",
+      "category": "lease",
+      "input": {
+        "events": [
+          {
+            "at": 0,
+            "op": "claim",
+            "task_id": "task-lease",
+            "runner_nid": "runner-a",
+            "lease_seconds": 10,
+            "dedup_key": "dedup-a"
+          },
+          {
+            "at": 5,
+            "op": "renew",
+            "task_id": "task-lease",
+            "runner_nid": "runner-a",
+            "lease_seconds": 10
+          },
+          {
+            "at": 6,
+            "op": "claim",
+            "task_id": "task-lease",
+            "runner_nid": "runner-b",
+            "lease_seconds": 10,
+            "dedup_key": "dedup-a"
+          },
+          {
+            "at": 16,
+            "op": "renew",
+            "task_id": "task-lease",
+            "runner_nid": "runner-a",
+            "lease_seconds": 10
+          },
+          {
+            "at": 16,
+            "op": "claim",
+            "task_id": "task-lease",
+            "runner_nid": "runner-b",
+            "lease_seconds": 10,
+            "dedup_key": "dedup-a"
+          },
+          {
+            "at": 17,
+            "op": "renew",
+            "task_id": "task-lease",
+            "runner_nid": "runner-a",
+            "lease_seconds": 10
+          }
+        ]
+      },
+      "expected": {
+        "outcomes": [
+          "granted",
+          "granted",
+          "conflict",
+          "conflict",
+          "reclaimed",
+          "conflict"
+        ]
+      }
+    },
+    {
+      "id": "nop.lease.002",
+      "description": "Terminal-node dedup survives lease reclaim.",
+      "kind": "positive",
+      "category": "lease",
+      "input": {
+        "events": [
+          {
+            "at": 0,
+            "op": "claim",
+            "task_id": "task-dedup",
+            "runner_nid": "runner-a",
+            "lease_seconds": 10,
+            "dedup_key": "dedup-b"
+          },
+          {
+            "at": 1,
+            "op": "mark_terminal",
+            "dedup_key": "dedup-b",
+            "node_id": "node-a"
+          },
+          {
+            "at": 11,
+            "op": "claim",
+            "task_id": "task-dedup",
+            "runner_nid": "runner-b",
+            "lease_seconds": 10,
+            "dedup_key": "dedup-b"
+          },
+          {
+            "at": 11,
+            "op": "is_terminal",
+            "dedup_key": "dedup-b",
+            "node_id": "node-a"
+          }
+        ]
+      },
+      "expected": {
+        "outcomes": ["granted", "recorded", "reclaimed", "terminal"]
+      }
+    },
+    {
+      "id": "nop.delegation.001",
+      "description": "Each retry re-resolves the current unique highest-epoch live Anchor.",
+      "kind": "positive",
+      "category": "delegation",
+      "input": {
+        "attempts": [
+          {
+            "candidates": [
+              { "nid": "anchor-a", "cluster_epoch": 4, "live": true },
+              { "nid": "anchor-b", "cluster_epoch": 3, "live": true }
+            ]
+          },
+          {
+            "candidates": [
+              { "nid": "anchor-a", "cluster_epoch": 4, "live": false },
+              { "nid": "anchor-b", "cluster_epoch": 5, "live": true }
+            ]
+          }
+        ],
+        "parent_scope": {
+          "nodes": ["agent-a", "agent-b"],
+          "actions": ["read", "invoke"],
+          "max_token_budget": 1000
+        },
+        "delegated_scope": {
+          "nodes": ["agent-b"],
+          "actions": ["invoke"],
+          "max_token_budget": 600
+        }
+      },
+      "expected": { "targets": ["anchor-a", "anchor-b"], "error": null }
+    },
+    {
+      "id": "nop.delegation.002",
+      "description": "Scope expansion is rejected before dispatch.",
+      "kind": "negative",
+      "category": "delegation",
+      "input": {
+        "attempts": [],
+        "parent_scope": {
+          "nodes": ["agent-a"],
+          "actions": ["read"],
+          "max_token_budget": 100
+        },
+        "delegated_scope": {
+          "nodes": ["agent-a", "agent-b"],
+          "actions": ["read", "invoke"],
+          "max_token_budget": 101
+        }
+      },
+      "expected": { "targets": [], "error": "NOP-DELEGATE-SCOPE-VIOLATION" }
+    },
+    {
+      "id": "nop.delegation.003",
+      "description": "Equal highest live epochs are a split brain.",
+      "kind": "negative",
+      "category": "delegation",
+      "input": {
+        "attempts": [
+          {
+            "candidates": [
+              { "nid": "anchor-a", "cluster_epoch": 7, "live": true },
+              { "nid": "anchor-b", "cluster_epoch": 7, "live": true }
+            ]
+          }
+        ],
+        "parent_scope": {
+          "nodes": ["agent-a"],
+          "actions": ["invoke"],
+          "max_token_budget": 100
+        },
+        "delegated_scope": {
+          "nodes": ["agent-a"],
+          "actions": ["invoke"],
+          "max_token_budget": 100
+        }
+      },
+      "expected": { "targets": [], "error": "NDP-CLUSTER-SPLIT" }
+    },
+    {
+      "id": "nop.spawnspec.001",
+      "description": "A complete portable SpawnSpec is valid.",
+      "kind": "positive",
+      "category": "spawn_spec",
+      "input": {
+        "spawn_spec": {
+          "image": "registry.example.test/worker:1.0",
+          "command": ["/app/worker", "--serve"],
+          "env": { "MODE": "test" },
+          "resource_limits": {
+            "cpu": "500m",
+            "memory": "512Mi",
+            "cgn_budget": 50000
+          },
+          "idle_timeout_seconds": 30,
+          "max_runtime_seconds": 300
+        }
+      },
+      "expected": { "error": null }
+    },
+    {
+      "id": "nop.spawnspec.002",
+      "description": "SpawnSpec image is required.",
+      "kind": "negative",
+      "category": "spawn_spec",
+      "input": { "spawn_spec": { "command": ["/app/worker"] } },
+      "expected": { "error": "NOP-SPAWN-SPEC-INVALID" }
+    },
+    {
+      "id": "nop.spawnspec.003",
+      "description": "Idle timeout cannot exceed max runtime.",
+      "kind": "negative",
+      "category": "spawn_spec",
+      "input": {
+        "spawn_spec": {
+          "image": "registry.example.test/worker:1.0",
+          "idle_timeout_seconds": 60,
+          "max_runtime_seconds": 30
+        }
+      },
+      "expected": { "error": "NOP-SPAWN-SPEC-INVALID" }
+    },
+    {
+      "id": "nop.lifecycle.001",
+      "description": "Worker done maps to completed.",
+      "kind": "positive",
+      "category": "lifecycle",
+      "input": {
+        "elapsed_seconds": 20,
+        "idle_seconds": 2,
+        "idle_timeout_seconds": 30,
+        "max_runtime_seconds": 300,
+        "worker_terminal": "done"
+      },
+      "expected": { "state": "completed", "error": null }
+    },
+    {
+      "id": "nop.lifecycle.002",
+      "description": "Idle timeout maps to the NOP runtime error.",
+      "kind": "negative",
+      "category": "lifecycle",
+      "input": {
+        "elapsed_seconds": 40,
+        "idle_seconds": 31,
+        "idle_timeout_seconds": 30,
+        "max_runtime_seconds": 300,
+        "worker_terminal": null
+      },
+      "expected": {
+        "state": "failed",
+        "error": "NOP-RUNTIME-IDLE-TIMEOUT"
+      }
+    },
+    {
+      "id": "nop.lifecycle.003",
+      "description": "Max runtime takes precedence when both limits are breached.",
+      "kind": "negative",
+      "category": "lifecycle",
+      "input": {
+        "elapsed_seconds": 301,
+        "idle_seconds": 31,
+        "idle_timeout_seconds": 30,
+        "max_runtime_seconds": 300,
+        "worker_terminal": null
+      },
+      "expected": {
+        "state": "failed",
+        "error": "NOP-RUNTIME-MAX-RUNTIME"
+      }
+    },
+    {
+      "id": "nop.dedup.001",
+      "description": "dedup_key uses a NUL separator and lowercase SHA-256 hex.",
+      "kind": "positive",
+      "category": "dedup_key",
+      "input": { "task_id": "task-1", "dag_hash": "dag-a" },
+      "expected": {
+        "value": "22089413c713f2f8405f8ae2b04e27241ef43b1567902ef3436cec58c2aac6fd"
+      }
+    }
+  ]
+}

@@ -4,11 +4,11 @@ English | [中文版](./NPS-5-NOP.cn.md)
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.7
-**Date**: 2026-06-12
+**Version**: 0.9
+**Date**: 2026-07-29
 **Port**: 17433 (default, shared) / 17437 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9), NPS-2 (NWP v0.17), NPS-3 (NIP v0.11)
+**Depends-On**: NPS-1 (NCP v0.11), NPS-2 (NWP v0.20), NPS-3 (NIP v0.13), NPS-4 (NDP v0.12)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
@@ -72,7 +72,7 @@ The complete task definition submitted by the Orchestrator to its runtime or a c
 | `timeout_ms` | uint32 | Optional | Overall task timeout (milliseconds), default 30000, max 3600000 (1 hour) |
 | `max_retries` | uint8 | Optional | Global maximum retry count (failure of any single node beyond this causes overall failure), default 2 |
 | `priority` | string | Optional | Task priority: `"low"` / `"normal"` (default) / `"high"` |
-| `callback_url` | string | Optional | Callback URL on task completion/failure (`https://`, see §8.4) |
+| `callback_url` | string | Optional | Callback URL on task completion/failure (`https://`, see §9.4) |
 | `preflight` | bool | Optional | If true, perform a resource pre-flight check (§4) before execution, default false |
 | `compensation_policy` | string | Optional | Saga compensation policy: `"best_effort"` (default) or `"strict"`, see §3.1.6 |
 | `callback_secret` | string | Optional | HMAC-SHA256 key (base64url, 32 bytes) for webhook delivery signing (NOP v0.6). When present, the Orchestrator MUST compute `X-NPS-Signature: sha256=<HMAC-SHA256-hex>` over the raw JSON body and include it on every POST to `callback_url`. Receivers SHOULD reject callbacks missing this header with 400. Error code: `NOP-CALLBACK-HMAC-MISSING`. |
@@ -289,7 +289,7 @@ The Orchestrator delegates a single DAG subtask to a Worker Agent.
 | `deadline_at` | string | Required | Subtask deadline (ISO 8601 UTC) |
 | `idempotency_key` | string | Optional | Idempotency key (use the same value on retries) |
 | `priority` | string | Optional | Inherited from TaskFrame.priority |
-| `target_cluster_anchor` | string | Optional | NID of the cluster anchor to route this subtask to (cross-cluster delegation, NOP v0.6). When present, the Orchestrator MUST route the DelegateFrame to a Worker Agent registered under the specified cluster anchor. |
+| `target_cluster_anchor` | string | Optional | NID of the cluster anchor to route this subtask to (cross-cluster delegation, NOP v0.6). When present, the Orchestrator MUST route the DelegateFrame to a Worker Agent registered under the specified cluster anchor. Under multi-Anchor HA ([NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)) the Orchestrator MUST resolve `target_cluster_anchor` to the cluster's **current active** Anchor (highest `cluster_epoch`, NDP §9); on an `anchor_failover`, in-flight delegations to that cluster MUST re-resolve to the successor before retry. |
 | `context` | object | Optional | Pass-through context (inherited from TaskFrame.context with span_id updated to the current Delegate span) |
 
 **Scope Carving Principle**
@@ -423,6 +423,77 @@ Directed task stream, replacing NCP AlignFrame (0x05). Carries DAG context and N
 | Identity binding | None | sender_nid mandatory verification |
 | Backpressure unit | Bytes / frame count | CGN Token count |
 | Error propagation | None | `error` field (task failure semantics) |
+
+### 3.5 Portable Orchestrator Conformance Profile (v0.9)
+
+This section defines the deterministic profile used by shared Alpha.17
+conformance transcripts. Production orchestrators MAY execute independent nodes
+concurrently, but MUST produce the same terminal states, mapped values,
+aggregation, compensation set, retry count, and security decisions.
+
+#### 3.5.1 Preflight and scheduling
+
+1. Validate the complete DAG before any callback, preflight probe, or worker
+   dispatch. Kahn topological sorting MUST choose the lexicographically smallest
+   node ID whenever more than one node is ready.
+2. Validate `callback_url` and `callback_secret` before worker dispatch.
+3. When `preflight=true`, probe distinct `(agent, action)` pairs in
+   lexicographic order. Any rejection terminates the task with
+   `NOP-RESOURCE-INSUFFICIENT`; no task node is dispatched.
+4. Conformance mode executes one ready node at a time in stable topological
+   order and emits the canonical events `task:running`,
+   `<node>:attempt:<n>`, `<node>:completed|skipped|failed`, optional
+   `<node>:compensating|compensated|compensation_failed`, and one terminal
+   `task:completed|failed|cancelled` event.
+
+#### 3.5.2 Conditions, mapping, retry, and timeout
+
+- A node's `condition` is evaluated exactly once when the node first becomes
+  runnable, against an immutable snapshot of completed predecessor results.
+  `false` yields `SKIPPED`; an evaluation error yields
+  `NOP-CONDITION-EVAL-ERROR` and is not retried.
+- `input_mapping` is resolved after the condition and before the first dispatch.
+  A mapping error yields `NOP-INPUT-MAPPING-ERROR` and is not retried.
+- `max_retries` is the number of additional attempts after the initial attempt.
+  Every attempt reuses the same `subtask_id` and `idempotency_key`. A failure is
+  retried only when attempts remain, the worker marks it retryable, and
+  `retry_on` is absent or contains the error code.
+- A node deadline breach is `NOP-DELEGATE-TIMEOUT`. An overall deadline breach
+  is `NOP-TASK-TIMEOUT`. Once cancellation wins the terminal-state race, no
+  further attempt or compensation is dispatched and the task ends with
+  `NOP-TASK-CANCELLED`.
+
+#### 3.5.3 Dependency and aggregation rules
+
+`SKIPPED` satisfies a dependency but contributes no result. A K-of-N barrier
+passes when K predecessors are `COMPLETED` or `SKIPPED`; it fails as soon as K
+can no longer be reached. End-node results are ordered by stable topological
+order before aggregation. `merge` therefore applies later-key-wins in that
+order; `all` preserves that order; `fastest_k` uses explicit completion order
+with node ID as the tie-breaker; `weighted_first_k` sorts descending numeric
+`score` then by node ID; and `merge_all` concatenates arrays in topological
+order while applying later-key-wins to non-array values.
+
+#### 3.5.4 Saga compensation
+
+On terminal node failure, the compensation candidate set is the transitive
+completed ancestors of the failed node. Candidates run in reverse stable
+topological order. `strict` validates that every candidate has a
+`compensate_action` before dispatching any compensation; otherwise it returns
+`NOP-COMPENSATION-NOT-SUPPORTED`. In `best_effort`, missing actions are skipped
+and failures do not stop later compensations. In `strict`, the first failed
+compensation stops the saga with `NOP-COMPENSATION-FAILED`. Compensation uses
+the stable key `<task_id>:<node_id>:compensate`.
+
+#### 3.5.5 Delegation and runner leases
+
+Every delegation attempt MUST re-resolve `target_cluster_anchor` through NDP and
+select the unique highest-epoch live Anchor. It MUST reject a split brain,
+scope expansion, or a missing target before dispatch and MUST reuse the same
+idempotency key on retry. Runner lease renewal succeeds only while the lease is
+live and owned by the same `runner_nid`; an expired, released, or reclaimed
+lease MUST return `NOP-CLAIM-CONFLICT`. The canonical `dedup_key` is lowercase
+hex SHA-256 over UTF-8 `task_id`, one NUL separator byte, and UTF-8 `dag_hash`.
 
 ---
 
@@ -598,6 +669,8 @@ Orchestrator                              Worker B (Data)    Worker C (Inference
 | `NOP-COMPENSATION-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | Terminal — a node's `compensate_action` returned an error during saga rollback (see §3.1.6) |
 | `NOP-COMPENSATION-NOT-SUPPORTED` | `NPS-CLIENT-UNPROCESSABLE` | Terminal — a predecessor that must be compensated has no `compensate_action` and `compensation_policy="strict"` |
 | `NOP-CALLBACK-HMAC-MISSING` | `NPS-AUTH-UNAUTHENTICATED` | Callback recipient rejected delivery because `X-NPS-Signature` header was absent; `callback_secret` was set but signature was not computed |
+| `NOP-CALLBACK-INVALID` | `NPS-CLIENT-BAD-PARAM` | Callback URL failed scheme, user-info, DNS, public-address, or redirect validation |
+| `NOP-CALLBACK-HMAC-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | Callback HMAC was malformed or did not match the exact raw body |
 | `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | Task result requested after `result_ttl_seconds` elapsed; result no longer retained |
 | `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK retransmission requested for a frame no longer available in sender's buffer (frame has been evicted) |
 | `NOP-CLAIM-CONFLICT` | `NPS-CLIENT-CONFLICT` | TaskFrame already leased by a live runner lease (NPS-CR-0007 §4.2) |
@@ -622,7 +695,7 @@ A runner leases the head of a per-NID inbox atomically: `{ task_id, runner_nid, 
 (clamped [10,600]), dedup_key = sha256(task_id ‖ dag_hash) }`. Outcomes:
 
 - **Granted** — inbox marks the task `LEASED (runner_nid, lease_expiry)`; the runner MUST renew
-  the lease before expiry while the node runs.
+  the lease before expiry while the node runs. A renewal extends `lease_expiry` by `lease_seconds`, MUST carry the same `runner_nid`, and — if it arrives after the lease already expired and was reclaimed — MUST be rejected with `NOP-CLAIM-CONFLICT`.
 - **Conflict** — a live lease already exists ⇒ `NOP-CLAIM-CONFLICT`; the runner backs off.
 - **Reclaim** — an expired lease is reclaimable; the `dedup_key` ensures a side-effect-bearing
   node already in a terminal state is **not** re-executed (at-least-once with dedup).
@@ -636,6 +709,12 @@ Result reporting is idempotent, keyed by `(task_id, node_id, dedup_key)`.
 idle_timeout_seconds?, max_runtime_seconds? }`. It MAY be an inline `spawnspec:` base64url-JSON
 data URI or an `https://`/`nwp://` URL whose body MUST validate against the schema. Resolution
 failure ⇒ `NOP-SPAWN-SPEC-INVALID`.
+
+For a remote reference, the runner MUST apply the destination rules in §9.4 to the initial URL
+and every redirect. DNS resolution MUST fail closed unless every returned address is public, and
+the transport MUST connect to one of the validated addresses while retaining the original
+hostname for TLS SNI and certificate verification. Implementations MUST enforce finite redirect,
+response-size, and request-time limits.
 
 ### 8.3 Lifecycle enforcement
 
@@ -681,7 +760,16 @@ Every DelegateFrame execution SHOULD be written to an audit log containing:
 
 ### 9.4 callback_url Abuse Prevention
 - TaskFrame `callback_url` MUST use the `https://` scheme
-- The Orchestrator SHOULD perform SSRF checks on callback URLs (internal network addresses prohibited)
+- The Orchestrator MUST reject URL user-info and hosts that are loopback,
+  private, link-local, unspecified, multicast, or otherwise non-public.
+- A hostname MUST be resolved before delivery. Every returned A/AAAA address
+  MUST pass the same public-address check, and the HTTP transport MUST connect
+  to one of those validated addresses while retaining the original hostname
+  for TLS SNI and certificate verification. Redirects MUST repeat the complete
+  validation and MUST NOT reuse an unvalidated destination.
+- When `callback_secret` is present, senders MUST sign the exact raw body and
+  receivers MUST compare the lowercase `sha256=<hex>` HMAC in constant time.
+  A missing, malformed, or mismatched signature fails closed.
 - On callback delivery failure, SHOULD apply exponential backoff retries (max 3 attempts), then abandon and log
 
 ### 9.5 Delegation Chain Security
@@ -693,6 +781,8 @@ Every delegation level must pass NIP CA verification that `delegated_scope` does
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.9 | 2026-07-29 | **Alpha.17 portable orchestrator profile**: deterministic DAG preflight and conformance scheduling; single-evaluation condition/input mapping rules; retry, timeout, cancellation, K-of-N, and aggregation ordering; reverse-topological saga reporting; fail-closed callback DNS/SSRF and HMAC validation; per-attempt Anchor re-resolution; strict live-owner lease renewal and canonical dedup key. Adds shared orchestration and runtime/security transcripts; promotes NPS-CR-0007 to Implemented after the six-SDK and runner gates passed. |
+| 0.8 | 2026-07-05 | Multi-Anchor HA interaction (NPS-CR-0009): `DelegateFrame.target_cluster_anchor` MUST resolve to the target cluster's current active Anchor (highest `cluster_epoch`, NDP §9), and in-flight delegations MUST re-resolve to the `successor_nid` on `anchor_failover` before retry. Lease-renewal semantics formalised (§8): a renewal extends `lease_expiry`, MUST match `runner_nid`, and is rejected with `NOP-CLAIM-CONFLICT` if the lease already expired and was reclaimed. No new codes. |
 | 0.7 | 2026-06-12 | **NPS-CR-0007 — NOP ↔ L3 runtime integration**: new §8 (task-claim protocol with lease + `dedup_key`; `spawn_spec_ref` SpawnSpec content schema; idle/max-runtime enforcement; idempotent result reporting); 4 new error codes (`NOP-CLAIM-CONFLICT`, `NOP-SPAWN-SPEC-INVALID`, `NOP-RUNTIME-IDLE-TIMEOUT`, `NOP-RUNTIME-MAX-RUNTIME`); new `services/conformance/NPS-Node-L3.md` (`TC-N3-*`); Security/Changelog renumbered §9/§10. Gates the `nps-runner` L3 FaaS runtime. |
 | 0.7 | 2026-06-03 | `result_ttl_seconds` (uint32, default 3600) on TaskFrame — `NOP-TASK-RESULT-EXPIRED` after TTL; `NOP-STREAM-NAK-UNRESOLVABLE` error code for evicted-frame NAK retransmission |
 | 0.6 | 2026-05-31 | `callback_secret` (HMAC-SHA256 key) on TaskFrame — `X-NPS-Signature` header on webhook callbacks, `NOP-CALLBACK-HMAC-MISSING`; `target_cluster_anchor` on DelegateFrame for cross-cluster routing; `weighted_first_k` / `merge_all` SyncFrame aggregate strategies (§3.3.2); `ack_seq` / `nak_seq` sliding-window ACK on AlignStream (§3.4.2) |

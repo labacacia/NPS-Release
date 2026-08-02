@@ -4,7 +4,7 @@
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.9
+**Version**: 0.11
 **Date**: 2026-06-27
 **Port**: 17433（默认，全协议族共用）  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
@@ -131,6 +131,13 @@ Client (Agent)                        Server (Node)
 - 一个会话 SHOULD 使用稳定的默认编码策略：生产环境用 Tier-2 MsgPack，开发/兼容场景用 Tier-1 JSON，Tier-3 BinaryVector 只作为已协商的向量密集型帧专用优化。仅当符合已协商策略时，才允许逐帧使用不同 Tier（例如协商前 HelloFrame 用 JSON、普通帧用 MsgPack、NWP 向量检索 QueryFrame 用 BinaryVector）。实现 MUST NOT 把帧头 tier bits 理解为应用层可随意切换编码的许可。
 - 只有当双方都支持 Tier-3 BinaryVector v1 时，服务端 MAY 启用 `binary_vector.v1`；启用它并不表示 Tier-3 成为会话默认编码。
 - 协商后的 `max_frame_payload` = min(client.max_frame_payload, server.max_frame_payload)
+
+**身份与授权绑定**
+
+- `HelloFrame` 只是传输 / 会话层的能力协商帧。除可选的 `agent_id` 路由提示外，它 MUST NOT 携带 bearer token、授权 scope 或任何其他凭据。
+- 原生模式下，当所选的上层协议要求认证时，客户端 MUST 在服务端握手 `CapsFrame` 之后、第一个需认证的 NWP/NOP 帧之前，每连接一次地出示 NIP `IdentFrame`。服务端把该 `IdentFrame` 中验证通过的 NID、capabilities、scope 与 assurance level 绑定到该 NCP 会话。当该 Anchor 随后发生集群所有权转移（多 Anchor 高可用，[NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)）时，服务端 MAY 关闭该原生连接；在连接丢失、或恢复（resumption）尝试后收到 `NCP-NID-MISMATCH` 的情况下，客户端 MUST 重新解析该集群（NDP §9，取最高 `cluster_epoch`）或改用 NWP `anchor_failover` 事件（NPS-2 §12.2）给出的 `successor_nid`，并对新的活跃 Anchor 重新建立会话。原生模式传输依 NPS-RFC-0006（Accepted）为规范性内容。
+- NWP `QueryFrame`、`ActionFrame` 与 `SubscribeFrame` 不含逐消息的 auth-token 字段。原生模式下消息的授权，基于会话绑定的身份再加上逐消息的 target / scope 数据来判定。
+- HTTP / Overlay 模式不使用 `HelloFrame`；使用 bearer 凭据的部署在 HTTP 传输信封中出示凭据（例如 `Authorization: Bearer ...`），与 NWP 请求头并列。bearer 凭据不嵌入 NWP 帧 payload 内部。
 
 **错误处理**
 
@@ -838,6 +845,7 @@ NCP v0.9 的标准绑定是 NWP `QueryFrame.vector_search.vector`。marker index
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.10 | 2026-07-05 | 原生模式传输正式成为规范性内容（NPS-RFC-0006 **Accepted**）。新增原生模式下**跨 Anchor 故障转移的会话连续性**（NPS-CR-0009）：多 Anchor 所有权转移后，若连接丢失或恢复尝试返回 `NCP-NID-MISMATCH`，客户端经 NDP §9（取最高 `cluster_epoch`）重新解析，或使用 NWP `anchor_failover` 的 `successor_nid`，并重新建立会话。无新增帧与错误码（复用 `NCP-NID-MISMATCH`）。 |
 | 0.9 | 2026-06-27 | 激活 Tier-3 BinaryVector v1（`Flags.T1T0 = 10`），协商 token 为 `binary_vector.v1`；定义 `NPBV` Payload 布局、MessagePack metadata marker、float32 little-endian 向量段，以及 NWP `QueryFrame.vector_search.vector` 绑定；`0b11` 仍为保留值。 |
 | 0.8 | 2026-06-12 | 新增 §7.5 原生模式 TLS 绑定与双向认证，归纳 **NPS-RFC-0006 §6**（草案→提议）：套件级 ALPN `nps/1.0`（取代临时值 `ncp/1`）、原生模式 over TCP 强制 TLS 封装、与 NIP 证书的 mTLS + session-NID 绑定、TLS 1.3 会话恢复票据；新增错误码 `NCP-NID-MISMATCH`。gate `nps-ingress`（L2）守护进程。（正文中文翻译待补，见 version-matrix translation_lag） |
 | 0.6 | 2026-04-25 | 新增 §2.6.1 原生模式连接前导（8 字节常量 `b"NPS/1.0\n"`）；在 `frame-registry.yaml` 中保留帧类型字节 0x4E；新增错误码 `NCP-PREAMBLE-INVALID` 和状态码 `NPS-PROTO-PREAMBLE-INVALID`。详见 [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.cn.md)。 |

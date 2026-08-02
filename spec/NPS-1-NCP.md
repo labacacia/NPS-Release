@@ -4,8 +4,8 @@ English | [中文版](./NPS-1-NCP.cn.md)
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.9
-**Date**: 2026-06-27
+**Version**: 0.11
+**Date**: 2026-07-05
 **Port**: 17433 (default, shared across the protocol suite)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 
@@ -135,7 +135,7 @@ Client (Agent)                        Server (Node)
 **Identity and authorization binding**
 
 - `HelloFrame` is a transport/session capability negotiation frame only. It MUST NOT carry bearer tokens, authorization scopes, or other credentials beyond the optional `agent_id` routing hint.
-- In native mode, when the selected higher-layer protocol requires authentication, the client MUST present a NIP `IdentFrame` once per connection after the server's handshake `CapsFrame` and before the first authenticated NWP/NOP frame. The server binds the verified NID, capabilities, scope, and assurance level from that `IdentFrame` to the NCP session.
+- In native mode, when the selected higher-layer protocol requires authentication, the client MUST present a NIP `IdentFrame` once per connection after the server's handshake `CapsFrame` and before the first authenticated NWP/NOP frame. The server binds the verified NID, capabilities, scope, and assurance level from that `IdentFrame` to the NCP session. When that Anchor subsequently transfers cluster ownership (multi-Anchor HA, [NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)), the server MAY close the native connection; on connection loss or an `NCP-NID-MISMATCH` after a resumption attempt, the client MUST re-resolve the cluster (NDP §9, highest `cluster_epoch`) or use the `successor_nid` from the NWP `anchor_failover` event (NPS-2 §12.2) and re-establish the session against the new active Anchor. Native-mode transport is normative per NPS-RFC-0006 (Accepted).
 - NWP `QueryFrame`, `ActionFrame`, and `SubscribeFrame` do not contain per-message auth-token fields. Authorization for native-mode messages is evaluated against the session-bound identity plus any per-message target/scope data.
 - HTTP/Overlay mode does not use `HelloFrame`; deployments that use bearer credentials present them in the HTTP transport envelope (for example `Authorization: Bearer ...`) alongside the NWP request headers. Bearer credentials are not embedded inside NWP frame payloads.
 
@@ -209,6 +209,80 @@ Hex: `4E 50 53 2F 31 2E 30 0A`. The preamble is **not** a frame — it has no he
 ```
 
 See [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.md) for full design rationale, alternatives considered, and SDK rollout phases.
+
+### 2.6.2 Native Server Interoperability Profile (NCP v0.11)
+
+This profile defines the minimum observable behavior of a portable native-mode
+NCP server. It applies equally to TCP and QUIC stream implementations. The
+language-neutral cases in
+[`conformance/ncp/native_server_handshake_vectors.json`](conformance/ncp/native_server_handshake_vectors.json)
+are normative.
+
+**Transport and read boundaries**
+
+1. When transport authentication is configured, the Server MUST complete the
+   authentication or stream-wrapping hook before reading the NCP preamble.
+   A deployment that requires an authenticated stream MUST fail locally when no
+   hook is configured or the hook returns the original unauthenticated stream.
+2. The Server MUST bound the preamble read. The default limit is 10 seconds.
+   An invalid or incomplete preamble is closed silently as defined in §2.6.1.
+3. After a valid preamble, the Server MUST bound the complete Hello read
+   (header plus payload) separately. The default limit is 5 seconds.
+4. The Server MUST inspect the frame header before allocating the Hello payload.
+   `max_hello_payload` defaults to 65,535 bytes and MUST be configurable to a
+   lower deployment limit.
+5. The first frame MUST be an unencrypted Tier-1 JSON `HelloFrame` with
+   `EXT=0`. A wrong frame type, reserved encoding tier, `ENC=1`, `EXT=1`,
+   malformed header/payload, oversized payload, or Hello timeout causes a silent
+   close. These pre-admission failures MUST NOT emit an `ErrorFrame`.
+6. Once a valid Hello has been decoded, the Server MUST either send one
+   handshake `CapsFrame` and establish the session, or send one `ErrorFrame` and
+   close. It MUST NOT continue reading application frames while the connection
+   remains in the handshake state.
+
+Servers MUST expose bounded preamble and Hello timeouts. Deployments MAY lower
+the defaults, but MUST NOT disable both limits on an untrusted listener.
+
+**Deterministic negotiation**
+
+The Server evaluates a decoded Hello against its configured profile:
+
+- Both peers declare an inclusive `min_version`-`nps_version` range.
+  An omitted `min_version` equals that peer's `nps_version`. Versions use the
+  strict `major.minor` form. The session version is the highest version in the
+  overlap. No overlap returns `NCP-VERSION-INCOMPATIBLE`.
+- The stable default encoding is the first token in the client's ordered
+  `supported_encodings` list that is also enabled by the Server and is either
+  `msgpack` or `json`. No stable intersection returns
+  `NCP-ENCODING-UNSUPPORTED`.
+- `binary_vector.v1` is enabled only when both peers declare it. It is appended
+  after the stable default in `enabled_encodings` and never becomes the default.
+- `supported_protocols` is the intersection of both lists in client preference
+  order. `ncp` MUST be present; otherwise the Server returns
+  `NCP-VERSION-INCOMPATIBLE`.
+- `max_frame_payload` and `max_concurrent_streams` are the minimum of the two
+  peers' advertised limits. A zero limit is invalid.
+- `ext_support` is enabled only when both peers advertise `true`.
+
+The handshake `CapsFrame` payload is distinguished by handshake state and uses
+the following portable fields. Existing fields remain additive and
+backward-compatible:
+
+| Field | Type | Required | Description |
+|---|---|---:|---|
+| `node_id` | string | yes | Server NID |
+| `caps` | array[string] | yes | Server application capabilities |
+| `session_version` | string | yes | Negotiated protocol version |
+| `negotiated_encoding` | string | yes | Stable default: `msgpack` or `json` |
+| `enabled_encodings` | array[string] | yes | Stable default followed by negotiated extensions |
+| `supported_protocols` | array[string] | yes | Negotiated higher-layer protocol intersection |
+| `max_frame_payload` | uint32 | yes | Negotiated payload ceiling |
+| `ext_support` | bool | yes | Negotiated extended-header support |
+| `max_concurrent_streams` | uint32 | yes | Negotiated concurrent-stream ceiling |
+| `anchor_ref` | string | no | First offered schema reference |
+| `payload` | object | no | Implementation-defined metadata |
+
+This profile adds no frame type or error code.
 
 ---
 
@@ -890,6 +964,8 @@ For NCP v0.9, the standard binding is NWP `QueryFrame.vector_search.vector`. The
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.11 | 2026-07-29 | Added §2.6.2 Native Server Interoperability Profile: authentication-before-preamble ordering, separate bounded preamble/Hello reads, allocation-safe Hello limits, silent pre-admission failure behavior, deterministic version/encoding/protocol/limit negotiation, portable handshake Caps fields, and shared `native_server_handshake_vectors.json`. Additive; no new frame type or error code. |
+| 0.10 | 2026-07-05 | Native-mode transport adopted as normative (NPS-RFC-0006 **Accepted**). New native-mode **session continuity across Anchor failover** (NPS-CR-0009): on connection loss / `NCP-NID-MISMATCH` after a multi-Anchor ownership transfer, the client re-resolves via NDP §9 (highest `cluster_epoch`) or the NWP `anchor_failover` `successor_nid` and re-establishes the session. No new frames or error codes (`NCP-NID-MISMATCH` reused). |
 | 0.9 | 2026-06-27 | Activated Tier-3 BinaryVector v1 (`Flags.T1T0 = 10`) with negotiation token `binary_vector.v1`; defined the `NPBV` payload layout, MessagePack metadata marker, float32 little-endian vector segments, and NWP `QueryFrame.vector_search.vector` binding; `0b11` remains reserved. |
 | 0.8 | 2026-06-12 | New §7.5 Native-Mode TLS Binding & Mutual Authentication, summarising **NPS-RFC-0006 §6** (promoted Draft → Proposed): suite-wide ALPN `nps/1.0` (supersedes provisional `ncp/1`), TLS-wrapped framing mandated for native-mode-over-TCP, mTLS with NIP certificates + session-NID binding, TLS 1.3 session-resumption tickets; added error code `NCP-NID-MISMATCH`. Gates the `nps-ingress` (L2) daemon. |
 | 0.8 | 2026-06-03 | **NopFrame (0x07)** keepalive/heartbeat: null payload, bidirectional; `HelloFrame.ping_interval_ms` declares preferred interval (0 = disabled, default); `NCP-KEEPALIVE-TIMEOUT` error code when no frame received within 3 × interval; §7.6 dead-peer detection rules. |

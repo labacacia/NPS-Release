@@ -1,0 +1,92 @@
+{
+  "name": "ncp-encoding-policy",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-1-NCP.md §2.6, §8",
+  "description": "Session encoding-policy fixtures. The negotiated default encoding is stable for ordinary frames; Tier-3 BinaryVector v1 is an optional extension that may be used only when binary_vector.v1 is enabled and the frame class has a standard BinaryVector binding.",
+  "vectors": [
+    {
+      "id": "ncp.encoding_policy.001",
+      "description": "Negative: a MsgPack-only session receives a Tier-3 BinaryVector QueryFrame header. Receiver MUST reject it before payload decode.",
+      "kind": "negative",
+      "input": {
+        "policy": {
+          "default_encoding": "msgpack",
+          "enabled_encodings": ["msgpack"]
+        },
+        "inbound_frame": {
+          "frame_type": "0x10",
+          "frame_name": "QueryFrame",
+          "flags": "0x06",
+          "tier": "binary_vector.v1"
+        }
+      },
+      "expected": {
+        "status": "NPS-SERVER-ENCODING-UNSUPPORTED",
+        "error": "NCP-ENCODING-UNSUPPORTED",
+        "decision": "reject"
+      }
+    },
+    {
+      "id": "ncp.encoding_policy.002",
+      "description": "Positive: a MsgPack session with binary_vector.v1 enabled may receive an NWP QueryFrame using Tier-3.",
+      "kind": "positive",
+      "input": {
+        "policy": {
+          "default_encoding": "msgpack",
+          "enabled_encodings": ["msgpack", "binary_vector.v1"]
+        },
+        "inbound_frame": {
+          "frame_type": "0x10",
+          "frame_name": "QueryFrame",
+          "flags": "0x06",
+          "tier": "binary_vector.v1"
+        }
+      },
+      "expected": {
+        "decision": "accept"
+      }
+    },
+    {
+      "id": "ncp.encoding_policy.003",
+      "description": "Negative: binary_vector.v1 is enabled, but ActionFrame has no v1 BinaryVector binding. Receiver MUST reject arbitrary per-frame Tier-3 switching.",
+      "kind": "negative",
+      "input": {
+        "policy": {
+          "default_encoding": "msgpack",
+          "enabled_encodings": ["msgpack", "binary_vector.v1"]
+        },
+        "inbound_frame": {
+          "frame_type": "0x11",
+          "frame_name": "ActionFrame",
+          "flags": "0x06",
+          "tier": "binary_vector.v1"
+        }
+      },
+      "expected": {
+        "status": "NPS-SERVER-ENCODING-UNSUPPORTED",
+        "error": "NCP-ENCODING-UNSUPPORTED",
+        "decision": "reject"
+      }
+    },
+    {
+      "id": "ncp.encoding_policy.004",
+      "description": "Positive: ordinary frames use the stable default encoding selected by the session policy.",
+      "kind": "positive",
+      "input": {
+        "policy": {
+          "default_encoding": "msgpack",
+          "enabled_encodings": ["msgpack", "binary_vector.v1"]
+        },
+        "inbound_frame": {
+          "frame_type": "0x11",
+          "frame_name": "ActionFrame",
+          "flags": "0x05",
+          "tier": "msgpack"
+        }
+      },
+      "expected": {
+        "decision": "accept"
+      }
+    }
+  ]
+}

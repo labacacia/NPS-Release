@@ -2,8 +2,8 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 1.6
-**Date**: 2026-07-05
+**Version**: 1.8
+**Date**: 2026-07-29
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -93,11 +93,22 @@ NPS uses a two-level error system:
 | `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` | HTTP overlay request `Accept` cannot be satisfied by any supported response media type (NWP §9.5) |
 | `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | Response `X-NWP-Request-ID` does not echo the request ID (NWP §9.5) |
 | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body cannot be parsed as a supported NWP frame envelope (NWP §9.5) |
+| `NWP-HTTP-BODY-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | HTTP request body exceeds the portable Node server's configured limit (NWP §9.5 / §16.5.1) |
 | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM advertises a capability/profile that the node currently cannot serve; distinct from truthful unsupported-feature codes such as `NWP-QUERY-VECTOR-UNSUPPORTED` (NWP §9.5) |
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | Caller lacks permission to read this Anchor's topology (NPS-2 §12); authorization policy is implementation-defined per §12.4 (NPS-CR-0002) |
+| `NWP-ANCHOR-NOT-LEADER` | `NPS-CLIENT-CONFLICT` | Topology write sent to a standby or read-only-degraded Anchor; only the active cluster owner accepts writes (NPS-CR-0009) |
+| `NWP-ANCHOR-EPOCH-FENCED` | `NPS-CLIENT-CONFLICT` | Inbound frame carries a higher `cluster_epoch` than the receiving Anchor; the receiver is a superseded leader and is fenced (NPS-CR-0009) |
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` value is not implemented by this Anchor Node (NPS-CR-0002) |
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | Requested `topology.depth` exceeds this Anchor Node's configured maximum (NPS-CR-0002) |
 | `NWP-TOPOLOGY-FILTER-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | `topology.filter` contains an unrecognized key or unsupported operator (NPS-CR-0002) |
+| `NWP-BRIDGE-DIRECTION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | The request targets a protocol/direction pair this Bridge Node did not declare — an inbound request for a protocol absent from `bridge_inbound_protocols`, or an outbound `bridge_target.protocol` absent from `bridge_protocols` (NPS-4 §3.1). The response SHOULD carry both declared arrays in `hint`. Distinct from `NWP-ACTION-PARAMS-INVALID`: the protocol/direction is well-formed but unserved, not malformed. (NPS-CR-0010) |
+| `NWP-BRIDGE-TARGET-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | **Outbound.** The invocation carries no valid `bridge_target` object, or it fails schema validation (missing `protocol` / `endpoint`). *Registered by NPS-CR-0010; shipped in the .NET Bridge since alpha.7 without ever being registered here.* |
+| `NWP-BRIDGE-PROTOCOL-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | **Outbound.** `bridge_target.protocol` is well-formed but this Bridge Node has no registered dispatcher for it. Distinct from `NWP-BRIDGE-DIRECTION-UNSUPPORTED`, which concerns the *declared* protocol/direction sets rather than the dispatcher table. *Registered by NPS-CR-0010.* |
+| `NWP-BRIDGE-ENDPOINT-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | **Outbound.** `bridge_target.endpoint` is not a valid URL, or is disallowed by the Bridge's SSRF policy (NWP §15.2). *Registered by NPS-CR-0010.* |
+| `NWP-BRIDGE-UPSTREAM-FAILED` | `NPS-DOWNSTREAM-UNAVAILABLE` | **Outbound.** The external call failed at the transport layer, timed out, or returned a response the Bridge could not translate back into NWP frames. Distinct from a *successful* translation of an upstream error status, which maps per NWP §16.3. *Registered by NPS-CR-0010.* |
+| `NWP-BRIDGE-SERVER-TOOL-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | **Inbound.** The foreign client named a tool / action / resource this Bridge does not expose. *Registered by NPS-CR-0010.* |
+| `NWP-BRIDGE-SERVER-DISPATCHER-MISSING` | `NPS-SERVER-INTERNAL` | **Inbound.** The Bridge was started without a configured backend for the NPS node it fronts — a deployment fault, not a client fault. *Registered by NPS-CR-0010; the .NET Bridge previously emitted the non-existent status `NPS-SERVER-NOT-IMPLEMENTED` here.* |
+| `NWP-BRIDGE-SERVER-DISPATCH-FAILED` | `NPS-SERVER-INTERNAL` | **Inbound.** Dispatch to the fronted NPS node failed unexpectedly. *Registered by NPS-CR-0010.* |
 
 ---
 
@@ -107,6 +118,7 @@ NPS uses a two-level error system:
 |------------|-----------------|-------------|
 | `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | Certificate has expired (`expires_at < now`) |
 | `NIP-CERT-NODE-ROLES-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.node_roles` does not match the `id-nps-node-roles` X.509 extension; Phase 3 enforcement (NIP v0.10) |
+| `NIP-CERT-CAPABILITIES-EXCEEDED` | `NPS-AUTH-FORBIDDEN` | `IdentFrame.capabilities` claims a capability absent from the CA-attested `id-nps-capabilities` extension; Phase-3 enforcement (NIP v0.12) |
 | `NIP-OCSP-STAPLE-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | `IdentFrame.ocsp_staple` `nextUpdate` has elapsed — staple is stale; Agent must refresh and resend (NIP v0.9 §5.1.4) |
 | `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | Certificate has been revoked (found in CRL or OCSP) |
 | `NIP-CERT-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | Certificate signature verification failed |
@@ -163,11 +175,12 @@ NPS uses a two-level error system:
 | `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` contains an unrecognized value (not a known-removed legacy value — use `NDP-ANNOUNCE-ROLE-REMOVED` for that case). |
 | `NDP-ANNOUNCE-CONFLICT` | `NPS-CLIENT-CONFLICT` | Two AnnounceFrames share the same `nid` and `graph_seq` but differ in covered content (registry-poisoning attempt; see NPS-4 §7.4) |
 | `NDP-ANNOUNCE-PROFILE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame violates an active registry security profile constraint not covered by a more specific NDP error (for example, address policy under an org/private or public/federated profile) |
-| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `graph_seq` is less than or equal to the highest value previously accepted for that NID (rollback attempt; see NPS-4 §7.5) |
+| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `graph_seq` is lower than the highest value previously accepted for that NID (rollback attempt; see NPS-4 §7.5) |
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame sequence numbers are not contiguous |
 | `NDP-GRAPH-INVALID` | `NPS-CLIENT-BAD-FRAME` | GraphFrame edge references a NID not present in the `nodes` list, or contains a self-edge |
 | `NDP-GRAPH-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | GraphFrame exceeds the topology snapshot limits (`nodes` > 256 or `edges` > 1024) |
 | `NDP-FEDERATION-LOOP` | `NPS-CLIENT-CONFLICT` | Federation forwarding detected a loop via the `ndp-forwarded-by` hop list |
+| `NDP-CLUSTER-SPLIT` | `NPS-CLIENT-CONFLICT` | Two live Anchor announcements advertise the same `cluster_epoch` for one `cluster_anchor` cluster (split-brain); the Registry refuses to resolve arbitrarily (NPS-CR-0009) |
 | `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame issuer (signing CA) is not in the active registry profile's issuer allowlist (see NPS-4 §7.3) |
 | `NDP-CA-ATTEST-REQUIRED` | `NPS-AUTH-UNAUTHENTICATED` | Active registry profile requires a CA-attested NID and the AnnounceFrame's certificate chain does not anchor in the configured trust roots (see NPS-4 §7.3) |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry temporarily unavailable |
@@ -203,6 +216,8 @@ NPS uses a two-level error system:
 | `NOP-RUNTIME-IDLE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | L3 worker exceeded its idle timeout before completing the node (NPS-CR-0007 §6) |
 | `NOP-RUNTIME-MAX-RUNTIME` | `NPS-SERVER-TIMEOUT` | L3 worker exceeded its max runtime before completing the node (NPS-CR-0007 §6) |
 | `NOP-CALLBACK-HMAC-MISSING` | `NPS-AUTH-UNAUTHENTICATED` | Callback recipient rejected delivery because `X-NPS-Signature` header was absent; `callback_secret` was set but signature was not computed (NOP v0.6) |
+| `NOP-CALLBACK-INVALID` | `NPS-CLIENT-BAD-PARAM` | Callback URL failed scheme, user-info, DNS, public-address, or redirect validation (NOP v0.9) |
+| `NOP-CALLBACK-HMAC-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | Callback HMAC was malformed or did not match the exact raw body (NOP v0.9) |
 | `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | Task result requested after `result_ttl_seconds` elapsed; result no longer retained (NOP v0.7) |
 | `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK retransmission requested for a frame no longer available in sender's buffer (frame has been evicted) (NOP v0.7) |
 

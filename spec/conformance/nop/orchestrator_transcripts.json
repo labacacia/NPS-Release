@@ -1,0 +1,468 @@
+{
+  "name": "nop-orchestrator-transcripts",
+  "version": "0.9.0",
+  "spec_ref": "spec/NPS-5-NOP.md §3.5",
+  "description": "Deterministic portable-orchestrator sessions. Nodes are run in stable topological order; scripted attempts model worker outcomes.",
+  "vectors": [
+    {
+      "id": "nop.orchestrator.001",
+      "description": "Linear success resolves input_mapping before dispatch.",
+      "kind": "positive",
+      "input": {
+        "task_id": "task-linear",
+        "aggregate": "merge",
+        "nodes": [
+          {
+            "id": "fetch",
+            "depends_on": [],
+            "attempts": [
+              { "kind": "success", "result": { "value": 2 } }
+            ]
+          },
+          {
+            "id": "double",
+            "depends_on": ["fetch"],
+            "input_mapping": { "value": "$.fetch.value" },
+            "attempts": [
+              { "kind": "success", "result": { "answer": 4 } }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": [
+          "task:running",
+          "fetch:attempt:1",
+          "fetch:completed",
+          "double:attempt:1",
+          "double:completed",
+          "task:completed"
+        ],
+        "terminal_state": "completed",
+        "error_code": null,
+        "aggregate": { "answer": 4 },
+        "node_states": { "double": "completed", "fetch": "completed" },
+        "attempt_counts": { "double": 1, "fetch": 1 },
+        "mapped_params": { "double": { "value": 2 } },
+        "compensation_order": []
+      }
+    },
+    {
+      "id": "nop.orchestrator.002",
+      "description": "A false condition skips a terminal node and contributes no result.",
+      "kind": "positive",
+      "input": {
+        "task_id": "task-skip",
+        "nodes": [
+          {
+            "id": "seed",
+            "depends_on": [],
+            "attempts": [
+              { "kind": "success", "result": { "score": 0.4 } }
+            ]
+          },
+          {
+            "id": "publish",
+            "depends_on": ["seed"],
+            "condition": "$.seed.score > 0.7",
+            "attempts": [
+              { "kind": "success", "result": { "published": true } }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": [
+          "task:running",
+          "seed:attempt:1",
+          "seed:completed",
+          "publish:skipped",
+          "task:completed"
+        ],
+        "terminal_state": "completed",
+        "error_code": null,
+        "aggregate": null,
+        "node_states": { "publish": "skipped", "seed": "completed" },
+        "attempt_counts": { "publish": 0, "seed": 1 },
+        "mapped_params": {},
+        "compensation_order": []
+      }
+    },
+    {
+      "id": "nop.orchestrator.003",
+      "description": "A selected retryable failure reuses the logical dispatch and succeeds.",
+      "kind": "positive",
+      "input": {
+        "task_id": "task-retry-success",
+        "max_retries": 1,
+        "nodes": [
+          {
+            "id": "invoke",
+            "depends_on": [],
+            "retry_on": ["NWP-NODE-UNAVAILABLE"],
+            "attempts": [
+              {
+                "kind": "failure",
+                "error_code": "NWP-NODE-UNAVAILABLE",
+                "retryable": true
+              },
+              { "kind": "success", "result": { "ok": true } }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": [
+          "task:running",
+          "invoke:attempt:1",
+          "invoke:retrying",
+          "invoke:attempt:2",
+          "invoke:completed",
+          "task:completed"
+        ],
+        "terminal_state": "completed",
+        "error_code": null,
+        "aggregate": { "ok": true },
+        "node_states": { "invoke": "completed" },
+        "attempt_counts": { "invoke": 2 },
+        "mapped_params": {},
+        "compensation_order": []
+      }
+    },
+    {
+      "id": "nop.orchestrator.004",
+      "description": "Retry exhaustion preserves the worker error as the task error.",
+      "kind": "negative",
+      "input": {
+        "task_id": "task-retry-fail",
+        "max_retries": 1,
+        "nodes": [
+          {
+            "id": "invoke",
+            "depends_on": [],
+            "attempts": [
+              {
+                "kind": "failure",
+                "error_code": "NOP-DELEGATE-REJECTED",
+                "retryable": true
+              },
+              {
+                "kind": "failure",
+                "error_code": "NOP-DELEGATE-REJECTED",
+                "retryable": true
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": [
+          "task:running",
+          "invoke:attempt:1",
+          "invoke:retrying",
+          "invoke:attempt:2",
+          "invoke:failed",
+          "task:failed"
+        ],
+        "terminal_state": "failed",
+        "error_code": "NOP-DELEGATE-REJECTED",
+        "aggregate": null,
+        "node_states": { "invoke": "failed" },
+        "attempt_counts": { "invoke": 2 },
+        "mapped_params": {},
+        "compensation_order": []
+      }
+    },
+    {
+      "id": "nop.orchestrator.005",
+      "description": "merge_all uses stable topological order and concatenates arrays.",
+      "kind": "positive",
+      "input": {
+        "task_id": "task-merge-all",
+        "aggregate": "merge_all",
+        "nodes": [
+          {
+            "id": "beta",
+            "depends_on": [],
+            "attempts": [
+              {
+                "kind": "success",
+                "result": { "items": [2], "shared": "beta" }
+              }
+            ]
+          },
+          {
+            "id": "alpha",
+            "depends_on": [],
+            "attempts": [
+              {
+                "kind": "success",
+                "result": { "items": [1], "shared": "alpha" }
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": [
+          "task:running",
+          "alpha:attempt:1",
+          "alpha:completed",
+          "beta:attempt:1",
+          "beta:completed",
+          "task:completed"
+        ],
+        "terminal_state": "completed",
+        "error_code": null,
+        "aggregate": { "items": [1, 2], "shared": "beta" },
+        "node_states": { "alpha": "completed", "beta": "completed" },
+        "attempt_counts": { "alpha": 1, "beta": 1 },
+        "mapped_params": {},
+        "compensation_order": []
+      }
+    },
+    {
+      "id": "nop.orchestrator.006",
+      "description": "Best-effort saga compensates completed ancestors in reverse topology.",
+      "kind": "negative",
+      "input": {
+        "task_id": "task-saga-best-effort",
+        "compensation_policy": "best_effort",
+        "nodes": [
+          {
+            "id": "reserve",
+            "depends_on": [],
+            "compensate_action": "nwp://inventory/release/invoke",
+            "compensation_outcome": "success",
+            "attempts": [
+              { "kind": "success", "result": { "reservation_id": "r1" } }
+            ]
+          },
+          {
+            "id": "charge",
+            "depends_on": ["reserve"],
+            "compensate_action": "nwp://payments/refund/invoke",
+            "compensation_outcome": "success",
+            "attempts": [
+              { "kind": "success", "result": { "charge_id": "c1" } }
+            ]
+          },
+          {
+            "id": "ship",
+            "depends_on": ["charge"],
+            "attempts": [
+              {
+                "kind": "failure",
+                "error_code": "NOP-DELEGATE-REJECTED",
+                "retryable": false
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": [
+          "task:running",
+          "reserve:attempt:1",
+          "reserve:completed",
+          "charge:attempt:1",
+          "charge:completed",
+          "ship:attempt:1",
+          "ship:failed",
+          "charge:compensating",
+          "charge:compensated",
+          "reserve:compensating",
+          "reserve:compensated",
+          "task:failed"
+        ],
+        "terminal_state": "failed",
+        "error_code": "NOP-DELEGATE-REJECTED",
+        "aggregate": null,
+        "node_states": {
+          "charge": "compensated",
+          "reserve": "compensated",
+          "ship": "failed"
+        },
+        "attempt_counts": { "charge": 1, "reserve": 1, "ship": 1 },
+        "mapped_params": {},
+        "compensation_order": ["charge", "reserve"]
+      }
+    },
+    {
+      "id": "nop.orchestrator.007",
+      "description": "Strict saga stops at the first compensation failure.",
+      "kind": "negative",
+      "input": {
+        "task_id": "task-saga-strict",
+        "compensation_policy": "strict",
+        "nodes": [
+          {
+            "id": "reserve",
+            "depends_on": [],
+            "compensate_action": "nwp://inventory/release/invoke",
+            "compensation_outcome": "success",
+            "attempts": [
+              { "kind": "success", "result": { "reservation_id": "r2" } }
+            ]
+          },
+          {
+            "id": "charge",
+            "depends_on": ["reserve"],
+            "compensate_action": "nwp://payments/refund/invoke",
+            "compensation_outcome": "failure",
+            "attempts": [
+              { "kind": "success", "result": { "charge_id": "c2" } }
+            ]
+          },
+          {
+            "id": "ship",
+            "depends_on": ["charge"],
+            "attempts": [
+              {
+                "kind": "failure",
+                "error_code": "NOP-DELEGATE-REJECTED",
+                "retryable": false
+              }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": [
+          "task:running",
+          "reserve:attempt:1",
+          "reserve:completed",
+          "charge:attempt:1",
+          "charge:completed",
+          "ship:attempt:1",
+          "ship:failed",
+          "charge:compensating",
+          "charge:compensation_failed",
+          "task:failed"
+        ],
+        "terminal_state": "failed",
+        "error_code": "NOP-COMPENSATION-FAILED",
+        "aggregate": null,
+        "node_states": {
+          "charge": "compensation_failed",
+          "reserve": "completed",
+          "ship": "failed"
+        },
+        "attempt_counts": { "charge": 1, "reserve": 1, "ship": 1 },
+        "mapped_params": {},
+        "compensation_order": ["charge"]
+      }
+    },
+    {
+      "id": "nop.orchestrator.008",
+      "description": "Preflight rejection dispatches no task nodes.",
+      "kind": "negative",
+      "input": {
+        "task_id": "task-preflight",
+        "preflight": true,
+        "nodes": [
+          {
+            "id": "alpha",
+            "depends_on": [],
+            "preflight_available": true,
+            "attempts": [
+              { "kind": "success", "result": { "unused": true } }
+            ]
+          },
+          {
+            "id": "beta",
+            "depends_on": [],
+            "preflight_available": false,
+            "attempts": [
+              { "kind": "success", "result": { "unused": true } }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": ["task:preflight", "task:failed"],
+        "terminal_state": "failed",
+        "error_code": "NOP-RESOURCE-INSUFFICIENT",
+        "aggregate": null,
+        "node_states": {},
+        "attempt_counts": {},
+        "mapped_params": {},
+        "compensation_order": []
+      }
+    },
+    {
+      "id": "nop.orchestrator.009",
+      "description": "Cancellation before the next dispatch wins the terminal-state race.",
+      "kind": "negative",
+      "input": {
+        "task_id": "task-cancel",
+        "cancel_before": "beta",
+        "nodes": [
+          {
+            "id": "alpha",
+            "depends_on": [],
+            "attempts": [
+              { "kind": "success", "result": { "done": true } }
+            ]
+          },
+          {
+            "id": "beta",
+            "depends_on": ["alpha"],
+            "attempts": [
+              { "kind": "success", "result": { "must_not_run": true } }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": [
+          "task:running",
+          "alpha:attempt:1",
+          "alpha:completed",
+          "task:cancelled"
+        ],
+        "terminal_state": "cancelled",
+        "error_code": "NOP-TASK-CANCELLED",
+        "aggregate": null,
+        "node_states": { "alpha": "completed" },
+        "attempt_counts": { "alpha": 1 },
+        "mapped_params": {},
+        "compensation_order": []
+      }
+    },
+    {
+      "id": "nop.orchestrator.010",
+      "description": "A cycle is rejected before worker dispatch.",
+      "kind": "negative",
+      "input": {
+        "task_id": "task-cycle",
+        "nodes": [
+          {
+            "id": "alpha",
+            "depends_on": ["beta"],
+            "attempts": [
+              { "kind": "success", "result": {} }
+            ]
+          },
+          {
+            "id": "beta",
+            "depends_on": ["alpha"],
+            "attempts": [
+              { "kind": "success", "result": {} }
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "events": ["task:failed"],
+        "terminal_state": "failed",
+        "error_code": "NOP-TASK-DAG-CYCLE",
+        "aggregate": null,
+        "node_states": {},
+        "attempt_counts": {},
+        "mapped_params": {},
+        "compensation_order": []
+      }
+    }
+  ]
+}

@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0
 
 **CR ID**: NPS-CR-0006
 **Target version**: v1.0.0-alpha.11
-**Status**: Accepted
+**Status**: Implemented (v1.0.0-alpha.11, 2026-05-28)
 **Accepted**: 2026-05-28
 **Type**: Backward-compatible addition (new frame spec, new section in NWP, frame-registry status promotion)
 **Author**: Ori, LabAcacia

@@ -1,0 +1,58 @@
+{
+  "name": "nip-signed-crl",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-3-NIP.md §7.6, §8",
+  "description": "Deterministic signed CRL artifacts. The signature covers the recursively canonicalized body with the signature field absent. The key material is RFC 8032 test material and is for conformance tests only.",
+  "vectors": [
+    {
+      "id": "nip.signed_crl.001",
+      "description": "One-entry CRL canonical form and Ed25519 signature.",
+      "kind": "positive",
+      "input": {
+        "private_seed_hex": "9d61b19deffd5a60ba844af492ec2cc44449c5697b326919703bac031cae7f60",
+        "public_key": "ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+        "body": {
+          "issued_by": "urn:nps:org:ca.example.com",
+          "issued_at": "2026-07-29T01:00:00Z",
+          "entries": [
+            {
+              "nid": "urn:nps:agent:ca.example.com:agent-001",
+              "serial": "0x0001",
+              "revoked_at": "2026-07-29T00:00:00Z",
+              "reason": "key_compromise"
+            }
+          ]
+        },
+        "signature": "ed25519:lcwJ2K48lSsFPhK3SuSSxUoamDtWzxsVtcNg4zkweXqDn2mPjNFdzl3NSh8QyRcz7STh2sWPVP65cSKDKKWKCw"
+      },
+      "expected": {
+        "canonical_for_signing": "{\"entries\":[{\"nid\":\"urn:nps:agent:ca.example.com:agent-001\",\"reason\":\"key_compromise\",\"revoked_at\":\"2026-07-29T00:00:00Z\",\"serial\":\"0x0001\"}],\"issued_at\":\"2026-07-29T01:00:00Z\",\"issued_by\":\"urn:nps:org:ca.example.com\"}",
+        "signature_valid": true
+      }
+    },
+    {
+      "id": "nip.signed_crl.002",
+      "description": "Changing a signed revocation reason invalidates the original signature.",
+      "kind": "negative",
+      "input": {
+        "public_key": "ed25519:11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo",
+        "body": {
+          "issued_by": "urn:nps:org:ca.example.com",
+          "issued_at": "2026-07-29T01:00:00Z",
+          "entries": [
+            {
+              "nid": "urn:nps:agent:ca.example.com:agent-001",
+              "serial": "0x0001",
+              "revoked_at": "2026-07-29T00:00:00Z",
+              "reason": "cessation_of_operation"
+            }
+          ]
+        },
+        "signature": "ed25519:lcwJ2K48lSsFPhK3SuSSxUoamDtWzxsVtcNg4zkweXqDn2mPjNFdzl3NSh8QyRcz7STh2sWPVP65cSKDKKWKCw"
+      },
+      "expected": {
+        "signature_valid": false
+      }
+    }
+  ]
+}

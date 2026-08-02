@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.17
-**Date**: 2026-07-05
+**Version**: 0.20
+**Date**: 2026-07-29
 **Port**: 17433（默认，共用）/ 17434（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)、NPS-3 (NIP v0.11)、NPS-4 (NDP v0.9)
+**Depends-On**: NPS-1 (NCP v0.11)、NPS-3 (NIP v0.13)、NPS-4 (NDP v0.12)
 
 > 本文档为 NWP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
 
@@ -44,7 +44,7 @@ LLM 服务通过普通 Action Node 或 Complex Node 上的 NWM **LLM/Thinking Pr
 
 > **Anchor Node** 与 **Bridge Node** 由 [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md) 一同引入，替换原 `Gateway Node` 类型：
 > - **Anchor Node** 继承了 Gateway Node 原本承载的"集群入口 + NOP 路由"角色。它在每次请求中无状态，但 MAY 维持一份成员节点的长期注册表。
-> - **Bridge Node** 是新类型，职责是 **NPS → 外部协议**翻译。每次请求无状态，不参与集群拓扑。（方向说明：这与 `compat/*-bridge` 历史上发布的"外部协议 → NPS"入站适配器方向相反；后者已重命名为 `compat/*-ingress`，把 "Bridge" 一词让出给本节点类型。）
+> - **Bridge Node** 是新类型，职责是 **NPS ↔ 非-NPS 协议翻译，双向**。每次请求无状态，不参与集群拓扑。方向按协议在 NDP `Announce` 中声明（`bridge_protocols` 出向、`bridge_inbound_protocols` 入向）。（[NPS-CR-0010](cr/NPS-CR-0010-bridge-bidirectional.md) 就此定案：alpha.3–alpha.15 期间规范中存在一条"仅出向"的收窄，其唯一存在理由是让 `Bridge` 这个名字与当时独立存在的 `compat/*-ingress` 包区分开；那些包现已并入 Bridge 包，该限制随之解除。）
 > - 原 `Gateway Node` 术语已弃用；`"gateway"` wire 值被移除，解析器 MUST 拒绝并明确报告 CR-0001。
 
 #### 已移除类型
@@ -79,13 +79,26 @@ Anchor Node MUST：
 
 #### Bridge Node —— 详细语义
 
-Bridge Node MUST：
+Bridge Node 在 NPS 帧与非-NPS 协议之间做**双向**翻译。它 MUST 至少实现一个方向，并且 MUST 通过 NDP `Announce` 声明哪些协议走哪个方向（NPS-4 §3.1）：`bridge_protocols` 表示出向，`bridge_inbound_protocols` 表示入向。**不得**假设一个 Bridge Node 提供它未声明的方向。（NPS-CR-0010）
+
+**出向 —— NPS → 外部协议**（与既有规范一致，未变更）。提供出向服务的 Bridge Node MUST：
 
 1. 接受携带 `bridge_target` 参数（标识外部协议与端点）的入站 NWP 帧。规范化 `bridge_target` wire 形状为 `{ "protocol", "endpoint", "extras"? }`：`protocol`（string，必填，取值为 `"http"`、`"grpc"`、`"mcp"`、`"a2a"` 之一）；`endpoint`（string URL，必填）；`extras`（object，可选，承载按协议变化的参数，如 HTTP `method`、`headers`，MCP `tool`，或 gRPC call metadata）。HTTP header MUST 放在 `bridge_target.extras.headers` 内，不能作为顶层 `bridge_target.headers` 字段。第三方 adapter MAY 在 `extras` 中扩展字段；consumer MUST 忽略未知顶层字段与未知 `extras` 成员。
 2. 用目标协议的格式产出对外请求。
 3. 把目标协议的响应翻译回 NWP 帧（通常是 `CapsFrame`）。
 
-Bridge Node 每次请求无状态，不参与集群拓扑。一个 Bridge Node MAY 翻译多个不同外部协议；部署 MAY 为隔离起见为每个协议跑独立 Bridge Node。
+**入向 —— 外部协议 → NPS**（新增）。提供入向服务的 Bridge Node MUST：
+
+4. 为 `bridge_inbound_protocols` 中列出的每个协议暴露一个服务端端点，使用该协议的原生线格式。
+5. 把外部协议请求翻译成发往其所代理的 NPS 节点的 NWP 帧 —— 读操作走 Memory Node `Query`，调用走 Action / Complex Node `Invoke` —— 并把 NWP 响应翻译回该外部协议的响应格式。
+6. **不得**要求外部客户端具备任何 NPS 寻址、NID 或帧的知识。外部客户端 MUST 能够把这个 Bridge 当作它自己协议的原生服务端来使用。
+7. 按该协议的规范化映射表（§16.3）把 NWP / NPS 错误码映射到外部协议的错误空间。
+
+对 **MCP 入向**而言，合规的 Bridge Node MUST 提供 `initialize`、`ping`、`tools/list`、`tools/call`、`resources/list`、`resources/read`。Memory Node 投射为 MCP resource；Action / Complex Node 投射为 MCP tool。
+
+一个部署 MAY 把入向翻译当作纯宿主库跑在 NPS 节点前面，不持有 NID、不发 `Announce`。这样的部署**不是** Bridge Node —— 它是 Bridge 库，上述 MUST 不约束它。只有发出 `node_roles: ["bridge"]` 公告的部署才是 Bridge Node。（NPS-CR-0010 §3.3）
+
+Bridge Node 在**两个方向上**都是每次请求无状态、不参与集群拓扑。一个 Bridge Node MAY 同时服务多个协议和两个方向；部署 MAY 为隔离起见按协议或按方向跑独立的 Bridge Node。
 
 参考 Bridge Node 实现期望支持的标准外部协议：
 
@@ -94,7 +107,7 @@ Bridge Node 每次请求无状态，不参与集群拓扑。一个 Bridge Node M
 - MCP（Model Context Protocol）
 - A2A（Agent-to-Agent 协议）
 
-更多协议适配器 MAY 通过未来 CR 注册。支持的协议集合在 NDP `Announce.bridge_protocols` 中声明（NPS-4 §3.1）。
+更多协议适配器 MAY 通过未来 CR 注册。支持的协议集合在 NDP `Announce.bridge_protocols` / `Announce.bridge_inbound_protocols` 中声明（NPS-4 §3.1）。
 
 ### 2.2 Overlay 模式
 
@@ -945,6 +958,7 @@ HTTP overlay 实现 MUST 在请求体被接受为 NWP frame 之前，对传输�
 | Accept 无法满足 | `Accept` 拒绝了节点能返回的所有 response media type | `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` |
 | Request-id 回传不匹配 | 客户端观察到响应 `X-NWP-Request-ID` 未回传请求头中的值 | `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` |
 | Frame body 无法解析 | HTTP body 不能解析为任何受支持的 NWP frame envelope 或 NCP 承载的 NWP frame | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` |
+| Body 过大 | 请求 body 超出服务端公告或配置的 NWP body 上限 | `NWP-HTTP-BODY-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` |
 | 已声明但未实现 | NWM 在 discovery 中声明了某 capability 或 profile，但节点当前无法服务 | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` |
 
 `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` 与 `NWP-QUERY-VECTOR-UNSUPPORTED` 等能力专用 unsupported 错误不同：manifest 如实声明不支持该能力时使用专用错误；只有在 rollout 窗口、后端被禁用或 discovery 状态不一致，导致“已声明但无法服务”时，才使用 `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED`。
@@ -1135,8 +1149,20 @@ Anchor Node 集群拓扑的持续变更事件流。
 | `member_joined` | NDP `Announce` 中 `cluster_anchor` 指向本 Anchor | 完整成员对象（§12.1）|
 | `member_left` | 成员显式离开或超过 NDP 在线 TTL | `{ "nid": "urn:nps:..." }` |
 | `member_updated` | 既有成员元数据变更（tags、activation_mode、capabilities 等）| `{ "nid": "urn:nps:...", "changes": { "<字段>": <新值>, ... } }` —— 仅字段级 diff，由客户端自行合并 |
-| `anchor_state` | 罕见。Anchor Node 内部状态变更需通知客户端（如重启后版本计数 rebase）| `{ "field": "version_rebased", "details": { ... } }` |
+| `anchor_state` | Anchor 集群状态变更且与订阅方相关。payload 携带判别字段 `field`，用于选择下列子类型之一 | `{ "field": "<子类型>", "details": { ... } }` |
 | `resync_required` | 订阅方的 `topology.since_version` 已无法重播 | `{ "reason": "version_too_old" }`。本事件不带 `seq`，订阅方 MUST 重新发起 `topology.snapshot` |
+
+**`anchor_state` 子类型**（由 payload 的 `field` 判别字段选出）：
+
+| `field` | Phase | 触发条件 | `details` 形态 |
+|---------|-------|---------|---------------|
+| `version_rebased` | Phase 1–2 | Anchor 重启并重置了自己的单调 `version` 计数器（§12.3）。订阅方 MUST 视同 `resync_required` 处理 | `{ "previous_version": <uint64>, "new_version": <uint64> }` |
+| `anchor_failover` | 已定案（NPS-CR-0009）| 活跃 Anchor 已把集群所有权移交给同集群的另一个 Anchor（多 Anchor 高可用，AaaS L3）。每次所有权转移时推送；被围栏（fenced）的前任 leader MUST 发送一条终止性 `anchor_failover` 后关闭自己的流 | `{ "successor_nid": "urn:nps:...", "cluster_epoch": <uint64>, "reason": "planned" \| "active_lost" }` |
+| `anchor_quorum_lost` | 已定案（NPS-CR-0009）| Anchor 集群无法维持所有权 quorum，集群转为只读（degraded）。Anchor 以 `NWP-ANCHOR-NOT-LEADER` 拒绝拓扑写入，并标记 `health: "degraded"`（NDP §3.2）| `{ "quorum_size": <uint32>, "available": <uint32> }` |
+
+**集群所有权栅栏（NPS-CR-0009）。** 在多 Anchor 集群中，任一时刻至多有一个 Anchor 是活跃所有者，由单调递增的 `cluster_epoch`（uint64，从 1 开始）标识。每个 `topology.snapshot` / `topology.stream` 响应以及每次改变拓扑的写入都携带当前 `cluster_epoch`。standby（或处于只读 degraded 状态）的 Anchor MUST 以 `NWP-ANCHOR-NOT-LEADER`（→ `NPS-CLIENT-CONFLICT`）拒绝拓扑写入；活跃 Anchor MUST 以 `NWP-ANCHOR-EPOCH-FENCED` 拒绝任何携带**更高** `cluster_epoch` 的入站帧（把已被取代的 leader 围栏掉）。单 Anchor 集群保持 `cluster_epoch = 1`，且永不推送 `anchor_failover` / `anchor_quorum_lost`。见 [NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)。
+
+实现 MUST 把无法识别的 `anchor_state.field` 取值按前向兼容处理并忽略，而不是拆除订阅，使将来的 Phase 3 子类型可以在不破坏 wire 兼容的前提下引入。
 
 标准 SubscribeFrame 心跳（§8.2）与取消订阅（§8.1，`action = "unsubscribe"`）继续生效。
 
@@ -1165,7 +1191,61 @@ Anchor Node 集群拓扑的持续变更事件流。
 
 ---
 
-## 13. 错误码
+## 13. SubscribeFrame (0x12) —— 正式规范
+
+SubscribeFrame 在 Memory Node 或 Anchor Node 上开启一个服务端推送订阅。服务端以 DiffFrame 消息流式推送匹配的事件，直到订阅被关闭。
+
+### 13.1 请求字段
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `frame` | uint8 | 必填 | 固定值 `0x12` |
+| `subscription_id` | string | 必填 | 客户端生成的 UUID v4；用于关联事件与取消订阅 |
+| `type` | string | 可选 | §12 定义的保留订阅类型标识符。设置后，类型特定字段生效，且 `anchor_ref` 的语义由该类型定义。缺省时按下述 per-anchor 订阅行为处理 |
+| `anchor_ref` | string | 条件必填 | 所订阅数据的 anchor_id。默认 per-anchor 订阅时必填；当保留 `type` 自行定义目标语义时省略（例如 `topology.stream`）|
+| `filter` | object | 可选 | 与 QueryFrame `filter`（§6）相同的过滤语法；缺省则匹配全部事件 |
+| `heartbeat_interval_ms` | uint32 | 可选 | 设置后，服务端 MUST 按此间隔发出心跳 DiffFrame（空 payload，`event_type = "heartbeat"`）；默认 0（无心跳）|
+| `max_events` | uint32 | 可选 | 服务端在推送这么多事件后关闭订阅；0 = 不限 |
+| `cursor` | string | 可选 | 从先前位置恢复；若 cursor 已过期，服务端 MUST 返回 `NWP-SUBSCRIBE-SEQ-TOO-OLD` |
+
+### 13.2 生命周期
+
+1. 客户端发送 SubscribeFrame → 服务端以 CapsFrame 响应（回显 `subscription_id`，`status = "open"`）
+2. 服务端流式推送 DiffFrame 事件；每个事件在 EXT 头或等价的传输层元数据中携带 `subscription_id`
+3. 客户端通过关闭订阅传输来取消；服务端在达到 `max_events` 时也 MAY 主动关闭
+4. 服务端发生错误时，MUST 在关闭前发送一个带相应 `NWP-SUBSCRIBE-*` 码的终止 ErrorFrame
+
+订阅推送的 DiffFrame 在标准 DiffFrame 字段之外，增加以下事件信封字段：
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `subscription_id` | string | 必填 | 关联的订阅 ID |
+| `seq` | uint64 | 除终止性 `resync_required` 外必填 | 订阅内单调递增的事件序号；保留订阅类型 MAY 将其绑定到某个领域特定的版本号，例如拓扑版本（§12.3）|
+| `event_type` | string | 必填 | 默认订阅取 `"create"` / `"update"` / `"delete"` / `"heartbeat"` / `"error"`。保留订阅类型（§12）MAY 定义额外取值 |
+| `timestamp` | string | 可选 | 变更时间（ISO 8601）|
+| `payload` | object | 可选 | 事件特定负载。心跳使用空 payload |
+| `cgn_est` | uint32 | 可选 | 本次推送事件负载的 CGN token 成本估计。节点 SHOULD 在每个推送的 DiffFrame 上填充该字段，使订阅方能按 [token-budget.md §7.2](token-budget.md) 在 Agent 侧做累计预算核算。缺省表示节点不提供逐事件估计；Agent MAY 本地按 UTF-8/4 回退估算 |
+
+**Cursor 语义**
+
+- Cursor 值是服务端生成的不透明字符串。客户端 MUST NOT 解析、比较或自行构造它们。
+- 当 Agent 检测到 `seq` 断档时，SHOULD 用它收到的最新服务端 cursor 重新订阅。
+- 节点 SHOULD 保留最近的 cursor 位置（推荐：10 分钟或 10,000 条事件，先到者为准）。
+- 若 `cursor` 落在保留窗口之外，节点 MUST 返回 `NWP-SUBSCRIBE-SEQ-TOO-OLD`，或发出该保留类型特定的终止性 resync 事件（例如 `topology.stream` 的 `resync_required`）。
+
+### 13.3 错误码
+
+以下错误码（定义于 §14）适用于 SubscribeFrame 操作：
+
+- `NWP-SUBSCRIBE-STREAM-NOT-FOUND` —— subscription_id 未知或已关闭
+- `NWP-SUBSCRIBE-LIMIT-EXCEEDED` —— 达到服务端并发订阅上限
+- `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` —— 本节点不支持该 filter 表达式
+- `NWP-SUBSCRIBE-INTERRUPTED` —— 服务端中断
+- `NWP-SUBSCRIBE-SEQ-TOO-OLD` —— cursor 位置已不可用
+
+---
+
+## 14. 错误码
 
 | 错误码 | NPS 状态码 | 描述 |
 |--------|-----------|------|
@@ -1210,15 +1290,19 @@ Anchor Node 集群拓扑的持续变更事件流。
 | `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` | HTTP overlay 请求 `Accept` 无法由任何受支持的 response media type 满足（§9.5）|
 | `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | 响应 `X-NWP-Request-ID` 未回传请求 ID（§9.5）|
 | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body 无法解析为受支持的 NWP frame envelope（§9.5）|
+| `NWP-HTTP-BODY-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | HTTP 请求 body 超出服务端 NWP body 上限（§9.5、§16.5.1）|
 | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM 声明了当前节点无法服务的 capability/profile（§9.5）|
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | 调用方无权读取该 Anchor 的拓扑（§12）。授权策略由实现自定，详见 §12.4 |
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | 该 Anchor 不实现请求的 `topology.scope` |
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | 请求的 `topology.depth` 超过该 Anchor 上限 |
 | `NWP-TOPOLOGY-FILTER-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | `topology.filter` 含未识别 key |
+| `NWP-ANCHOR-NOT-LEADER` | `NPS-CLIENT-CONFLICT` | 拓扑写请求到达了 standby（或降级只读）Anchor；只有当前 `cluster_epoch` 的活跃属主才可接受写入（§12.2，NPS-CR-0009）|
+| `NWP-ANCHOR-EPOCH-FENCED` | `NPS-CLIENT-CONFLICT` | 入站帧携带的 `cluster_epoch` 高于接收方自身；接收方是被取代的旧 leader，自我隔离（§12.2，NPS-CR-0009）|
+| `NWP-BRIDGE-DIRECTION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 请求到达了该 Bridge Node 未声明的方向/协议 —— 见 §16.2；响应 SHOULD 在 `hint` 中携带 `bridge_protocols` 与 `bridge_inbound_protocols` 两个数组（NPS-CR-0010）|
 
 ---
 
-## 14. 安全考量
+## 15. 安全考量
 
 ### 14.1 Scope 强制校验
 节点 MUST 在每次请求时校验 Agent NID 的 scope。超出 scope 的请求 MUST 返回 `NWP-AUTH-NID-SCOPE-VIOLATION`，不得返回任何数据。
@@ -1249,24 +1333,105 @@ Complex Node 解析子节点引用时，MUST 维护允许的节点 URL 前缀白
 
 ## 16. Bridge Node 合规性
 
-Bridge Node 类型与 `bridge_target` 对象 schema 由 NPS-CR-0001（§2.1）引入，并在 NWP v0.13 标准化。本节形式化合规要求，并提供规范化 `bridge_target` 往返测试向量，确保所有 SDK Bridge 实现对 wire shape 达成一致。
+Bridge Node 类型与 `bridge_target` 对象 schema 由 NPS-CR-0001 引入（§2.1），并在 NWP v0.13 标准化。
+[NPS-CR-0010](cr/NPS-CR-0010-bridge-bidirectional.md) 将 Bridge Node 定案为**双向**，并把本章拆为
+两个独立的合规 profile。本章形式化这两个 profile、给出它们共用的规范性错误映射，并提供规范化的
+`bridge_target` 往返测试向量，使所有 SDK 的 Bridge 实现在线格式上保持一致。
 
-### 16.1 合规要求
+### 16.1 合规 profile
 
-合规 Bridge Node MUST：
+Bridge Node MUST 至少声明下述两个 profile 之一，并且 MUST 在线上声明（§2.1、NPS-4 §3.1）。
+两个都不声明就不是合规的 Bridge Node。Bridge Node MAY 同时声明两个。
+**只声明出向** —— 也就是 alpha.15 之前唯一存在的那个 profile —— 的实现**无需任何改动即保持完全合规**。
 
-1. 在 NWM（§4.1）中声明 `node_type: "bridge"`，并通过 NDP `bridge_protocols`（NPS-4 §3.1）声明支持的外部协议。
-2. 接受携带 `bridge_target` 对象的入站 NWP 帧；对于 Bridge-routed action，缺少该对象时 MUST 以 `NWP-ACTION-PARAMS-INVALID` 拒绝。
-3. 校验 `bridge_target.protocol` 是否属于自身声明的协议集合；不支持的协议 MUST 返回 `NWP-ACTION-PARAMS-INVALID`，不得静默 fallthrough。
-4. 把未知 `bridge_target` 字段视为 opaque pass-through，MUST NOT 因未知字段失败（前向兼容）。
-5. 每次请求 **无状态**，且 MUST NOT 参与集群拓扑；纯 Bridge Node 的 `topology.*` MUST 返回 `NWP-RESERVED-TYPE-UNSUPPORTED`。
+#### 16.1.1 出向 profile（NPS → 外部）
 
-合规 Bridge Node SHOULD：
+通过声明非空的 `bridge_protocols` 来主张。合规的出向 Bridge Node MUST：
 
-1. 在拨打上游前，对 `bridge_target.endpoint` 应用 SSRF 防护（NPS-2 §15.2）。
-2. 对 HTTP 上游请求，原样传递 `bridge_target.extras.headers`，但 MUST 去掉 hop-by-hop headers。
+1. 在其 NWM（§4.1）中公告 `node_type: "bridge"`，并通过 NDP `bridge_protocols`（NPS-4 §3.1）公告所支持的外部协议。
+2. 接受携带 `bridge_target` 对象的入站 NWP 帧；缺少该对象、或 `bridge_target` schema 校验失败的帧，MUST 以 `NWP-BRIDGE-TARGET-INVALID` 拒绝。
+3. 对照已公告的集合校验 `bridge_target.protocol`；没有注册 dispatcher 的协议 MUST 返回 `NWP-BRIDGE-PROTOCOL-UNSUPPORTED`（不得静默放行）。
+4. 把 `bridge_target` 中的未知字段视为不透明透传，MUST NOT 因其失败（前向兼容）。
+5. **每次请求无状态**，MUST NOT 参与集群拓扑（纯 Bridge Node 上 `topology.*` MUST 返回 `NWP-RESERVED-TYPE-UNSUPPORTED`）。
 
-### 16.2 `bridge_target` 测试向量
+合规的出向 Bridge Node SHOULD：
+
+1. 在拨号上游前对 `bridge_target.endpoint` 施加 SSRF 防护（NPS-2 §15.2）。
+2. 把 `bridge_target.extras.headers` 原样透传给上游 HTTP 请求，逐跳（hop-by-hop）头除外。
+
+#### 16.1.2 入向 profile（外部 → NPS）
+
+通过声明非空的 `bridge_inbound_protocols` 来主张。合规的入向 Bridge Node MUST：
+
+1. 在其 NWM（§4.1）中公告 `node_type: "bridge"`，并通过 NDP `bridge_inbound_protocols`（NPS-4 §3.1）公告所服务的协议。
+2. 为每个已声明的协议暴露一个服务端端点，使用该协议的原生线格式，并且**不得**要求外部客户端具备任何 NPS 寻址、NID 或帧的知识。
+3. 把其所代理的 NPS 节点投射到外部协议的对象模型上：Memory Node 投射到该协议的读取面，Action / Complex Node 投射到调用面。对 **MCP** 而言，这意味着必须提供 `initialize`、`ping`、`tools/list`、`tools/call`、`resources/list`、`resources/read` —— **省略 `resources/*` 的入向 MCP Bridge 不合规**。
+4. 按 §16.3 把 NWP / NPS 错误码确定性地映射到外部协议的错误空间。
+5. 对未在 `bridge_inbound_protocols` 中声明的协议的请求，MUST 以 `NWP-BRIDGE-DIRECTION-UNSUPPORTED` 拒绝；响应 SHOULD 在 `hint` 中携带两个已声明的数组。
+6. **每次请求无状态**，MUST NOT 参与集群拓扑。
+
+合规的入向 Bridge Node SHOULD：
+
+1. 对翻译后的 NWP 帧施加被代理节点自身的授权策略（§7），而不是赋予外部客户端环境权限（ambient authority）。
+2. 让 NPS 状态码语义穿透映射 —— 把不同的 NPS 状态类**塌并**到同一个外部错误码上，是**合规失败**，而不是实现质量问题。
+
+### 16.2 方向声明
+
+`bridge_protocols` 与 `bridge_inbound_protocols` 是同一取值域（`"http"`、`"grpc"`、`"mcp"`、`"a2a"`）上的
+两个独立集合。同一协议 MAY 同时出现在两者中（双向桥接）。声明 `node_roles: ["bridge"]` 的节点
+MUST 保证两者至少一个非空。接收方 MUST 把缺省的 `bridge_inbound_protocols` 当作 `[]` —— 这正是
+alpha.16 之前的纯出向 Bridge Node。（NPS-CR-0010 §3.2）
+
+### 16.3 错误映射（规范性）
+
+两个方向都要把 NPS 状态码翻译进（或翻译出）某个外部协议的错误空间。alpha.15 之前，这套映射
+**每个协议被实现了两遍** —— 一遍在出向 dispatcher 里，一遍在当时独立的 `compat/*-ingress` 包里 ——
+两份副本已经漂移。因此本映射是规范性的，且 MUST 由**同一份**实现同时服务两个方向。
+
+**MCP（JSON-RPC 2.0）。** NPS 状态 → JSON-RPC 错误码：
+
+| NPS 状态 | JSON-RPC 码 | 说明 |
+|---|---|---|
+| `NPS-CLIENT-BAD-FRAME` | `-32600`（Invalid Request）| |
+| `NPS-CLIENT-BAD-PARAM`、`NPS-CLIENT-UNPROCESSABLE` | `-32602`（Invalid params）| |
+| `NPS-CLIENT-NOT-FOUND` | `tools/call` 中未知 tool → `-32601`（Method not found）；`resources/read` 中未知 URI → `-32602` | 这个区分有实际意义：对 MCP 客户端而言，未知 **tool** 是「方法不存在」，而未知 **resource** 是「参数错了」 |
+| `NPS-CLIENT-GONE` | `-32602` | |
+| `NPS-CLIENT-CONFLICT` | `-32004`（实现自定义）| |
+| `NPS-AUTH-UNAUTHENTICATED` | `-32001`（实现自定义）| MUST 是 JSON-RPC **错误**，绝不能是携带错误负载的成功响应 |
+| `NPS-AUTH-FORBIDDEN` | `-32003`（实现自定义）| MUST NOT 塌并到 `-32001` |
+| `NPS-LIMIT-RATE`、`NPS-LIMIT-BUDGET`、`NPS-LIMIT-PAYLOAD` | `-32005`（实现自定义）| |
+| `NPS-SERVER-UNSUPPORTED` | `-32601`（Method not found）| 含 `NWP-BRIDGE-DIRECTION-UNSUPPORTED` |
+| `NPS-SERVER-INTERNAL`、`NPS-SERVER-UNAVAILABLE`、`NPS-SERVER-TIMEOUT`、`NPS-DOWNSTREAM-UNAVAILABLE` | `-32603`（Internal error）| 上游节点故障 |
+| 分发前解析失败 | `-32700`（Parse error）| |
+
+实现自定义码 `-32002` 被**保留，MUST NOT 发出**。alpha.15 之前 .NET Bridge 用它表示「tool 不存在」；
+NPS-CR-0010 改为把未知 tool 映射到 `-32601`（Method not found）—— 这本来就是 MCP 客户端已经理解的语义 ——
+并且**保留** `-32002` 不再复用，以免仍按旧行为编写的客户端把别的错误误读成「工具不存在」。
+
+反方向（JSON-RPC 错误 → NPS 状态）是本表的逆映射；在逆映射非单射之处，实现 MUST 选择**最具体**的
+NPS 状态，绝不能一律回落到 `NPS-SERVER-INTERNAL`。
+
+**gRPC。** NPS 状态 → gRPC 状态码：
+
+| NPS 状态 | gRPC 状态 |
+|---|---|
+| `NPS-CLIENT-BAD-FRAME`、`NPS-CLIENT-BAD-PARAM`、`NPS-CLIENT-UNPROCESSABLE` | `INVALID_ARGUMENT` |
+| `NPS-CLIENT-NOT-FOUND`、`NPS-CLIENT-GONE` | `NOT_FOUND` |
+| `NPS-CLIENT-CONFLICT` | `ABORTED` |
+| `NPS-AUTH-UNAUTHENTICATED` | `UNAUTHENTICATED` |
+| `NPS-AUTH-FORBIDDEN` | `PERMISSION_DENIED` |
+| `NPS-LIMIT-RATE`、`NPS-LIMIT-BUDGET`、`NPS-LIMIT-PAYLOAD` | `RESOURCE_EXHAUSTED` |
+| `NPS-SERVER-UNSUPPORTED` | `UNIMPLEMENTED` |
+| `NPS-SERVER-INTERNAL` | `INTERNAL` |
+| `NPS-SERVER-UNAVAILABLE`、`NPS-DOWNSTREAM-UNAVAILABLE` | `UNAVAILABLE` |
+| `NPS-SERVER-TIMEOUT` | `DEADLINE_EXCEEDED` |
+
+**A2A。** NPS 状态 → A2A task 状态：client 类错误以 `failed` 终止 task，并在失败详情中**原样保留** NPS 码；
+server 类错误以 `failed` 终止且可重试。A2A Bridge MUST NOT 把错误静默降级成 `completed` 的 task。
+
+实现 MUST NOT 把不同的 NPS 状态类塌并到同一个外部错误码上（§16.1.2 SHOULD-2 使之可观测）；这么做是合规失败。
+
+### 16.4 `bridge_target` 测试向量
 
 规范 wire 形状为 `{ "protocol", "endpoint", "extras"? }`（SDK in-memory form）；`headers` 与其他按协议变化的参数位于 `extras` 中。所有六个 SDK MUST 对这些向量做一致往返（`from_dict(to_dict(x)) == x`）：
 
@@ -1296,12 +1461,72 @@ Bridge Node 类型与 `bridge_target` 对象 schema 由 NPS-CR-0001（§2.1）�
 - `extras` 为空或缺失时 MUST 从序列化结果中省略（不得输出为 `null`）。
 - `BridgeNodeDescriptor` 序列化 `supported_protocols` 时使用 **排序后** 数组，以保证各 SDK 输出稳定。
 
+### 16.5 可移植 Node 与 Bridge 服务端 Profile
+
+NWP v0.20 为 SDK 承载的服务端定义与传输无关的决策 profile，不增加 frame type。实现 MAY 暴露
+框架专用 middleware，但 admission、dispatch、取消与错误决策 MUST 与
+`spec/conformance/nwp/` 中的共享向量一致。
+
+#### 16.5.1 Node admission 与 dispatch
+
+声明可移植 profile 的 Memory、Action、Complex Node 服务端 MUST：
+
+1. 以 `application/nwp-manifest+json` 提供 `/.nwm`，且必须使用 `GET`；方法拒绝 MUST
+   返回 HTTP 405 并携带 `Allow: GET`。Memory 与 Complex Node MUST 分发 `QueryFrame`；
+   Action 与 Complex Node MUST 分发 `ActionFrame`。
+2. `/query` 与 `/invoke` 必须使用 `POST`。方法拒绝发生在 frame admission 之前，返回 HTTP 405，
+   且 MUST 携带 `Allow: POST`。
+3. 接受 `application/nwp-frame`。在 alpha.17 兼容窗口内还 MUST 接受旧请求 media type
+   `application/x-nps-frame`，但 MUST 只发送规范响应 media type：
+   `application/nwp-capsule`、`application/nwp-error+json` 与
+   `application/nwp-manifest+json`。旧别名已弃用，并在 alpha.18 从必需 profile 中移除。
+4. 解码前执行有限且可配置的 HTTP body 上限。超限 MUST 返回 HTTP 413，以及
+   `NPS-LIMIT-PAYLOAD` / `NWP-HTTP-BODY-TOO-LARGE`。
+5. 对不支持的 `Content-Type`、无法满足的 `Accept` 与畸形 body 返回 §9.5 规范错误；HTTP
+   错误 body MUST 使用 `application/nwp-error+json`。
+6. 端到端保留请求关联标识：HTTP 模式使用 `X-NWP-Request-ID`，native 模式使用 frame
+   `request_id`。具有关联字段的响应 MUST 回传该值。
+7. 把调用方取消传播到解码和 provider/handler 工作。若响应提交前观察到取消，服务端 MUST
+   直接中止，不得合成 ErrorFrame 或 HTTP 错误响应。
+8. 记录且仅记录一个终态 telemetry outcome：`success`、`rejected`、`cancelled` 或
+   `timeout`；telemetry 系统允许时 SHOULD 附带关联标识。
+
+native 模式下，不受支持的已解码 frame type MUST 产生 `NPS-CLIENT-BAD-FRAME` /
+`NWP-NATIVE-FRAME-UNSUPPORTED` 的 `ErrorFrame`。成功 admission 后的 provider 失败继续使用
+`NWP-NATIVE-DISPATCH-FAILED`，除非存在更具体的协议错误。
+
+规范用例为 `portable_node_server_vectors.json`。
+
+#### 16.5.2 Bridge preflight 与生命周期
+
+声明可移植 profile 的出向 Bridge 服务端 MUST 在拨号前执行：
+
+1. 校验 `bridge_target` 形状，然后在已注册 dispatcher 集合中解析 `protocol`。缺少协议为
+   `NPS-CLIENT-UNPROCESSABLE` / `NWP-BRIDGE-TARGET-INVALID`；格式正确但未注册的协议为
+   `NPS-SERVER-UNSUPPORTED` / `NWP-BRIDGE-PROTOCOL-UNSUPPORTED`。
+2. 校验绝对 endpoint scheme，并施加配置的 HTTPS、prefix allowlist、private/loopback
+   地址策略。拒绝使用 `NPS-CLIENT-UNPROCESSABLE` /
+   `NWP-BRIDGE-ENDPOINT-INVALID`。SDK 策略决策 MUST 可重复，且字面地址输入 MUST NOT
+   依赖 DNS；拨号时解析的 host 仍须接受防 DNS rebinding 的地址检查。
+3. 对 preflight、连接、响应头、body 翻译和响应发送施加一个有限 deadline。deadline 耗尽时
+   返回 HTTP 504，以及 `NPS-SERVER-TIMEOUT` /
+   `NWP-BRIDGE-UPSTREAM-FAILED`；取消优先于超时，且不得合成响应。
+4. 目标协议提供关联/metadata 机制时，把关联标识传播到外部请求，并保留同步/异步 Action
+   task mode。获准的异步 action 返回 `NPS-OK-ACCEPTED`。
+5. 按 §16.5.1 相同规则发出一个终态 telemetry outcome。
+
+规范用例为 `bridge_lifecycle_vectors.json`。六个参考 SDK MUST 在 CI 中执行两套 v0.20
+向量；HTTP 与 native 宿主的决策、status/error 对、响应 media type 和关联行为必须等价。
+
 ---
 
 ## 17. 变更历史
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.20 | 2026-07-29 | 新增 §16.5 可移植 Node/Bridge 服务端 profile 与跨语言共享向量。标准化 HTTP/native admission、角色分发、alpha.17 兼容窗口内的规范/旧 MIME 处理、有限 body 上限、取消、关联标识传播、Bridge dispatcher/SSRF/deadline preflight、异步 task mode 与终态 telemetry outcome。新增 `NWP-HTTP-BODY-TOO-LARGE` → `NPS-LIMIT-PAYLOAD`；不增加 frame type。Depends-On 推进到 NCP v0.11 与 NIP v0.13。 |
+| 0.19 | 2026-07-23 | **NPS-CR-0010 Bridge Node 是双向的**：解决规范自身的矛盾 —— §2.1 节点分类表、"已移除类型"注记、以及 NPS-CR-0001 本身都把 Bridge Node 定义为 NPS↔非-NPS 双向翻译，而 §2.1 的 callout 与规范性 MUST 列表却把它收窄成仅 NPS→外部。该收窄的唯一存在理由是让 `Bridge` 一名与当时独立的 `compat/*-ingress` 包区分开；那些包现已并入 Bridge 包，限制解除。Bridge Node 语义重构为 **出向**（不变）+ **入向**（新增）两组 MUST；MCP 入向 MUST 同时提供 `resources/*` 与 `tools/*`。§16 拆为两个独立合规 profile（§16.1.1 出向 / §16.1.2 入向）、规范性方向声明（§16.2）、以及规范性的分协议错误映射表（§16.3）—— 后者 MUST 由同一份实现同时服务两个方向。明确「角色 vs 库」边界：只有发出 `node_roles: ["bridge"]` 公告的部署才是 Bridge Node。`Depends-On` 升级 NDP 至 v0.11（定义 `bridge_inbound_protocols`）。新增一个错误码 `NWP-BRIDGE-DIRECTION-UNSUPPORTED`。Additive 且向后兼容：纯出向 Bridge Node 无需改动即保持合规。（正文中文翻译已同步 §2.1 与 §16 全章；由 edge 线 0.16 重编号 —— 已发布的 alpha.16 线独立把 0.15–0.17 用于下方 LLM profile 系列。）|
+| 0.18 | 2026-07-23 | **NPS-CR-0009 多 Anchor 高可用**：定案 §12.2 的两个 `anchor_state` 子类型 `anchor_failover`（`successor_nid` / `cluster_epoch` / `reason`）与 `anchor_quorum_lost`（`quorum_size` / `available`），解除原 Phase-3 占位的「MUST NOT emit」限制。拓扑响应/写入新增 `cluster_epoch`（uint64）所有权栅栏；standby 的写入以 `NWP-ANCHOR-NOT-LEADER` 拒绝，被取代的 leader 以 `NWP-ANCHOR-EPOCH-FENCED` 围栏。Additive 且按 Phase 门控：单 Anchor 集群保持 `cluster_epoch = 1`，不受影响。`Depends-On` 升级 NDP 至 v0.10（定义 AnnounceFrame 上的 `cluster_epoch` 与最高 epoch 解析规则）。新增两个错误码。|
 | 0.17 | 2026-07-05 | 新增 §9.5 HTTP Binding 拒绝错误码，为 HTTP overlay 前置条件拒绝和“已声明但未实现”的 capability rollout 窗口增加 6 个规范化 NWP 错误码：`NWP-HTTP-ORIGIN-FORBIDDEN`、`NWP-HTTP-CONTENT-TYPE-UNSUPPORTED`、`NWP-HTTP-ACCEPT-UNSATISFIABLE`、`NWP-HTTP-REQUEST-ID-MISMATCH`、`NWP-HTTP-FRAME-BODY-MALFORMED`、`NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED`。共享 `error-codes.md` 升级到 v1.6。 |
 | 0.16 | 2026-07-04 | 新增 §4.2a NWM `profiles` 与标准 LLM/Thinking Profile（`profiles.llm`），用于模型服务型 Action/Complex Node。明确 "Thinking Node" 是产品层别名，不是新的 `node_type`；粗粒度发现使用 NIP/NDP `llm:*` capabilities，具体模型、流式、工具、隐私与 reasoning 暴露元数据放在 NWM。无新增 frame type 或错误码。`Depends-On` NIP 升级到 v0.11，以使用 `llm:*` capability 注册表。 |
 | 0.15 | 2026-07-04 | 新增 §7.5，标准化 `llm.complete` ActionFrame contract：typed request/response DTO 形状、stop_reason 枚举、tool call 字段名、同步/异步/流式响应语义、ErrorFrame 与 payload error 的边界，以及 snake_case JSON/MessagePack key 策略。无新增 frame type 或错误码。 |

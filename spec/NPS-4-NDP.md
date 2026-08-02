@@ -4,11 +4,11 @@ English | [中文版](./NPS-4-NDP.cn.md)
 
 **Spec Number**: NPS-4
 **Status**: Proposed
-**Version**: 0.9
-**Date**: 2026-05-10
+**Version**: 0.12
+**Date**: 2026-07-29
 **Port**: 17433 (default, shared) / 17436 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9), NPS-3 (NIP v0.11)
+**Depends-On**: NPS-1 (NCP v0.11), NPS-3 (NIP v0.13)
 
 ---
 
@@ -47,15 +47,18 @@ A node or agent broadcasts its presence and capabilities.
 | `capabilities` | array | required | Capability list (reuses the NIP capability vocabulary) |
 | `ttl` | uint32 | required | Broadcast validity in seconds; `0` = offline notification |
 | `timestamp` | string | required | Broadcast time (ISO 8601 UTC) |
+| `graph_seq` | uint64 | conditional | Per-NID monotonic configuration sequence. NDP 0.12 publishers MUST emit it. For compatibility, a `local-dev` Registry MAY treat an absent value from an older publisher as `0`; `org-private` and `public-federated` Registries MUST reject an absent value with `NDP-ANNOUNCE-PROFILE-VIOLATION`. |
 | `activation_mode` | string | conditional | One of `ephemeral` / `resident` / `hybrid`. REQUIRED for publishers claiming NPS-Node Profile L1+ compliance. OPTIONAL for pre-L1 publishers. Receivers MUST treat an absent field as `ephemeral` (backward compatibility with NPS v1.0-alpha.2 publishers). See §3.1.1. |
 | `node_roles` | array of strings | optional | Node-functionality role(s) carried by this publisher. Each value is one of `"memory"`, `"action"`, `"complex"`, `"anchor"`, `"bridge"`. The legacy value `"gateway"` was removed in v1.0-alpha.3 (NPS-CR-0001); parsers MUST reject it with `NDP-ANNOUNCE-ROLE-REMOVED`. Any other unrecognized value MUST be rejected with `NDP-ANNOUNCE-ROLE-UNKNOWN`. Single-role nodes may send a one-element array (`"node_roles": ["memory"]`). Absent means "single role per `node_type`" — i.e. the receiver SHOULD fall back to the `node_type` field. Parsers MUST also accept the legacy field name `node_kind` as an alias for `node_roles` during the alpha transition window. (NPS-CR-0001; renamed from `node_kind` in NDP v0.8 — see M1 naming fix) |
 | `cluster_anchor` | string (NID) | optional | For non-Anchor nodes joining a cluster, identifies the Anchor Node they register with. Absent for standalone nodes and for Anchor Nodes themselves. (NPS-CR-0001) |
-| `bridge_protocols` | array of strings | optional | For nodes declaring `"bridge"` in `node_roles`, lists supported external protocols. Standard values: `"http"`, `"grpc"`, `"mcp"`, `"a2a"`. Open-ended; third-party adapters MAY register additional values via future CRs. MUST be absent for nodes that do not declare `"bridge"`. (NPS-CR-0001) |
+| `bridge_protocols` | array of strings | optional | For nodes declaring `"bridge"` in `node_roles`, lists the external protocols this node translates **outbound** (NPS → external). Standard values: `"http"`, `"grpc"`, `"mcp"`, `"a2a"`. Open-ended; third-party adapters MAY register additional values via future CRs. MUST be absent for nodes that do not declare `"bridge"`. Semantics unchanged by NPS-CR-0010. (NPS-CR-0001) |
+| `bridge_inbound_protocols` | array of strings | optional | For nodes declaring `"bridge"` in `node_roles`, lists the external protocols this node **serves inbound** (external → NPS) — i.e. protocols for which it exposes a native server endpoint that foreign clients can call without any NPS knowledge. Same value domain as `bridge_protocols`. Absent or empty ⇒ the node exposes no inbound surface (an outbound-only Bridge Node, the only kind that existed through alpha.15). A protocol MAY appear in both arrays. A node declaring `"bridge"` MUST have at least one of `bridge_protocols` / `bridge_inbound_protocols` non-empty. MUST be absent for nodes that do not declare `"bridge"`. (NPS-CR-0010) |
 | `activation_endpoint` | object | conditional | Push target for `resident` / `hybrid` publishers; same shape as an `addresses[]` entry. REQUIRED when `activation_mode ∈ {resident, hybrid}`; MUST be absent otherwise. |
 | `heartbeat_interval_ms` | uint32 | optional | How often this node will re-announce itself (milliseconds); default 60000. Receivers SHOULD treat the node as offline if no AnnounceFrame is received within 3× this interval. |
 | `spawn_spec_ref` | string | optional | Opaque reference the publishing daemon resolves to a **SpawnSpec** to construct an agent process on demand. Meaningful for `ephemeral` and `hybrid` cold start. The resolved SpawnSpec schema is defined in §3.1.2; the resolution rules (inline `spawnspec:` base64url-JSON data URI or an `https://`/`nwp://` URL) are standardized by [NPS-CR-0007](cr/NPS-CR-0007-nop-l3-runtime-integration.md) §5 (NPS-Node Profile L3). |
 | `health` | string | optional | Publisher liveness self-report (NDP v0.9). One of `"healthy"` / `"degraded"` / `"draining"`. Absent ⇒ receivers treat as `"healthy"` (backward compatible). `"draining"` signals the node is shutting down and SHOULD NOT receive new traffic. |
 | `last_seen` | string | optional | ISO 8601 UTC timestamp of the publisher's most recent liveness beat (NDP v0.9). When present, a Registry uses `last_seen + ttl` (rather than `timestamp + ttl`) as the freshness deadline for resolve-time staleness (§3.2). Absent ⇒ fall back to `timestamp`. |
+| `cluster_epoch` | uint64 | optional | Multi-Anchor cluster ownership fence (NPS-CR-0009). The epoch under which this Anchor holds ownership of its `cluster_anchor` cluster; starts at 1, strictly increases on each ownership transfer. Absent ⇒ treated as 1 (single-Anchor). Registries resolve a `cluster_anchor` NID to the entry with the highest `cluster_epoch` (§9). |
 | `signature` | string | required | Signature with IdentFrame private key; prevents forgery |
 
 **Example (L1+ publisher, ephemeral)**
@@ -166,6 +169,19 @@ proactively evict entries past their deadline; until eviction, the staleness che
 authoritative guard. The resolved object SHOULD echo the entry's `health` so callers can avoid a
 `draining` node even while it is still within its TTL.
 
+#### 3.2.2 Bridge capability discovery (NDP v0.12)
+
+A Registry discovery query for a Bridge protocol MUST consider only live entries
+that declare `"bridge"` in `node_roles` (or whose `node_type` fallback is
+`"bridge"`) and whose `health` is not `"draining"`. An **outbound** query matches
+`bridge_protocols`; an **inbound** query matches `bridge_inbound_protocols`.
+Registries MUST NOT infer inbound support from an outbound claim or vice versa.
+
+The portable discovery result is the complete candidate NID set sorted in
+ascending ordinal order. NDP does not choose one candidate or define load
+balancing; that decision belongs to the NWP Bridge client after it applies
+endpoint, trust, and runtime policy.
+
 ---
 
 ### 3.3 GraphFrame (0x32) — Topology Snapshot
@@ -253,6 +269,9 @@ _nps-ca.mycompany.com.      IN TXT  "v=nps1 ca=https://ca.mycompany.com/.well-kn
 
 ## 9. Federation Forwarding
 
+**Multi-Anchor cluster resolution (NPS-CR-0009).** When resolving a `cluster_anchor` NID with more than one live Anchor announcement, a Registry MUST return the announcement with the highest `cluster_epoch`. Two live announcements advertising the **same** `cluster_epoch` for one cluster is a split-brain fault and MUST be reported with `NDP-CLUSTER-SPLIT` (→ `NPS-CLIENT-CONFLICT`) rather than resolved arbitrarily. Federated Registries propagate the `(cluster_anchor, cluster_epoch, active_nid)` tuple; a Registry MUST prefer a higher `cluster_epoch` received from a peer and MUST NOT downgrade a cluster to a lower epoch (monotonic per cluster). See [NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md).
+
+
 When a `public-federated` registry receives an AnnounceFrame from a peer registry (forwarded across a federation link), it MUST:
 
 1. Forward the frame to its own subscribers by appending the forwarding NID to the `ndp-forwarded-by` request header (comma-separated list of NIDs).
@@ -278,13 +297,14 @@ ndp-forwarded-by: urn:nps:agent:registry-a.example.com:r1, urn:nps:agent:registr
 | `NDP-RESOLVE-AMBIGUOUS` | `NPS-CLIENT-CONFLICT` | Conflicting resolution results (multiple inconsistent registrations) |
 | `NDP-RESOLVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | Resolution request timed out |
 | `NDP-RESOLVE-STALE` | `NPS-CLIENT-NOT-FOUND` | The resolved entry's freshness deadline `(last_seen ?? timestamp) + ttl` is in the past; the registration is stale and MUST NOT be served (NDP v0.9 §3.2.1) |
+| `NDP-CLUSTER-SPLIT` | `NPS-CLIENT-CONFLICT` | Two live Anchor announcements for one `cluster_anchor` advertise the same `cluster_epoch`; the cluster is split-brain and MUST NOT be resolved arbitrarily (NDP v0.10 §9, NPS-CR-0009) |
 | `NDP-ANNOUNCE-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | AnnounceFrame signature verification failed |
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | NID in AnnounceFrame does not match the signing certificate |
 | `NDP-ANNOUNCE-ROLE-REMOVED` | `NPS-CLIENT-BAD-FRAME` | `node_roles` contains the removed legacy value `"gateway"` (NPS-CR-0001); response SHOULD include a `hint` pointing to NPS-CR-0001 |
 | `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `node_roles` contains an unrecognized value (see `NDP-ANNOUNCE-ROLE-REMOVED` for the `"gateway"` case specifically) |
 | `NDP-ANNOUNCE-CONFLICT` | `NPS-CLIENT-CONFLICT` | Two AnnounceFrames share the same `nid` and `graph_seq` but differ in content (registry poisoning attempt) |
 | `NDP-ANNOUNCE-PROFILE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame violates an active registry security profile constraint not covered by a more specific NDP error |
-| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `graph_seq` is less than or equal to the last value the receiver has accepted for this NID (rollback attempt) |
+| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `graph_seq` is lower than the highest value the receiver has accepted for this NID (rollback attempt) |
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame sequence numbers are not contiguous |
 | `NDP-FEDERATION-LOOP` | `NPS-CLIENT-CONFLICT` | Federation forwarding detected a loop via the `ndp-forwarded-by` hop list |
 | `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame issuer (signing CA) is not in the active registry profile's issuer allowlist |
@@ -328,12 +348,37 @@ Independent of profile, every NDP Registry MUST enforce the following rules:
 
 1. **Signed scope**. The `signature` field MUST cover the AnnounceFrame canonical body: all emitted AnnounceFrame wire fields except `signature`, `health`, `last_seen`, and any transport/core frame discriminant such as `frame`. Optional fields whose value is absent or `null` MUST be omitted from the canonical body rather than serialized as JSON `null`. `heartbeat_interval_ms` is signed; if absent on the wire, verifiers MUST canonicalize it as the default value `60000`. Receivers MUST verify the signature before any registry-side state mutation; signature verification MUST precede deduplication, conflict detection, and storage.
 2. **Replay defense**. Receivers MUST reject an AnnounceFrame whose `timestamp` is more than the profile's replay window in the past or in the future, with `NDP-ANNOUNCE-SIGNATURE-INVALID`. A replay window of `0` (the `local-dev` profile only) disables this check.
-3. **Duplicate suppression**. An AnnounceFrame whose `(nid, graph_seq)` exactly matches an entry already accepted MUST be silently dropped (no error, no state change). Byte-equal duplicates are normal in multicast environments.
-4. **Conflict rejection**. An AnnounceFrame whose `(nid, graph_seq)` matches an existing entry but whose covered content differs MUST be rejected with `NDP-ANNOUNCE-CONFLICT`. Both the rejected frame and the existing entry SHOULD be logged for operator review; conflicting frames are evidence of either a key compromise or a misconfigured publisher cluster.
+3. **Duplicate suppression**. An AnnounceFrame whose `(nid, graph_seq)` and complete wire content exactly match an entry already accepted MUST be silently dropped (no error, no state change). Byte-equal duplicates are normal in multicast environments.
+4. **Liveness refresh**. When `(nid, graph_seq)` and the canonical signed body match, but only `health` or `last_seen` changed, the Registry MUST refresh those advisory fields and recompute freshness without treating the frame as a conflict or rollback.
+5. **Conflict rejection**. An AnnounceFrame whose `(nid, graph_seq)` matches an existing entry but whose canonical signed body differs MUST be rejected with `NDP-ANNOUNCE-CONFLICT`. Both the rejected frame and the existing entry SHOULD be logged for operator review; conflicting frames are evidence of either a key compromise or a misconfigured publisher cluster.
+
+Canonicalization recursively sorts object keys in ascending Unicode code-point
+order, preserves array order, emits no insignificant whitespace, and omits
+absent or `null` optional fields. Registries SHOULD compare the SHA-256 digest
+of this canonical UTF-8 body rather than retaining a second serialized copy.
+
+The portable admission order is normative:
+
+1. verify signature and NID binding;
+2. apply replay-window and registry-profile checks;
+3. canonicalize and compare `graph_seq` / covered content;
+4. process a valid `ttl = 0` offline announcement;
+5. reject an already stale live announcement with `NDP-ANNOUNCE-STALE`;
+6. insert, refresh, or replace the entry.
+
+No failed step may mutate registry contents or the per-NID sequence fence.
+Before this admission order, Registries MUST validate the §3.1 wire types. In particular, `ttl`
+MUST be a present `uint32`; a present `graph_seq` MUST be a `uint64` even where `local-dev` permits
+the field to be absent; and each Bridge protocol field, when present, MUST be an array containing
+only non-empty strings. A malformed present value is not equivalent to an absent compatibility
+value and MUST be rejected with `NDP-ANNOUNCE-PROFILE-VIOLATION`.
+For a live announcement, freshness is `(last_seen ?? timestamp) + ttl`; a
+Registry MUST NOT extend it from its local receipt time. A valid offline
+announcement removes the live entry but retains its accepted sequence fence.
 
 ### 7.5 Graph sequence rollback defense
 
-The `graph_seq` field on an AnnounceFrame (and on the corresponding GraphFrame) is a per-NID monotonic counter. Receivers MUST track the highest `graph_seq` they have accepted for each NID. Any AnnounceFrame whose `graph_seq` is less than or equal to the tracked maximum for that NID MUST be rejected with `NDP-GRAPH-SEQ-ROLLBACK`. This prevents an attacker who captures an old AnnounceFrame from re-publishing it to demote a node's current state. The tracked maximum MUST persist across registry restarts at `org-private` and `public-federated` profile levels; `local-dev` MAY keep it in memory only.
+The `graph_seq` field on an AnnounceFrame (and on the corresponding GraphFrame) is a per-NID monotonic counter. Receivers MUST track the highest `graph_seq` they have accepted for each NID. A lower value MUST be rejected with `NDP-GRAPH-SEQ-ROLLBACK`. An equal value is handled by §7.4: exact retransmission is suppressed, an advisory-only liveness update refreshes the entry, and changed covered content is `NDP-ANNOUNCE-CONFLICT`. A higher value replaces the prior entry. This prevents an attacker who captures an old AnnounceFrame from re-publishing it to demote a node's current state. The tracked maximum MUST persist across registry restarts at `org-private` and `public-federated` profile levels; `local-dev` MAY keep it in memory only.
 
 ### 7.6 Cross-registry federation
 
@@ -365,6 +410,9 @@ A Registry MUST NOT advertise a profile whose operator trust requirements it can
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.12 | 2026-07-29 | Defines the Registry Conformance profile: additive `graph_seq` wire field and compatibility behavior; deterministic signed-body canonicalization; ordered signature/profile/replay/conflict/staleness admission; exact duplicate versus advisory liveness refresh semantics; retained sequence fences after expiry/offline; highest-epoch cluster resolution and split-brain behavior; direction-specific, sorted Bridge capability discovery; and shared cross-language canonicalization/registry vectors. |
+| 0.11 | 2026-07-12 | **NPS-CR-0010 Bridge Node is bidirectional**: AnnounceFrame (0x30) gains optional `bridge_inbound_protocols` (array of strings, same value domain as `bridge_protocols`) — the external protocols the node **serves inbound** (external → NPS). `bridge_protocols` keeps its exact prior meaning (protocols bridged **outbound**). Absent/empty `bridge_inbound_protocols` ⇒ no inbound surface, i.e. exactly a pre-alpha.16 outbound-only Bridge Node. A node declaring `"bridge"` MUST have at least one of the two arrays non-empty. Additive / backward-compatible; no new NDP error codes. |
+| 0.10 | 2026-07-05 | **NPS-CR-0009 multi-Anchor HA**: AnnounceFrame (0x30) gains optional `cluster_epoch` (uint64, default 1) — the cluster-ownership fence. New §9 resolution rule: resolve the highest-`cluster_epoch` live Anchor for a `cluster_anchor` NID; equal-epoch split-brain → `NDP-CLUSTER-SPLIT`; federated Registries propagate `(cluster_anchor, cluster_epoch, active_nid)` and prefer higher epoch (monotonic per cluster). One new error code `NDP-CLUSTER-SPLIT`. Additive / backward-compatible (single-Anchor clusters keep epoch 1). |
 | 0.9 | 2026-06-12 | AnnounceFrame (0x30) gains two additive liveness fields — `health` (`healthy`/`degraded`/`draining`, absent ⇒ `healthy`) and `last_seen` (ISO 8601 liveness beat). New §3.2.1 **resolve-time staleness**: a Registry MUST return `NDP-RESOLVE-STALE` when a resolved entry's freshness deadline `(last_seen ?? timestamp) + ttl` is in the past, rather than serve a dead endpoint; the resolved object SHOULD echo `health`. One new error code `NDP-RESOLVE-STALE`. Backward-compatible (both fields optional). |
 | 0.9 | 2026-06-03 | AnnounceFrame gains `heartbeat_interval_ms` (uint32, default 60000) and `spawn_spec_ref` (string ref resolving to a SpawnSpec; §3.1.2 schema — OCI image + command + resource_limits; resolution per NPS-CR-0007 §5); `NDP-ANNOUNCE-STALE` error code (announce-time staleness, distinct from §3.2.1 resolve-time `NDP-RESOLVE-STALE`). |
 | 0.8 | 2026-05-31 | §3.3 GraphFrame rewritten to topology-snapshot format: `graph_id` (UUID v4), `nodes` (array of NdpGraphNode with nid/cluster_anchor/node_roles), `edges` (array of NdpGraphEdge with from_nid/to_nid/latency_ms/protocol), `ttl`, `metadata`; max 256 nodes / 1024 edges; `NDP-GRAPH-TOO-LARGE` and `NDP-GRAPH-INVALID` error codes; §9 federation forwarding (public-federated MUST forward AnnounceFrames, `ndp-forwarded-by` header, max 3 hops, `NDP-FEDERATION-LOOP`). |

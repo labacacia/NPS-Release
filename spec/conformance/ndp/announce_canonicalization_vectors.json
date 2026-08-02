@@ -1,0 +1,145 @@
+{
+  "name": "ndp-announce-canonicalization",
+  "version": "0.12.0",
+  "spec_ref": "spec/NPS-4-NDP.md §7.4",
+  "description": "Canonical signed-body and Ed25519 verification vectors for NDP 0.12 AnnounceFrame. Implementations omit frame, signature, health, last_seen, and null fields, insert the default heartbeat interval when absent, and recursively sort object keys.",
+  "vectors": [
+    {
+      "id": "ndp.announce.canonical.001",
+      "description": "A complete bidirectional Bridge announcement verifies with the shared raw Ed25519 public key.",
+      "kind": "positive",
+      "input": {
+        "public_key": "ed25519:iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+        "signature": "ed25519:gj6qNLKcoBQNFYT_TJ3bVo8vIaPxm8XEYtDcJdJ8yuKd4yBs_TSRVcjADn_PQf6YjucNYGUMZRBHt_McHFAtAg",
+        "frame": {
+          "frame": "0x30",
+          "nid": "urn:nps:node:api.test:bridge-a",
+          "addresses": [
+            {
+              "host": "127.0.0.1",
+              "port": 17433,
+              "protocol": "nps-native"
+            }
+          ],
+          "capabilities": [
+            "nwp:query"
+          ],
+          "ttl": 120,
+          "timestamp": "2026-07-29T12:00:00Z",
+          "graph_seq": 7,
+          "heartbeat_interval_ms": 60000,
+          "node_roles": [
+            "bridge",
+            "anchor"
+          ],
+          "cluster_anchor": "urn:nps:cluster:api.test:main",
+          "cluster_epoch": 4,
+          "bridge_protocols": [
+            "a2a"
+          ],
+          "bridge_inbound_protocols": [
+            "mcp"
+          ],
+          "health": "healthy",
+          "last_seen": "2026-07-29T12:00:30Z",
+          "signature": "ignored"
+        }
+      },
+      "expected": {
+        "canonical_json": "{\"addresses\":[{\"host\":\"127.0.0.1\",\"port\":17433,\"protocol\":\"nps-native\"}],\"bridge_inbound_protocols\":[\"mcp\"],\"bridge_protocols\":[\"a2a\"],\"capabilities\":[\"nwp:query\"],\"cluster_anchor\":\"urn:nps:cluster:api.test:main\",\"cluster_epoch\":4,\"graph_seq\":7,\"heartbeat_interval_ms\":60000,\"nid\":\"urn:nps:node:api.test:bridge-a\",\"node_roles\":[\"bridge\",\"anchor\"],\"timestamp\":\"2026-07-29T12:00:00Z\",\"ttl\":120}",
+        "signature_valid": true
+      }
+    },
+    {
+      "id": "ndp.announce.canonical.002",
+      "description": "Advisory health and last_seen changes do not change the signed body.",
+      "kind": "positive",
+      "input": {
+        "public_key": "ed25519:iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+        "signature": "ed25519:gj6qNLKcoBQNFYT_TJ3bVo8vIaPxm8XEYtDcJdJ8yuKd4yBs_TSRVcjADn_PQf6YjucNYGUMZRBHt_McHFAtAg",
+        "frame": {
+          "frame": "0x30",
+          "nid": "urn:nps:node:api.test:bridge-a",
+          "addresses": [
+            {
+              "host": "127.0.0.1",
+              "port": 17433,
+              "protocol": "nps-native"
+            }
+          ],
+          "capabilities": [
+            "nwp:query"
+          ],
+          "ttl": 120,
+          "timestamp": "2026-07-29T12:00:00Z",
+          "graph_seq": 7,
+          "heartbeat_interval_ms": 60000,
+          "node_roles": [
+            "bridge",
+            "anchor"
+          ],
+          "cluster_anchor": "urn:nps:cluster:api.test:main",
+          "cluster_epoch": 4,
+          "bridge_protocols": [
+            "a2a"
+          ],
+          "bridge_inbound_protocols": [
+            "mcp"
+          ],
+          "health": "draining",
+          "last_seen": "2026-07-29T12:01:00Z",
+          "signature": "ignored"
+        }
+      },
+      "expected": {
+        "canonical_json": "{\"addresses\":[{\"host\":\"127.0.0.1\",\"port\":17433,\"protocol\":\"nps-native\"}],\"bridge_inbound_protocols\":[\"mcp\"],\"bridge_protocols\":[\"a2a\"],\"capabilities\":[\"nwp:query\"],\"cluster_anchor\":\"urn:nps:cluster:api.test:main\",\"cluster_epoch\":4,\"graph_seq\":7,\"heartbeat_interval_ms\":60000,\"nid\":\"urn:nps:node:api.test:bridge-a\",\"node_roles\":[\"bridge\",\"anchor\"],\"timestamp\":\"2026-07-29T12:00:00Z\",\"ttl\":120}",
+        "signature_valid": true
+      }
+    },
+    {
+      "id": "ndp.announce.canonical.003",
+      "description": "Changing a covered capability invalidates the signature.",
+      "kind": "negative",
+      "input": {
+        "public_key": "ed25519:iojj3XQJ8ZX9UtstPLpdcspnCb8dlBIb83SIAbQPb1w",
+        "signature": "ed25519:gj6qNLKcoBQNFYT_TJ3bVo8vIaPxm8XEYtDcJdJ8yuKd4yBs_TSRVcjADn_PQf6YjucNYGUMZRBHt_McHFAtAg",
+        "frame": {
+          "frame": "0x30",
+          "nid": "urn:nps:node:api.test:bridge-a",
+          "addresses": [
+            {
+              "host": "127.0.0.1",
+              "port": 17433,
+              "protocol": "nps-native"
+            }
+          ],
+          "capabilities": [
+            "nwp:action"
+          ],
+          "ttl": 120,
+          "timestamp": "2026-07-29T12:00:00Z",
+          "graph_seq": 7,
+          "heartbeat_interval_ms": 60000,
+          "node_roles": [
+            "bridge",
+            "anchor"
+          ],
+          "cluster_anchor": "urn:nps:cluster:api.test:main",
+          "cluster_epoch": 4,
+          "bridge_protocols": [
+            "a2a"
+          ],
+          "bridge_inbound_protocols": [
+            "mcp"
+          ],
+          "signature": "ignored"
+        }
+      },
+      "expected": {
+        "canonical_json": "{\"addresses\":[{\"host\":\"127.0.0.1\",\"port\":17433,\"protocol\":\"nps-native\"}],\"bridge_inbound_protocols\":[\"mcp\"],\"bridge_protocols\":[\"a2a\"],\"capabilities\":[\"nwp:action\"],\"cluster_anchor\":\"urn:nps:cluster:api.test:main\",\"cluster_epoch\":4,\"graph_seq\":7,\"heartbeat_interval_ms\":60000,\"nid\":\"urn:nps:node:api.test:bridge-a\",\"node_roles\":[\"bridge\",\"anchor\"],\"timestamp\":\"2026-07-29T12:00:00Z\",\"ttl\":120}",
+        "signature_valid": false,
+        "error": "NDP-ANNOUNCE-SIGNATURE-INVALID"
+      }
+    }
+  ]
+}

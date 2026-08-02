@@ -2,9 +2,9 @@
 
 # NPS-Node-L3 合规测试套件
 
-**状态**: 草案 (Draft)
-**版本**: 0.1
-**日期**: 2026-06-12
+**状态**: 生效 (Active)
+**版本**: 0.2
+**日期**: 2026-07-29
 **适用于**: [NPS-Node-Profile](../NPS-Node-Profile.md) —— Level 3（按需 / FaaS）、[NPS-CR-0007](../../cr/NPS-CR-0007-nop-l3-runtime-integration.md)
 **作者**: Ori Lynn / INNO LOTUS PTY LTD
 
@@ -59,7 +59,22 @@
 
 ---
 
-## 3. 超出范围
+## 3. Alpha.17 共享证据
+
+`spec/conformance/nop/` 下与语言无关的 NOP 0.9 语料是本套件可移植、可执行的子集：
+
+- `runtime_security_vectors.json` 覆盖租约 owner/过期/重领、终态去重、
+  SpawnSpec 校验、生命周期优先级以及规范 dedup key。
+- `orchestrator_transcripts.json` 覆盖确定性 DAG 执行、重试、取消、聚合和
+  Saga 补偿。
+- NPS-CR-0007 提升为 Implemented 前，六个 SDK 与 `nps-runner` 的 daemon
+  自有表面均已通过这些向量。
+
+具体部署在声明 L3 认证前，仍 MUST 执行 §2.4 中依赖环境的端到端用例。
+
+---
+
+## 4. 超出范围
 
 分布式租约存储后端（多副本协调）属实现关切；本套件仅校验认领/spawn/生命周期契约的**可观测线上行为**，该行为与存储无关（NPS-CR-0007 §10 OQ-1）。
 

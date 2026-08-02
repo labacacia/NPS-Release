@@ -108,10 +108,12 @@ Withdrawn / Rejected 的 RFC，编号也永不复用。
 
 | 编号 | 标题 | 状态 | 接受日期 | 取代 |
 |------|------|------|----------|------|
-| [0001](./NPS-RFC-0001-ncp-connection-preamble.cn.md) | 为 NCP 原生模式加入连接前导，用于流量识别 | Draft | _—_ | _—_ |
-| [0002](./NPS-RFC-0002-x509-acme-nid-certs.cn.md) | NID 证书改用 X.509 + ACME | Draft | _—_ | _—_ |
-| [0003](./NPS-RFC-0003-agent-identity-assurance-levels.cn.md) | Agent 身份三级保证等级（反爬 / 信任分流） | Draft | _—_ | _—_ |
-| [0004](./NPS-RFC-0004-nid-reputation-log.cn.md) | NID 声誉日志（Agent 版 Certificate Transparency） | Draft | _—_ | _—_ |
+| [0001](./NPS-RFC-0001-ncp-connection-preamble.cn.md) | 为 NCP 原生模式加入连接前导，用于流量识别 | Accepted | _—_ | _—_ |
+| [0002](./NPS-RFC-0002-x509-acme-nid-certs.cn.md) | NID 证书改用 X.509 + ACME | Accepted | 2026-05-17 | _—_ |
+| [0003](./NPS-RFC-0003-agent-identity-assurance-levels.cn.md) | Agent 身份三级保证等级（反爬 / 信任分流） | Accepted | _—_ | _—_ |
+| [0004](./NPS-RFC-0004-nid-reputation-log.cn.md) | NID 声誉日志（Agent 版 Certificate Transparency） | Active | 2026-05-28 | _—_ |
+| [0005](./NPS-RFC-0005-reputation-policy-enforcement.cn.md) | 声誉策略执行 —— `ban_on` / `reject_on` / `throttle_on` 规则、NWM `reputation_policy` 字段 | Active | 2026-05-28 | _—_ |
+| [0006](./NPS-RFC-0006-ncp-native-transport.cn.md) | NCP 原生模式传输绑定 —— TCP 分帧、QUIC 流映射、重新密钥、`max_concurrent_streams` | Accepted | 2026-07-05 | _—_ |
 
 ---
 

@@ -2,9 +2,9 @@ English | [中文版](./NPS-Node-L3.cn.md)
 
 # NPS-Node-L3 Conformance Suite
 
-**Status**: Draft
-**Version**: 0.1
-**Date**: 2026-06-12
+**Status**: Active
+**Version**: 0.2
+**Date**: 2026-07-29
 **Applies-To**: [NPS-Node-Profile](../NPS-Node-Profile.md) — Level 3 (on-demand / FaaS), [NPS-CR-0007](../../cr/NPS-CR-0007-nop-l3-runtime-integration.md)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
 
@@ -62,7 +62,25 @@ English | [中文版](./NPS-Node-L3.cn.md)
 
 ---
 
-## 3. Out of Scope
+## 3. Shared Alpha.17 Evidence
+
+The language-neutral NOP 0.9 corpus under `spec/conformance/nop/` is the
+portable executable subset of this suite:
+
+- `runtime_security_vectors.json` covers lease ownership/expiry/reclaim,
+  terminal dedup, SpawnSpec validation, lifecycle precedence, and the
+  canonical dedup key.
+- `orchestrator_transcripts.json` covers deterministic DAG execution,
+  retry, cancellation, aggregation, and saga compensation.
+- All six SDKs and the `nps-runner` daemon-owned surfaces passed these
+  vectors before NPS-CR-0007 was promoted to Implemented.
+
+An individual deployment still MUST execute the environment-dependent
+end-to-end cases in §2.4 before claiming L3 certification.
+
+---
+
+## 4. Out of Scope
 
 Distributed lease-store backends (multi-replica coordination) are an implementation concern;
 this suite validates only the **observable wire behaviour** of the claim/spawn/lifecycle

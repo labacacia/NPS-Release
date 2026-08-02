@@ -30,7 +30,7 @@
     },
     {
       "id": "nip.trust.002",
-      "description": "Operator-signed TrustFrame: `signer_nid` is an operator NID under `grantor_nid` (not equal to `grantor_nid` itself). Spec §5.2 permits this; verifier accepts as long as the operator key is recognised under the grantor's NID hierarchy.",
+      "description": "Delegated-operator TrustFrame: `signer_nid` is an agent NID under `grantor_nid`'s domain and is recognised by policy as an operator/delegated signer (not equal to `grantor_nid` itself). Spec §5.2 permits this; verifier accepts as long as the signer key is recognised under the grantor's NID hierarchy.",
       "kind": "positive",
       "input": {
         "trust_frame": {
@@ -42,18 +42,18 @@
           "issued_at": "2026-05-11T00:00:00Z",
           "expires_at": "2026-08-11T00:00:00Z",
           "serial": "00000000000A3FA1",
-          "signer_nid": "urn:nps:operator:org-a.com:trust-issuer-1",
+          "signer_nid": "urn:nps:agent:org-a.com:trust-issuer-1",
           "signature": "ed25519:placeholder-stripped-during-canonicalisation"
         }
       },
       "expected": {
         "signer_authorised": true,
-        "operator_relationship": "signer_nid is under grantor_nid"
+        "delegated_signer_relationship": "signer_nid is an agent under grantor_nid's domain with grant-authority policy"
       }
     },
     {
       "id": "nip.trust.003",
-      "description": "Negative: `signer_nid` is unrelated to `grantor_nid` (neither equal to it nor an operator under it). Verifier MUST reject with NIP-TRUST-FRAME-INVALID — the signer is not authorised to issue a trust grant on behalf of `grantor_nid`.",
+      "description": "Negative: `signer_nid` is unrelated to `grantor_nid` (neither equal to it nor an authorised delegated agent under it). Verifier MUST reject with NIP-TRUST-FRAME-INVALID — the signer is not authorised to issue a trust grant on behalf of `grantor_nid`.",
       "kind": "negative",
       "input": {
         "trust_frame": {

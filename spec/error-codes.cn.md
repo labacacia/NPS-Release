@@ -2,8 +2,8 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 1.6
-**Date**: 2026-07-05
+**Version**: 1.8
+**Date**: 2026-07-29
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -87,11 +87,22 @@ NPS 采用两级错误体系：
 | `NWP-HTTP-ACCEPT-UNSATISFIABLE` | `NPS-CLIENT-BAD-PARAM` | HTTP overlay 请求 `Accept` 无法由任何受支持的 response media type 满足（NWP §9.5）|
 | `NWP-HTTP-REQUEST-ID-MISMATCH` | `NPS-CLIENT-BAD-PARAM` | 响应 `X-NWP-Request-ID` 未回传请求 ID（NWP §9.5）|
 | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` | HTTP body 无法解析为受支持的 NWP frame envelope（NWP §9.5）|
+| `NWP-HTTP-BODY-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | HTTP 请求 body 超出可移植 Node 服务端配置的上限（NWP §9.5 / §16.5.1）|
 | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` | NWM 声明了当前节点无法服务的 capability/profile；不同于 `NWP-QUERY-VECTOR-UNSUPPORTED` 等如实声明不支持的专用错误码（NWP §9.5）|
 | `NWP-TOPOLOGY-UNAUTHORIZED` | `NPS-AUTH-FORBIDDEN` | 调用方无权读取该 Anchor 的拓扑信息（NPS-2 §12）；授权策略由实现方按 §12.4 自定义（NPS-CR-0002）|
+| `NWP-ANCHOR-NOT-LEADER` | `NPS-CLIENT-CONFLICT` | 拓扑写入被发送到 standby 或只读降级的 Anchor；只有当前活跃的集群 owner 接受写入（NPS-CR-0009）|
+| `NWP-ANCHOR-EPOCH-FENCED` | `NPS-CLIENT-CONFLICT` | 入站帧携带的 `cluster_epoch` 高于接收 Anchor 自身的值；接收方是已被取代的 leader，被栅栏隔离（NPS-CR-0009）|
 | `NWP-TOPOLOGY-UNSUPPORTED-SCOPE` | `NPS-CLIENT-BAD-PARAM` | `topology.scope` 的值该 Anchor Node 未实现（NPS-CR-0002）|
 | `NWP-TOPOLOGY-DEPTH-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | 请求的 `topology.depth` 超出该 Anchor Node 配置的最大值（NPS-CR-0002）|
 | `NWP-TOPOLOGY-FILTER-UNSUPPORTED` | `NPS-CLIENT-BAD-PARAM` | `topology.filter` 包含未识别的键或不支持的运算符（NPS-CR-0002）|
+| `NWP-BRIDGE-DIRECTION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 请求指向了本 Bridge Node 未声明的「协议 × 方向」组合 —— 入向请求命中了不在 `bridge_inbound_protocols` 中的协议，或出向 `bridge_target.protocol` 不在 `bridge_protocols` 中（NPS-4 §3.1）。响应 SHOULD 在 `hint` 中携带两个已声明的数组。与 `NWP-ACTION-PARAMS-INVALID` 的区别：该协议/方向本身格式合法，只是本节点不提供服务，而非请求畸形。（NPS-CR-0010）|
+| `NWP-BRIDGE-TARGET-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | **出向。** 调用未携带合法的 `bridge_target` 对象，或其 schema 校验失败（缺 `protocol` / `endpoint`）。*由 NPS-CR-0010 正式登记；.NET Bridge 自 alpha.7 起一直在发这个码，却从未登记在本表中。* |
+| `NWP-BRIDGE-PROTOCOL-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | **出向。** `bridge_target.protocol` 格式合法，但本 Bridge Node 没有为它注册 dispatcher。与 `NWP-BRIDGE-DIRECTION-UNSUPPORTED` 的区别：后者针对**已声明**的协议/方向集合，本码针对 dispatcher 注册表。*由 NPS-CR-0010 登记。* |
+| `NWP-BRIDGE-ENDPOINT-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | **出向。** `bridge_target.endpoint` 不是合法 URL，或被 Bridge 的 SSRF 策略拒绝（NWP §15.2）。*由 NPS-CR-0010 登记。* |
+| `NWP-BRIDGE-UPSTREAM-FAILED` | `NPS-DOWNSTREAM-UNAVAILABLE` | **出向。** 对外调用在传输层失败、超时，或返回了 Bridge 无法翻译回 NWP 帧的响应。注意区别：若上游返回的是一个能被**成功翻译**的错误状态，则按 NWP §16.3 映射，不用本码。*由 NPS-CR-0010 登记。* |
+| `NWP-BRIDGE-SERVER-TOOL-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | **入向。** 外部客户端点名了本 Bridge 并未暴露的 tool / action / resource。*由 NPS-CR-0010 登记。* |
+| `NWP-BRIDGE-SERVER-DISPATCHER-MISSING` | `NPS-SERVER-INTERNAL` | **入向。** Bridge 启动时未配置其所代理的 NPS 节点后端 —— 这是部署故障，不是客户端错误。*由 NPS-CR-0010 登记；.NET Bridge 此前在这里发的是根本不存在的状态码 `NPS-SERVER-NOT-IMPLEMENTED`。* |
+| `NWP-BRIDGE-SERVER-DISPATCH-FAILED` | `NPS-SERVER-INTERNAL` | **入向。** 向所代理的 NPS 节点分发时发生非预期失败。*由 NPS-CR-0010 登记。* |
 
 ---
 
@@ -100,6 +111,7 @@ NPS 采用两级错误体系：
 | 错误码 | NPS 状态码 | 描述 |
 |--------|-----------|------|
 | `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | 证书已过期（expires_at < now）|
+| `NIP-CERT-CAPABILITIES-EXCEEDED` | `NPS-AUTH-FORBIDDEN` | `IdentFrame.capabilities` 声称了 CA 见证扩展 `id-nps-capabilities` 中不存在的能力；Phase-3 强制（NIP v0.12）|
 | `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | 证书已被吊销（在 CRL 或 OCSP 中）|
 | `NIP-CERT-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | 证书签名验证失败 |
 | `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | 颁发者��在 trusted_issuers 列表中 |
@@ -141,6 +153,7 @@ NPS 采用两级错误体系：
 | `NDP-RESOLVE-AMBIGUOUS` | `NPS-CLIENT-CONFLICT` | 解析结果存在冲突（多个不一致的注册）|
 | `NDP-RESOLVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | 解析请求超时 |
 | `NDP-RESOLVE-STALE` | `NPS-CLIENT-NOT-FOUND` | 被解析条目的新鲜度截止 `(last_seen ?? timestamp) + ttl` 已过期；Registry MUST NOT 返回该失效注册（NDP v0.9 §3.2.1）|
+| `NDP-CLUSTER-SPLIT` | `NPS-CLIENT-CONFLICT` | 同一 `cluster_anchor` 集群存在两个宣告相同 `cluster_epoch` 的活跃 Anchor（脑裂）；Registry 拒绝任意裁决（NPS-CR-0009）|
 | `NDP-ANNOUNCE-STALE` | `NPS-CLIENT-NOT-FOUND` | 超过 `heartbeat_interval_ms × 3` 未收到重新公告，AnnounceFrame 心跳已过期（NDP v0.9）|
 | `NDP-ANNOUNCE-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | AnnounceFrame 签名验证失败 |
 | `NDP-ANNOUNCE-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 中 NID 与签名证书不一致 |
@@ -148,7 +161,7 @@ NPS 采用两级错误体系：
 | `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `node_roles` 包含无法识别的值（非已知遗留移除值——遗留移除情况请用 `NDP-ANNOUNCE-ROLE-REMOVED`）。|
 | `NDP-ANNOUNCE-CONFLICT` | `NPS-CLIENT-CONFLICT` | 两个 AnnounceFrame 共享相同 `nid` 与 `graph_seq` 但所覆盖内容不同（注册表投毒企图；见 NPS-4 §7.4）|
 | `NDP-ANNOUNCE-PROFILE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame 违反当前 Registry 安全 profile 约束，且没有更具体的 NDP 错误码可用（例如 org-private / public-federated profile 下的地址策略）|
-| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 的 `graph_seq` 小于或等于该 NID 此前已接受的最高值（回滚企图；见 NPS-4 §7.5）|
+| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 的 `graph_seq` 小于该 NID 此前已接受的最高值（回滚企图；见 NPS-4 §7.5）|
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame 序号不连续 |
 | `NDP-GRAPH-INVALID` | `NPS-CLIENT-BAD-FRAME` | GraphFrame 边引用了不在 `nodes` 列表中的 NID，或存在自环边 |
 | `NDP-GRAPH-TOO-LARGE` | `NPS-LIMIT-PAYLOAD` | GraphFrame 超过拓扑快照规模限制（`nodes` > 256 或 `edges` > 1024）|
@@ -183,6 +196,15 @@ NPS 采用两级错误体系：
 | `NOP-INPUT-MAPPING-ERROR` | `NPS-CLIENT-UNPROCESSABLE` | input_mapping JSONPath 无法解析或目标字段不存在 |
 | `NOP-COMPENSATION-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | 终态——saga 回滚过程中节点的 `compensate_action` 返回错误 |
 | `NOP-COMPENSATION-NOT-SUPPORTED` | `NPS-CLIENT-UNPROCESSABLE` | 终态——存在需要补偿的前驱缺少 `compensate_action` 且 `compensation_policy="strict"` |
+| `NOP-CLAIM-CONFLICT` | `NPS-CLIENT-CONFLICT` | TaskFrame 已被存活的 `nps-runner` 租约占用（NPS-CR-0007 §4.2）|
+| `NOP-SPAWN-SPEC-INVALID` | `NPS-CLIENT-BAD-PARAM` | `spawn_spec_ref` 无法解析或未通过 SpawnSpec 模式校验（NPS-CR-0007 §5）|
+| `NOP-RUNTIME-IDLE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | L3 Worker 空闲时间超过上限（NPS-CR-0007 §6）|
+| `NOP-RUNTIME-MAX-RUNTIME` | `NPS-SERVER-TIMEOUT` | L3 Worker 总运行时间超过上限（NPS-CR-0007 §6）|
+| `NOP-CALLBACK-HMAC-MISSING` | `NPS-AUTH-UNAUTHENTICATED` | 设置了 `callback_secret` 但缺少 `X-NPS-Signature` header（NOP v0.6）|
+| `NOP-CALLBACK-INVALID` | `NPS-CLIENT-BAD-PARAM` | callback URL 未通过 scheme、user-info、DNS、公网地址或重定向校验（NOP v0.9）|
+| `NOP-CALLBACK-HMAC-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | callback HMAC 格式错误，或与精确原始 body 不匹配（NOP v0.9）|
+| `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | 任务结果超过 `result_ttl_seconds` 后不再保留（NOP v0.7）|
+| `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK 请求的帧已从发送方缓冲区淘汰（NOP v0.7）|
 
 ---
 

@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.7
+**Version**: 0.9
 **Date**: 2026-05-10
 **Port**: 17433（默认，共用）/ 17437（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.9)、NPS-2 (NWP v0.17)、NPS-3 (NIP v0.11)
+**Depends-On**: NPS-1 (NCP v0.11)、NPS-2 (NWP v0.20)、NPS-3 (NIP v0.13)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > 本文档为 NOP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
@@ -288,6 +288,7 @@ Orchestrator 将 DAG 中的单个子任务委托给 Worker Agent 执行。
 | `deadline_at` | string | 必填 | 子任务截止时间（ISO 8601 UTC）|
 | `idempotency_key` | string | 可选 | 幂等键（重试时使用相同的值）|
 | `priority` | string | 可选 | 继承自 TaskFrame.priority |
+| `target_cluster_anchor` | string | 可选 | 本子任务要路由到的 cluster anchor 的 NID（跨集群委托，NOP v0.6）。存在时，Orchestrator MUST 把该 DelegateFrame 路由给注册在指定 cluster anchor 下的 Worker Agent。在多 Anchor 高可用（[NPS-CR-0009](cr/NPS-CR-0009-multi-anchor-ha.md)）下，Orchestrator MUST 把 `target_cluster_anchor` 解析到该集群**当前活跃**的 Anchor（`cluster_epoch` 最高者，NDP §9）；发生 `anchor_failover` 时，指向该集群的在途（in-flight）委托 MUST 在重试前重新解析到继任者。|
 | `context` | object | 可选 | 透传上下文（从 TaskFrame.context 继承，span_id 更新为当前 Delegate span）|
 
 **Scope 裁剪原则**
@@ -592,22 +593,75 @@ Orchestrator                              Worker B（数据）  Worker C（推�
 | `NOP-COMPENSATION-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | 终态——saga 回滚过程中某节点的 `compensate_action` 返回错误（见 §3.1.6）|
 | `NOP-COMPENSATION-NOT-SUPPORTED` | `NPS-CLIENT-UNPROCESSABLE` | 终态——存在需要补偿的前驱缺少 `compensate_action` 且 `compensation_policy="strict"` |
 | `NOP-CALLBACK-HMAC-MISSING` | `NPS-AUTH-UNAUTHENTICATED` | callback 接收方拒绝投递，因为缺少 `X-NPS-Signature` header；`callback_secret` 已设置但签名未计算 |
+| `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | `result_ttl_seconds` 已过后才请求任务结果；结果不再保留 |
+| `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK 请求重传的帧已不在发送方缓冲区中（该帧已被淘汰）|
+| `NOP-CLAIM-CONFLICT` | `NPS-CLIENT-CONFLICT` | TaskFrame 已被一个存活的 runner 租约认领（NPS-CR-0007 §4.2）|
+| `NOP-SPAWN-SPEC-INVALID` | `NPS-CLIENT-BAD-PARAM` | `spawn_spec_ref` 无法解析，或未通过 SpawnSpec schema 校验（NPS-CR-0007 §5）|
+| `NOP-RUNTIME-IDLE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | L3 worker 在完成该节点前超过了 idle timeout（NPS-CR-0007 §6）|
+| `NOP-RUNTIME-MAX-RUNTIME` | `NPS-SERVER-TIMEOUT` | L3 worker 在完成该节点前超过了 max runtime（NPS-CR-0007 §6）|
 
 ---
 
-## 8. 安全考量
+## 8. L3 运行时集成（nps-runner）
 
-### 8.1 任务注入防御
+> 规范性契约：**NPS-CR-0007**（`cr/NPS-CR-0007-nop-l3-runtime-integration.md`）。
+> 本节是 spec 内摘要；完整字段表与合规套件以该 CR 为准。
+
+NPS-Node Profile **L3（按需 / FaaS）** 层级只在任务到达时才具现化 Agent 进程。承担这件事的运行时是
+`nps-runner` daemon。本节定义 `nps-runner` 与 NOP 编排层之间的规范性接口。
+
+### 8.1 任务认领协议
+
+runner 原子地租约（lease）某个 per-NID 收件箱的队首任务：`{ task_id, runner_nid, lease_seconds
+（钳制在 [10,600]）, dedup_key = sha256(task_id ‖ dag_hash) }`。结果分三种：
+
+- **Granted** —— 收件箱把该任务标记为 `LEASED (runner_nid, lease_expiry)`；节点运行期间 runner MUST 在
+  租约到期前续约。一次续约把 `lease_expiry` 延长 `lease_seconds`，MUST 携带相同的 `runner_nid`；若续约在租约已过期并被回收之后才到达，MUST 以 `NOP-CLAIM-CONFLICT` 拒绝。
+- **Conflict** —— 已存在存活租约 ⇒ `NOP-CLAIM-CONFLICT`；runner 退避重试。
+- **Reclaim** —— 已过期的租约可被回收；`dedup_key` 保证已处于终态、带副作用的节点**不会**被重复执行
+  （at-least-once + 去重）。
+
+结果上报是幂等的，以 `(task_id, node_id, dedup_key)` 为键。
+
+### 8.2 `spawn_spec_ref` 内容 schema
+
+`spawn_spec_ref`（NDP AnnounceFrame，NPS-4 §3.1）解析为一个 **SpawnSpec**：
+`{ image（OCI ref，必填）, command?, env?, resource_limits? {cpu, memory, cgn_budget},
+idle_timeout_seconds?, max_runtime_seconds? }`。它 MAY 是内联的 `spawnspec:` base64url-JSON
+data URI，也 MAY 是 `https://` / `nwp://` URL，其响应体 MUST 通过该 schema 校验。解析失败 ⇒
+`NOP-SPAWN-SPEC-INVALID`。
+
+### 8.3 生命周期强制
+
+| 限制 | 优先级（高→低）| 违反时的终态 |
+|------|---------------|-------------|
+| Idle timeout | SpawnSpec `idle_timeout_seconds` → runner 策略 | `NOP-RUNTIME-IDLE-TIMEOUT` |
+| Max runtime | SpawnSpec `max_runtime_seconds` → runner 策略 | `NOP-RUNTIME-MAX-RUNTIME` |
+
+出现任一终态条件时，runner 以 PATCH 把节点状态写回 Orchestrator 的任务存储：`done → COMPLETED`，
+`failed` / idle / max-runtime → `FAILED`。带 `compensate_action` 的 `FAILED` L3 节点触发与 L1/L2
+相同的逆拓扑 saga 回滚（§3.1.6）；L3 不引入新的 saga 路径。
+
+### 8.4 合规性
+
+L3 部署由 `services/conformance/NPS-Node-L3.md`（`TC-N3-*`）测试：认领冲突、租约回收 + 去重、
+spawn-spec 解析、idle / max-runtime 违反、3 节点 DAG 端到端，以及 L3 saga 触发。
+
+---
+
+## 9. 安全考量
+
+### 9.1 任务注入防御
 Orchestrator MUST 验证接收到的 TaskFrame 来自可信 NID（通过 NIP 证书验证）。Worker Agent SHOULD 只接受已通过 NIP 验证的 DelegateFrame，拒绝未认证或 scope 不匹配的委托请求。
 
-### 8.2 DAG 资源限制
+### 9.2 DAG 资源限制
 实现 MUST 限制：
 - DAG 最大节点数：**32**
 - 最大委托链深度：**3 层**
 - `condition` 表达式长度：**≤ 512 字符**
 - `input_mapping` JSONPath 嵌套深度：**≤ 8 层**
 
-### 8.3 审计追踪
+### 9.3 审计追踪
 每个 DelegateFrame 的执行记录 SHOULD 写入审计日志，包含：
 
 - `sender_nid`（Orchestrator）
@@ -617,21 +671,22 @@ Orchestrator MUST 验证接收到的 TaskFrame 来自可信 NID（通过 NIP 证
 - `timestamp`
 - `trace_id`（来自 context，用于与 OpenTelemetry 系统关联）
 
-### 8.4 callback_url 防滥用
+### 9.4 callback_url 防滥用
 - TaskFrame `callback_url` MUST 为 `https://` 前缀
 - Orchestrator SHOULD 对回调 URL 做 SSRF 检查（禁止内网地址）
 - 回调推送失败时 SHOULD 指数退避重试（最多 3 次），之后放弃并记录日志
 
-### 8.5 Scope 委托链安全
+### 9.5 Scope 委托链安全
 每一层委托都必须通过 NIP CA 验证 `delegated_scope` 不超出父 scope。不得绕过 CA 直接委托超出权限的子任务。
 
 ---
 
-## 9. 变更历史
+## 10. 变更历史
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 0.7 | 2026-06-12 | **NPS-CR-0007 —— NOP↔L3 运行时集成**：新增 §8（任务认领协议：原子租约 + `dedup_key`、`NOP-CLAIM-CONFLICT`；`spawn_spec_ref` SpawnSpec 内容模式；idle/max-runtime 生命周期强制；幂等结果上报）；4 个新错误码（`NOP-CLAIM-CONFLICT`、`NOP-SPAWN-SPEC-INVALID`、`NOP-RUNTIME-IDLE-TIMEOUT`、`NOP-RUNTIME-MAX-RUNTIME`）；新增 `services/conformance/NPS-Node-L3.md`（`TC-N3-*`）；Security/Changelog 重编号为 §9/§10。gate `nps-runner` L3 FaaS 运行时。（正文中文翻译待补，见 version-matrix translation_lag） |
+| 0.8 | 2026-07-05 | 多 Anchor 高可用交互（NPS-CR-0009）：`DelegateFrame.target_cluster_anchor` MUST 解析到目标集群当前活跃的 Anchor（`cluster_epoch` 最高者，NDP §9）；发生 `anchor_failover` 时，在途委托 MUST 在重试前重新解析到 `successor_nid`。租约续约语义正式化（§8）：一次续约延长 `lease_expiry`，MUST 匹配 `runner_nid`；若租约已过期并被回收，则以 `NOP-CLAIM-CONFLICT` 拒绝。无新增错误码。 |
+| 0.7 | 2026-06-12 | **NPS-CR-0007 —— NOP↔L3 运行时集成**：新增 §8（任务认领协议：原子租约 + `dedup_key`、`NOP-CLAIM-CONFLICT`；`spawn_spec_ref` SpawnSpec 内容模式；idle/max-runtime 生命周期强制；幂等结果上报）；4 个新错误码（`NOP-CLAIM-CONFLICT`、`NOP-SPAWN-SPEC-INVALID`、`NOP-RUNTIME-IDLE-TIMEOUT`、`NOP-RUNTIME-MAX-RUNTIME`）；新增 `services/conformance/NPS-Node-L3.md`（`TC-N3-*`）；Security/Changelog 重编号为 §9/§10。gate `nps-runner` L3 FaaS 运行时。 |
 | 0.5 | 2026-05-10 | 补偿/Saga 语义（issue #34）：节点级 `compensate_action` / `compensate_params_mapping`；TaskFrame 级 `compensation_policy`（默认 `best_effort` / 可选 `strict`）；子任务 saga 状态 `COMPENSATING` / `COMPENSATED` / `COMPENSATION_FAILED`；§3.1.6 saga 触发逻辑（下游 FAILED 时按逆拓扑顺序补偿已完成前驱）；2 个新错误码：`NOP-COMPENSATION-FAILED`、`NOP-COMPENSATION-NOT-SUPPORTED` |
 | 0.4 | 2026-04-19 | Status / Depends-On 版本号同步；与 NCP v0.7 / NWP v0.13 / NIP v0.9 文字对齐 |
 | 0.3 | 2026-04-14 | DAG 节点粒度增强（per-node timeout/retry_policy/condition/input_mapping）；§3.1.2 context 字段支持 OpenTelemetry W3C Trace（trace_id/span_id/trace_flags/baggage）；§3.1.3 input_mapping JSONPath 映射；§3.1.4 retry_policy（fixed/linear/exponential）；§3.1.5 condition CEL 子集；DelegateFrame 新增 idempotency_key/priority/context/node_id；SyncFrame 新增 min_required（K-of-N 语义）和 §3.3.1/§3.3.2 聚合策略；AlignStream 新增 subtask_id/error 字段，§3.4.1 Token 级背压；§4 资源预检（preflight）协议；§5 扩展状态机（PREFLIGHT/SKIPPED）和任务取消机制；§6 完整多 Agent 流程图；3 个新错误码（RESOURCE-INSUFFICIENT、CONDITION-EVAL-ERROR、INPUT-MAPPING-ERROR、DELEGATE-TIMEOUT、TASK-CANCELLED）；§8.4 callback_url 防滥用；Depends-On 更新至 NCP v0.7 / NWP v0.13 |

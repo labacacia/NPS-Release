@@ -2,7 +2,7 @@
   "name": "ncp-frame-header",
   "version": "0.1.0",
   "spec_ref": "spec/NPS-1-NCP.md §3.1, §3.2",
-  "description": "NCP fixed-header encode and decode. Default header is 4 bytes (1 type + 1 flags + 2-byte BE payload length); extended header is 8 bytes (1 type + 1 flags + 4-byte BE payload length + 2 reserved bytes). Flags layout (MSB→LSB): EXT | RSV | RSV | RSV | ENC | FINAL | T1 | T0. Encoding tier T1T0: 00=JSON, 01=MsgPack, 10/11=Reserved.",
+  "description": "NCP fixed-header encode and decode. Default header is 4 bytes (1 type + 1 flags + 2-byte BE payload length); extended header is 8 bytes (1 type + 1 flags + 4-byte BE payload length + 2 reserved bytes). Flags layout (MSB→LSB): EXT | RSV | RSV | RSV | ENC | FINAL | T1 | T0. Encoding tier T1T0: 00=JSON, 01=MsgPack, 10=BinaryVector v1, 11=Reserved.",
   "vectors": [
     {
       "id": "ncp.header.001",
@@ -100,10 +100,29 @@
     },
     {
       "id": "ncp.header.006",
-      "description": "Negative: reserved tier 0b10 in T1T0 (former Tier-3 slot). Spec marks Tier-3 Reserved; receivers MUST reject. Flags = 00000110 = 0x06.",
+      "description": "Default 4-byte header for an AnchorFrame (0x01) with Tier-3 BinaryVector v1 encoding, FINAL=1, ENC=0, EXT=0, payload_len=64. Flags = 00000110 = 0x06.",
+      "kind": "positive",
+      "input": {
+        "frame_type": 1,
+        "flags": {
+          "ext": false,
+          "enc": false,
+          "final": true,
+          "tier": "binary_vector.v1"
+        },
+        "payload_len": 64
+      },
+      "expected": {
+        "header_hex": "01060040",
+        "header_len": 4
+      }
+    },
+    {
+      "id": "ncp.header.007",
+      "description": "Negative: reserved tier 0b11 in T1T0. Receivers MUST reject. Flags = 00000111 = 0x07.",
       "kind": "negative",
       "input": {
-        "header_hex": "01060040"
+        "header_hex": "01070040"
       },
       "expected": {
         "error": "NCP-FRAME-FLAGS-INVALID",

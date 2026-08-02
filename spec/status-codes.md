@@ -2,8 +2,8 @@ English | [中文版](./status-codes.cn.md)
 
 # NPS Native Status Codes and HTTP Mapping
 
-**Version**: 0.5  
-**Date**: 2026-07-05  
+**Version**: 0.6  
+**Date**: 2026-08-01  
 
 NPS defines a native status-code system independent of HTTP. Native mode uses NPS status codes directly; HTTP / Overlay mode additionally provides a mapping to HTTP status codes.
 
@@ -140,6 +140,11 @@ Each protocol's specific error code (e.g. `NCP-ANCHOR-NOT-FOUND`) maps to the co
 | `NWP-HTTP-FRAME-BODY-MALFORMED` | `NPS-CLIENT-BAD-FRAME` |
 | `NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED` | `NPS-SERVER-UNSUPPORTED` |
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` |
+| `NWP-ANCHOR-NOT-LEADER` | `NPS-CLIENT-CONFLICT` |
+| `NWP-ANCHOR-EPOCH-FENCED` | `NPS-CLIENT-CONFLICT` |
+| `NWP-BRIDGE-DIRECTION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` |
+| `NDP-CLUSTER-SPLIT` | `NPS-CLIENT-CONFLICT` |
+| `NIP-CERT-CAPABILITIES-EXCEEDED` | `NPS-AUTH-FORBIDDEN` |
 | `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` |
 | `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` |
 | `NIP-CERT-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` |

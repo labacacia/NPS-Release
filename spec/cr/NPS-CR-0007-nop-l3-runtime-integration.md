@@ -8,7 +8,7 @@ Licensed under the Apache License, Version 2.0
 
 **CR ID**: NPS-CR-0007
 **Target version**: v1.0.0-alpha.13
-**Status**: Proposed
+**Status**: Implemented (v1.0.0-alpha.13, 2026-06-13)
 **Type**: Backward-compatible addition (new NOP §8, `spawn_spec_ref` content-schema standardization, 4 new error codes, new L3 conformance suite)
 **Author**: Ori, LabAcacia
 **Affected components**: NOP spec (NPS-5) §8 (new), NDP spec (NPS-4) `spawn_spec_ref` field note, `spec/error-codes.md`, `spec/status-codes.md`, `spec/services/conformance/NPS-Node-L3.md` (new), `nps-runner` daemon, all 6 SDKs (NOP frame field additions)

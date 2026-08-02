@@ -1,0 +1,414 @@
+{
+  "name": "ncp-native-server-handshake",
+  "version": "0.1.0",
+  "spec_ref": "spec/NPS-1-NCP.md §2.6.2",
+  "description": "Portable native-server admission and deterministic Hello negotiation. A runner evaluates the staged transport input in order. Pre-admission framing failures close silently; failures after a valid Hello use an existing ErrorFrame; successful cases produce the portable handshake Caps fields.",
+  "vectors": [
+    {
+      "id": "ncp.native_server.001",
+      "description": "Full overlap selects the client's first stable encoding and intersects limits and protocols.",
+      "kind": "positive",
+      "input": {
+        "server": {
+          "min_version": "0.8",
+          "nps_version": "0.11",
+          "supported_encodings": ["msgpack", "json", "binary_vector.v1"],
+          "supported_protocols": ["ncp", "nwp", "nip"],
+          "max_frame_payload": 65535,
+          "ext_support": true,
+          "max_concurrent_streams": 64,
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 12,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 512,
+          "hello_elapsed_ms": 30
+        },
+        "hello": {
+          "min_version": "0.7",
+          "nps_version": "0.11",
+          "supported_encodings": ["msgpack", "json"],
+          "supported_protocols": ["nwp", "ncp"],
+          "max_frame_payload": 32768,
+          "ext_support": true,
+          "max_concurrent_streams": 32
+        }
+      },
+      "expected": {
+        "action": "accept",
+        "emit_error": false,
+        "session_version": "0.11",
+        "negotiated_encoding": "msgpack",
+        "enabled_encodings": ["msgpack"],
+        "supported_protocols": ["nwp", "ncp"],
+        "max_frame_payload": 32768,
+        "ext_support": true,
+        "max_concurrent_streams": 32
+      }
+    },
+    {
+      "id": "ncp.native_server.002",
+      "description": "The highest version in the overlap is selected and JSON is used when it is the first common stable encoding.",
+      "kind": "positive",
+      "input": {
+        "server": {
+          "min_version": "0.8",
+          "nps_version": "0.10",
+          "supported_encodings": ["json"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 32768,
+          "ext_support": false,
+          "max_concurrent_streams": 16,
+          "max_hello_payload": 4096,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 1,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 300,
+          "hello_elapsed_ms": 1
+        },
+        "hello": {
+          "min_version": "0.9",
+          "nps_version": "0.11",
+          "supported_encodings": ["msgpack", "json"],
+          "supported_protocols": ["ncp", "nip"],
+          "max_frame_payload": 65535,
+          "ext_support": true,
+          "max_concurrent_streams": 32
+        }
+      },
+      "expected": {
+        "action": "accept",
+        "emit_error": false,
+        "session_version": "0.10",
+        "negotiated_encoding": "json",
+        "enabled_encodings": ["json"],
+        "supported_protocols": ["ncp"],
+        "max_frame_payload": 32768,
+        "ext_support": false,
+        "max_concurrent_streams": 16
+      }
+    },
+    {
+      "id": "ncp.native_server.003",
+      "description": "BinaryVector is enabled as an extension and never selected as the stable default.",
+      "kind": "positive",
+      "input": {
+        "server": {
+          "min_version": "0.8",
+          "nps_version": "0.11",
+          "supported_encodings": ["msgpack", "json", "binary_vector.v1"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 65535,
+          "ext_support": true,
+          "max_concurrent_streams": 64,
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 8,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 420,
+          "hello_elapsed_ms": 15
+        },
+        "hello": {
+          "min_version": "0.8",
+          "nps_version": "0.11",
+          "supported_encodings": ["binary_vector.v1", "msgpack", "json"],
+          "supported_protocols": ["ncp", "nwp"],
+          "max_frame_payload": 65535,
+          "ext_support": false,
+          "max_concurrent_streams": 64
+        }
+      },
+      "expected": {
+        "action": "accept",
+        "emit_error": false,
+        "session_version": "0.11",
+        "negotiated_encoding": "msgpack",
+        "enabled_encodings": ["msgpack", "binary_vector.v1"],
+        "supported_protocols": ["ncp", "nwp"],
+        "max_frame_payload": 65535,
+        "ext_support": false,
+        "max_concurrent_streams": 64
+      }
+    },
+    {
+      "id": "ncp.native_server.004",
+      "description": "An invalid preamble is a diagnostic failure but is closed silently.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4741524241474521",
+          "preamble_elapsed_ms": 2
+        }
+      },
+      "expected": {
+        "action": "silent_close",
+        "emit_error": false,
+        "diagnostic_error": "NCP-PREAMBLE-INVALID"
+      }
+    },
+    {
+      "id": "ncp.native_server.005",
+      "description": "An incomplete preamble at the read deadline is closed silently without a wire error.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e5053",
+          "preamble_elapsed_ms": 10000
+        }
+      },
+      "expected": {
+        "action": "silent_close",
+        "emit_error": false
+      }
+    },
+    {
+      "id": "ncp.native_server.006",
+      "description": "A non-Hello first frame is rejected before admission without reflection.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 2,
+          "first_frame_type": "0x30",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 80,
+          "hello_elapsed_ms": 3
+        }
+      },
+      "expected": {
+        "action": "silent_close",
+        "emit_error": false
+      }
+    },
+    {
+      "id": "ncp.native_server.007",
+      "description": "Hello must use Tier-1 JSON because no encoding has been negotiated.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 2,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "msgpack",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 80,
+          "hello_elapsed_ms": 3
+        }
+      },
+      "expected": {
+        "action": "silent_close",
+        "emit_error": false
+      }
+    },
+    {
+      "id": "ncp.native_server.008",
+      "description": "Hello cannot request E2E encryption before algorithms and keys are negotiated.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 2,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": true,
+          "first_frame_extended": false,
+          "hello_payload_length": 80,
+          "hello_elapsed_ms": 3
+        }
+      },
+      "expected": {
+        "action": "silent_close",
+        "emit_error": false
+      }
+    },
+    {
+      "id": "ncp.native_server.009",
+      "description": "The Hello payload limit is checked from the header before allocation.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "max_hello_payload": 1024,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 2,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 1025,
+          "hello_elapsed_ms": 3
+        }
+      },
+      "expected": {
+        "action": "silent_close",
+        "emit_error": false
+      }
+    },
+    {
+      "id": "ncp.native_server.010",
+      "description": "The Hello header and payload have a separate bounded read deadline.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 2,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 80,
+          "hello_elapsed_ms": 5000
+        }
+      },
+      "expected": {
+        "action": "silent_close",
+        "emit_error": false
+      }
+    },
+    {
+      "id": "ncp.native_server.011",
+      "description": "A decoded Hello with no version overlap receives the existing version error and closes.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "min_version": "0.8",
+          "nps_version": "0.10",
+          "supported_encodings": ["msgpack", "json"],
+          "supported_protocols": ["ncp"],
+          "max_frame_payload": 65535,
+          "ext_support": false,
+          "max_concurrent_streams": 32,
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 2,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 200,
+          "hello_elapsed_ms": 3
+        },
+        "hello": {
+          "min_version": "0.11",
+          "nps_version": "0.12",
+          "supported_encodings": ["msgpack"],
+          "supported_protocols": ["ncp"],
+          "max_frame_payload": 65535,
+          "ext_support": false,
+          "max_concurrent_streams": 32
+        }
+      },
+      "expected": {
+        "action": "error_close",
+        "emit_error": true,
+        "status": "NPS-PROTO-VERSION-INCOMPATIBLE",
+        "error": "NCP-VERSION-INCOMPATIBLE"
+      }
+    },
+    {
+      "id": "ncp.native_server.012",
+      "description": "A decoded Hello with no common stable encoding receives the existing encoding error and closes.",
+      "kind": "negative",
+      "input": {
+        "server": {
+          "min_version": "0.8",
+          "nps_version": "0.11",
+          "supported_encodings": ["json"],
+          "supported_protocols": ["ncp"],
+          "max_frame_payload": 65535,
+          "ext_support": false,
+          "max_concurrent_streams": 32,
+          "max_hello_payload": 65535,
+          "preamble_timeout_ms": 10000,
+          "hello_timeout_ms": 5000
+        },
+        "transport": {
+          "preamble_hex": "4e50532f312e300a",
+          "preamble_elapsed_ms": 2,
+          "first_frame_type": "0x06",
+          "first_frame_tier": "json",
+          "first_frame_encrypted": false,
+          "first_frame_extended": false,
+          "hello_payload_length": 200,
+          "hello_elapsed_ms": 3
+        },
+        "hello": {
+          "min_version": "0.8",
+          "nps_version": "0.11",
+          "supported_encodings": ["msgpack", "binary_vector.v1"],
+          "supported_protocols": ["ncp"],
+          "max_frame_payload": 65535,
+          "ext_support": false,
+          "max_concurrent_streams": 32
+        }
+      },
+      "expected": {
+        "action": "error_close",
+        "emit_error": true,
+        "status": "NPS-SERVER-ENCODING-UNSUPPORTED",
+        "error": "NCP-ENCODING-UNSUPPORTED"
+      }
+    }
+  ]
+}
