@@ -18,9 +18,10 @@
   `CapsFrame.cached` 与模型 prefix/KV cache 复用不是同一语义（NPS-Dev#88）。
 - 新增候选 NPS-CR-0011 / NWP 0.21 有状态 LLM context contract：owner-bound
   不透明 context ID、create/append/fork/reset/status/release、CAS 版本、原子
-  stream/cancel 语义、NWM 0.2 发现、NIP 0.14 `llm:context` 授权、确定性错误，
+  unary/async 原子取消语义、NWM 0.2 发现、NIP 0.14 `llm:context` 授权、确定性错误，
   以及共享生命周期/replay/restart/accounting 向量（NPS-Dev#90）。Stateless
-  completion 保持兼容，stateful 请求绝不静默 fallback。
+  completion 保持兼容，stateful 请求绝不静默 fallback。alpha.18 参考 server
+  会拒绝 stateful streaming；terminal-stream commit 留待后续实现。
 - 新增用于有界活跃对象上限的 `NPS-LIMIT-RESOURCE`，以及在 decoder 边界测量
   请求的 `LlmUsageDto.wire_input_bytes`。
 

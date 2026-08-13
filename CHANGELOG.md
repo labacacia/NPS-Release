@@ -19,10 +19,12 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
   distinct from model prefix/KV-cache reuse (NPS-Dev#88).
 - Added the candidate NPS-CR-0011 / NWP 0.21 stateful LLM context contract:
   owner-bound opaque context IDs, create/append/fork/reset/status/release,
-  compare-and-swap versions, atomic stream/cancellation semantics, NWM 0.2
+  compare-and-swap versions, atomic unary/async cancellation semantics, NWM 0.2
   discovery, NIP 0.14 `llm:context` authorization, deterministic errors, and
   shared lifecycle/replay/restart/accounting vectors (NPS-Dev#90). Stateless
   completion remains compatible and stateful requests never silently fallback.
+  The alpha.18 reference servers reject stateful streaming without fallback;
+  terminal-stream commit remains specified for a later implementation round.
 - Added `NPS-LIMIT-RESOURCE` for bounded live-object limits and
   `LlmUsageDto.wire_input_bytes` for decoder-boundary request measurement.
 

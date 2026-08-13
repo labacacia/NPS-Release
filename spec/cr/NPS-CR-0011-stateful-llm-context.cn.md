@@ -7,7 +7,7 @@
 **日期**：2026-08-12  
 **作者**：Ori Lynn / INNO LOTUS PTY LTD  
 **跟踪 Issue**：[NPS-Dev#90](https://github.com/labacacia/NPS-Dev/issues/90)  
-**涉及范围**：NPS-2 NWP（§4.2a LLM profile、§7.5 `llm.complete`）、NPS-3 NIP（§5.1 capabilities）、统一错误/状态码、NWM、六语言 SDK、NWP 合规向量
+**涉及范围**：NPS-2 NWP（§4.2a LLM profile、§7.5 `llm.complete`、§7.6 stateful context）、NPS-3 NIP（§5.1 capabilities）、统一错误/状态码、NWM、六语言 SDK、NWP 合规向量
 
 ---
 

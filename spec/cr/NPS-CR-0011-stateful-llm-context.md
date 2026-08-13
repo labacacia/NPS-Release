@@ -7,7 +7,7 @@ English | [Chinese](./NPS-CR-0011-stateful-llm-context.cn.md)
 **Date**: 2026-08-12  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 **Tracking**: [NPS-Dev#90](https://github.com/labacacia/NPS-Dev/issues/90)  
-**Touches**: NPS-2 NWP (§4.2a LLM profile, §7.5 `llm.complete`), NPS-3 NIP (§5.1 capabilities), unified error/status codes, NWM, six SDKs, NWP conformance vectors
+**Touches**: NPS-2 NWP (§4.2a LLM profile, §7.5 `llm.complete`, §7.6 stateful context), NPS-3 NIP (§5.1 capabilities), unified error/status codes, NWM, six SDKs, NWP conformance vectors
 
 ---
 
