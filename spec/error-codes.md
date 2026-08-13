@@ -2,8 +2,8 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 1.8
-**Date**: 2026-07-29
+**Version**: 1.9
+**Date**: 2026-08-12
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -69,6 +69,13 @@ NPS uses a two-level error system:
 | `NWP-ACTION-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | `action_id` is not registered on the node |
 | `NWP-ACTION-PARAMS-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | Action params fail schema validation |
 | `NWP-ACTION-IDEMPOTENCY-CONFLICT` | `NPS-CLIENT-CONFLICT` | A request with the same `idempotency_key` is already in progress |
+| `NWP-LLM-CONTEXT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | Stateful LLM context is unknown/released, or owner-scoped idempotency lookup is outside its retention window (NWP §7.6) |
+| `NWP-LLM-CONTEXT-EXPIRED` | `NPS-CLIENT-GONE` | Context has an idle-expiry tombstone; the caller must create or reset another context (NWP §7.6) |
+| `NWP-LLM-CONTEXT-VERSION-CONFLICT` | `NPS-CLIENT-CONFLICT` | `base_version` is stale or another mutation owns the context reservation; hint SHOULD carry the current version (NWP §7.6) |
+| `NWP-LLM-CONTEXT-BINDING-MISMATCH` | `NPS-CLIENT-CONFLICT` | Resolved model, system messages, tool definitions, or runtime compatibility revision differs from the committed binding (NWP §7.6) |
+| `NWP-LLM-CONTEXT-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | Authenticated caller is not the context owner or lacks required scope/capability (NWP §7.6) |
+| `NWP-LLM-CONTEXT-LIMIT-EXCEEDED` | `NPS-LIMIT-RESOURCE` | Per-principal live-context limit reached; hint SHOULD carry the advertised limit (NWP §7.6) |
+| `NWP-LLM-CONTEXT-OPERATION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node supports stateful context but did not advertise/implement the requested lifecycle operation (NWP §7.6) |
 | `NWP-TASK-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | Asynchronous task referenced by `task_id` does not exist |
 | `NWP-TASK-ALREADY-CANCELLED` | `NPS-CLIENT-CONFLICT` | Task has been cancelled; further operations are not permitted |
 | `NWP-TASK-ALREADY-COMPLETED` | `NPS-CLIENT-CONFLICT` | Task has completed and cannot be cancelled |

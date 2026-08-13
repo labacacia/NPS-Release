@@ -5,10 +5,10 @@
 **Spec Number**: NPS-5
 **Status**: Proposed
 **Version**: 0.9
-**Date**: 2026-05-10
+**Date**: 2026-07-29
 **Port**: 17433（默认，共用）/ 17437（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11)、NPS-2 (NWP v0.20)、NPS-3 (NIP v0.13)
+**Depends-On**: NPS-1 (NCP v0.11)、NPS-2 (NWP v0.21)、NPS-3 (NIP v0.14)、NPS-4 (NDP v0.12)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > 本文档为 NOP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
@@ -72,10 +72,11 @@ Orchestrator 向自身运行时或协调节点提交的整体任务定义。
 | `timeout_ms` | uint32 | 可选 | 整体任务超时（毫秒），默认 30000，最大 3600000（1 小时）|
 | `max_retries` | uint8 | 可选 | 全局最大重试次数（单个节点超过时整体失败），默认 2 |
 | `priority` | string | 可选 | 任务优先级：`"low"` / `"normal"`（默认）/ `"high"` |
-| `callback_url` | string | 可选 | 任务完成/失败时的回调 URL（`https://`，见 §7.4）|
-| `preflight` | bool | 可选 | true 时先执行资源预检（§5），通过后再正式执行，默认 false |
+| `callback_url` | string | 可选 | 任务完成/失败时的回调 URL（`https://`，见 §9.4）|
+| `preflight` | bool | 可选 | true 时先执行资源预检（§4），通过后再正式执行，默认 false |
 | `compensation_policy` | string | 可选 | Saga 补偿策略：`"best_effort"`（默认）或 `"strict"`，见 §3.1.6 |
 | `callback_secret` | string | 可选 | webhook 投递签名用的 HMAC-SHA256 key（base64url，32 字节）。存在时 Orchestrator MUST 对原始 JSON body 计算 `X-NPS-Signature: sha256=<HMAC-SHA256-hex>` 并随每次 POST 到 `callback_url` 一起发送。接收方 SHOULD 在缺少该 header 时以 400 拒绝。错误码：`NOP-CALLBACK-HMAC-MISSING`。 |
+| `result_ttl_seconds` | uint32 | 可选 | Orchestrator 在任务完成后保留任务结果的时长（秒），默认 3600。TTL 过期后再获取结果返回 `NOP-TASK-RESULT-EXPIRED`。（NOP v0.7）|
 | `context` | object | 可选 | 透传上下文，见 §3.1.2 |
 | `request_id` | string | 可选 | UUID v4，用于请求追踪 |
 
@@ -326,7 +327,7 @@ Orchestrator 将 DAG 中的单个子任务委托给 Worker Agent 执行。
 | `sync_id` | string | 必填 | 同步点唯一标识（UUID v4）|
 | `wait_for` | array | 必填 | 需等待的 subtask_id 列表 |
 | `min_required` | uint32 | 可选 | K-of-N：最少需要多少个子任务成功才继续；省略或 0 表示全部成功（默认）|
-| `aggregate` | string | 可选 | 结果聚合策略：`"merge"`（默认）/ `"first"` / `"all"` / `"fastest_k"`，见 §3.3.1 |
+| `aggregate` | string | 可选 | 结果聚合策略：`"merge"`（默认）/ `"first"` / `"all"` / `"fastest_k"` / `"weighted_first_k"` / `"merge_all"`，见 §3.3.1 与 §3.3.2 |
 | `timeout_ms` | uint32 | 可选 | 等待超时（毫秒），超时返回 `NOP-SYNC-TIMEOUT` |
 
 #### §3.3.1 K-of-N 同步语义
@@ -349,6 +350,8 @@ K < N 时，同步屏障通过后，Orchestrator SHOULD 向剩余未完成子任
 | `first` | 取第一个成功完成的子任务结果 |
 | `all` | 将所有结果保留为数组 `[result_a, result_b, ...]` |
 | `fastest_k` | 取最先完成的 `min_required` 个结果（合并为 `all` 格式）|
+| `weighted_first_k` | 取置信度分数最高的 `min_required` 个结果（要求每个子任务结果中带有 `result.score` 字段）；合并为 `all` 格式（NOP v0.6）|
+| `merge_all` | 将所有成功子任务的结果合并为单个对象，保留全部字段；与 `merge` 不同，数组类型的字段是拼接而非覆盖（NOP v0.6）|
 
 **SyncFrame 完成响应（CapsFrame）**
 
@@ -390,6 +393,8 @@ K < N 时，同步屏障通过后，Orchestrator SHOULD 向剩余未完成子任
 | `data` | object | 可选 | 中间结果数据 |
 | `window_size` | uint32 | 可选 | 背压窗口大小（单位：CGN Token 数），见 §3.4.1 |
 | `is_final` | bool | 必填 | true 表示流结束（最终结果帧）|
+| `ack_seq` | uint64 | 可选 | 确认 `seq ≤ ack_seq` 的所有帧均已收到并处理完毕。用于滑动窗口协议（NOP v0.6 §3.4.2）。 |
+| `nak_seq` | uint64 | 可选 | 否定确认：请求从 `nak_seq` 开始重传。发送方 MUST 从 `nak_seq` 起重发；若该帧已不可用，发送方返回 `NOP-STREAM-NAK-UNRESOLVABLE`。 |
 | `sender_nid` | string | 必填 | 发送方 NID（接收方 MUST 验证与连接身份一致）|
 | `error` | object | 可选 | 错误信息（is_final=true 时可携带，表示子任务失败）|
 
@@ -418,6 +423,68 @@ K < N 时，同步屏障通过后，Orchestrator SHOULD 向剩余未完成子任
 | 身份绑定 | 无 | sender_nid 强制验证 |
 | 背压单位 | 字节 / 帧数 | CGN Token 数 |
 | 错误传播 | 无 | error 字段（任务失败语义）|
+
+### 3.5 可移植 Orchestrator 合规性 Profile（v0.9）
+
+本节定义共享的 Alpha.17 合规性 transcript 所使用的确定性 profile。生产环境的
+Orchestrator MAY 并发执行相互独立的节点，但 MUST 产生相同的终态、映射值、
+聚合结果、补偿集合、重试次数与安全决策。
+
+#### 3.5.1 预检与调度
+
+1. 在任何回调、预检探针或 worker 下发之前，MUST 先校验完整的 DAG。当同时有
+   多个节点就绪时，Kahn 拓扑排序 MUST 选择字典序最小的节点 ID。
+2. MUST 在 worker 下发之前校验 `callback_url` 与 `callback_secret`。
+3. `preflight=true` 时，按字典序对互不相同的 `(agent, action)` 组合逐一探针。
+   任意一次拒绝都以 `NOP-RESOURCE-INSUFFICIENT` 终止任务；此时不下发任何
+   任务节点。
+4. 合规模式（conformance mode）每次只按稳定拓扑顺序执行一个就绪节点，并发出
+   规范事件 `task:running`、`<node>:attempt:<n>`、
+   `<node>:completed|skipped|failed`、可选的
+   `<node>:compensating|compensated|compensation_failed`，以及唯一一个终态
+   `task:completed|failed|cancelled` 事件。
+
+#### 3.5.2 条件、映射、重试与超时
+
+- 节点的 `condition` 在该节点首次变为可运行时，针对已完成前驱结果的不可变
+  快照，恰好求值一次。`false` 产生 `SKIPPED`；求值错误产生
+  `NOP-CONDITION-EVAL-ERROR`，且不重试。
+- `input_mapping` 在 condition 之后、首次下发之前解析。映射错误产生
+  `NOP-INPUT-MAPPING-ERROR`，且不重试。
+- `max_retries` 指首次尝试之后额外允许的尝试次数。每次尝试复用相同的
+  `subtask_id` 与 `idempotency_key`。仅当仍有剩余尝试次数、worker 将该失败
+  标记为可重试，且 `retry_on` 省略或包含该错误码时，失败才会被重试。
+- 节点级截止时间被突破对应 `NOP-DELEGATE-TIMEOUT`，整体截止时间被突破对应
+  `NOP-TASK-TIMEOUT`。一旦取消在终态竞争中胜出，就不再下发任何后续尝试或
+  补偿，任务以 `NOP-TASK-CANCELLED` 结束。
+
+#### 3.5.3 依赖与聚合规则
+
+`SKIPPED` 满足依赖关系但不贡献任何结果。当 K 个前驱处于 `COMPLETED` 或
+`SKIPPED` 时，K-of-N 屏障通过；一旦 K 已不可能达成，屏障立即失败。终点节点的
+结果在聚合前按稳定拓扑顺序排列。因此 `merge` 在该顺序下应用「后者覆盖前者」；
+`all` 保持该顺序；`fastest_k` 使用显式的完成顺序，并以节点 ID 作为平局裁决；
+`weighted_first_k` 按数值型 `score` 降序排序，再按节点 ID 排序；`merge_all`
+按拓扑顺序拼接数组，同时对非数组值应用「后者覆盖前者」。
+
+#### 3.5.4 Saga 补偿
+
+节点进入终态失败时，补偿候选集合是该失败节点的所有传递性已完成祖先节点。
+候选按稳定拓扑顺序的逆序执行。`strict` 在下发任何补偿之前先校验每个候选都
+具有 `compensate_action`，否则返回 `NOP-COMPENSATION-NOT-SUPPORTED`。
+`best_effort` 下，缺少补偿操作的候选被跳过，且补偿失败不会中止后续补偿。
+`strict` 下，第一次补偿失败即以 `NOP-COMPENSATION-FAILED` 终止 saga。补偿
+使用稳定键 `<task_id>:<node_id>:compensate`。
+
+#### 3.5.5 委托与 runner 租约
+
+每一次委托尝试 MUST 通过 NDP 重新解析 `target_cluster_anchor`，并选出唯一的、
+epoch 最高的存活 Anchor。下发之前 MUST 拒绝脑裂（split brain）、scope 扩大
+以及目标缺失的情况，重试时 MUST 复用相同的幂等键。runner 租约续约仅在租约
+存活且属主为同一 `runner_nid` 时才成功；已过期、已释放或已被回收的租约 MUST
+返回 `NOP-CLAIM-CONFLICT`。规范的 `dedup_key` 是对 UTF-8 编码的 `task_id`、
+一个 NUL 分隔字节、以及 UTF-8 编码的 `dag_hash` 计算 SHA-256 后得到的小写
+十六进制串。
 
 ---
 
@@ -593,6 +660,8 @@ Orchestrator                              Worker B（数据）  Worker C（推�
 | `NOP-COMPENSATION-FAILED` | `NPS-CLIENT-UNPROCESSABLE` | 终态——saga 回滚过程中某节点的 `compensate_action` 返回错误（见 §3.1.6）|
 | `NOP-COMPENSATION-NOT-SUPPORTED` | `NPS-CLIENT-UNPROCESSABLE` | 终态——存在需要补偿的前驱缺少 `compensate_action` 且 `compensation_policy="strict"` |
 | `NOP-CALLBACK-HMAC-MISSING` | `NPS-AUTH-UNAUTHENTICATED` | callback 接收方拒绝投递，因为缺少 `X-NPS-Signature` header；`callback_secret` 已设置但签名未计算 |
+| `NOP-CALLBACK-INVALID` | `NPS-CLIENT-BAD-PARAM` | callback URL 未通过 scheme、user-info、DNS、公网地址或重定向校验 |
+| `NOP-CALLBACK-HMAC-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | callback HMAC 格式非法，或与原始 body 的精确比对不匹配 |
 | `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | `result_ttl_seconds` 已过后才请求任务结果；结果不再保留 |
 | `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK 请求重传的帧已不在发送方缓冲区中（该帧已被淘汰）|
 | `NOP-CLAIM-CONFLICT` | `NPS-CLIENT-CONFLICT` | TaskFrame 已被一个存活的 runner 租约认领（NPS-CR-0007 §4.2）|
@@ -630,6 +699,11 @@ runner 原子地租约（lease）某个 per-NID 收件箱的队首任务：`{ ta
 idle_timeout_seconds?, max_runtime_seconds? }`。它 MAY 是内联的 `spawnspec:` base64url-JSON
 data URI，也 MAY 是 `https://` / `nwp://` URL，其响应体 MUST 通过该 schema 校验。解析失败 ⇒
 `NOP-SPAWN-SPEC-INVALID`。
+
+对于远程引用，runner MUST 对初始 URL 以及每一次重定向应用 §9.4 中的目标地址规则。DNS 解析
+MUST fail closed —— 除非返回的每一个地址都是公网地址；传输层 MUST 连接到其中一个已校验的
+地址，同时保留原始主机名用于 TLS SNI 与证书校验。实现 MUST 强制有限的重定向次数、响应体
+大小与请求时长上限。
 
 ### 8.3 生命周期强制
 
@@ -673,7 +747,15 @@ Orchestrator MUST 验证接收到的 TaskFrame 来自可信 NID（通过 NIP 证
 
 ### 9.4 callback_url 防滥用
 - TaskFrame `callback_url` MUST 为 `https://` 前缀
-- Orchestrator SHOULD 对回调 URL 做 SSRF 检查（禁止内网地址）
+- Orchestrator MUST 拒绝带 user-info 的 URL，以及 loopback、私有地址、链路本地、
+  未指定地址、组播或其他任何非公网的主机。
+- 投递前 MUST 先解析主机名。返回的每一个 A/AAAA 地址都 MUST 通过同样的公网地址
+  检查，且 HTTP 传输层 MUST 连接到其中一个已校验的地址，同时保留原始主机名用于
+  TLS SNI 与证书校验。重定向 MUST 重复完整的校验流程，且 MUST NOT 复用未经校验
+  的目标地址。
+- 存在 `callback_secret` 时，发送方 MUST 对原始 body 逐字节签名，接收方 MUST 以
+  常数时间比较小写形式的 `sha256=<hex>` HMAC。签名缺失、格式非法或不匹配时一律
+  fail closed。
 - 回调推送失败时 SHOULD 指数退避重试（最多 3 次），之后放弃并记录日志
 
 ### 9.5 Scope 委托链安全
@@ -685,11 +767,14 @@ Orchestrator MUST 验证接收到的 TaskFrame 来自可信 NID（通过 NIP 证
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.9 | 2026-07-29 | **Alpha.17 可移植 Orchestrator profile**：确定性的 DAG 预检与合规性调度；condition / input_mapping 单次求值规则；重试、超时、取消、K-of-N 与聚合顺序；逆拓扑的 saga 上报；fail-closed 的 callback DNS/SSRF 与 HMAC 校验；每次尝试都重新解析 Anchor；严格的「存活 + 同属主」租约续约与规范 dedup key。新增共享的编排与运行时/安全 transcript；在六个 SDK 与 runner 关卡通过后，将 NPS-CR-0007 提升为 Implemented。 |
 | 0.8 | 2026-07-05 | 多 Anchor 高可用交互（NPS-CR-0009）：`DelegateFrame.target_cluster_anchor` MUST 解析到目标集群当前活跃的 Anchor（`cluster_epoch` 最高者，NDP §9）；发生 `anchor_failover` 时，在途委托 MUST 在重试前重新解析到 `successor_nid`。租约续约语义正式化（§8）：一次续约延长 `lease_expiry`，MUST 匹配 `runner_nid`；若租约已过期并被回收，则以 `NOP-CLAIM-CONFLICT` 拒绝。无新增错误码。 |
 | 0.7 | 2026-06-12 | **NPS-CR-0007 —— NOP↔L3 运行时集成**：新增 §8（任务认领协议：原子租约 + `dedup_key`、`NOP-CLAIM-CONFLICT`；`spawn_spec_ref` SpawnSpec 内容模式；idle/max-runtime 生命周期强制；幂等结果上报）；4 个新错误码（`NOP-CLAIM-CONFLICT`、`NOP-SPAWN-SPEC-INVALID`、`NOP-RUNTIME-IDLE-TIMEOUT`、`NOP-RUNTIME-MAX-RUNTIME`）；新增 `services/conformance/NPS-Node-L3.md`（`TC-N3-*`）；Security/Changelog 重编号为 §9/§10。gate `nps-runner` L3 FaaS 运行时。 |
+| 0.7 | 2026-06-03 | TaskFrame 新增 `result_ttl_seconds`（uint32，默认 3600）—— TTL 过期后返回 `NOP-TASK-RESULT-EXPIRED`；新增 `NOP-STREAM-NAK-UNRESOLVABLE` 错误码，用于帧已被淘汰时的 NAK 重传 |
+| 0.6 | 2026-05-31 | TaskFrame 新增 `callback_secret`（HMAC-SHA256 key）—— webhook 回调携带 `X-NPS-Signature` header，`NOP-CALLBACK-HMAC-MISSING`；DelegateFrame 新增 `target_cluster_anchor` 用于跨集群路由；SyncFrame 新增 `weighted_first_k` / `merge_all` 聚合策略（§3.3.2）；AlignStream 新增 `ack_seq` / `nak_seq` 滑动窗口 ACK（§3.4.2） |
 | 0.5 | 2026-05-10 | 补偿/Saga 语义（issue #34）：节点级 `compensate_action` / `compensate_params_mapping`；TaskFrame 级 `compensation_policy`（默认 `best_effort` / 可选 `strict`）；子任务 saga 状态 `COMPENSATING` / `COMPENSATED` / `COMPENSATION_FAILED`；§3.1.6 saga 触发逻辑（下游 FAILED 时按逆拓扑顺序补偿已完成前驱）；2 个新错误码：`NOP-COMPENSATION-FAILED`、`NOP-COMPENSATION-NOT-SUPPORTED` |
 | 0.4 | 2026-04-19 | Status / Depends-On 版本号同步；与 NCP v0.7 / NWP v0.13 / NIP v0.9 文字对齐 |
-| 0.3 | 2026-04-14 | DAG 节点粒度增强（per-node timeout/retry_policy/condition/input_mapping）；§3.1.2 context 字段支持 OpenTelemetry W3C Trace（trace_id/span_id/trace_flags/baggage）；§3.1.3 input_mapping JSONPath 映射；§3.1.4 retry_policy（fixed/linear/exponential）；§3.1.5 condition CEL 子集；DelegateFrame 新增 idempotency_key/priority/context/node_id；SyncFrame 新增 min_required（K-of-N 语义）和 §3.3.1/§3.3.2 聚合策略；AlignStream 新增 subtask_id/error 字段，§3.4.1 Token 级背压；§4 资源预检（preflight）协议；§5 扩展状态机（PREFLIGHT/SKIPPED）和任务取消机制；§6 完整多 Agent 流程图；3 个新错误码（RESOURCE-INSUFFICIENT、CONDITION-EVAL-ERROR、INPUT-MAPPING-ERROR、DELEGATE-TIMEOUT、TASK-CANCELLED）；§8.4 callback_url 防滥用；Depends-On 更新至 NCP v0.7 / NWP v0.13 |
+| 0.3 | 2026-04-14 | DAG 节点粒度增强（per-node timeout/retry_policy/condition/input_mapping）；§3.1.2 context 字段支持 OpenTelemetry W3C Trace（trace_id/span_id/trace_flags/baggage）；§3.1.3 input_mapping JSONPath 映射；§3.1.4 retry_policy（fixed/linear/exponential）；§3.1.5 condition CEL 子集；DelegateFrame 新增 idempotency_key/priority/context/node_id；SyncFrame 新增 min_required（K-of-N 语义）和 §3.3.1/§3.3.2 聚合策略；AlignStream 新增 subtask_id/error 字段，§3.4.1 Token 级背压；§4 资源预检（preflight）协议；§5 扩展状态机（PREFLIGHT/SKIPPED）和任务取消机制；§6 完整多 Agent 流程图；5 个新错误码（RESOURCE-INSUFFICIENT、CONDITION-EVAL-ERROR、INPUT-MAPPING-ERROR、DELEGATE-TIMEOUT、TASK-CANCELLED）；§8.4 callback_url 防滥用；Depends-On 更新至 NCP v0.7 / NWP v0.13 |
 | 0.2 | 2026-04-12 | 统一端口 17433；错误码改用 NPS 状态码映射；完善错误码列表 |
 | 0.1 | 2026-04-10 | 初始规范：TaskFrame/DelegateFrame/SyncFrame/AlignStream，DAG 执行模型，替代 NCP AlignFrame |
 

@@ -2,11 +2,11 @@
 
 > English | [中文版](sdks.cn.md)
 
-Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — aligned to suite release **1.0.0-alpha.16**. Package-manager availability is tracked per ecosystem.
+Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — aligned to suite release **1.0.0-alpha.17**. Package-manager availability is tracked per ecosystem.
 
-> alpha.16 release note: SDK docs now call out typed remote NIP CA clients, native-mode NWP serving helpers, and TC-N1/TC-N2 conformance helpers.
+> alpha.17 release note: all six SDKs share portable server/conformance profiles, corrected NOP wire keys, and the HA/Bridge/NIP enforcement surface.
 
-> npm note: `@labacacia/nps-sdk@1.0.0-alpha.16` fixed the earlier alpha.11 tarball issue; install `@labacacia/nps-sdk@alpha` for the latest published alpha.
+> npm note: `@labacacia/nps-sdk@1.0.0-alpha.17` includes the package build output; install `@labacacia/nps-sdk@alpha` for the latest published alpha.
 
 ---
 
@@ -19,7 +19,7 @@ Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + ND
 | TypeScript | `@labacacia/nps-sdk`                                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [Wiki: SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
 | Java       | `com.labacacia.nps:nps-java`                                 | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [Wiki: SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
 | Rust       | `nps-sdk`                                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [Wiki: SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.25     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.26.5   | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
 
 For install commands, minimal examples, and per-feature coverage tables, see the per-language Wiki pages above or [SDK-Quickstart](https://github.com/labacacia/NPS-Release/wiki/SDK-Quickstart) for a language-agnostic walkthrough.
 

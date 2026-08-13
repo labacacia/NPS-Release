@@ -8,7 +8,7 @@ English | [中文版](./NPS-4-NDP.cn.md)
 **Date**: 2026-07-29
 **Port**: 17433 (default, shared) / 17436 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11), NPS-3 (NIP v0.13)
+**Depends-On**: NPS-1 (NCP v0.11), NPS-3 (NIP v0.14)
 
 ---
 

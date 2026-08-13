@@ -55,6 +55,7 @@
 | [NPS-CR-0008](./NPS-CR-0008-tier3-binary-vector.md) | Tier-3 BinaryVector v1 编码 | v1.0-alpha.14 | Implemented（2026-06-26）|
 | [NPS-CR-0009](./NPS-CR-0009-multi-anchor-ha.md) | 多 Anchor 高可用（`anchor_failover` / `anchor_quorum_lost`、`cluster_epoch` 栅栏、NDP 解析规则） | v1.0.0-alpha.17 | Implemented |
 | [NPS-CR-0010](./NPS-CR-0010-bridge-bidirectional.md) | Bridge Node 是双向的 —— 修正"仅出向"的自相矛盾，新增 `bridge_inbound_protocols` 方向声明，拆分 §16 合规 profile，把 `compat/*-ingress` 合并进 Bridge 包 | v1.0.0-alpha.17 | Implemented |
+| [NPS-CR-0011](./NPS-CR-0011-stateful-llm-context.cn.md) | 有状态 LLM context 与增量 completion —— owner-bound 不透明 context、CAS 版本、原子提交、生命周期 action、发现与可测复用 | v1.0.0-alpha.18 | Draft |
 
 ## 起草新 CR 的方法
 

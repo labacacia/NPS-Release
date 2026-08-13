@@ -8,6 +8,77 @@
 
 在 NPS 达到 v1.0 稳定版之前，套件内所有仓库 —— 规范、各 SDK（.NET / Python / TypeScript / Java / Rust / Go）、CA Server、兼容 Bridge —— 同步使用同一个预发布版本号。
 
+## [1.0.0-alpha.18] —— 未发布
+
+### 新增
+
+- 新增官方 NWP LLM usage telemetry（`input_tokens`、`output_tokens`、prefix/KV
+  cache 命中、复用 token 与新计算 token）及 unary `CapsFrame.request_id` 关联。
+  六语言 native NWP server helper 统一回显 request ID；并明确
+  `CapsFrame.cached` 与模型 prefix/KV cache 复用不是同一语义（NPS-Dev#88）。
+- 新增候选 NPS-CR-0011 / NWP 0.21 有状态 LLM context contract：owner-bound
+  不透明 context ID、create/append/fork/reset/status/release、CAS 版本、原子
+  stream/cancel 语义、NWM 0.2 发现、NIP 0.14 `llm:context` 授权、确定性错误，
+  以及共享生命周期/replay/restart/accounting 向量（NPS-Dev#90）。Stateless
+  completion 保持兼容，stateful 请求绝不静默 fallback。
+- 新增用于有界活跃对象上限的 `NPS-LIMIT-RESOURCE`，以及在 decoder 边界测量
+  请求的 `LlmUsageDto.wire_input_bytes`。
+
+### 修复
+
+- 修复 .NET NativeAOT MessagePack resolver 对可空 `UInt64` 的缺失支持，恢复
+  NDP `AnnounceFrame.cluster_epoch` 的 Tier-2 round-trip；同时覆盖 Graph latency
+  的 null 与有值两种可选 primitive 情况（NPS-Dev#89）。
+- TypeScript runtime `VERSION` 改为从 `package.json` 派生，避免包版本更新后
+  runtime banner 仍停留在旧版本。
+- Go SDK 支持下限降至 Go 1.23，并固定到仍兼容该下限的最新
+  `golang.org/x/crypto` 系列；release gate 会覆盖最低工具链。
+- Java MessagePack 升至 0.9.11、Jackson 升至 2.18.9、BouncyCastle 升至
+  1.84，清除 alpha.18 OSV 门报告的全部 runtime dependency advisory。
+
+### 发布工程
+
+- 修正 alpha.18 同步发布手册：兼容 ingress 不再属于强制列车；Rust 发布包含
+  `nps-conformance` 在内的 8 个 crate；standalone 物化删除旧源码并 vendoring
+  conformance fixture；Maven 增加 Python `zipfile` 回退；npm 与 crates.io
+  preflight 必须证明发布权限。
+- 新增 NativeAOT codec publish-and-run smoke 门，并把 NuGet workflow/family
+  checker 对齐到 alpha.18 的 11 包 SDK 家族。
+
+## [1.0.0-alpha.17] —— 2026-08-02
+
+### 新增
+
+- 将 .NET 参考实现的服务端与编排能力移植到 Python、TypeScript、Java、Rust 和 Go：NCP 原生传输、NWP Action/Complex/Memory Node 与双向 bridge、NIP CA 与完整校验、NOP 编排、daemon observability，以及 telemetry。
+- 为官方 .NET 包族新增 NativeAOT-safe frame codec 与发布验证。
+- 为 NCP 0.11 原生服务握手、NWP 0.20 Node/Bridge serving、NIP 0.13
+  CA/吊销、NDP 0.12 registry 准入和 NOP 0.9 编排/runtime 决策新增可移植、
+  语言无关 Profile 与共享一致性向量；六个 SDK 执行同一套 fixture。
+- 完成 CR-0007 共享实现门，并为 `nps-runner` 加入 portable OCI
+  SpawnSpec/引用解析、租约续期、生命周期强制和 daemon 自有 runtime 向量。
+
+### 修复
+
+- 升级存在漏洞的 Rust transport / PKI 依赖、TypeScript 测试工具链，并将 Go 最低工具链提升到 1.26.5；各语言依赖审计目前无可处理漏洞。
+- 为 source-of-truth checker 增加窄范围的历史 retired identifier allowlist，避免协议历史记录造成虚假发布阻塞。
+- 在 publish overlay 中保留 runner/ingress 独立测试访问权限，恢复 Ledger 独立分发版的 SQLite 依赖，并从 daemon 分发中移除存在漏洞的 SQLite runtime bundle。
+- 让 `check-version-sync.py` 正确执行 `expected: skip`，使冻结或退役仓库能从后续 release train 中干净排除。
+- 修正可移植 NWP 方法拒绝：`/.nwm` 现在返回 `Allow: GET`，并补上缺失的
+  六语言共享向量。
+- 六个 SDK 现在一致拒绝畸形的 NDP `graph_seq`、`ttl` 与 Bridge 协议声明，
+  且拒绝时不推进 Registry sequence fence。
+- 加固 Runner 远程 SpawnSpec 拉取的私网 SSRF、重定向绕过与 DNS rebinding
+  防护；租约丢失后不再写入陈旧终态或 ack inbox。
+- 在 `dpkg-deb` 校验前规范化 `DEBIAN/` 控制目录权限，使 daemon 的 Debian
+  打包不再受调用方 `umask` 影响。
+
+### 发布工程
+
+- 准备协议规范、六种 SDK 分发仓、daemon overlay 与 package metadata 的同步 alpha.17 候选；未执行 tag 或发布。
+- 准备 MCP、A2A、gRPC compatibility ingress 的最后一个 deprecated alpha.17
+  构建；消费者应迁移到 `LabAcacia.NPS.NWP.Bridge`，alpha.18 起这些包退出
+  必须同步的发布列车。
+
 ## [1.0.0-alpha.16] —— 2026-07-23
 
 ### 修复

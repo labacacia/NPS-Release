@@ -8,6 +8,88 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NET / Python / TypeScript / Java / Rust / Go), CA Servers, and compat bridges — is synchronized to the same pre-release version tag.
 
+## [1.0.0-alpha.18] — Unreleased
+
+### Added
+
+- Added official NWP LLM usage telemetry (`input_tokens`, `output_tokens`,
+  prefix/KV-cache hit, reused tokens, and evaluated tokens) plus unary
+  `CapsFrame.request_id` correlation. Native NWP server helpers now echo request
+  IDs consistently across all six SDKs; `CapsFrame.cached` is explicitly kept
+  distinct from model prefix/KV-cache reuse (NPS-Dev#88).
+- Added the candidate NPS-CR-0011 / NWP 0.21 stateful LLM context contract:
+  owner-bound opaque context IDs, create/append/fork/reset/status/release,
+  compare-and-swap versions, atomic stream/cancellation semantics, NWM 0.2
+  discovery, NIP 0.14 `llm:context` authorization, deterministic errors, and
+  shared lifecycle/replay/restart/accounting vectors (NPS-Dev#90). Stateless
+  completion remains compatible and stateful requests never silently fallback.
+- Added `NPS-LIMIT-RESOURCE` for bounded live-object limits and
+  `LlmUsageDto.wire_input_bytes` for decoder-boundary request measurement.
+
+### Fixed
+
+- Fixed the .NET NativeAOT MessagePack resolver for nullable `UInt64`, restoring
+  Tier-2 round trips for NDP `AnnounceFrame.cluster_epoch`; optional primitive
+  coverage now also exercises null and populated graph latency values
+  (NPS-Dev#89).
+- Derived the TypeScript runtime `VERSION` export from `package.json` so package
+  bumps cannot leave the runtime banner behind.
+- Lowered the Go SDK support floor to Go 1.23 and pinned the newest compatible
+  `golang.org/x/crypto` line, with the minimum toolchain covered by the release
+  gate.
+- Upgraded Java MessagePack to 0.9.11, Jackson to 2.18.9, and BouncyCastle to
+  1.84, clearing all runtime dependency advisories reported by the alpha.18
+  OSV gate.
+
+### Release Engineering
+
+- Corrected the synchronized-release runbooks for the alpha.18 train: retired
+  compatibility ingress packages are no longer required; Rust publishes eight
+  crates including `nps-conformance`; standalone materialization deletes stale
+  source and vendors conformance fixtures; Maven has a Python `zipfile`
+  fallback; npm and crates.io preflight checks prove publish capability.
+- Added a publish-and-run NativeAOT codec smoke gate and aligned the NuGet
+  workflow/family checker to the 11-package alpha.18 SDK family.
+
+## [1.0.0-alpha.17] — 2026-08-02
+
+### Added
+
+- Ported the .NET reference server and orchestration surface into Python, TypeScript, Java, Rust, and Go: native NCP transport, NWP Action/Complex/Memory Nodes and bidirectional bridges, NIP CA and full verification, NOP orchestration, daemon observability, and telemetry.
+- Added NativeAOT-safe .NET frame codecs and publish validation for the official package family.
+- Added portable, language-neutral profiles and shared conformance vectors for
+  NCP 0.11 native-server handshakes, NWP 0.20 Node/Bridge serving, NIP 0.13
+  CA/revocation behavior, NDP 0.12 registry admission, and NOP 0.9
+  orchestration/runtime decisions; all six SDKs execute the same fixtures.
+- Completed the CR-0007 shared implementation gate and added portable OCI
+  SpawnSpec/reference resolution, lease renewal, lifecycle enforcement, and
+  daemon-owned runtime vectors to `nps-runner`.
+
+### Fixed
+
+- Upgraded vulnerable Rust transport and PKI dependencies, the TypeScript test toolchain, and the minimum Go toolchain to 1.26.5; language-specific dependency audits now report no actionable vulnerabilities.
+- Extended the source-of-truth checker with a narrow allowlist for documented retired identifiers so protocol history no longer creates false release blockers.
+- Preserved standalone runner/ingress test access in publish overlays, restored Ledger's standalone SQLite dependency, and removed the vulnerable bundled SQLite runtime from daemon distributions.
+- Made `check-version-sync.py` honor `expected: skip` so frozen or retired repositories are excluded cleanly from later release trains.
+- Corrected portable NWP method rejection so `/.nwm` advertises `Allow: GET`,
+  and added the missing shared cross-language vector.
+- Rejected malformed NDP `graph_seq`, `ttl`, and Bridge protocol declarations
+  consistently across all six SDKs without advancing registry sequence fences.
+- Hardened remote runner SpawnSpec retrieval against private-address SSRF,
+  redirect bypass, and DNS rebinding; lease loss no longer produces a stale
+  terminal write or inbox acknowledgement.
+- Made Debian daemon packaging independent of the caller's `umask` by
+  normalizing `DEBIAN/` control-directory permissions before `dpkg-deb`
+  validation.
+
+### Release Engineering
+
+- Prepared synchronized alpha.17 candidates for the protocol spec, all six SDK distribution repositories, daemon overlays, and package metadata without tagging or publishing.
+- Prepared one final deprecated alpha.17 build of the MCP, A2A, and gRPC
+  compatibility ingress packages; consumers should migrate to
+  `LabAcacia.NPS.NWP.Bridge`, and alpha.18 removes these packages from the
+  required synchronized train.
+
 ## [1.0.0-alpha.16] — 2026-07-23
 
 ### Fixed

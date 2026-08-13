@@ -1,0 +1,422 @@
+{
+  "name": "nwp-llm-context",
+  "version": "0.21.0",
+  "spec_ref": "spec/NPS-2-NWP.md §7.6",
+  "description": "Stateful LLM context and delta-completion decision vectors. Each case begins from the declared pre_state and asserts admission, atomic state transition, error/status mapping, discovery truth, or accounting invariants. context_id values are opaque base64url locators and never authorization credentials.",
+  "vectors": [
+    {
+      "id": "nwp.llm-context.001",
+      "description": "Stateless compatibility: an ordinary llm.complete request has no context operation or receipt.",
+      "kind": "positive",
+      "input": {
+        "owner_nid": "urn:nps:agent:labacacia:alice",
+        "action_id": "llm.complete",
+        "params": {
+          "kind": "llm.complete",
+          "model": "willow-small",
+          "stream": false,
+          "messages": [{ "role": "user", "content": "Hello" }]
+        }
+      },
+      "expected": {
+        "mode": "stateless",
+        "dispatched": true,
+        "context_mutated": false,
+        "response_context_present": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.002",
+      "description": "Create commits v1 only at terminal success and returns an opaque owner-bound context receipt.",
+      "kind": "positive",
+      "input": {
+        "owner_nid": "urn:nps:agent:labacacia:alice",
+        "capabilities": ["llm:complete", "llm:context"],
+        "idempotency_key": "00000000-0000-4000-8000-000000000002",
+        "params": {
+          "kind": "llm.complete",
+          "model": "willow-small",
+          "messages": [
+            { "role": "system", "content": "Be concise." },
+            { "role": "user", "content": "One" }
+          ],
+          "context": { "operation": "create", "ttl_seconds": 600 }
+        },
+        "terminal_result": { "stop_reason": "end_turn", "content": "First" }
+      },
+      "expected": {
+        "committed": true,
+        "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "version": 1,
+        "state": "active",
+        "receipt_location": "terminal_result",
+        "owner_nid": "urn:nps:agent:labacacia:alice"
+      }
+    },
+    {
+      "id": "nwp.llm-context.003",
+      "description": "Append sends only messages after base_version and commits exactly vN+1.",
+      "kind": "positive",
+      "input": {
+        "owner_nid": "urn:nps:agent:labacacia:alice",
+        "idempotency_key": "00000000-0000-4000-8000-000000000003",
+        "pre_state": {
+          "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+          "version": 1,
+          "model": "willow-small",
+          "messages": [
+            { "role": "system", "content": "Be concise." },
+            { "role": "user", "content": "One" },
+            { "role": "assistant", "content": "First" }
+          ]
+        },
+        "params": {
+          "model": "willow-small",
+          "messages": [{ "role": "user", "content": "Two" }],
+          "context": {
+            "operation": "append",
+            "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+            "base_version": 1
+          }
+        },
+        "terminal_result": { "stop_reason": "end_turn", "content": "Second" }
+      },
+      "expected": {
+        "committed": true,
+        "version": 2,
+        "accepted_delta_message_count": 1,
+        "full_history_resent": false,
+        "post_message_count": 5
+      }
+    },
+    {
+      "id": "nwp.llm-context.004",
+      "description": "A stale or concurrent append loses compare-and-swap and does not mutate the committed transcript.",
+      "kind": "negative",
+      "input": {
+        "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "pre_state": { "version": 3, "reservation_request_id": "req-winner" },
+        "request": {
+          "request_id": "req-loser",
+          "base_version": 2,
+          "operation": "append"
+        }
+      },
+      "expected": {
+        "error": "NWP-LLM-CONTEXT-VERSION-CONFLICT",
+        "status": "NPS-CLIENT-CONFLICT",
+        "hint": { "current_version": 3 },
+        "post_version": 3,
+        "context_mutated": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.005",
+      "description": "Fork snapshots the admitted parent version, creates child v1, and leaves a later-mutated parent unchanged by the fork commit.",
+      "kind": "positive",
+      "input": {
+        "owner_nid": "urn:nps:agent:labacacia:alice",
+        "parent": { "context_id": "AQIDBAUGBwgJCgsMDQ4PEA", "version": 4 },
+        "request": {
+          "base_version": 4,
+          "operation": "fork",
+          "messages": []
+        },
+        "parent_version_at_child_commit": 5
+      },
+      "expected": {
+        "committed": true,
+        "context_id": "ERITFBUWFxgZGhscHR4fIA",
+        "version": 1,
+        "parent_context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "parent_version": 4,
+        "post_parent_version": 5
+      }
+    },
+    {
+      "id": "nwp.llm-context.006",
+      "description": "Reset atomically replaces transcript and binding under the same context ID and increments once.",
+      "kind": "positive",
+      "input": {
+        "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "pre_state": { "version": 5, "resolved_model": "willow-small" },
+        "request": {
+          "operation": "reset",
+          "base_version": 5,
+          "model": "willow-medium",
+          "messages": [
+            { "role": "system", "content": "Use JSON." },
+            { "role": "user", "content": "Restart" }
+          ]
+        },
+        "terminal_result": { "stop_reason": "end_turn", "content": "{}" }
+      },
+      "expected": {
+        "committed": true,
+        "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "version": 6,
+        "resolved_model": "willow-medium",
+        "old_transcript_retained": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.007",
+      "description": "Append with a changed model, system message, or tools fails closed and never falls back to stateless execution.",
+      "kind": "negative",
+      "input": {
+        "pre_state": {
+          "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+          "version": 6,
+          "resolved_model": "willow-medium",
+          "system_messages_hash": "sha256:1111",
+          "tools_hash": "sha256:2222"
+        },
+        "request": {
+          "operation": "append",
+          "base_version": 6,
+          "model": "willow-large",
+          "messages": [{ "role": "user", "content": "Continue" }]
+        }
+      },
+      "expected": {
+        "error": "NWP-LLM-CONTEXT-BINDING-MISMATCH",
+        "status": "NPS-CLIENT-CONFLICT",
+        "post_version": 6,
+        "provider_dispatched": false,
+        "stateless_fallback": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.008",
+      "description": "A known context ID does not authorize another NID or a caller missing llm:context.",
+      "kind": "negative",
+      "input": {
+        "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "owner_nid": "urn:nps:agent:labacacia:alice",
+        "caller_nid": "urn:nps:agent:labacacia:bob",
+        "caller_capabilities": ["llm:complete"]
+      },
+      "expected": {
+        "error": "NWP-LLM-CONTEXT-FORBIDDEN",
+        "status": "NPS-AUTH-FORBIDDEN",
+        "context_mutated": false,
+        "context_id_is_bearer_credential": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.009",
+      "description": "Cancellation, timeout, stop_reason=error, or abnormal stream termination aborts the reservation and preserves the prior version.",
+      "kind": "negative",
+      "input": {
+        "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "pre_state": { "version": 6 },
+        "request": { "operation": "append", "base_version": 6, "stream": true },
+        "terminal_event": "stream_error"
+      },
+      "expected": {
+        "committed": false,
+        "post_version": 6,
+        "reservation_released": true,
+        "terminal_receipt_present": false,
+        "ttl_refreshed": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.010",
+      "description": "A lost create response is recovered by owner-scoped idempotency status lookup without exposing an uncommitted ID.",
+      "kind": "positive",
+      "input": {
+        "owner_nid": "urn:nps:agent:labacacia:alice",
+        "idempotency_key": "00000000-0000-4000-8000-000000000010",
+        "status_sequence": [
+          { "at": "running", "request_id": "req-create" },
+          { "at": "completed", "context_id": "AQIDBAUGBwgJCgsMDQ4PEA", "version": 1 }
+        ]
+      },
+      "expected": {
+        "running_status": { "state": "busy", "context_id_present": false, "version_present": false },
+        "completed_status": { "state": "active", "context_id": "AQIDBAUGBwgJCgsMDQ4PEA", "version": 1 },
+        "model_regenerated": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.011",
+      "description": "Release increments to a tombstone; expiry keeps the last version; mutation errors change after tombstone removal.",
+      "kind": "positive",
+      "input": {
+        "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "pre_state": { "state": "active", "version": 7 },
+        "sequence": ["release", "status", "mutate_released", "remove_tombstone", "mutate_unknown"],
+        "expiry_branch": { "active_version": 9, "event": "idle_ttl_elapsed" }
+      },
+      "expected": {
+        "release_receipt": { "state": "released", "version": 8 },
+        "status_after_release": { "state": "released", "version": 8 },
+        "mutation_after_release": { "error": "NWP-LLM-CONTEXT-NOT-FOUND", "status": "NPS-CLIENT-NOT-FOUND" },
+        "mutation_after_tombstone_removal": { "error": "NWP-LLM-CONTEXT-NOT-FOUND", "status": "NPS-CLIENT-NOT-FOUND" },
+        "expiry_tombstone": { "state": "expired", "version": 9 },
+        "mutation_after_expiry": { "error": "NWP-LLM-CONTEXT-EXPIRED", "status": "NPS-CLIENT-GONE" }
+      }
+    },
+    {
+      "id": "nwp.llm-context.012",
+      "description": "Usage distinguishes logical, reused, evaluated, and decoder-measured wire input without synthesizing unavailable provider counters.",
+      "kind": "positive",
+      "input": {
+        "usage": {
+          "input_tokens": 1200,
+          "reused_tokens": 1000,
+          "evaluated_tokens": 200,
+          "output_tokens": 80,
+          "cache_hit": true,
+          "wire_input_bytes": 384
+        },
+        "stateless_wire_input_bytes": 4096
+      },
+      "expected": {
+        "usage_equation_valid": true,
+        "cache_hit_valid": true,
+        "wire_input_smaller_than_stateless": true,
+        "wire_measurement_boundary": "decoded_action_frame_payload"
+      }
+    },
+    {
+      "id": "nwp.llm-context.013",
+      "description": "NWM claims exactly the implemented context operations, persistence, limits, and lifecycle actions.",
+      "kind": "positive",
+      "input": {
+        "implemented_operations": ["create", "append", "reset", "release"],
+        "implemented_persistence": "process",
+        "manifest": {
+          "profile_version": "0.2",
+          "actions": ["llm.complete", "llm.context.status", "llm.context.release"],
+          "context": {
+            "supported": true,
+            "operations": ["create", "append", "reset", "release"],
+            "persistence": "process",
+            "max_contexts_per_principal": 32,
+            "max_ttl_seconds": 3600,
+            "tombstone_seconds": 86400
+          }
+        }
+      },
+      "expected": {
+        "manifest_valid": true,
+        "advertised_unimplemented_operation": false,
+        "requires_capability": "llm:context"
+      }
+    },
+    {
+      "id": "nwp.llm-context.014",
+      "description": "Restart behavior matches the advertised persistence level and never silently creates replacement state.",
+      "kind": "negative",
+      "input": {
+        "persistence": "process",
+        "event": "process_restart",
+        "request_after_restart": {
+          "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+          "operation": "append",
+          "base_version": 2
+        }
+      },
+      "expected": {
+        "error": "NWP-LLM-CONTEXT-NOT-FOUND",
+        "status": "NPS-CLIENT-NOT-FOUND",
+        "replacement_created": false,
+        "stateless_fallback": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.015",
+      "description": "Completed streaming idempotency replay returns a new logical stream but does not regenerate or recommit context state.",
+      "kind": "positive",
+      "input": {
+        "idempotency_key": "00000000-0000-4000-8000-000000000015",
+        "original": {
+          "stream_id": "stream-original",
+          "chunks": ["A", "B"],
+          "stop_reason": "end_turn",
+          "context_version": 3
+        },
+        "replay_stream_id": "stream-replay"
+      },
+      "expected": {
+        "ordered_content": "AB",
+        "stop_reason": "end_turn",
+        "context_version": 3,
+        "new_stream_sequence": true,
+        "provider_invocations": 0,
+        "additional_context_commits": 0
+      }
+    },
+    {
+      "id": "nwp.llm-context.016",
+      "description": "NIP revocation after admission but before terminal commit aborts the reservation and mutation.",
+      "kind": "negative",
+      "input": {
+        "caller_nid": "urn:nps:agent:labacacia:alice",
+        "context_id": "AQIDBAUGBwgJCgsMDQ4PEA",
+        "pre_state": { "version": 3 },
+        "authorization_at_admission": "valid",
+        "authorization_at_commit": "revoked"
+      },
+      "expected": {
+        "error": "NWP-AUTH-NID-REVOKED",
+        "status": "NPS-AUTH-UNAUTHENTICATED",
+        "post_version": 3,
+        "reservation_released": true,
+        "terminal_receipt_present": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.017",
+      "description": "Creating above the advertised per-principal live-context bound returns the resource-limit status without allocating state.",
+      "kind": "negative",
+      "input": {
+        "owner_nid": "urn:nps:agent:labacacia:alice",
+        "live_contexts": 32,
+        "max_contexts_per_principal": 32,
+        "request": { "operation": "create" }
+      },
+      "expected": {
+        "error": "NWP-LLM-CONTEXT-LIMIT-EXCEEDED",
+        "status": "NPS-LIMIT-RESOURCE",
+        "hint": { "max_contexts_per_principal": 32 },
+        "context_allocated": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.018",
+      "description": "A well-formed lifecycle operation omitted from NWM operations returns operation-unsupported, not generic params-invalid.",
+      "kind": "negative",
+      "input": {
+        "advertised_operations": ["create", "append", "reset", "release"],
+        "request": { "operation": "fork", "context_id": "AQIDBAUGBwgJCgsMDQ4PEA", "base_version": 2 }
+      },
+      "expected": {
+        "error": "NWP-LLM-CONTEXT-OPERATION-UNSUPPORTED",
+        "status": "NPS-SERVER-UNSUPPORTED",
+        "context_mutated": false
+      }
+    },
+    {
+      "id": "nwp.llm-context.019",
+      "description": "A stateful completion without ActionFrame idempotency_key is malformed and rejected before allocation or provider dispatch.",
+      "kind": "negative",
+      "input": {
+        "idempotency_key_present": false,
+        "params": {
+          "model": "willow-small",
+          "messages": [{ "role": "user", "content": "Hello" }],
+          "context": { "operation": "create" }
+        }
+      },
+      "expected": {
+        "error": "NWP-ACTION-PARAMS-INVALID",
+        "status": "NPS-CLIENT-UNPROCESSABLE",
+        "context_allocated": false,
+        "provider_dispatched": false
+      }
+    }
+  ]
+}

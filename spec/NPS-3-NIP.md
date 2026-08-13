@@ -4,8 +4,8 @@ English | [中文版](./NPS-3-NIP.cn.md)
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.13
-**Date**: 2026-07-23
+**Version**: 0.14
+**Date**: 2026-08-12
 **Port**: 17433 (default, shared) / 17435 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
 **Depends-On**: NPS-1 (NCP v0.11)
@@ -160,6 +160,7 @@ When more than one tier is available the Node MUST prefer the highest-trust tier
 | `nop:orchestrate` | May act as an orchestrator and emit TaskFrames |
 | `topology:read` | May read Anchor Node topology data via reserved query types `topology.snapshot` / `topology.stream` (NPS-2 §12); Anchor Nodes MUST require this capability at Phase 1–2 per NPS-2 §12.4. Self-declared and signed at Phase 1–2; CA-attested role binding deferred to Phase 3 (RFC-0002 amendment). |
 | `llm:complete` | May invoke the standard NWP `llm.complete` action on an LLM/Thinking Profile node (NPS-2 §4.2a, §7.5) |
+| `llm:context` | May operate owner-bound stateful LLM contexts under NWP §7.6. Create/append/fork/reset also require `llm:complete`; status/release require this capability plus ownership only. Possession of a context ID grants no authority. |
 | `llm:stream` | May receive streaming LLM completion responses (`LlmCompleteActionRequest.stream = true`) |
 | `llm:tool_call` | May submit tool definitions and receive tool-call requests in LLM completion flows |
 | `llm:embed` | May invoke standard embedding actions when a node advertises embedding support |
@@ -372,7 +373,7 @@ Cross-CA trust-chain propagation and capability grant. A TrustFrame lets one CA 
 | `frame` | uint8 | required | Fixed `0x21`. |
 | `grantor_nid` | string (NID) | required | NID of the granting CA. MUST be in the verifying Node's `trusted_issuers` for the TrustFrame to take effect. |
 | `grantee_ca` | string (NID) | required | NID of the receiving CA. IdentFrames whose `issued_by` equals `grantee_ca` are admitted under the grant. |
-| `trust_scope` | array of string | required | Capability strings the trust covers. MUST be a subset of the standard `capabilities` enum defined in §5.1 (`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read` / `llm:complete` / `llm:stream` / `llm:tool_call` / `llm:embed` / `llm:rerank`). A grantee MUST NOT issue downstream IdentFrames carrying capabilities outside this set. |
+| `trust_scope` | array of string | required | Capability strings the trust covers. MUST be a subset of the standard `capabilities` enum defined in §5.1 (`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read` / `llm:complete` / `llm:context` / `llm:stream` / `llm:tool_call` / `llm:embed` / `llm:rerank`). A grantee MUST NOT issue downstream IdentFrames carrying capabilities outside this set. |
 | `nodes` | array of string | required | `nwp://` URL patterns this trust applies to. `*` matches a single path segment; `**` matches multiple segments. Empty array means the grant covers no nodes (effectively inert). |
 | `issued_at` | string (ISO 8601 UTC) | required | Issuance time. |
 | `expires_at` | string (ISO 8601 UTC) | required | Expiry time. After this instant the frame MUST be rejected with `NIP-TRUST-FRAME-EXPIRED`. |
@@ -806,6 +807,7 @@ At every link in the delegation chain, scope MUST NOT exceed that of its parent.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.14 | 2026-08-12 | Added standard `llm:context` capability for the NWP §7.6 stateful LLM context lifecycle and admitted it into TrustFrame `trust_scope`. Completion mutations also require `llm:complete`; owner-authorized status/release remain available with `llm:context` alone. Context identifiers are locators, not bearer authorization. No new frame field or NIP error code. |
 | 0.13 | 2026-07-29 | Added §7.6 Portable CA and Verification Profile: deterministic verification/source order, `if_configured` and fail-closed `required` revocation modes, signed deterministic CRL semantics, full CA-store enumeration, and authenticated `GET /v1/certificates`. Added shared revocation-policy and signed-CRL vectors. No new frame field or error code. |
 | 0.12 | 2026-07-23 | New §7.5 **Phase-3 enforcement mode**: a receiver-side `phase3_enforcement` verification-policy flag that turns the Phase-1–2 opt-in CA-attestation checks (assurance / node_roles / capabilities / OCSP-staple) into hard MUSTs ahead of the `v1.0.0-beta.1` flag day — so the flag day is a default change, not a code change. Role/capability checks are subset checks (no un-attested claims); each applies only when the corresponding cert extension is present (self-declared NIDs unaffected). One new error code `NIP-CERT-CAPABILITIES-EXCEEDED` (`NPS-AUTH-FORBIDDEN`). Additive / backward-compatible. (Renumbered from the edge-line 0.11 — the released alpha.16 line had independently used 0.11 for the LLM capability strings below.) |
 | 0.11 | 2026-07-04 | Adds standard LLM capability strings (`llm:complete`, `llm:stream`, `llm:tool_call`, `llm:embed`, `llm:rerank`) for NWP LLM/Thinking Profile discovery and authorization. TrustFrame `trust_scope` may cover these capabilities. No new frame fields or error codes. |

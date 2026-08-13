@@ -4,11 +4,11 @@ English | [中文版](./NPS-2-NWP.cn.md)
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.20
-**Date**: 2026-07-29
+**Version**: 0.21
+**Date**: 2026-08-12
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11), NPS-3 (NIP v0.13), NPS-4 (NDP v0.12)
+**Depends-On**: NPS-1 (NCP v0.11), NPS-3 (NIP v0.14), NPS-4 (NDP v0.12)
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -210,12 +210,13 @@ A node with `profiles.llm` is an **LLM-capable Action or Complex Node**. Product
 - Use `"complex"` when the endpoint also owns memory, tool orchestration, graph traversal, session state, or other non-trivial composition.
 - The node SHOULD advertise `llm:complete` in its NDP/NIP `capabilities` and MUST implement the `llm.complete` ActionFrame contract (§7.5) when `profiles.llm.actions` contains `"llm.complete"`.
 - If `supports_stream = true`, the node SHOULD also advertise `llm:stream`; if `supports_tools = true`, it SHOULD advertise `llm:tool_call`.
+- A node that advertises `context.supported = true` MUST also advertise `llm:context`, list the implemented lifecycle actions, and implement §7.6 without silent stateless fallback.
 
 **`profiles.llm` fields**
 
 | Field | Type | Required | Description |
 |-------|------|----------|-------------|
-| `profile_version` | string | Optional | LLM profile schema version. Current value: `"0.1"` |
+| `profile_version` | string | Optional | LLM profile schema version. `"0.1"` is the stateless profile; `"0.2"` adds the optional stateful-context descriptor below. |
 | `actions` | array[string] | Optional | Standard LLM action ids implemented by this node. Default: `["llm.complete"]` |
 | `provider` | string | Optional | Provider/runtime family, e.g. `"willow"`, `"ollama"`, `"openai-compatible"`. Advisory only |
 | `default_model` | string | Optional | Model id used when a request omits provider-specific routing hints |
@@ -227,6 +228,7 @@ A node with `profiles.llm` is an **LLM-capable Action or Complex Node**. Product
 | `supports_rerank` | bool | Optional | Whether rerank actions such as `llm.rerank` are supported |
 | `reasoning_visibility` | string | Optional | `"none"` / `"summary"` / `"trace"`. `trace` exposes provider reasoning artifacts and is deployment-sensitive |
 | `privacy` | object | Optional | Operator privacy policy hints, see below |
+| `context` | object | Optional | Stateful LLM context support and operational limits; requires `profile_version = "0.2"` and §7.6 |
 
 **Model descriptor**
 
@@ -248,6 +250,17 @@ A node with `profiles.llm` is an **LLM-capable Action or Complex Node**. Product
 | `training` | bool | Whether prompt/response content may be used for model training |
 | `region` | string | Optional processing or storage region hint |
 
+**Stateful context descriptor (`profiles.llm.context`)**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `supported` | bool | Required | Whether this node implements the §7.6 contract. `false` MUST NOT be inferred as partial support. |
+| `operations` | array[string] | Required when supported | Implemented operations from `create`, `append`, `fork`, `reset`, `release`. |
+| `persistence` | string | Required when supported | `connection`, `process`, or `durable`, with the lifecycle guarantees in §7.6.5. |
+| `max_contexts_per_principal` | uint32 | Required when supported | Maximum live contexts owned by one authenticated principal/security scope. |
+| `max_ttl_seconds` | uint32 | Required when supported | Maximum accepted idle TTL. |
+| `tombstone_seconds` | uint32 | Required when supported | Minimum released/expired tombstone visibility promised by the node. |
+
 **Example**
 
 ```json
@@ -261,17 +274,39 @@ A node with `profiles.llm` is an **LLM-capable Action or Complex Node**. Product
       "result_anchor": "nps:system:llm.complete:response",
       "async": true,
       "required_capability": "llm:complete"
+    },
+    "llm.context.status": {
+      "description": "Inspect an LLM context or recover an idempotent create outcome",
+      "params_anchor": "nps:system:llm.context.status:request",
+      "result_anchor": "nps:system:llm.context.status:response",
+      "async": false,
+      "required_capability": "llm:context"
+    },
+    "llm.context.release": {
+      "description": "Release an LLM context",
+      "params_anchor": "nps:system:llm.context.release:request",
+      "result_anchor": "nps:system:llm.context.release:response",
+      "async": false,
+      "required_capability": "llm:context"
     }
   },
   "profiles": {
     "llm": {
-      "profile_version": "0.1",
+      "profile_version": "0.2",
       "provider": "willow",
       "default_model": "willow-small",
-      "actions": ["llm.complete"],
+      "actions": ["llm.complete", "llm.context.status", "llm.context.release"],
       "supports_stream": true,
       "supports_tools": true,
       "reasoning_visibility": "summary",
+      "context": {
+        "supported": true,
+        "operations": ["create", "append", "fork", "reset", "release"],
+        "persistence": "process",
+        "max_contexts_per_principal": 32,
+        "max_ttl_seconds": 3600,
+        "tombstone_seconds": 86400
+      },
       "models": [
         {
           "id": "willow-small",
@@ -777,6 +812,7 @@ model request.
 | `stream` | bool | Optional | When true, response is a `StreamFrame` sequence instead of a synchronous `CapsFrame` |
 | `messages` | array | Required | Ordered conversation messages |
 | `tools` | array | Optional | Tool definitions available to the model |
+| `context` | `LlmContextRequestDto` | Optional | Stateful context operation defined in §7.6. Absent preserves stateless full-history semantics. |
 
 **`LlmMessageDto` fields**
 
@@ -801,7 +837,7 @@ object received from or sent to an LLM backend. `LlmToolDefinitionDto` uses
 
 | Request mode | Successful response |
 |--------------|---------------------|
-| `async=false`, `stream=false` | `CapsFrame` with `anchor_ref = "nps:system:llm.complete:response"` and `data[0]` containing `LlmCompleteActionResponse` |
+| `async=false`, `stream=false` | `CapsFrame` with `anchor_ref = "nps:system:llm.complete:response"`, `request_id` copied from the ActionFrame when present, and `data[0]` containing `LlmCompleteActionResponse` |
 | `async=true`, `stream=false` | `AsyncActionResponse` acknowledgment. `system.task.status.result` contains `LlmCompleteActionResponse` when completed |
 | `stream=true` | `StreamFrame` sequence with `anchor_ref = "nps:system:llm.complete:stream"` on the first chunk; `data[]` contains `LlmCompleteStreamChunkDto` items |
 
@@ -817,10 +853,38 @@ server still follows the async task contract.
 | `content` | string | Optional | Final generated text for non-tool completions |
 | `tool_calls` | array | Optional | Tool calls requested by the model |
 | `error` | string | Optional | Model/provider-level completion error; see error rule below |
+| `usage` | object | Optional | Actual model/provider usage for this invocation; see `LlmUsageDto` below |
+| `context` | `LlmContextReceiptDto` | Optional | Committed stateful-context receipt; MUST be absent for stateless requests. |
 
 For streaming responses, `LlmCompleteStreamChunkDto.content_delta` carries the
 new text for that chunk. The final chunk SHOULD set `stop_reason`; abnormal
 stream termination SHOULD use a terminal `ErrorFrame` or `StreamFrame.error_code`.
+The terminal chunk MAY carry `usage`. A successful stateful stream MUST carry
+its context receipt only on the terminal chunk. Non-terminal chunks MUST omit
+the receipt and SHOULD omit usage.
+
+**`LlmUsageDto` fields**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `input_tokens` | uint32 | Optional | Total logical model-input tokens, including any reused prefix |
+| `output_tokens` | uint32 | Optional | Tokens generated by the model for this completion |
+| `cache_hit` | bool | Optional | Whether the model runtime reused a prefix/KV-cache entry |
+| `reused_tokens` | uint32 | Optional | Input tokens reused from prefix/KV cache without new evaluation |
+| `evaluated_tokens` | uint32 | Optional | Input tokens newly evaluated by the model for this invocation |
+| `wire_input_bytes` | uint64 | Optional | Complete serialized ActionFrame payload bytes measured at the NWP decoder boundary, after NCP decryption and excluding the NCP header/TLS/response bytes |
+
+Every usage field is optional because providers expose different accounting
+levels. Values in `usage` MUST be actual runtime/provider observations, not
+estimates. `CapsFrame.token_est` remains a CGN estimate and is not a substitute
+for `usage`. `CapsFrame.cached` means the complete NWP response came from the
+server-side response cache; it is distinct from `usage.cache_hit`. When all
+three input-accounting fields are known, producers SHOULD satisfy
+`reused_tokens + evaluated_tokens = input_tokens`.
+`cache_hit = true` is valid only when `reused_tokens > 0`. `wire_input_bytes`
+MUST be measured from the accepted wire payload, not obtained by re-serializing
+a DTO. Providers MUST omit token fields they cannot observe rather than derive
+them from prompt length.
 
 **Error rule**
 
@@ -837,6 +901,179 @@ Canonical JSON field names are snake_case. SDK producers MUST emit snake_case.
 SDK consumers SHOULD accept PascalCase/case-insensitive property names as a
 compatibility fallback. MessagePack payload maps MUST use the same canonical
 snake_case keys as JSON.
+
+### 7.6 Stateful LLM Context and Delta Completion
+
+This section implements NPS-CR-0011. It is an opt-in extension of §7.5, not a
+new frame family. A request without `LlmCompleteActionRequest.context` remains
+stateless and sends a complete ordered message list. A request with `context`
+MUST execute the requested state transition exactly or fail with an ErrorFrame;
+the server MUST NOT silently rebuild a stateless prompt or report a false cache
+hit.
+
+#### 7.6.1 Request and receipt DTOs
+
+A stateful `llm.complete` ActionFrame MUST carry an `idempotency_key`. Its
+`messages` field means the complete initial/replacement transcript for `create`
+and `reset`, and only the ordered delta after `base_version` for `append` and
+`fork`. An empty message array is allowed only for `fork`.
+
+**`LlmContextRequestDto`**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `operation` | enum | Required | `create`, `append`, `fork`, or `reset`. |
+| `context_id` | string | Conditional | Required for all operations except `create`; forbidden for `create`. |
+| `base_version` | uint64 | Conditional | Required for `append`, `fork`, and `reset`; MUST equal the committed version. |
+| `ttl_seconds` | uint32 | Optional | Requested idle TTL; the server MAY clamp it to its advertised maximum. |
+
+`ttl_seconds` MUST be greater than zero when present. If omitted, `create` uses
+the node default; `append` and `reset` preserve the context's current effective
+TTL; and `fork` inherits the source context's remaining TTL. A supplied value or
+an inherited/default value MAY be clamped to `max_ttl_seconds`; the effective
+expiry MUST be returned in the receipt when TTL is bounded.
+
+Context IDs are case-sensitive, unpadded base64url strings generated from at
+least 128 bits of cryptographically secure randomness. Producers MUST emit
+22–128 ASCII characters from `[A-Za-z0-9_-]`. An ID MUST NOT encode a NID,
+tenant, model, database key, or other sensitive metadata. It is a locator, not
+an authorization credential.
+
+**`LlmContextReceiptDto`**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `context_id` | string | Required | Opaque context identifier. |
+| `version` | uint64 | Required | Committed version after the operation. Create/fork start at 1; append/reset/release increment exactly once. |
+| `operation` | enum | Required | `create`, `append`, `fork`, `reset`, or `release`. |
+| `state` | enum | Required | `active` for completion mutations; `released` for release. |
+| `expires_at` | RFC 3339 timestamp | Optional | Effective idle expiry when bounded. |
+| `parent_context_id` | string | Required for fork | Source context. |
+| `parent_version` | uint64 | Required for fork | Immutable source version used by the fork. |
+
+Unary success carries the receipt on `LlmCompleteActionResponse.context`.
+Async acknowledgment does not commit context state; the receipt appears only in
+the completed `system.task.status.result`. Streaming success carries the receipt
+only on the terminal chunk. Stateless responses and non-terminal chunks MUST
+omit it.
+
+#### 7.6.2 Lifecycle actions
+
+| Action | Request DTO | Success response |
+|--------|-------------|------------------|
+| `llm.context.status` | `LlmContextStatusRequestDto` with exactly one of `context_id` or `idempotency_key` | CapsFrame `anchor_ref = "nps:system:llm.context.status:response"`, `data[0] = LlmContextStatusDto` |
+| `llm.context.release` | `LlmContextReleaseRequestDto` with `context_id` and `base_version`; ActionFrame MUST carry `idempotency_key` | CapsFrame `anchor_ref = "nps:system:llm.context.release:response"`, `data[0] = LlmContextReceiptDto` |
+
+`LlmContextStatusDto` contains required `state` (`busy`, `active`, `released`,
+`expired`, or `failed`) plus optional `context_id`, `version`, `expires_at`,
+`request_id`, and `error_code`. Active/released/expired states MUST carry an ID
+and version. An in-flight create reports `busy` but MUST omit its not-yet-
+committed ID/version. A failed create reports `failed`, omits ID/version, and
+carries its terminal error code. Status is observational and MUST NOT refresh
+TTL.
+
+Release increments vN to a released tombstone vN+1. It is replay-idempotent for
+the same owner and ActionFrame key. Mutations against a released context return
+`NWP-LLM-CONTEXT-NOT-FOUND`; the owner MAY still inspect its tombstone with
+status during the advertised retention window.
+
+#### 7.6.3 Binding and authorization
+
+Create/reset binds the context to the resolved model ID, ordered system
+messages, canonical tool definitions, and the provider/runtime compatibility
+revision required for prefix reuse. Append/fork MUST preserve this binding.
+Their deltas MUST NOT contain system-role messages; omitted `tools` reuses the
+bound definitions, while present `tools` MUST canonically equal them. The
+required `model` field MUST resolve to the bound model. A mismatch returns
+`NWP-LLM-CONTEXT-BINDING-MISMATCH`.
+
+Stateful `llm.complete` mutations require both `llm:complete` and
+`llm:context`; streaming and tools additionally require `llm:stream` and
+`llm:tool_call`, respectively. Status/release require `llm:context` plus owner
+authorization but do not require the caller to retain model-invocation rights.
+The owner is the authenticated NID plus the node's authenticated tenant/workspace
+security scope. That scope comes from admitted identity and deployment policy,
+never a client-controlled context field. Every operation MUST re-run normal NIP
+expiry, revocation, assurance, scope, and capability checks. Long-running work
+MUST repeat revocation/authorization checks before commit. An authenticated
+non-owner receives `NWP-LLM-CONTEXT-FORBIDDEN`.
+
+#### 7.6.4 Atomic state transitions
+
+Create commits v1. Append/reset compare-and-swap `base_version` and commit
+vN+1. Fork atomically snapshots the parent at admission, creates a child v1,
+and never mutates the parent. A later parent mutation does not invalidate an
+admitted fork snapshot. At most one mutation reservation may exist per context;
+a stale or concurrent loser receives `NWP-LLM-CONTEXT-VERSION-CONFLICT` with
+the current version in the ErrorFrame hint.
+
+A completion mutation commits only after a successful terminal result whose
+stop reason is not `error`. The commit includes both the request delta and the
+terminal assistant text/tool calls. A structured refusal represented by an
+ordinary `end_turn` MAY commit. Validation/auth/provider failure, timeout,
+cancellation, `stop_reason = "error"`, or abnormal stream termination MUST
+leave the prior transcript/version unchanged and release the reservation.
+
+The server MUST atomically commit to the store promised by its NWM persistence
+level before exposing the terminal receipt. A valid reservation prevents idle
+expiry while work is running. Successful create/append/fork/reset starts or
+refreshes TTL; status and failed/cancelled mutations do not. If the prior TTL
+elapsed during work and the reservation aborts, the context transitions directly
+to expired. Automatic expiry records the last committed version without
+incrementing it.
+
+#### 7.6.5 Reconnect, restart, and idempotency
+
+The NWM persistence values mean:
+
+- `connection`: survives requests only on the creating NCP connection;
+- `process`: survives reconnect only when routed to the same process, not a
+  process restart or another instance;
+- `durable`: survives process restart under the same logical node NID and
+  endpoint identity.
+
+Connection/process contexts are node-instance scoped and clients SHOULD pin
+them to the creating endpoint. Cross-instance migration/distributed context
+stores are not defined here. State loss returns not-found/expired and MUST NOT
+create a replacement.
+
+The existing 24-hour ActionFrame idempotency window also retains the owner-
+scoped key-to-outcome record, even when context TTL is shorter. A duplicate
+while the first request runs returns `NWP-ACTION-IDEMPOTENCY-CONFLICT` and MUST
+NOT join a live stream. Completed unary/async requests use the cached-result
+rule. Completed streaming replay uses a new StreamFrame sequence with logically
+identical ordered text, tool calls, stop reason, usage, and terminal receipt;
+it MUST NOT regenerate or recommit. `llm.context.status` by idempotency key
+resolves a lost create response. After 24 hours the key lookup MAY return
+not-found.
+
+#### 7.6.6 Expiry, limits, and errors
+
+Released/expired tombstones SHOULD remain visible to their owner for at least
+`tombstone_seconds`. Mutations against an expiry tombstone return
+`NWP-LLM-CONTEXT-EXPIRED`; after tombstone removal they return not-found.
+
+| Error | NPS status | Meaning |
+|-------|------------|---------|
+| `NWP-LLM-CONTEXT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | Unknown/released context or expired idempotency lookup. |
+| `NWP-LLM-CONTEXT-EXPIRED` | `NPS-CLIENT-GONE` | Idle-expiry tombstone is still present. |
+| `NWP-LLM-CONTEXT-VERSION-CONFLICT` | `NPS-CLIENT-CONFLICT` | Stale version or concurrent mutation reservation. |
+| `NWP-LLM-CONTEXT-BINDING-MISMATCH` | `NPS-CLIENT-CONFLICT` | Model/system/tools/runtime binding differs. |
+| `NWP-LLM-CONTEXT-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | Caller is not owner or lacks scope/capability. |
+| `NWP-LLM-CONTEXT-LIMIT-EXCEEDED` | `NPS-LIMIT-RESOURCE` | Per-principal live-context limit reached. |
+| `NWP-LLM-CONTEXT-OPERATION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node supports context but not this operation. |
+
+Malformed field combinations use `NWP-ACTION-PARAMS-INVALID`. All failures in
+this section use ErrorFrame or terminal stream error, never
+`LlmCompleteActionResponse.error`.
+
+#### 7.6.7 Conformance and benchmark claim
+
+All six SDKs MUST execute `conformance/nwp/llm_context_vectors.json`. A benchmark
+claiming stateful savings MUST compare the same multi-turn role/tool semantics
+in stateless and strict-native stateful modes. On the second turn, stateful mode
+MUST send only the delta and demonstrate both lower `wire_input_bytes` and lower
+observed `evaluated_tokens`. Protocol fallback MUST be disabled.
 
 ---
 
@@ -1266,6 +1503,13 @@ The following error codes (defined in §14) apply to SubscribeFrame operations:
 | `NWP-ACTION-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | action_id does not exist |
 | `NWP-ACTION-PARAMS-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | Operation parameter schema validation failed |
 | `NWP-ACTION-IDEMPOTENCY-CONFLICT` | `NPS-CLIENT-CONFLICT` | A request with the same idempotency_key is already in progress |
+| `NWP-LLM-CONTEXT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | Stateful LLM context is unknown/released, or idempotency lookup expired (§7.6) |
+| `NWP-LLM-CONTEXT-EXPIRED` | `NPS-CLIENT-GONE` | Stateful LLM context has an idle-expiry tombstone (§7.6) |
+| `NWP-LLM-CONTEXT-VERSION-CONFLICT` | `NPS-CLIENT-CONFLICT` | `base_version` is stale or a concurrent mutation owns the reservation (§7.6) |
+| `NWP-LLM-CONTEXT-BINDING-MISMATCH` | `NPS-CLIENT-CONFLICT` | Model/system/tools/runtime binding differs from the committed context (§7.6) |
+| `NWP-LLM-CONTEXT-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | Caller is not the context owner or lacks scope/capability (§7.6) |
+| `NWP-LLM-CONTEXT-LIMIT-EXCEEDED` | `NPS-LIMIT-RESOURCE` | Per-principal live-context limit reached (§7.6) |
+| `NWP-LLM-CONTEXT-OPERATION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Context is supported but the requested lifecycle operation is not (§7.6) |
 | `NWP-TASK-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | task_id does not exist |
 | `NWP-TASK-ALREADY-CANCELLED` | `NPS-CLIENT-CONFLICT` | Task has already been cancelled |
 | `NWP-TASK-ALREADY-COMPLETED` | `NPS-CLIENT-CONFLICT` | Task has already completed; cannot cancel |
@@ -1417,7 +1661,7 @@ normative, and a single implementation of it MUST serve both directions.
 | `NPS-CLIENT-CONFLICT` | `-32004` (implementation-defined) | |
 | `NPS-AUTH-UNAUTHENTICATED` | `-32001` (implementation-defined) | MUST be a JSON-RPC error, never a successful result carrying an error payload |
 | `NPS-AUTH-FORBIDDEN` | `-32003` (implementation-defined) | MUST NOT be collapsed onto `-32001` |
-| `NPS-LIMIT-RATE`, `NPS-LIMIT-BUDGET`, `NPS-LIMIT-PAYLOAD` | `-32005` (implementation-defined) | |
+| `NPS-LIMIT-RATE`, `NPS-LIMIT-BUDGET`, `NPS-LIMIT-PAYLOAD`, `NPS-LIMIT-RESOURCE` | `-32005` (implementation-defined) | |
 | `NPS-SERVER-UNSUPPORTED` | `-32601` (Method not found) | Includes `NWP-BRIDGE-DIRECTION-UNSUPPORTED` |
 | `NPS-SERVER-INTERNAL`, `NPS-SERVER-UNAVAILABLE`, `NPS-SERVER-TIMEOUT`, `NPS-DOWNSTREAM-UNAVAILABLE` | `-32603` (Internal error) | Upstream node failure |
 | parse failure before dispatch | `-32700` (Parse error) | |
@@ -1441,7 +1685,7 @@ not injective, an implementation MUST choose the **most specific** NPS status, n
 | `NPS-CLIENT-CONFLICT` | `ABORTED` |
 | `NPS-AUTH-UNAUTHENTICATED` | `UNAUTHENTICATED` |
 | `NPS-AUTH-FORBIDDEN` | `PERMISSION_DENIED` |
-| `NPS-LIMIT-RATE`, `NPS-LIMIT-BUDGET`, `NPS-LIMIT-PAYLOAD` | `RESOURCE_EXHAUSTED` |
+| `NPS-LIMIT-RATE`, `NPS-LIMIT-BUDGET`, `NPS-LIMIT-PAYLOAD`, `NPS-LIMIT-RESOURCE` | `RESOURCE_EXHAUSTED` |
 | `NPS-SERVER-UNSUPPORTED` | `UNIMPLEMENTED` |
 | `NPS-SERVER-INTERNAL` | `INTERNAL` |
 | `NPS-SERVER-UNAVAILABLE`, `NPS-DOWNSTREAM-UNAVAILABLE` | `UNAVAILABLE` |
@@ -1558,6 +1802,7 @@ correlation behavior are required across HTTP and native hosts.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.21 | 2026-08-12 | **NPS-CR-0011 stateful LLM context/delta completion**: NWM LLM profile 0.2 advertises explicit context operations/persistence/limits; `llm.complete` gains optional owner-bound opaque context requests and terminal receipts; adds status/release lifecycle actions, CAS versions, binding checks, atomic cancellation/stream commit, restart/idempotency semantics, measured `wire_input_bytes`, seven deterministic errors, and shared conformance vectors. Stateless completion remains compatible and stateful requests never silently fall back. Depends-On NIP advanced to v0.14 for `llm:context`. No new frame type. |
 | 0.20 | 2026-07-29 | Added §16.5 portable Node/Bridge server profile and shared cross-language vectors. Standardized HTTP/native admission, role dispatch, canonical/legacy MIME handling for the alpha.17 compatibility window, finite body limits, cancellation, correlation propagation, Bridge dispatcher/SSRF/deadline preflight, async task mode, and terminal telemetry outcomes. Added `NWP-HTTP-BODY-TOO-LARGE` → `NPS-LIMIT-PAYLOAD`; no new frame type. Depends-On advanced to NCP v0.11 and NIP v0.13. |
 | 0.19 | 2026-07-23 | **NPS-CR-0010 Bridge Node is bidirectional**: resolved the spec's own contradiction — the §2.1 taxonomy, the "Removed types" note, and NPS-CR-0001 all defined Bridge Node as NPS↔non-NPS translation, while the §2.1 callout and the normative MUST list narrowed it to NPS→external only. The narrowing existed solely to keep the name `Bridge` distinct from the then-separate `compat/*-ingress` packages; those are now absorbed into the Bridge package and the restriction is lifted. Bridge Node semantics restructured into **Outbound** (unchanged) + **Inbound** (new) MUST lists; MCP inbound MUST serve `resources/*` as well as `tools/*`. §16 split into two independent conformance profiles (§16.1.1 outbound / §16.1.2 inbound), a normative direction declaration (§16.2), and normative per-protocol error-mapping tables (§16.3) that a single implementation MUST serve in both directions. Role-vs-library boundary made explicit: only a deployment announcing `node_roles: ["bridge"]` is a Bridge Node. `Depends-On` NDP bumped to v0.11 (defines `bridge_inbound_protocols`). One new error code `NWP-BRIDGE-DIRECTION-UNSUPPORTED`. Additive and backward-compatible: an outbound-only Bridge Node remains conformant unchanged. (Renumbered from the edge-line 0.16 — the released alpha.16 line had independently used 0.15–0.17 for the LLM profile series below.) |
 | 0.18 | 2026-07-23 | **NPS-CR-0009 multi-Anchor HA**: finalised the two §12.2 `anchor_state` sub-types `anchor_failover` (`successor_nid` / `cluster_epoch` / `reason`) and `anchor_quorum_lost` (`quorum_size` / `available`), removing the Phase-3-placeholder “MUST NOT emit” restriction. New `cluster_epoch` (uint64) ownership fence on topology responses/writes; standby writes rejected with `NWP-ANCHOR-NOT-LEADER`, superseded leaders fenced with `NWP-ANCHOR-EPOCH-FENCED`. Additive and Phase-gated: single-Anchor clusters keep `cluster_epoch = 1` and are unaffected. `Depends-On` NDP bumped to v0.10 (defines `cluster_epoch` on AnnounceFrame + highest-epoch resolution). Two new error codes. |

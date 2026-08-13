@@ -5,10 +5,10 @@
 **Spec Number**: NPS-4
 **Status**: Proposed
 **Version**: 0.12
-**Date**: 2026-05-10
+**Date**: 2026-07-29
 **Port**: 17433（默认，共用）/ 17436（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11)、NPS-3 (NIP v0.13)
+**Depends-On**: NPS-1 (NCP v0.11)、NPS-3 (NIP v0.14)
 
 ---
 
@@ -47,6 +47,7 @@ NDP 是 NPS 的发现与注册协议。Agent、Node 与 Registry 通过 NDP 发�
 | `capabilities` | array | 必填 | 能力列表（复用 NIP capabilities 定义）|
 | `ttl` | uint32 | 必填 | 广播有效期（秒），0 = 下线通知 |
 | `timestamp` | string | 必填 | 广播时间（ISO 8601 UTC）|
+| `graph_seq` | uint64 | 条件必填 | per-NID 单调递增的配置序号。NDP 0.12 发布者 MUST 携带。出于兼容，`local-dev` Registry MAY 把旧发布者缺失的该值按 `0` 处理；`org-private` 与 `public-federated` Registry MUST 以 `NDP-ANNOUNCE-PROFILE-VIOLATION` 拒绝缺失值。|
 | `activation_mode` | string | 条件必填 | 取值 `ephemeral` / `resident` / `hybrid` 之一。声明符合 NPS-Node Profile L1+ 的发布者 MUST 携带；未合规发布者可不带。接收方 MUST 把缺失字段按 `ephemeral` 处理（与 NPS v1.0-alpha.2 发布者保持向后兼容）。见 §3.1.1。 |
 | `node_roles` | string 数组 | 可选 | 该发布者承担的节点功能角色列表。每个值取自 `"memory"`、`"action"`、`"complex"`、`"anchor"`、`"bridge"`。遗留值 `"gateway"` 在 v1.0-alpha.3 移除（NPS-CR-0001），解析器 MUST 以 `NDP-ANNOUNCE-ROLE-REMOVED` 拒绝；其他无法识别的值 MUST 以 `NDP-ANNOUNCE-ROLE-UNKNOWN` 拒绝。单角色节点发送一元素数组（`"node_roles": ["memory"]`）。缺省表示"按 `node_type` 字段单角色"，接收方 SHOULD 回退到 `node_type`。解析器 MUST 在 alpha 过渡期内把遗留字段名 `node_kind` 当作 `node_roles` 的别名接受。（NPS-CR-0001；在 NDP v0.8 由 `node_kind` 更名而来——见 M1 命名消歧修复）|
 | `cluster_anchor` | string (NID) | 可选 | 加入集群的非-Anchor 节点，标识它注册到的 Anchor Node 的 NID。独立节点和 Anchor Node 自己 MUST 不带。（NPS-CR-0001）|
@@ -161,6 +162,12 @@ NDP 是 NPS 的发现与注册协议。Agent、Node 与 Registry 通过 NDP 发�
 #### 3.2.1 解析期陈旧检查（NDP v0.9）
 
 Registry MUST 以 `(last_seen ?? timestamp) + ttl` 计算每条注册记录的新鲜度截止。当 `ResolveFrame` 将返回的条目已经超过该截止时间，Registry MUST 返回 `NDP-RESOLVE-STALE`，而不是继续提供陈旧端点。陈旧端点很可能把流量路由到已经离线的节点。Registry MAY 主动清理过期条目；在清理之前，解析期陈旧检查是权威保护。`resolved` 对象 SHOULD 回显条目的 `health`，使调用方即便在 TTL 未过期时也能避开 `draining` 节点。
+
+#### 3.2.2 Bridge 能力发现（NDP v0.12）
+
+针对某个 Bridge 协议的 Registry 发现查询，MUST 只考虑在 `node_roles` 中声明 `"bridge"`（或 `node_type` 回退值为 `"bridge"`）、且 `health` 不为 `"draining"` 的存活条目。**出向**（outbound）查询匹配 `bridge_protocols`；**入向**（inbound）查询匹配 `bridge_inbound_protocols`。Registry MUST NOT 由出向声明推断入向支持，反之亦然。
+
+可移植的发现结果是按 ordinal 升序排序的完整候选 NID 集合。NDP 不挑选某一个候选，也不定义负载均衡；该决策属于 NWP Bridge 客户端，由其在应用端点、信任与运行时策略之后作出。
 
 ---
 
@@ -285,7 +292,7 @@ ndp-forwarded-by: urn:nps:agent:registry-a.example.com:r1, urn:nps:agent:registr
 | `NDP-ANNOUNCE-ROLE-UNKNOWN` | `NPS-CLIENT-BAD-FRAME` | `node_roles` 包含无法识别的值（`"gateway"` 遗留情况请用 `NDP-ANNOUNCE-ROLE-REMOVED`）|
 | `NDP-ANNOUNCE-CONFLICT` | `NPS-CLIENT-CONFLICT` | 两个 AnnounceFrame 拥有相同的 `nid` 与 `graph_seq` 但内容不同（注册表投毒企图）|
 | `NDP-ANNOUNCE-PROFILE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame 违反当前 Registry 安全 profile 约束，且没有更具体的 NDP 错误码可用 |
-| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 的 `graph_seq` 小于或等于该 NID 已接受的最高值（回滚企图）|
+| `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 的 `graph_seq` 小于接收方已为该 NID 接受的最高值（回滚企图）|
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame 序号不连续 |
 | `NDP-FEDERATION-LOOP` | `NPS-CLIENT-CONFLICT` | 联邦转发通过 `ndp-forwarded-by` hop 列表检测到环路 |
 | `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame 的签发者（签名 CA）不在当前注册表 profile 的签发者白名单中 |
@@ -329,12 +336,26 @@ HTTP 模式下的状态码映射见 [status-codes.cn.md](status-codes.cn.md)。
 
 1. **签名覆盖范围**。`signature` 字段 MUST 覆盖 AnnounceFrame canonical body：所有已发出的 AnnounceFrame wire 字段，但排除 `signature`、`health`、`last_seen` 以及 `frame` 这类传输/核心帧判别字段。值缺失或为 `null` 的可选字段 MUST 从 canonical body 中省略，不得序列化为 JSON `null`。`heartbeat_interval_ms` 参与签名；若 wire 上缺失，验证方 MUST 按默认值 `60000` 进行 canonicalize。接收方 MUST 在任何注册表侧状态变更前完成签名验证；签名验证 MUST 先于去重、冲突检测和持久化。
 2. **重放防御**。`timestamp` 偏离当前时间超过 profile 重放窗口（过去或未来）的 AnnounceFrame，MUST 以 `NDP-ANNOUNCE-SIGNATURE-INVALID` 拒绝。重放窗口 `0`（仅 `local-dev` profile）禁用该检查。
-3. **重复抑制**。`(nid, graph_seq)` 与已接受条目完全相同的 AnnounceFrame，MUST 静默丢弃（不返回错误，不变更状态）。多播环境下的字节级重复属正常现象。
-4. **冲突拒绝**。`(nid, graph_seq)` 与已有条目相同但所覆盖内容不同的 AnnounceFrame，MUST 以 `NDP-ANNOUNCE-CONFLICT` 拒绝。被拒帧与已有条目 SHOULD 同步记入审计日志供运营方排查；冲突帧是私钥泄露或发布者集群配置错误的证据。
+3. **重复抑制**。`(nid, graph_seq)` 与完整 wire 内容都与已接受条目完全相同的 AnnounceFrame，MUST 静默丢弃（不返回错误，不变更状态）。多播环境下的字节级重复属正常现象。
+4. **Liveness 刷新**。当 `(nid, graph_seq)` 与 canonical 签名体均匹配，仅 `health` 或 `last_seen` 发生变化时，Registry MUST 刷新这两个 advisory 字段并重算新鲜度，且 MUST NOT 把该帧视为冲突或回滚。
+5. **冲突拒绝**。`(nid, graph_seq)` 与已有条目相同但 canonical 签名体不同的 AnnounceFrame，MUST 以 `NDP-ANNOUNCE-CONFLICT` 拒绝。被拒帧与已有条目 SHOULD 同步记入审计日志供运营方排查；冲突帧是私钥泄露或发布者集群配置错误的证据。
+
+Canonicalize 按 Unicode 码点升序递归排序对象键、保留数组顺序、不输出无意义空白、并省略缺失或为 `null` 的可选字段。Registry SHOULD 比对该 canonical UTF-8 体的 SHA-256 摘要，而不是另存一份序列化副本。
+
+可移植的准入顺序为规范性要求：
+
+1. 验证签名与 NID 绑定；
+2. 应用重放窗口与 Registry profile 检查；
+3. canonicalize 并比对 `graph_seq` / 所覆盖内容；
+4. 处理合法的 `ttl = 0` 下线公告；
+5. 以 `NDP-ANNOUNCE-STALE` 拒绝已经陈旧的存活公告；
+6. 插入、刷新或替换该条目。
+
+任何失败的步骤都不得变更 Registry 内容或 per-NID 序列栅栏。在执行上述准入顺序之前，Registry MUST 校验 §3.1 的 wire 类型。特别地：`ttl` MUST 存在且为 `uint32`；`graph_seq` 存在时 MUST 为 `uint64`，即便 `local-dev` 允许该字段缺失；每个 Bridge 协议字段存在时 MUST 为仅含非空字符串的数组。格式错误的已存在值不等价于缺失的兼容值，MUST 以 `NDP-ANNOUNCE-PROFILE-VIOLATION` 拒绝。对存活公告而言，新鲜度为 `(last_seen ?? timestamp) + ttl`；Registry MUST NOT 用自身的本地收帧时间延长它。合法的下线公告移除存活条目，但保留其已接受的序列栅栏。
 
 ### 7.5 Graph 序列回滚防御
 
-AnnounceFrame（以及对应 GraphFrame）的 `graph_seq` 字段是 per-NID 单调递增计数器。接收方 MUST 跟踪每个 NID 已接受的最高 `graph_seq`。`graph_seq` 小于或等于该 NID 已跟踪最高值的 AnnounceFrame，MUST 以 `NDP-GRAPH-SEQ-ROLLBACK` 拒绝。这防止攻击者捕获旧 AnnounceFrame 后再次发布以使节点状态降级。在 `org-private` 与 `public-federated` profile 下，已跟踪最高值 MUST 在 Registry 重启后持久化；`local-dev` MAY 仅保存在内存中。
+AnnounceFrame（以及对应 GraphFrame）的 `graph_seq` 字段是 per-NID 单调递增计数器。接收方 MUST 跟踪每个 NID 已接受的最高 `graph_seq`。更小的值 MUST 以 `NDP-GRAPH-SEQ-ROLLBACK` 拒绝。相等的值按 §7.4 处理：完全重传被抑制，仅 advisory 的 liveness 更新刷新条目，所覆盖内容发生变化则为 `NDP-ANNOUNCE-CONFLICT`。更大的值替换先前条目。这防止攻击者捕获旧 AnnounceFrame 后再次发布以使节点状态降级。在 `org-private` 与 `public-federated` profile 下，已跟踪最高值 MUST 在 Registry 重启后持久化；`local-dev` MAY 仅保存在内存中。
 
 ### 7.6 跨注册表联邦
 
@@ -366,6 +387,7 @@ Registry MUST NOT 声明其无法满足相应运营方信任要求的 profile。
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.12 | 2026-07-29 | 定义 Registry Conformance profile：additive 的 `graph_seq` wire 字段及其兼容行为；确定性的签名体 canonicalization；有序的 签名/profile/重放/冲突/陈旧 准入流程；完全重复与 advisory liveness 刷新的语义区分；条目过期/下线后仍保留序列栅栏；最高 epoch 的集群解析与脑裂行为；按方向区分且已排序的 Bridge 能力发现；以及跨语言共享的 canonicalization / Registry 测试向量。|
 | 0.11 | 2026-07-12 | **NPS-CR-0010 Bridge Node 是双向的**：AnnounceFrame (0x30) 新增可选 `bridge_inbound_protocols`（string 数组，取值域同 `bridge_protocols`）—— 该节点**入向服务**（外部 → NPS）的外部协议集。`bridge_protocols` 保持其原有含义不变（**出向**桥接的协议集）。缺省/为空 ⇒ 不暴露入向面，即 alpha.16 之前的纯出向 Bridge Node。声明 `"bridge"` 的节点 MUST 保证两个数组至少一个非空。Additive / 向后兼容；无新增 NDP 错误码。|
 | 0.10 | 2026-07-05 | **NPS-CR-0009 多 Anchor 高可用**：AnnounceFrame (0x30) 新增可选 `cluster_epoch`（uint64，默认 1）—— 集群所有权栅栏。新增 §9 解析规则：对一个 `cluster_anchor` NID 解析出 `cluster_epoch` 最高的存活 Anchor；同 epoch 的脑裂 → `NDP-CLUSTER-SPLIT`；联邦 Registry 传播 `(cluster_anchor, cluster_epoch, active_nid)` 三元组并优先取更高 epoch（每集群单调）。新增一个错误码 `NDP-CLUSTER-SPLIT`。Additive / 向后兼容（单 Anchor 集群保持 epoch 1）。|
 | 0.9 | 2026-06-12 | AnnounceFrame (0x30) 新增两个可选 liveness 字段 —— `health`（`healthy`/`degraded`/`draining`，缺省 ⇒ `healthy`）和 `last_seen`（ISO 8601 心跳时间）。新增 §3.2.1 **解析期陈旧检查**：当被解析条目的新鲜度截止 `(last_seen ?? timestamp) + ttl` 已过期时，Registry MUST 返回 `NDP-RESOLVE-STALE` 而非提供已失效端点；resolved 对象 SHOULD 回显 `health`。1 个新错误码 `NDP-RESOLVE-STALE`。向后兼容（两字段均可选）。|

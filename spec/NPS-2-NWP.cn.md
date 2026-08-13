@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.20
-**Date**: 2026-07-29
+**Version**: 0.21
+**Date**: 2026-08-12
 **Port**: 17433（默认，共用）/ 17434（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11)、NPS-3 (NIP v0.13)、NPS-4 (NDP v0.12)
+**Depends-On**: NPS-1 (NCP v0.11)、NPS-3 (NIP v0.14)、NPS-4 (NDP v0.12)
 
 > 本文档为 NWP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
 
@@ -162,7 +162,8 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `node_id` | string | 必填 | 节点 NID，格式：`urn:nps:node:{host}:{path}` |
 | `node_type` | string | 必填 | `"memory"` / `"action"` / `"complex"` / `"anchor"` / `"bridge"`。遗留值 `"gateway"` 在 v1.0-alpha.3 移除（见 §2.1 *已移除类型* 与 [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)），解析器 MUST 以 `NWP-MANIFEST-NODE-TYPE-REMOVED` 拒绝；其他无法识别的值 MUST 以 `NWP-MANIFEST-NODE-TYPE-UNKNOWN` 拒绝。此字段声明该 NWP 服务端点**当前运营的角色**，MUST 是节点 NDP `Announce.node_roles`（NPS-4 §3.1）中的一个值。多角色节点在此选填生效角色；完整约束见 §2.1 *节点角色解析*。 |
 | `display_name` | string | 可选 | 人类可读节点名称 |
-| `manifest_version` | string | 可选 | 清单版本标识（ETag），用于条件请求缓存控制 |
+| `manifest_version` | uint32 | 可选 | 单调递增的清单版本计数器（从 1 开始，每次结构性变更递增）。服务端 MUST 在每次 `GET /.nwm` 响应中携带 `X-NWM-Version: <manifest_version>`。Agent SHOULD 在后续请求中发送 `If-None-Match: <manifest_version>`；清单未变更时返回 `304 Not Modified`。（NWP v0.14）|
+| `manifest_updated_at` | string | 可选 | 最近一次清单变更的 ISO 8601 时间戳，例如 `"2026-06-03T12:00:00Z"`。SHOULD 在 `manifest_version` 递增时一并设置。（NWP v0.14）|
 | `min_agent_version` | string | 可选 | Agent 支持的最低 NPS 版本，格式 `"major.minor"`；低于此版本的 Agent MUST 被拒绝并返回 `NWP-MANIFEST-VERSION-UNSUPPORTED` |
 | `min_assurance_level` | string | 可选 | 取值 `"anonymous"`（默认）/ `"attested"` / `"verified"` 之一（见 [NIP §5.1.1](NPS-3-NIP.cn.md#511-保证等级nps-rfc-0003)）。请求等级低于此值时 MUST 返回 `NWP-AUTH-ASSURANCE-TOO-LOW`（`NPS-AUTH-FORBIDDEN`），响应 SHOULD 在 `hint` 字段附 CA 注册 URL。默认 `"anonymous"` 与 v1.0-alpha.2 节点向后兼容。可在 §4.6 单个 ActionSpec 上以 `min_assurance_level` 字段覆盖。（NPS-RFC-0003）|
 | `wire_formats` | array | 必填 | 支持的编码格式列表：`["ncp-capsule", "msgpack", "json"]` |
@@ -176,6 +177,10 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `endpoints` | object | 必填 | 各功能端点 URL |
 | `graph` | object | 可选 | 子节点引用（Complex Node 专用），见 §11 |
 | `tokenizer_support` | array | 可选 | 节点支持的 tokenizer 列表（见 [token-budget.cn.md](token-budget.cn.md)）|
+| `stability` | string | 可选 | 生命周期阶段：`"experimental"` / `"stable"` / `"deprecated"`。Marketplace / NeuronHub 发现客户端据此过滤或对非 stable 服务给出告警。默认 `"stable"`（向后兼容——0.11 之前的清单一律视为 stable）。可在 ActionSpec.stability（§4.6）上做 per-action 覆盖。|
+| `sla` | object | 可选 | 节点的 SLO 承诺，见 §4.7。仅供参考，协议层不做强制。可在 ActionSpec.sla（§4.6）上做 per-action 覆盖。|
+| `billing` | object | 可选 | 节点的商业元数据（计量 profile + 价格提示），见 §4.8。仅供参考，协议层不收取也不结算费用。可在 ActionSpec.billing（§4.6）上做 per-action 覆盖。|
+| `trust_anchors` | array of strings | 可选 | Anchor 接受作为 IdentFrame 签发者的 CA 节点 NID 列表（例如 `["urn:nps:agent:ca.example.com:root"]`）。消费方 SHOULD 据此在连接前预校验自己的签发者。缺省时，节点接受任何被 NIP 验证链信任的 CA。|
 | `profiles` | object | 可选 | 叠加在基础节点角色上的结构化协议 profile，见 §4.2a。Consumer MUST 忽略无法识别的 profile key。|
 
 ### 4.2 capabilities 字段
@@ -205,12 +210,13 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 - 端点还拥有 memory、工具编排、图遍历、会话状态或其他组合逻辑时，用 `"complex"`。
 - 节点 SHOULD 在 NDP/NIP `capabilities` 中声明 `llm:complete`；当 `profiles.llm.actions` 包含 `"llm.complete"` 时，MUST 实现 §7.5 的 `llm.complete` ActionFrame contract。
 - 若 `supports_stream = true`，节点 SHOULD 同时声明 `llm:stream`；若 `supports_tools = true`，SHOULD 声明 `llm:tool_call`。
+- 节点若声明 `context.supported = true`，MUST 同时声明 `llm:context`、列出已实现的生命周期 action，并完整实现 §7.6，禁止静默降级为 stateless。
 
 **`profiles.llm` 字段**
 
 | 字段 | 类型 | 必填 | 描述 |
 |------|------|------|------|
-| `profile_version` | string | 可选 | LLM profile schema 版本。当前值：`"0.1"` |
+| `profile_version` | string | 可选 | LLM profile schema 版本。`"0.1"` 为 stateless profile；`"0.2"` 增加下方可选的有状态 context descriptor。 |
 | `actions` | array[string] | 可选 | 本节点实现的标准 LLM action id。默认：`["llm.complete"]` |
 | `provider` | string | 可选 | Provider/runtime 家族，如 `"willow"`、`"ollama"`、`"openai-compatible"`。仅作提示 |
 | `default_model` | string | 可选 | 请求未提供 provider-specific 路由提示时使用的模型 id |
@@ -222,6 +228,7 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `supports_rerank` | bool | 可选 | 是否支持 `llm.rerank` 等 rerank action |
 | `reasoning_visibility` | string | 可选 | `"none"` / `"summary"` / `"trace"`。`trace` 会暴露 provider reasoning artifact，属于部署敏感能力 |
 | `privacy` | object | 可选 | Operator 隐私策略提示，见下表 |
+| `context` | object | 可选 | 有状态 LLM context 支持与运行限制；要求 `profile_version = "0.2"` 并实现 §7.6 |
 
 **模型描述对象**
 
@@ -243,6 +250,17 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `training` | bool | Prompt/response 内容是否可用于模型训练 |
 | `region` | string | 可选处理或存储区域提示 |
 
+**有状态 context 描述符（`profiles.llm.context`）**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `supported` | bool | 必填 | 本节点是否实现 §7.6 contract。`false` 不得被理解为部分支持。 |
+| `operations` | array[string] | 支持时必填 | 已实现 operation：`create`、`append`、`fork`、`reset`、`release` 的子集。 |
+| `persistence` | string | 支持时必填 | `connection`、`process` 或 `durable`，保证见 §7.6.5。 |
+| `max_contexts_per_principal` | uint32 | 支持时必填 | 每个认证 principal/security scope 的最大活跃 context 数。 |
+| `max_ttl_seconds` | uint32 | 支持时必填 | 接受的最大 idle TTL。 |
+| `tombstone_seconds` | uint32 | 支持时必填 | 节点承诺 released/expired tombstone 可见的最短时间。 |
+
 **示例**
 
 ```json
@@ -256,17 +274,39 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
       "result_anchor": "nps:system:llm.complete:response",
       "async": true,
       "required_capability": "llm:complete"
+    },
+    "llm.context.status": {
+      "description": "Inspect an LLM context or recover an idempotent create outcome",
+      "params_anchor": "nps:system:llm.context.status:request",
+      "result_anchor": "nps:system:llm.context.status:response",
+      "async": false,
+      "required_capability": "llm:context"
+    },
+    "llm.context.release": {
+      "description": "Release an LLM context",
+      "params_anchor": "nps:system:llm.context.release:request",
+      "result_anchor": "nps:system:llm.context.release:response",
+      "async": false,
+      "required_capability": "llm:context"
     }
   },
   "profiles": {
     "llm": {
-      "profile_version": "0.1",
+      "profile_version": "0.2",
       "provider": "willow",
       "default_model": "willow-small",
-      "actions": ["llm.complete"],
+      "actions": ["llm.complete", "llm.context.status", "llm.context.release"],
       "supports_stream": true,
       "supports_tools": true,
       "reasoning_visibility": "summary",
+      "context": {
+        "supported": true,
+        "operations": ["create", "append", "fork", "reset", "release"],
+        "persistence": "process",
+        "max_contexts_per_principal": 32,
+        "max_ttl_seconds": 3600,
+        "tombstone_seconds": 86400
+      },
       "models": [
         {
           "id": "willow-small",
@@ -303,6 +343,27 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `max_concurrent_streams` | uint32 | 每 Agent 最大并发流数 |
 | `max_subscriptions` | uint32 | 每 Agent 最大并发订阅数 |
 
+### 4.4a sla 字段
+
+参考性的 SLO 承诺。客户端（尤其是 marketplace / NeuronHub 聚合器）据此展示或过滤，协议层不做稽核。所有子字段均为可选。
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `p95_latency_ms` | uint32 | 自声明的端到端 P95 延迟（毫秒），以节点 `/.nwm` 参考端点为测量点 |
+| `availability` | string | 自声明的可用性目标，取十进制小数字符串，例如 `"0.999"` 表示「三个 9」。格式：`0\.[0-9]+`；缺省时客户端 SHOULD 按 best effort 理解。|
+| `sla_tier` | string | 可选的 marketplace 挂牌档位名：`"best-effort"` / `"standard"` / `"premium"`。该枚举之外的自由字符串保留给将来扩展，当前客户端 SHOULD 忽略。|
+
+### 4.4b billing 字段
+
+参考性的商业元数据。协议层不授权、不计量、也不结算费用；本字段的存在是为了让 marketplace 挂牌、agent 自动扩缩容与预算闸门能在调用前做出知情决策。所有子字段均为可选。
+
+| 字段 | 类型 | 描述 |
+|------|------|------|
+| `metering_profile` | string | 计量模型标识：`"free"` / `"metered"` / `"flat-rate"`。该枚举之外的自由取值为保留值，保守的客户端 SHOULD 按 `"metered"` 处理。|
+| `billing_unit` | string | `metering_profile = "metered"` 时的计量单位，例如 `"per-token"` / `"per-request"` / `"per-cgn"` / `"per-second"`。|
+| `price_hint` | string | 指示性价格，采用 ISO-4217 货币前缀 + 十进制数的形式，例如按 `billing_unit` 计的 `"USD 0.0002"`。仅为提示——以运营方的外部合同为准。|
+| `currency` | string | ISO-4217 货币代码（例如 `"USD"`、`"EUR"`、`"CNY"`）。可选的便利字段；`price_hint` 本身已含货币前缀。|
+
 ### 4.5 NWM 完整示例
 
 ```json
@@ -311,7 +372,8 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
   "node_id": "urn:nps:node:api.example.com:orders",
   "node_type": "complex",
   "display_name": "Order Management Node",
-  "manifest_version": "etag-2026041402",
+  "manifest_version": 7,
+  "manifest_updated_at": "2026-06-03T00:00:00Z",
   "min_agent_version": "0.3",
   "wire_formats": ["ncp-capsule", "msgpack", "json"],
   "preferred_format": "ncp-capsule",
@@ -345,6 +407,18 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
     "max_concurrent_streams": 10,
     "max_subscriptions": 5
   },
+  "stability": "stable",
+  "sla": {
+    "p95_latency_ms": 250,
+    "availability": "0.999",
+    "sla_tier": "standard"
+  },
+  "billing": {
+    "metering_profile": "metered",
+    "billing_unit": "per-request",
+    "price_hint": "USD 0.0002",
+    "currency": "USD"
+  },
   "actions": {
     "orders.create": {
       "description": "Create a new order",
@@ -354,7 +428,10 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
       "idempotent": true,
       "timeout_ms_default": 10000,
       "timeout_ms_max": 60000,
-      "required_capability": "nwp:invoke"
+      "required_capability": "nwp:invoke",
+      "stability": "stable",
+      "sla": { "p95_latency_ms": 800, "sla_tier": "premium" },
+      "billing": { "metering_profile": "metered", "billing_unit": "per-request", "price_hint": "USD 0.001" }
     },
     "orders.cancel": {
       "description": "Cancel an existing order",
@@ -364,7 +441,8 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
       "idempotent": true,
       "timeout_ms_default": 5000,
       "timeout_ms_max": 10000,
-      "required_capability": "nwp:invoke"
+      "required_capability": "nwp:invoke",
+      "stability": "experimental"
     }
   },
   "endpoints": {
@@ -381,11 +459,11 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 
 **NWM 条件请求**
 
-Agent SHOULD 缓存 NWM 并利用 `manifest_version` 做条件请求：HTTP 模式通过 `If-None-Match: {manifest_version}` 请求头，服务端若清单未变更则返回 `304 Not Modified`。
+Agent SHOULD 缓存 NWM 并利用 `manifest_version` 做条件请求：HTTP 模式通过 `If-None-Match: <manifest_version>` 请求头（整数字符串，例如 `If-None-Match: 7`），服务端若清单未变更则返回 `304 Not Modified`。服务端 MUST 在每次 `GET /.nwm` 响应中携带 `X-NWM-Version: <manifest_version>`，使 Agent 无需整份重取即可发现缓存过期。`manifest_updated_at` 则提供最近一次结构性变更的人类可读时间戳。
 
 ### 4.6 NWM Action 注册表
 
-`actions` 字段为 `{action_id: ActionSpec}` 字典，Action/Complex Node MUST 在此声明所有可调用操作。
+`actions` 字段为 `{action_id: ActionSpec}` 字典，Action/Complex/Anchor Node MUST 在此声明所有可调用操作。
 
 **ActionSpec 字段定义**
 
@@ -400,6 +478,9 @@ Agent SHOULD 缓存 NWM 并利用 `manifest_version` 做条件请求：HTTP 模�
 | `timeout_ms_max` | uint32 | 可选 | 最大允许超时毫秒数 |
 | `required_capability` | string | 可选 | 调用此操作所需的 NIP 能力，如 `"nwp:invoke"` |
 | `min_assurance_level` | string | 可选 | per-action 保证级别覆盖：`"anonymous"` / `"attested"` / `"verified"`。存在时覆盖顶层 NWM `min_assurance_level`，仅对本操作生效。请求级别不足时 MUST 返回 `NWP-AUTH-ASSURANCE-TOO-LOW`。（NPS-RFC-0003）|
+| `stability` | string | 可选 | per-action 生命周期阶段覆盖（`"experimental"` / `"stable"` / `"deprecated"`）。存在时对本 action 覆盖顶层 NWM `stability`。即使节点级 stability 为 `"stable"`，marketplace 客户端 SHOULD 仍然把 deprecated 的 action 显式呈现出来。|
+| `sla` | object | 可选 | per-action SLO 覆盖；形状与顶层 `sla` 字段（§4.4a）相同。存在时，此处给出的字段仅对本 action 覆盖顶层同名字段；未给出的子字段回落到顶层取值。|
+| `billing` | object | 可选 | per-action 商业元数据覆盖；形状与顶层 `billing` 字段（§4.4b）相同。字段级回落语义与 `sla` 一致。|
 
 **`/actions` 端点**
 
@@ -561,7 +642,7 @@ Agent                              Node
 **分页与流的关系**
 
 - 流式查询不使用 `cursor`，记录按 `order` 连续推送，直到满足 `limit × 帧数` 或全量推送完毕
-- Agent 如需提前终止，发送 SubscribeFrame（`action="unsubscribe"`, `stream_id` 等于 QueryFrame 的 `request_id`）或直接断开连接。**注**：此处复用 SubscribeFrame 作为流取消信号是有意为之——这是协议层面统一的流取消机制；节点通过 `stream_id` 路由，无论流源自 QueryFrame 还是 SubscribeFrame。
+- Agent 如需提前终止，发送引用该 QueryFrame `request_id` 的 ErrorFrame，或直接断开连接。节点按 `request_id` 路由取消信号，且 MUST NOT 要求流式查询使用 SubscribeFrame 形态的取消消息。
 - 节点 MUST 在连接断开后停止推送
 
 ### 6.7 聚合查询
@@ -730,6 +811,7 @@ reasoning 暴露策略。
 | `stream` | bool | 可选 | 为 true 时，响应为 `StreamFrame` 序列，而不是同步 `CapsFrame` |
 | `messages` | array | 必填 | 有序对话消息 |
 | `tools` | array | 可选 | 可供模型使用的工具定义 |
+| `context` | `LlmContextRequestDto` | 可选 | §7.6 定义的有状态 context operation；缺省时保持 stateless 完整历史语义。 |
 
 **`LlmMessageDto` 字段**
 
@@ -753,7 +835,7 @@ reasoning 暴露策略。
 
 | 请求模式 | 成功响应 |
 |---------|----------|
-| `async=false`, `stream=false` | `CapsFrame`，`anchor_ref = "nps:system:llm.complete:response"`，`data[0]` 为 `LlmCompleteActionResponse` |
+| `async=false`, `stream=false` | `CapsFrame`，`anchor_ref = "nps:system:llm.complete:response"`；ActionFrame 携带 `request_id` 时将其复制到响应；`data[0]` 为 `LlmCompleteActionResponse` |
 | `async=true`, `stream=false` | `AsyncActionResponse` ack；任务完成后，`system.task.status.result` 为 `LlmCompleteActionResponse` |
 | `stream=true` | `StreamFrame` 序列；首个 chunk 携带 `anchor_ref = "nps:system:llm.complete:stream"`，`data[]` 为 `LlmCompleteStreamChunkDto` |
 
@@ -768,10 +850,34 @@ Fire-and-forget 不是 `llm.complete` 的独立模式。客户端若不关心结
 | `content` | string | 可选 | 非工具 completion 的最终生成文本 |
 | `tool_calls` | array | 可选 | 模型请求的工具调用 |
 | `error` | string | 可选 | 模型/提供商层 completion error，见下方错误规则 |
+| `usage` | object | 可选 | 本次调用的实际模型/provider 用量，见下方 `LlmUsageDto` |
+| `context` | `LlmContextReceiptDto` | 可选 | 已提交的有状态 context receipt；stateless 请求必须省略。 |
 
 流式响应中，`LlmCompleteStreamChunkDto.content_delta` 携带该 chunk 的新增文本。
 最终 chunk SHOULD 设置 `stop_reason`；异常终止 SHOULD 使用 terminal
 `ErrorFrame` 或 `StreamFrame.error_code`。
+终止 chunk MAY 携带 `usage`。成功 stateful stream 的 context receipt 只允许出现
+在终止 chunk；非终止 chunk MUST 省略 receipt，并 SHOULD 省略 usage。
+
+**`LlmUsageDto` 字段**
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `input_tokens` | uint32 | 可选 | 模型逻辑输入 token 总量，包含被复用的 prefix |
+| `output_tokens` | uint32 | 可选 | 本次 completion 由模型生成的 token 数 |
+| `cache_hit` | bool | 可选 | 模型 runtime 是否复用了 prefix/KV cache 条目 |
+| `reused_tokens` | uint32 | 可选 | 从 prefix/KV cache 复用且未重新计算的输入 token 数 |
+| `evaluated_tokens` | uint32 | 可选 | 本次调用中由模型新计算的输入 token 数 |
+| `wire_input_bytes` | uint64 | 可选 | 在 NWP decoder 边界实测的完整序列化 ActionFrame payload 字节数；位于 NCP 解密后，并排除 NCP header/TLS/响应字节 |
+
+不同 provider 暴露的计量粒度不同，因此所有 usage 字段均为可选。`usage` 中的值
+MUST 是 runtime/provider 的实际观测值，不得填入估算值。`CapsFrame.token_est` 仍是
+CGN 估算，不能替代 `usage`。`CapsFrame.cached` 表示完整 NWP 响应命中服务端响应缓存，
+与 `usage.cache_hit` 不同。三个输入计量字段都已知时，生产端 SHOULD 满足
+`reused_tokens + evaluated_tokens = input_tokens`。
+只有 `reused_tokens > 0` 时才可令 `cache_hit = true`。`wire_input_bytes` MUST
+来自已接纳 wire payload 的实测值，不得通过重新序列化 DTO 获得。Provider 无法
+观测的 token 字段必须省略，不得按 prompt 长度推导。
 
 **错误规则**
 
@@ -786,83 +892,163 @@ completion，而非抛出传输或服务端错误。
 SHOULD 兼容 PascalCase/大小写不敏感属性名。MessagePack payload map MUST 使用
 与 JSON 相同的规范 snake_case key。
 
+### 7.6 有状态 LLM Context 与增量 Completion
+
+本节落实 NPS-CR-0011。它是 §7.5 的 opt-in 扩展，不新增 frame family。不含
+`LlmCompleteActionRequest.context` 的请求保持 stateless，发送完整有序消息列表。
+携带 `context` 的请求必须精确执行所请求的状态迁移或返回 ErrorFrame；服务端
+MUST NOT 静默重建 stateless prompt，也不得报告虚假 cache hit。
+
+#### 7.6.1 Request 与 receipt DTO
+
+Stateful `llm.complete` ActionFrame MUST 携带 `idempotency_key`。`messages` 在
+`create`/`reset` 中表示完整初始/替换 transcript，在 `append`/`fork` 中只表示
+`base_version` 之后的有序增量。只有 `fork` 允许空消息数组。
+
+**`LlmContextRequestDto`**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `operation` | enum | 必填 | `create`、`append`、`fork` 或 `reset`。 |
+| `context_id` | string | 条件必填 | 除 `create` 外均必填；`create` 禁止。 |
+| `base_version` | uint64 | 条件必填 | `append`、`fork`、`reset` 必填，MUST 等于已提交版本。 |
+| `ttl_seconds` | uint32 | 可选 | 请求 idle TTL；服务端 MAY 收窄到广告上限。 |
+
+`ttl_seconds` 出现时必须大于零。省略时，`create` 使用节点默认值；`append` 与
+`reset` 保留 context 当前的实际 TTL；`fork` 继承源 context 的剩余 TTL。显式值、
+继承值或默认值都 MAY 被收窄到 `max_ttl_seconds`；TTL 有界时，receipt MUST 返回
+实际 expiry。
+
+Context ID 是大小写敏感、无 padding 的 base64url 字符串，使用至少 128 bit
+密码学安全随机数生成。生产者 MUST 发出 22–128 个 `[A-Za-z0-9_-]` ASCII 字符。
+ID 不得编码 NID、tenant、model、数据库 key 或其他敏感 metadata。它只是 locator，
+不是授权凭据。
+
+**`LlmContextReceiptDto`**
+
+| 字段 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| `context_id` | string | 必填 | 不透明 context 标识。 |
+| `version` | uint64 | 必填 | operation 后的已提交版本；create/fork 从 1 开始，append/reset/release 恰好递增一次。 |
+| `operation` | enum | 必填 | `create`、`append`、`fork`、`reset` 或 `release`。 |
+| `state` | enum | 必填 | completion mutation 为 `active`；release 为 `released`。 |
+| `expires_at` | RFC 3339 timestamp | 可选 | 有界时的实际 idle expiry。 |
+| `parent_context_id` | string | fork 必填 | 源 context。 |
+| `parent_version` | uint64 | fork 必填 | fork 使用的不可变源版本。 |
+
+Unary success 在 `LlmCompleteActionResponse.context` 携带 receipt。Async ack 不
+提交 context；receipt 只出现在已完成的 `system.task.status.result`。Streaming
+success 只在终止 chunk 携带 receipt。Stateless response 与非终止 chunk MUST
+省略 receipt。
+
+#### 7.6.2 生命周期 action
+
+| Action | Request DTO | 成功响应 |
+|--------|-------------|----------|
+| `llm.context.status` | `LlmContextStatusRequestDto`，`context_id` / `idempotency_key` 恰好出现一个 | CapsFrame `anchor_ref = "nps:system:llm.context.status:response"`，`data[0] = LlmContextStatusDto` |
+| `llm.context.release` | `LlmContextReleaseRequestDto`，含 `context_id`、`base_version`；ActionFrame MUST 携带 `idempotency_key` | CapsFrame `anchor_ref = "nps:system:llm.context.release:response"`，`data[0] = LlmContextReceiptDto` |
+
+`LlmContextStatusDto` 包含必填 `state`（`busy`、`active`、`released`、`expired`、
+`failed`），以及可选 `context_id`、`version`、`expires_at`、`request_id`、
+`error_code`。Active/released/expired 必须携带 ID 与 version。运行中的 create
+报告 `busy`，但 commit 前必须省略 ID/version；失败 create 报告 `failed`、省略
+ID/version 并携带终结错误码。Status 只观察状态，MUST NOT 刷新 TTL。
+
+Release 把 vN 递增为 released tombstone vN+1。相同 owner 与 ActionFrame key
+replay 时幂等。对 released context 的 mutation 返回
+`NWP-LLM-CONTEXT-NOT-FOUND`；owner 在广告 retention window 内仍可用 status
+查看 tombstone。
+
+#### 7.6.3 Binding 与授权
+
+Create/reset 把 context 绑定到解析后的 model ID、有序 system message、canonical
+tool definition，以及 prefix 复用所需 provider/runtime compatibility revision。
+Append/fork MUST 保持 binding；delta 禁止 system-role message。省略 `tools` 表示
+复用绑定定义，出现时必须 canonical 相等。必填 `model` 必须解析到绑定模型。
+不一致返回 `NWP-LLM-CONTEXT-BINDING-MISMATCH`。
+
+Stateful `llm.complete` mutation 同时要求 `llm:complete` 与 `llm:context`；
+streaming/tools 仍分别额外要求 `llm:stream` / `llm:tool_call`。Status/release
+要求 `llm:context` 加 owner 授权，但不要求 caller 继续持有模型调用权。Owner 是认证 NID 加节点认证后的
+tenant/workspace security scope；scope 来自已接纳身份与部署 policy，不得来自
+客户端可控 context 字段。每次 operation MUST 重做 NIP expiry、revocation、
+assurance、scope、capability 检查；长时间工作还 MUST 在 commit 前复检。认证
+non-owner 返回 `NWP-LLM-CONTEXT-FORBIDDEN`。
+
+#### 7.6.4 原子状态迁移
+
+Create 提交 v1。Append/reset 对 `base_version` 做 CAS 并提交 vN+1。Fork 在
+admission 时原子读取 parent 快照，创建 child v1，且永不修改 parent；之后 parent
+mutation 不使已接纳 fork 快照失效。每个 context 同时至多一个 mutation
+reservation；陈旧/并发失败方收到 `NWP-LLM-CONTEXT-VERSION-CONFLICT`，
+ErrorFrame hint 携带当前版本。
+
+Completion mutation 只有在非 `error` stop reason 的成功终结结果后才提交；提交
+同时包含请求 delta 与终结 assistant text/tool calls。以普通 `end_turn` 表示的
+结构化 refusal MAY 提交。校验/授权/provider failure、timeout、cancel、
+`stop_reason = "error"` 或异常 stream 终止 MUST 保持旧 transcript/version 不变，
+并释放 reservation。
+
+服务端必须先按 NWM 广告的 persistence level 原子提交，再暴露终结 receipt。有效
+reservation 运行期间阻止 idle expiry。成功 create/append/fork/reset 开始或刷新
+TTL；status 与失败/取消 mutation 不刷新。若工作期间旧 TTL 已过期且 reservation
+abort，context 直接转为 expired。自动 expiry 记录最后已提交版本，不递增。
+
+#### 7.6.5 重连、重启与幂等
+
+NWM persistence 值语义如下：
+
+- `connection`：只在创建它的 NCP 连接上跨请求存活；
+- `process`：仅在重连仍路由到同一进程时存活，不跨进程重启或其他实例；
+- `durable`：在同一 logical node NID 与 endpoint identity 下跨进程重启存活。
+
+Connection/process context 只在 node instance 范围内有效，客户端 SHOULD 固定到
+创建 endpoint。本节不定义跨实例 migration/分布式 context store。状态丢失返回
+not-found/expired，MUST NOT 创建替代 context。
+
+现有 24 小时 ActionFrame idempotency window 同时保留 owner-scoped
+key-to-outcome，即使 context TTL 更短。首个请求仍运行时，duplicate 返回
+`NWP-ACTION-IDEMPOTENCY-CONFLICT`，MUST NOT 加入 live stream。完成后的
+unary/async 使用 cached-result 规则。Streaming replay 使用新的 StreamFrame
+sequence，返回逻辑一致的有序 text、tool calls、stop reason、usage 与终结 receipt，
+不得重新生成或 commit。按 idempotency key 调用 `llm.context.status` 可恢复丢失的
+create response；24 小时后 key lookup MAY 返回 not-found。
+
+#### 7.6.6 Expiry、限制与错误
+
+Released/expired tombstone SHOULD 对 owner 至少保留 `tombstone_seconds`。对
+expiry tombstone 的 mutation 返回 `NWP-LLM-CONTEXT-EXPIRED`；移除 tombstone 后
+返回 not-found。
+
+| 错误 | NPS status | 含义 |
+|------|------------|------|
+| `NWP-LLM-CONTEXT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | 未知/released context，或 idempotency lookup 已过期。 |
+| `NWP-LLM-CONTEXT-EXPIRED` | `NPS-CLIENT-GONE` | Idle-expiry tombstone 仍存在。 |
+| `NWP-LLM-CONTEXT-VERSION-CONFLICT` | `NPS-CLIENT-CONFLICT` | 版本陈旧或存在并发 mutation reservation。 |
+| `NWP-LLM-CONTEXT-BINDING-MISMATCH` | `NPS-CLIENT-CONFLICT` | model/system/tools/runtime binding 不一致。 |
+| `NWP-LLM-CONTEXT-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | Caller 非 owner，或缺少 scope/capability。 |
+| `NWP-LLM-CONTEXT-LIMIT-EXCEEDED` | `NPS-LIMIT-RESOURCE` | 达到每 principal 活跃 context 上限。 |
+| `NWP-LLM-CONTEXT-OPERATION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点支持 context，但不支持该 operation。 |
+
+字段组合不合法使用 `NWP-ACTION-PARAMS-INVALID`。本节所有失败均走 ErrorFrame
+或 terminal stream error，不得使用 `LlmCompleteActionResponse.error`。
+
+#### 7.6.7 合规与 benchmark 声明
+
+六 SDK MUST 执行 `conformance/nwp/llm_context_vectors.json`。声称 stateful 节省的
+benchmark 必须在 stateless 与 strict-native stateful 模式下比较同一组多轮
+role/tool 语义。第二轮 stateful MUST 只发送 delta，并同时证明更低的
+`wire_input_bytes` 与 runtime 实测 `evaluated_tokens`。MUST 禁用协议 fallback。
+
 ---
 
-## 8. SubscribeFrame (0x12)
+## 8. SubscribeFrame 概览 (0x12)
 
-用于在 Memory Node 上建立变更订阅，服务端以 DiffFrame (0x02) 推送增量更新。
+用于在 Memory Node 与 Anchor Node 上建立变更订阅。权威的 v0.13 线格式定义在 §13（CR-0006）：`subscription_id`、`filter`、`heartbeat_interval_ms`、`max_events` 与不透明 `cursor`。
 
-### 8.1 字段定义
+更早的 alpha 草案曾使用 `action`、`stream_id`、`heartbeat_interval` 与 `resume_from_seq`。这些名称在 NWP v0.13 已废止，合规的 alpha.11+ 生产者 MUST NOT 再发出它们。消费者 MAY 仅将其作为 pre-alpha.11 的兼容回退接受，但 MUST 在内部归一化为 §13 定义的字段。
 
-| 字段 | 类型 | 必填 | 描述 |
-|------|------|------|------|
-| `frame` | uint8 | 必填 | 固定值 `0x12` |
-| `action` | string | 必填 | `"subscribe"` / `"unsubscribe"` / `"ping"` |
-| `type` | string | 可选 | 保留订阅类型标识，见 §12。设置后按对应类型的字段语义解释，`anchor_ref` 由该类型重新定义；不设置则按下方默认 per-anchor 订阅行为 |
-| `stream_id` | string | 必填 | 客户端生成的 UUID v4 |
-| `anchor_ref` | string | 条件必填 | 订阅数据的 anchor_id（`action="subscribe"` 且 `type` 缺省或保留类型要求 anchor 时必填）|
-| `filter` | object | 可选 | 过滤条件（同 §6.2）；需 `capabilities.subscribe_filter=true` |
-| `heartbeat_interval` | uint32 | 可选 | 心跳间隔秒数，0 = 禁用，默认 30 |
-| `resume_from_seq` | uint64 | 可选 | 断线恢复时提供，从此序号之后重播事件（含该序号对应事件）；节点无法满足时返回 `NWP-SUBSCRIBE-SEQ-TOO-OLD` |
-
-### 8.2 DiffFrame 订阅扩展字段
-
-订阅推送的 DiffFrame（0x02）在标准字段基础上附加：
-
-| 字段 | 类型 | 描述 |
-|------|------|------|
-| `stream_id` | string | 关联的订阅流 ID |
-| `seq` | uint64 | 单调递增的事件序号（per-stream，从 1 开始）；Agent 用于检测丢帧和断线恢复 |
-| `event_type` | string | 默认订阅取 `"create"` / `"update"` / `"delete"`。保留订阅类型（§12）MAY 定义额外取值（例如 §12.2 拓扑事件类型）|
-| `timestamp` | string | 变更发生时间（ISO 8601）|
-
-**序号语义**
-
-- 每个 stream_id 的 seq 独立维护，从 1 开始，单调递增
-- Agent 检测到 seq 不连续时，SHOULD 使用 `resume_from_seq` 重新订阅
-- 节点 SHOULD 缓冲最近 N 个事件（推荐缓冲 10 分钟或 10,000 条，取先达者）
-- 若 `resume_from_seq` 超出缓冲范围，节点 MUST 返回 `NWP-SUBSCRIBE-SEQ-TOO-OLD`（Agent 需全量重查后重新订阅）
-
-### 8.3 订阅流程
-
-```
-Agent                                  Node
-  │                                       │
-  │── SubscribeFrame(subscribe, sid) ───→ │  建立订阅
-  │  ←─────────────────── CapsFrame(ack) │  确认（stream_id, status="subscribed"）
-  │                                       │
-  │  ←─── DiffFrame(seq=1, event) ──────  │  变更推送
-  │  ←─── DiffFrame(seq=2, event) ──────  │
-  │  ←─── DiffFrame(seq=N, ping) ───────  │  心跳（patch=[]）
-  │                                       │
-  │  [ 连接中断 ]                          │
-  │── SubscribeFrame(subscribe, sid,      │  断线恢复
-  │      resume_from_seq=N) ───────────→  │
-  │  ←─────────────────── CapsFrame(ack) │  确认（status="subscribed", resumed=true）
-  │  ←─── DiffFrame(seq=N+1, ...) ──────  │  从断点续播
-```
-
-**订阅确认 CapsFrame**
-
-```json
-{
-  "frame": "0x04",
-  "anchor_ref": "nps:system:subscribe:ack",
-  "count": 1,
-  "data": [{
-    "stream_id": "550e8400-...",
-    "status": "subscribed",
-    "resumed": false,
-    "last_seq": 0,
-    "effective_filter": {}
-  }]
-}
-```
-
-- `last_seq`：节点当前已知的最新事件 seq（新订阅时为 0，恢复时为缓冲中最新事件的 seq）
-- `resumed`：true 表示这是一次断线恢复
-
-### 8.4 HTTP 模式下的订阅（SSE）
+### 8.1 HTTP 模式下的订阅（SSE）
 
 ```
 POST /nwp/orders/subscribe HTTP/1.1
@@ -887,6 +1073,7 @@ data: [DiffFrame bytes, base64]
 | 头 | 必填 | 描述 |
 |----|------|------|
 | `X-NWP-Agent` | 条件必填 | Agent NID（auth.required=true 时必填）|
+| `Authorization` | 条件必填 | `auth.identity_type = "bearer"` 时的 HTTP bearer 凭据。原生模式不使用；原生模式的认证通过 NCP/NIP IdentFrame 绑定到会话。|
 | `X-NWP-Budget` | 可选 | CGN 预算上限（uint32）|
 | `X-NWP-Tokenizer` | 可选 | Agent 使用的 tokenizer 标识 |
 | `X-NWP-Depth` | 可选 | 节点图谱遍历深度，默认 1，最大 5 |
@@ -1128,21 +1315,23 @@ Anchor Node 集群拓扑的持续变更事件流。
 |------|------|
 | 帧 | SubscribeFrame（0x12），`type = "topology.stream"` |
 | 强制对象 | 全部 Anchor Node（NPS-AaaS Profile L2 及以上）|
-| 可取消 | 是，使用标准 `SubscribeFrame.action = "unsubscribe"` |
+| 可取消 | 是 —— 关闭订阅传输，或收到/发出终止性 ErrorFrame |
 
-**请求字段**（SubscribeFrame 顶层，叠加在 §8.1 标准字段之上）：
+**请求字段**（SubscribeFrame 顶层，叠加在 §13.1 标准字段之上）：
 
 | 字段 | 类型 | 必填 | 描述 |
 |------|------|------|------|
 | `type` | string | 必填 | 常量 `"topology.stream"` |
+| `subscription_id` | string | 必填 | 客户端生成的 UUID v4，用于关联拓扑流与推送的 DiffFrame |
+| `cursor` | string | 可选 | 上一次订阅中服务端签发的不透明续订 cursor。存在时，`cursor` 优先于 `topology.since_version` |
 | `topology` | object | 必填 | 拓扑相关参数容器，见下 |
 | `topology.scope` | string | 必填 | `"cluster"`（默认指 Anchor 自身集群）；其它 scope 留待将来 |
 | `topology.filter` | object | 可选 | 减少事件量。支持键：`tags_any`（数组，命中任一）、`tags_all`（数组，全部命中）、`node_roles`（数组——按角色过滤，匹配 `node_roles` 与给定值有交集的成员）。Anchor Node MUST 以 `NWP-TOPOLOGY-FILTER-UNSUPPORTED` 拒绝未识别 key |
-| `topology.since_version` | uint64 | 可选 | 从指定 version 之后恢复。Anchor Node MUST 在保留窗口内重播缺失事件；版本超出保留窗口时 MUST 推送 `resync_required` 事件，客户端 MUST 重发 `topology.snapshot` |
+| `topology.since_version` | uint64 | 可选 | 拓扑语境下的初次续订提示，供已持有快照 `version` 但尚无不透明 `cursor` 的客户端使用。Anchor Node MUST 在可行时重播缺失事件；版本超出保留窗口时 MUST 推送 `resync_required` 事件，客户端 MUST 重发 `topology.snapshot` |
 
-`type = "topology.stream"` 时，`topology.since_version` 是 `SubscribeFrame.resume_from_seq`（§8.1）在拓扑语境下的同义字段。两者同时出现时，`topology.since_version` 优先。
+`type = "topology.stream"` 时，`cursor` 是 v0.13 的规范续订机制。`topology.since_version` 仅在没有 cursor 可用时作为拓扑语境下的引导提示被接受；两者同时出现时，`cursor` 优先。
 
-**事件**通过 `DiffFrame (0x02)` 推送，遵循 §8.2 扩展字段。`topology.stream` 上下文下 `event_type` 取下表保留拓扑事件类型（在默认 `"create" / "update" / "delete"` 之外扩展），`seq` 是事件后的拓扑版本（§12.3），`payload` 携带类型相关数据。
+**事件**通过 `DiffFrame (0x02)` 推送，携带 §13.2 的订阅事件信封。在 `topology.stream` 订阅中，`subscription_id` 标识该流，`event_type` 取下表保留拓扑事件类型之一（在默认 `"create" / "update" / "delete"` 枚举之外扩展），`seq` 是事件后的拓扑版本（§12.3），`payload` 携带类型相关数据。
 
 | `event_type` | 触发条件 | `payload` 形态 |
 |--------------|---------|---------------|
@@ -1150,7 +1339,7 @@ Anchor Node 集群拓扑的持续变更事件流。
 | `member_left` | 成员显式离开或超过 NDP 在线 TTL | `{ "nid": "urn:nps:..." }` |
 | `member_updated` | 既有成员元数据变更（tags、activation_mode、capabilities 等）| `{ "nid": "urn:nps:...", "changes": { "<字段>": <新值>, ... } }` —— 仅字段级 diff，由客户端自行合并 |
 | `anchor_state` | Anchor 集群状态变更且与订阅方相关。payload 携带判别字段 `field`，用于选择下列子类型之一 | `{ "field": "<子类型>", "details": { ... } }` |
-| `resync_required` | 订阅方的 `topology.since_version` 已无法重播 | `{ "reason": "version_too_old" }`。本事件不带 `seq`，订阅方 MUST 重新发起 `topology.snapshot` |
+| `resync_required` | 订阅方 MUST 拆除本地视图，重新发起一次 `topology.snapshot`，再建立新的 `topology.stream` 订阅。触发条件：(a) `topology.since_version` 已无法重播；(b) 任何使既有版本计数器失效的 `anchor_state` 子类型（例如 `version_rebased`）；(c) 服务端状态丢失，需要重新订阅 | `{ "reason": "<version_too_old \| anchor_rebased \| server_state_lost>" }`。本事件 MAY 不带 `seq`，订阅方 MUST 重新发起 `topology.snapshot` |
 
 **`anchor_state` 子类型**（由 payload 的 `field` 判别字段选出）：
 
@@ -1164,7 +1353,7 @@ Anchor Node 集群拓扑的持续变更事件流。
 
 实现 MUST 把无法识别的 `anchor_state.field` 取值按前向兼容处理并忽略，而不是拆除订阅，使将来的 Phase 3 子类型可以在不破坏 wire 兼容的前提下引入。
 
-标准 SubscribeFrame 心跳（§8.2）与取消订阅（§8.1，`action = "unsubscribe"`）继续生效。
+标准 SubscribeFrame 心跳（§13.2）行为不变。v0.13 的取消是传输层的：任意一方 MAY 在有错误原因可用时先发出终止性 ErrorFrame，再关闭订阅流。
 
 ### 12.3 版本与一致性模型
 
@@ -1186,7 +1375,19 @@ Anchor Node 集群拓扑的持续变更事件流。
 
 - **Capability / metrics 字段 schema 标准化**：§12.1 的 `capabilities` 与 `metrics` 内容由实现自定，待积累足够实现样本后由后续 CR 再标准化。
 - **跨集群联邦查询**：在多个 Anchor Node 之间联合查询拓扑，属 NPS-AaaS Profile L3 / NPS Cloud 范畴，本节仅覆盖单 Anchor。
-- **授权模型**：`NWP-TOPOLOGY-UNAUTHORIZED` 仅保留为 wire 信号；具体何时触发它的策略推迟到后续 CR（NeuronHub 商业部署诉求驱动）。
+- **授权模型 —— 最小约束（Phase 1–2）**：Anchor Node MUST 在服务任何 `topology.*` 请求之前强制执行以下最小约束：
+
+  1. **Capability 闸门（按接口区分）**：Phase 1–2 区分两个授权接口：
+     - `topology.snapshot`（单次拉取，§12.1）：请求方 NID MUST 在 `IdentFrame.capabilities`（NPS-3 §5.1）中声明 `topology:read`；缺少该 capability MUST 返回 `NWP-TOPOLOGY-UNAUTHORIZED`。
+     - `topology.stream`（长连接订阅，§12.2）：请求方 MUST 在 `IdentFrame.capabilities` 中同时声明 `topology:read` 与 `topology:subscribe`。Phase 2 的 Anchor Node MUST 强制校验 `topology:subscribe` capability（缺失即视为授权失败），使订阅权限可与快照读取权限分离；尚未强制 `topology:subscribe` 的 Anchor Node MUST 至少强制 `topology:read`。无法强制 `topology:subscribe` 的节点 MUST 在 NWM `stability` 元数据中明确记录该未强制情况。
+
+     IdentFrame 由请求方私钥签名，因此该声明是完整性受保护的，但仍是自声明——在 Phase 1–2 并非 CA 背书。
+  2. **NDP 角色交叉校验（纵深防御）**：Anchor SHOULD 额外校验请求方最近一次收到的 `AnnounceFrame`（在 TTL 内）声明的 `node_roles` 含 `"anchor"`。不匹配时 SHOULD 返回带 `hint` 的 `NWP-TOPOLOGY-UNAUTHORIZED`。缺少 `AnnounceFrame` MUST NOT 阻断已通过 capability 闸门的请求方。
+  3. **流中拒绝（仅订阅）**：对已建立的 `topology.stream` 订阅，若 Anchor 撤销了请求方的 capability 集合（例如收到 CA 的 RevokeFrame、NID 过期或 scope 收窄），服务端 MUST 在流上推送一条终止性 `NWP-TOPOLOGY-UNAUTHORIZED` 事件，然后关闭该流。该事件使用标准 DiffFrame 信封，`event_type = "error"`，payload 为 `{ "code": "NWP-TOPOLOGY-UNAUTHORIZED", "reason": "<revoked | expired | scope_narrowed>" }`。Anchor Node MUST NOT 静默丢弃订阅方——必须给出一次干净的拒绝事件，客户端才能把授权失效与传输层断连区分开。
+  4. **声誉交互（NPS-RFC-0004 `reputation_policy`）**：当接收方 Anchor 声明了 `reputation_policy`（NWM Phase 2 字段，见 [NPS-RFC-0004 §4.4](rfcs/NPS-RFC-0004-nid-reputation-log.md)），且在 `topology.stream` 订阅活跃期间请求方 NID 的声誉分跌破配置阈值时，Anchor SHOULD 推送一条终止性事件，其 `payload.code = "NWP-AUTH-REPUTATION-BLOCKED"`，并携带匹配的 `incident`、`severity` 与账本条目 `seq`（按错误码 §14），然后关闭该流。对于初次握手阶段（请求时）的声誉拒绝，适用标准的同步 `NWP-AUTH-REPUTATION-BLOCKED` 错误码，订阅根本不会被建立。未声明 `reputation_policy` 的 Anchor 没有评估声誉的义务。
+  5. **Phase 3 [RFC-0002 stable]**：Anchor SHOULD 额外校验由 CA 背书的 `id-nps-node-roles` 证书扩展（将由后续 RFC-0002 修订定义），以弥合自声明缺口，把角色声明绑定到 CA 签发的证书上。
+
+  更细粒度的按集群命名空间或 ACL 策略仍由实现自定，留待后续 CR 跟踪。
 - **浏览器端传输（WebSocket）**：`npsd` 是否暴露 WebSocket 端点供浏览器消费另案跟踪。本节定义的拓扑查询语义与传输层无关。
 
 ---
@@ -1229,7 +1430,7 @@ SubscribeFrame 在 Memory Node 或 Anchor Node 上开启一个服务端推送订
 **Cursor 语义**
 
 - Cursor 值是服务端生成的不透明字符串。客户端 MUST NOT 解析、比较或自行构造它们。
-- 当 Agent 检测到 `seq` 断档时，SHOULD 用它收到的最新服务端 cursor 重新订阅。
+- 当 Agent 检测到 `seq` 断档时，SHOULD 用它收到的最新服务端签发 `cursor` 重新订阅。
 - 节点 SHOULD 保留最近的 cursor 位置（推荐：10 分钟或 10,000 条事件，先到者为准）。
 - 若 `cursor` 落在保留窗口之外，节点 MUST 返回 `NWP-SUBSCRIBE-SEQ-TOO-OLD`，或发出该保留类型特定的终止性 resync 事件（例如 `topology.stream` 的 `resync_required`）。
 
@@ -1267,15 +1468,22 @@ SubscribeFrame 在 Memory Node 或 Anchor Node 上开启一个服务端推送订
 | `NWP-ACTION-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | action_id 不存在 |
 | `NWP-ACTION-PARAMS-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | 操作参数 Schema 校验失败 |
 | `NWP-ACTION-IDEMPOTENCY-CONFLICT` | `NPS-CLIENT-CONFLICT` | 相同 idempotency_key 的请求正在进行中 |
+| `NWP-LLM-CONTEXT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | 有状态 LLM context 未知/已 release，或 idempotency lookup 已过期（§7.6）|
+| `NWP-LLM-CONTEXT-EXPIRED` | `NPS-CLIENT-GONE` | 有状态 LLM context 存在 idle-expiry tombstone（§7.6）|
+| `NWP-LLM-CONTEXT-VERSION-CONFLICT` | `NPS-CLIENT-CONFLICT` | `base_version` 陈旧，或并发 mutation 持有 reservation（§7.6）|
+| `NWP-LLM-CONTEXT-BINDING-MISMATCH` | `NPS-CLIENT-CONFLICT` | model/system/tools/runtime binding 与已提交 context 不一致（§7.6）|
+| `NWP-LLM-CONTEXT-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | Caller 不是 context owner，或缺少 scope/capability（§7.6）|
+| `NWP-LLM-CONTEXT-LIMIT-EXCEEDED` | `NPS-LIMIT-RESOURCE` | 达到每 principal 活跃 context 上限（§7.6）|
+| `NWP-LLM-CONTEXT-OPERATION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点支持 context，但不支持请求的生命周期 operation（§7.6）|
 | `NWP-TASK-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | task_id 不存在 |
 | `NWP-TASK-ALREADY-CANCELLED` | `NPS-CLIENT-CONFLICT` | 任务已被取消 |
 | `NWP-TASK-ALREADY-COMPLETED` | `NPS-CLIENT-CONFLICT` | 任务已完成，无法取消 |
 | `NWP-TASK-ALREADY-FAILED` | `NPS-CLIENT-CONFLICT` | 任务已失败，无法取消 |
-| `NWP-SUBSCRIBE-STREAM-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | unsubscribe 的 stream_id 不存在 |
+| `NWP-SUBSCRIBE-STREAM-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | 订阅操作引用的 `subscription_id` 不存在或已关闭 |
 | `NWP-SUBSCRIBE-LIMIT-EXCEEDED` | `NPS-LIMIT-EXCEEDED` | 超出最大并发订阅数 |
 | `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点不支持带 filter 的订阅 |
 | `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | 订阅流因数据源中断而终止 |
-| `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | resume_from_seq 超出节点缓冲范围，需全量重查 |
+| `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | `cursor` 落在节点保留窗口之外；需全量重查或走保留类型的 resync 流程 |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | 响应将超过 token 预算 |
 | `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | depth 超过节点允许的 max_depth |
 | `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | 节点图谱存在循环引用 |
@@ -1304,30 +1512,30 @@ SubscribeFrame 在 Memory Node 或 Anchor Node 上开启一个服务端推送订
 
 ## 15. 安全考量
 
-### 14.1 Scope 强制校验
+### 15.1 Scope 强制校验
 节点 MUST 在每次请求时校验 Agent NID 的 scope。超出 scope 的请求 MUST 返回 `NWP-AUTH-NID-SCOPE-VIOLATION`，不得返回任何数据。
 
-### 14.2 SSRF 防护
+### 15.2 SSRF 防护
 Complex Node 解析子节点引用时，MUST 维护允许的节点 URL 前缀白名单，禁止访问内网地址（RFC 1918）。
 
-### 14.3 Token Budget 强制执行
+### 15.3 Token Budget 强制执行
 超过预算时，节点 SHOULD 优先裁剪响应内容（字段精简 → 摘要 → 截断记录数）；无法裁剪时 MUST 返回 `NWP-BUDGET-EXCEEDED`，不得直接截断数据。详见 [token-budget.cn.md §4.3](token-budget.cn.md)。
 
-### 14.4 频率限制
+### 15.4 频率限制
 节点 SHOULD 对每个 Agent NID 实施频率限制。超限时返回 `NWP-RATE-LIMIT-EXCEEDED` 并附加 `X-NWP-Rate-Reset` 头。未认证请求 SHOULD 使用 IP 维度限制。
 
-### 14.5 Filter 注入防护
+### 15.5 Filter 注入防护
 - 字段名 MUST 仅含字母/数字/下划线/点，长度 ≤ 128 字符
 - `$regex` MUST 经过 ReDoS 检测；Filter 嵌套深度 ≤ 8
 - 节点 MUST 使用参数化查询，禁止字符串拼接
 
-### 14.6 callback_url 防滥用
+### 15.6 callback_url 防滥用
 - ActionFrame `callback_url` MUST 为 `https://` 前缀
 - 节点 SHOULD 对回调 URL 做 SSRF 检查（禁止内网地址）
 - 节点 SHOULD 对 callback 推送失败做指数退避重试（最多 3 次），之后放弃并标记任务为 `COMPLETED` 而非无限重试
 
-### 14.7 拓扑读取
-实现 §12 的 Anchor Node MUST 把 `topology.snapshot` 与 `topology.stream` 视作鉴权接口。在授权模型尚未标准化前（§12.4），实现 MUST 至少在 L2 要求 `auth.required = true`，并 SHOULD 仅放开给 `node_roles` 含 `"anchor"` 或 Agent scope 显式带 `topology:read` 的 NID。未授权调用方 MUST 收到 `NWP-TOPOLOGY-UNAUTHORIZED`，不得静默返回空结果，避免对集群成员关系做 oracle 攻击。
+### 15.7 拓扑读取
+实现 §12 的 Anchor Node MUST 把 `topology.snapshot` 与 `topology.stream` 视作鉴权接口。最小授权约束定义在 §12.4：在 Phase 1–2，请求方 NID MUST 在 `IdentFrame.capabilities` 中声明 `topology:read`（主闸门）；NDP `node_roles` 交叉校验是纵深防御性质的 SHOULD。未授权调用方 MUST 收到 `NWP-TOPOLOGY-UNAUTHORIZED`，不得静默返回空结果，避免对集群成员关系做 oracle 攻击。
 
 ---
 
@@ -1399,7 +1607,7 @@ alpha.16 之前的纯出向 Bridge Node。（NPS-CR-0010 §3.2）
 | `NPS-CLIENT-CONFLICT` | `-32004`（实现自定义）| |
 | `NPS-AUTH-UNAUTHENTICATED` | `-32001`（实现自定义）| MUST 是 JSON-RPC **错误**，绝不能是携带错误负载的成功响应 |
 | `NPS-AUTH-FORBIDDEN` | `-32003`（实现自定义）| MUST NOT 塌并到 `-32001` |
-| `NPS-LIMIT-RATE`、`NPS-LIMIT-BUDGET`、`NPS-LIMIT-PAYLOAD` | `-32005`（实现自定义）| |
+| `NPS-LIMIT-RATE`、`NPS-LIMIT-BUDGET`、`NPS-LIMIT-PAYLOAD`、`NPS-LIMIT-RESOURCE` | `-32005`（实现自定义）| |
 | `NPS-SERVER-UNSUPPORTED` | `-32601`（Method not found）| 含 `NWP-BRIDGE-DIRECTION-UNSUPPORTED` |
 | `NPS-SERVER-INTERNAL`、`NPS-SERVER-UNAVAILABLE`、`NPS-SERVER-TIMEOUT`、`NPS-DOWNSTREAM-UNAVAILABLE` | `-32603`（Internal error）| 上游节点故障 |
 | 分发前解析失败 | `-32700`（Parse error）| |
@@ -1420,7 +1628,7 @@ NPS 状态，绝不能一律回落到 `NPS-SERVER-INTERNAL`。
 | `NPS-CLIENT-CONFLICT` | `ABORTED` |
 | `NPS-AUTH-UNAUTHENTICATED` | `UNAUTHENTICATED` |
 | `NPS-AUTH-FORBIDDEN` | `PERMISSION_DENIED` |
-| `NPS-LIMIT-RATE`、`NPS-LIMIT-BUDGET`、`NPS-LIMIT-PAYLOAD` | `RESOURCE_EXHAUSTED` |
+| `NPS-LIMIT-RATE`、`NPS-LIMIT-BUDGET`、`NPS-LIMIT-PAYLOAD`、`NPS-LIMIT-RESOURCE` | `RESOURCE_EXHAUSTED` |
 | `NPS-SERVER-UNSUPPORTED` | `UNIMPLEMENTED` |
 | `NPS-SERVER-INTERNAL` | `INTERNAL` |
 | `NPS-SERVER-UNAVAILABLE`、`NPS-DOWNSTREAM-UNAVAILABLE` | `UNAVAILABLE` |
@@ -1524,13 +1732,19 @@ native 模式下，不受支持的已解码 frame type MUST 产生 `NPS-CLIENT-B
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.21 | 2026-08-12 | **NPS-CR-0011 有状态 LLM context/增量 completion**：NWM LLM profile 0.2 显式广告 context operation/persistence/limit；`llm.complete` 新增可选的 owner-bound 不透明 context request 与终结 receipt；新增 status/release 生命周期 action、CAS 版本、binding 校验、原子 cancel/stream commit、重启/幂等语义、实测 `wire_input_bytes`、七个确定性错误与共享合规向量。Stateless completion 保持兼容，stateful 请求绝不静默降级。Depends-On NIP 推进到 v0.14，以使用 `llm:context`。不新增 frame type。 |
 | 0.20 | 2026-07-29 | 新增 §16.5 可移植 Node/Bridge 服务端 profile 与跨语言共享向量。标准化 HTTP/native admission、角色分发、alpha.17 兼容窗口内的规范/旧 MIME 处理、有限 body 上限、取消、关联标识传播、Bridge dispatcher/SSRF/deadline preflight、异步 task mode 与终态 telemetry outcome。新增 `NWP-HTTP-BODY-TOO-LARGE` → `NPS-LIMIT-PAYLOAD`；不增加 frame type。Depends-On 推进到 NCP v0.11 与 NIP v0.13。 |
 | 0.19 | 2026-07-23 | **NPS-CR-0010 Bridge Node 是双向的**：解决规范自身的矛盾 —— §2.1 节点分类表、"已移除类型"注记、以及 NPS-CR-0001 本身都把 Bridge Node 定义为 NPS↔非-NPS 双向翻译，而 §2.1 的 callout 与规范性 MUST 列表却把它收窄成仅 NPS→外部。该收窄的唯一存在理由是让 `Bridge` 一名与当时独立的 `compat/*-ingress` 包区分开；那些包现已并入 Bridge 包，限制解除。Bridge Node 语义重构为 **出向**（不变）+ **入向**（新增）两组 MUST；MCP 入向 MUST 同时提供 `resources/*` 与 `tools/*`。§16 拆为两个独立合规 profile（§16.1.1 出向 / §16.1.2 入向）、规范性方向声明（§16.2）、以及规范性的分协议错误映射表（§16.3）—— 后者 MUST 由同一份实现同时服务两个方向。明确「角色 vs 库」边界：只有发出 `node_roles: ["bridge"]` 公告的部署才是 Bridge Node。`Depends-On` 升级 NDP 至 v0.11（定义 `bridge_inbound_protocols`）。新增一个错误码 `NWP-BRIDGE-DIRECTION-UNSUPPORTED`。Additive 且向后兼容：纯出向 Bridge Node 无需改动即保持合规。（正文中文翻译已同步 §2.1 与 §16 全章；由 edge 线 0.16 重编号 —— 已发布的 alpha.16 线独立把 0.15–0.17 用于下方 LLM profile 系列。）|
 | 0.18 | 2026-07-23 | **NPS-CR-0009 多 Anchor 高可用**：定案 §12.2 的两个 `anchor_state` 子类型 `anchor_failover`（`successor_nid` / `cluster_epoch` / `reason`）与 `anchor_quorum_lost`（`quorum_size` / `available`），解除原 Phase-3 占位的「MUST NOT emit」限制。拓扑响应/写入新增 `cluster_epoch`（uint64）所有权栅栏；standby 的写入以 `NWP-ANCHOR-NOT-LEADER` 拒绝，被取代的 leader 以 `NWP-ANCHOR-EPOCH-FENCED` 围栏。Additive 且按 Phase 门控：单 Anchor 集群保持 `cluster_epoch = 1`，不受影响。`Depends-On` 升级 NDP 至 v0.10（定义 AnnounceFrame 上的 `cluster_epoch` 与最高 epoch 解析规则）。新增两个错误码。|
 | 0.17 | 2026-07-05 | 新增 §9.5 HTTP Binding 拒绝错误码，为 HTTP overlay 前置条件拒绝和“已声明但未实现”的 capability rollout 窗口增加 6 个规范化 NWP 错误码：`NWP-HTTP-ORIGIN-FORBIDDEN`、`NWP-HTTP-CONTENT-TYPE-UNSUPPORTED`、`NWP-HTTP-ACCEPT-UNSATISFIABLE`、`NWP-HTTP-REQUEST-ID-MISMATCH`、`NWP-HTTP-FRAME-BODY-MALFORMED`、`NWP-CAPABILITY-ADVERTISED-UNIMPLEMENTED`。共享 `error-codes.md` 升级到 v1.6。 |
 | 0.16 | 2026-07-04 | 新增 §4.2a NWM `profiles` 与标准 LLM/Thinking Profile（`profiles.llm`），用于模型服务型 Action/Complex Node。明确 "Thinking Node" 是产品层别名，不是新的 `node_type`；粗粒度发现使用 NIP/NDP `llm:*` capabilities，具体模型、流式、工具、隐私与 reasoning 暴露元数据放在 NWM。无新增 frame type 或错误码。`Depends-On` NIP 升级到 v0.11，以使用 `llm:*` capability 注册表。 |
 | 0.15 | 2026-07-04 | 新增 §7.5，标准化 `llm.complete` ActionFrame contract：typed request/response DTO 形状、stop_reason 枚举、tool call 字段名、同步/异步/流式响应语义、ErrorFrame 与 payload error 的边界，以及 snake_case JSON/MessagePack key 策略。无新增 frame type 或错误码。 |
-| 0.14 | 2026-06-12 | 新增 §16 **Bridge Node 合规性**：形式化 MUST/SHOULD 要求 + 规范化 `bridge_target` 往返测试向量（http / grpc / mcp），六个 SDK 必须一致往返。原变更历史重编号为 §17。无新错误码；`Depends-On` 升级为 NCP v0.8 / NIP v0.10 / NDP v0.9。 |
+| 0.14 | 2026-06-12 | 新增 §16 **Bridge Node 合规性**：形式化 MUST/SHOULD 要求（公告 `node_type: "bridge"`、校验 `bridge_target.protocol`、未知字段不透明透传、无状态 / 不参与拓扑）+ 规范化 `bridge_target` 往返测试向量（http / grpc / mcp，含 `extras`），六个 SDK 必须一致往返。原 §16 变更历史重编号为 §17。无新错误码；`Depends-On` 无变化。 |
+| 0.14 | 2026-06-03 | NWM `manifest_version` 类型由不透明字符串（ETag）改为 uint32 单调计数器（从 1 开始，每次结构性变更递增）。新增 NWM 字段 `manifest_updated_at`（ISO 8601，可选），记录最近一次变更时间戳。服务端 MUST 在每次 `GET /.nwm` 响应中返回 `X-NWM-Version: <manifest_version>`；Agent 使用 `If-None-Match: <uint32>` 做条件请求。无新错误码；缓存命中沿用 `304 Not Modified`。 |
+| 0.13 | 2026-05-28 | §13 SubscribeFrame (0x12) 正式规范（关闭 CR-0006）：字段表（subscription_id、filter、heartbeat_interval_ms、max_events、cursor）、生命周期（open→active→heartbeat→close）、错误码索引。§12.4 `topology:subscribe` 的强制级别由 SHOULD 提升为 MUST；无法强制的节点 MUST 在 NWM stability 元数据中记录该未强制情况。NWM 新增可选字段 `trust_anchors`（CA NID URN 数组）。BridgeNode `bridge_target` 对象 schema 标准化（protocol + endpoint + extras 载体）。 |
+| 0.12 | 2026-05-11 | 补齐 NPS-CR-0002 Phase 2 的规范缺口。§8.2 DiffFrame 扩展表新增可选字段 `cgn_est`（uint32），按 [token-budget.cn.md §7.2](token-budget.cn.md) 用于推送流上的逐事件 CGN 上报；表格列重排以包含「必填」。§12.2 `topology.stream` 事件表：`anchor_state` 行新增显式子类型判别 schema（`version_rebased` 定义于 Phase 1–2；`anchor_failover` 与 `anchor_quorum_lost` 保留为 Phase 3 占位槽 —— stable 之前实现 MUST NOT 发出 Phase 3 子类型，且 MUST 忽略未知子类型以保证前向兼容）；`resync_required` 的触发条件与 `reason` 枚举扩宽（`version_too_old` / `anchor_rebased` / `server_state_lost`）。§12.4 Phase 1–2 授权模型扩充：(a) capability 闸门按接口拆分 —— `topology.snapshot` 要求 `topology:read`；`topology.stream` 要求 `topology:read`，且在 Phase 2 SHOULD 额外要求 `topology:subscribe`（Phase 3 为 MUST）；(b) 新增流中拒绝规则 —— capability 被撤销时，服务端 MUST 推送终止性 `NWP-TOPOLOGY-UNAUTHORIZED` 事件并关闭流；(c) 新增声誉交互 —— 对活跃订阅，声明了 `reputation_policy` 的 Anchor 在订阅方声誉跌破阈值时 SHOULD 推送终止性 `NWP-AUTH-REPUTATION-BLOCKED` 并关闭流。无新错误码；复用既有的 `NWP-TOPOLOGY-UNAUTHORIZED` 与 `NWP-AUTH-REPUTATION-BLOCKED`。`Depends-On` 无变化。详见 issue #41。 |
+| 0.11 | 2026-05-10 | NWM 新增可选顶层字段 `stability`（`experimental`/`stable`/`deprecated`）、`sla`（对象：`p95_latency_ms`、`availability`、`sla_tier`）与 `billing`（对象：`metering_profile`、`billing_unit`、`price_hint`、`currency`）（§4.1、§4.4a、§4.4b）。ActionSpec（§4.6）新增对应的 per-action `stability` / `sla` / `billing` 覆盖，并支持字段级回落到顶层取值。所有字段均为参考性（协议层不强制）且向后兼容 —— 0.11 之前的清单一律视为 `stability="stable"` 且无 SLO/计费元数据。使 marketplace / NeuronHub 客户端可按生命周期阶段与商业档位过滤、告警或排序，满足 AaaS-Profile 的发现需求。无新错误码；`Depends-On` 无变化。详见 issue #36。 |
+| 0.10 | 2026-05-01 | §12.4 授权模型把原先的「由实现自定」替换为 Phase 1–2 最小约束：Anchor Node MUST 要求 `IdentFrame.capabilities` 含 `topology:read`（capability 闸门，自声明但已签名）；SHOULD 交叉校验 NDP `node_roles` 含 `"anchor"` 作为纵深防御；Phase 3 [RFC-0002 stable] 增加 CA 背书的 `id-nps-node-roles` 证书扩展。§14.7 更新为引用 §12.4 定义的最小约束，取代原先「SHOULD restrict」的模糊措辞。`Depends-On` NIP 升级为 v0.6（定义 `topology:read` capability）。 |
 | 0.9 | 2026-05-01 | **破坏性更名（pre-1.0）**：拓扑成员对象字段 `node_kind` 更名为 `node_roles`（§12.1）；拓扑流过滤键 `node_kind` 更名为 `node_roles`（§12.2）。§2.1 更新 `node_kind` 引用为 `node_roles`。新增 §2.1 **节点角色解析**：`node_roles`（NDP，发现层，数组）与 `node_type`（NWM，服务层，字符串）是两个独立字段——`node_type` MUST 为 `node_roles` 中的一项；验证方 SHOULD 对照缓存 NDP 数据校验。§4.1 `node_type` 描述更新，补充跨协议约束及 §2.1 指针。§14.7 `node_kind` 引用更新为 `node_roles`。Depends-On NDP 升级为 v0.6。修复 M1 命名消歧问题。 |
 | 0.8 | 2026-04-27 | 新增 §12 **保留查询类型**，引入 `topology.*` 命名空间，强制于 NPS-AaaS Profile L2：`topology.snapshot`（QueryFrame，`type="topology.snapshot"`）与 `topology.stream`（SubscribeFrame，`type="topology.stream"`）。QueryFrame §6.1 与 SubscribeFrame §8.1 各新增可选顶层字段 `type` 用于选入保留类型。DiffFrame §8.2 `event_type` 通过保留订阅类型扩展枚举 —— `topology.stream` 增加 `member_joined` / `member_left` / `member_updated` / `anchor_state` / `resync_required`。新增 4 条错误码：`NWP-TOPOLOGY-UNAUTHORIZED`、`NWP-TOPOLOGY-UNSUPPORTED-SCOPE`、`NWP-TOPOLOGY-DEPTH-UNSUPPORTED`、`NWP-TOPOLOGY-FILTER-UNSUPPORTED`（§13）。新增 §14.7 拓扑读取安全节。原 §12 错误码 / §13 安全考量 / §14 变更历史顺延为 §13 / §14 / §15 以容纳新章节。详见 [NPS-CR-0002](cr/NPS-CR-0002-anchor-topology-queries.md)。 |
 | 0.7 | 2026-04-26 | **破坏性。** §2.1 节点类型：移除 `Gateway Node`；替换为 **Anchor Node**（集群控制平面 + NOP 路由 —— 继承既有角色）与 **Bridge Node**（NPS↔非-NPS 协议翻译 —— 全新）。NWM `node_type` 枚举更新；遗留 `"gateway"` MUST 拒绝。Anchor Node 详细语义（§2.1 内嵌）覆盖成员分派 + 可选注册表；Bridge Node 语义覆盖 HTTP/gRPC/MCP/A2A 目标适配器。Depends-On 升级为 NDP v0.8，引入 `node_kind` 数组形式 + `cluster_anchor` + `bridge_protocols` 字段。详见 [NPS-CR-0001](cr/NPS-CR-0001-anchor-bridge-split.md)。 |

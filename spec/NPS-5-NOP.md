@@ -8,7 +8,7 @@ English | [中文版](./NPS-5-NOP.cn.md)
 **Date**: 2026-07-29
 **Port**: 17433 (default, shared) / 17437 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11), NPS-2 (NWP v0.20), NPS-3 (NIP v0.13), NPS-4 (NDP v0.12)
+**Depends-On**: NPS-1 (NCP v0.11), NPS-2 (NWP v0.21), NPS-3 (NIP v0.14), NPS-4 (NDP v0.12)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).

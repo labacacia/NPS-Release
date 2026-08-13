@@ -22,8 +22,8 @@
 #   version_regex - optional override regex (group 1 must capture the version string)
 # ─────────────────────────────────────────────────────────────────────────────
 
-suite_version: "1.0.0-alpha.17"
-released_at: "2026-07-23"
+suite_version: "1.0.0-alpha.18"
+released_at: "2026-08-02"
 
 repos:
   # ── Spec & dev ────────────────────────────────────────────────────────────
@@ -72,17 +72,17 @@ repos:
   # ── Compatibility ingresses ───────────────────────────────────────────────
   - name: labacacia/NPS-mcp-ingress
     kind: dotnet-csproj
-    expected: required
+    expected: skip
     manifest_file: src/LabAcacia.McpIngress/LabAcacia.McpIngress.csproj
 
   - name: labacacia/NPS-a2a-ingress
     kind: dotnet-csproj
-    expected: required
+    expected: skip
     manifest_file: src/LabAcacia.A2aIngress/LabAcacia.A2aIngress.csproj
 
   - name: labacacia/NPS-grpc-ingress
     kind: dotnet-csproj
-    expected: required
+    expected: skip
     manifest_file: src/LabAcacia.GrpcIngress/LabAcacia.GrpcIngress.csproj
 
   # ── Standalone tools ──────────────────────────────────────────────────────

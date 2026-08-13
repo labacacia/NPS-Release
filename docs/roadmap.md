@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The latest suite release is **v1.0.0-alpha.16**. The release closes the Banyan integration gaps that were blocking SDK/spec adoption: typed remote NIP CA clients, native-mode NWP serving helpers, conformance manifests, live revocation hooks, native NCP TLS/mTLS hardening, signed CRL output, and transport-neutral observability.
+NPS is on a four-phase path from draft specification to formal standard. The latest suite release is **v1.0.0-alpha.17**. It delivers portable server/conformance profiles across all six SDKs, multi-Anchor HA, bidirectional Bridge serving, NIP Phase-3 enforcement, corrected NOP wire keys, and hardened daemon runtime behavior. Alpha.18 is the current unreleased candidate.
 
 ---
 

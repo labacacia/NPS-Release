@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — 为 AI Agent 和神经模型量身设计的完整互联网协议栈。
 >
-> 1.0.0-alpha.16 · 最新 suite release 1.0.0-alpha.16 · Apache 2.0 · [English](index.md)
+> 候选版 1.0.0-alpha.18 · 最新 suite release 1.0.0-alpha.17 · Apache 2.0 · [English](index.md)
 
 ---
 
@@ -38,19 +38,19 @@ pip install nps-lib==1.0.0a13
 npm install @labacacia/nps-sdk@alpha
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.16
+cargo add nps-sdk@=1.0.0-alpha.17
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.16
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.17
 
 # Java (Gradle)
-implementation("com.labacacia.nps:nps-java:1.0.0-alpha.16")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.17")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.16
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.17
 ```
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.16` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；`alpha` dist-tag 指向最新已发布 alpha。
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.17` 包含 package build 输出；`alpha` dist-tag 指向最新已发布 alpha。
 
 ---
 
@@ -65,7 +65,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.16
 
 ## 状态
 
-**v1.0.0-alpha.16** — 文档与规范当前跟踪 NCP v0.9、NWP v0.14、NIP v0.10、NDP v0.9、NOP v0.7。本次发布补齐类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper、live revocation、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。各生态包管理器可用性单独跟踪；.NET 包族已发布到 Nexus，并同时挂到 GitHub Release 作为 fallback bundle。**NIP CA Server** 在 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)。**NPS Daemons** bundle（`npsd` + `nps-runner` + `nps-ingress` + `nps-registry`）在 [`labacacia/nps-daemons`](https://github.com/labacacia/nps-daemons)。Layer-3 trust-anchor daemon 在 `innolotus` 组织私有，随 NPS Cloud GA 公开。
+**v1.0.0-alpha.17** — 已发布的 SDK/spec line 跟踪 NCP v0.11、NWP v0.20、NIP v0.13、NDP v0.12、NOP v0.9，交付六 SDK 可移植 server/conformance profile、多 Anchor HA、双向 Bridge serving、NIP Phase-3 enforcement、NOP wire key 修正与 daemon runtime 加固。尚未发布的 alpha.18 候选新增 NWP 0.21 有状态 LLM context 语义及相应 SDK/runtime。**NIP CA Server** 与公开 **NPS Daemons** bundle 的独立发布仍停在 alpha.16，alpha.18 候选正在准备。
 
 ---
 

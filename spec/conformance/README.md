@@ -41,6 +41,7 @@ spec/conformance/
 ├── nwp/
 │   ├── filter_dsl_vectors.json          # QueryFrame filter DSL parse + evaluate
 │   ├── action_frame_vectors.json        # ActionFrame: idempotency, async lifecycle, system.task.*, callback_url
+│   ├── llm_context_vectors.json         # Stateful LLM context: CAS, ownership, lifecycle, replay, usage
 │   ├── subscribe_frame_vectors.json     # SubscribeFrame: seq monotonicity, cursor, SSE wire, topology.stream events
 │   ├── query_frame_aggregation_vectors.json  # QueryFrame aggregation + topology.snapshot shape
 │   ├── portable_node_server_vectors.json # HTTP/native Node admission and dispatch profile
@@ -63,6 +64,11 @@ capability discovery.
 assert deterministic event order and terminal results, while the runtime
 vectors cover fail-closed callback validation, HMAC, Anchor re-resolution,
 scope carving, leases, SpawnSpec validation, lifecycle limits, and dedup keys.
+
+`nwp/llm_context_vectors.json` carries the NWP 0.21 stateful LLM context
+profile. It asserts stateless compatibility, owner-bound opaque IDs, atomic
+CAS/commit/abort, lifecycle tombstones, restart truth, idempotent stream replay,
+authorization re-checks, and measured token/wire accounting.
 
 ## Vector file format
 

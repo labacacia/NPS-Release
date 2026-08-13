@@ -2,7 +2,7 @@
 
 > [English](roadmap.md) | 中文版
 
-NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 suite release 为 **v1.0.0-alpha.16**；本次发布关闭 Banyan 集成中阻塞 SDK/spec 采用的缺口：类型化远程 NIP CA client、native-mode NWP serving helper、conformance manifest、live revocation hook、native NCP TLS/mTLS 加固、签名 CRL 输出与 transport-neutral observability。
+NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 suite release 为 **v1.0.0-alpha.17**，已交付六 SDK 可移植 server/conformance profile、多 Anchor HA、双向 Bridge serving、NIP Phase-3 enforcement、NOP wire key 修正与 daemon runtime 加固。Alpha.18 是当前尚未发布的候选版。
 
 ---
 

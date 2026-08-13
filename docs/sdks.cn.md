@@ -2,11 +2,11 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。当前已对齐 suite release **1.0.0-alpha.16**；各生态包管理器可用性单独跟踪。
+六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。当前已对齐 suite release **1.0.0-alpha.17**；各生态包管理器可用性单独跟踪。
 
-> alpha.16 release 说明：SDK 文档已补充类型化远程 NIP CA client、native-mode NWP serving helper、TC-N1/TC-N2 conformance helper。
+> alpha.17 release 说明：六个 SDK 已统一可移植 server/conformance profile、修正 NOP wire key，并对齐 HA/Bridge/NIP enforcement 能力面。
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.16` 已修复早期 alpha.11 tarball 缺少 `dist/` 的问题；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
+> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.17` 包含 package build 输出；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
 
 ---
 
@@ -19,7 +19,7 @@
 | TypeScript | `@labacacia/nps-sdk`                                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [Wiki: SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
 | Java       | `com.labacacia.nps:nps-java`                                 | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [Wiki: SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
 | Rust       | `nps-sdk`                                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [Wiki: SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.25     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.26.5   | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
 
 安装命令、极简示例、功能覆盖对照表等深度内容，请访问上方各语言 Wiki 页面，或查阅 [SDK-Quickstart](https://github.com/labacacia/NPS-Release/wiki/SDK-Quickstart) 获取语言无关的入门教程。
 

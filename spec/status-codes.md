@@ -2,8 +2,8 @@ English | [中文版](./status-codes.cn.md)
 
 # NPS Native Status Codes and HTTP Mapping
 
-**Version**: 0.6  
-**Date**: 2026-08-01  
+**Version**: 0.7
+**Date**: 2026-08-12
 
 NPS defines a native status-code system independent of HTTP. Native mode uses NPS status codes directly; HTTP / Overlay mode additionally provides a mapping to HTTP status codes.
 
@@ -70,6 +70,7 @@ All uppercase, hyphen-separated. For the full error-code list, see [error-codes.
 | `NPS-LIMIT-RATE` | 429 | Request rate exceeded |
 | `NPS-LIMIT-BUDGET` | 429 | Token budget exceeded |
 | `NPS-LIMIT-PAYLOAD` | 413 | Payload exceeds maximum frame size |
+| `NPS-LIMIT-RESOURCE` | 429 | Bounded live-resource count exceeded (contexts, leases, or equivalent retained objects) |
 
 ### Server Errors (SERVER)
 
@@ -132,6 +133,13 @@ Each protocol's specific error code (e.g. `NCP-ANCHOR-NOT-FOUND`) maps to the co
 | `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` |
 | `NWP-AUTH-NID-*` | `NPS-AUTH-*` (maps per specific error) |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` |
+| `NWP-LLM-CONTEXT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` |
+| `NWP-LLM-CONTEXT-EXPIRED` | `NPS-CLIENT-GONE` |
+| `NWP-LLM-CONTEXT-VERSION-CONFLICT` | `NPS-CLIENT-CONFLICT` |
+| `NWP-LLM-CONTEXT-BINDING-MISMATCH` | `NPS-CLIENT-CONFLICT` |
+| `NWP-LLM-CONTEXT-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` |
+| `NWP-LLM-CONTEXT-LIMIT-EXCEEDED` | `NPS-LIMIT-RESOURCE` |
+| `NWP-LLM-CONTEXT-OPERATION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` |
 | `NWP-RESERVED-TYPE-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` |
 | `NWP-HTTP-ORIGIN-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` |
 | `NWP-HTTP-CONTENT-TYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` |

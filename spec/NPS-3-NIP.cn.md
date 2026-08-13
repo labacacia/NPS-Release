@@ -4,8 +4,8 @@
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.13
-**Date**: 2026-07-23
+**Version**: 0.14
+**Date**: 2026-08-12
 **Port**: 17433（默认，共用）/ 17435（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
 **Depends-On**: NPS-1 (NCP v0.11)
@@ -112,6 +112,8 @@ Agent 身份声明与证书携带。每次建立连接时作为握手帧发送�
 | `metadata` | object | 可选 | Agent 元数据，见下 |
 | `assurance_level` | string | 可选 | 取值 `"anonymous"` / `"attested"` / `"verified"` 之一（见 §5.1.1）。当 NID 证书携带 `id-nid-assurance-level` 扩展时本字段为 REQUIRED。接收方 MUST 把缺失字段视作 `"anonymous"`（向后兼容 v1.0-alpha.2 发布者）。两端都存在时 MUST 保持一致——**Phase gate**：Phase 1–2（当前）强制可选（SHOULD 检查，MAY 强制执行）；Phase 3 flag day（见 NPS-RFC-0003 §8.1）起强制变为 MUST，违规返回 `NIP-ASSURANCE-MISMATCH`。（NPS-RFC-0003）|
 | `lineage` | object | 可选 | 签名 lineage 元数据。当本 NID 为编排器组（`role = "group"`）或短寿命会话（`role = "session"`）时存在。详见 §5.1.3。（NPS-CR-0003）|
+| `ocsp_staple` | string | 可选 | Agent 在发送时装订（staple）的 base64url 编码 DER OCSP 响应（NIP v0.9 §5.1.4）。接收方 SHOULD 验证 staple 签名；staple 过期返回 `NIP-OCSP-STAPLE-EXPIRED`。缺省时接收方 MAY 按 NWM 中声明的 `ocsp_url` 发起在线 OCSP 查询。|
+| `node_roles` | array[string] | 可选 | 自声明的节点角色标签，例如 `["memory", "orchestrator"]`（NIP v0.10）。词汇与 NDP `AnnounceFrame.node_roles` 相同。Phase 1–2：自声明，仅作参考。Phase 3 flag day 起：MUST 与 `id-nps-node-roles` X.509 扩展（`1.3.6.1.4.1.65715.2.2`）一致；不一致返回 `NIP-CERT-NODE-ROLES-MISMATCH`。|
 
 **metadata 字段（可选）**
 
@@ -158,6 +160,7 @@ metadata 字段不参与签名计算，Agent 可在运行时动态设置。Node 
 | `nop:orchestrate` | 可作为 Orchestrator 发起 TaskFrame |
 | `topology:read` | 可通过保留查询类型 `topology.snapshot` / `topology.stream` 读取 Anchor Node 拓扑数据（NPS-2 §12）；Phase 1–2 的 Anchor Node MUST 按 NPS-2 §12.4 要求此能力。Phase 1–2 中该能力为自声明并签名；CA 背书的角色绑定推迟到 Phase 3（RFC-0002 修订）。 |
 | `llm:complete` | 可调用带 LLM/Thinking Profile 节点上的标准 NWP `llm.complete` action（NPS-2 §4.2a、§7.5）|
+| `llm:context` | 可按 NWP §7.6 操作 owner-bound 有状态 LLM context。Create/append/fork/reset 还要求 `llm:complete`；status/release 只要求该 capability 加 owner 授权。仅持有 context ID 不产生任何授权。 |
 | `llm:stream` | 可接收流式 LLM completion 响应（`LlmCompleteActionRequest.stream = true`）|
 | `llm:tool_call` | 可在 LLM completion 流程中提交工具定义并接收 tool-call 请求 |
 | `llm:embed` | 节点声明 embedding 支持时，可调用标准 embedding action |
@@ -335,6 +338,30 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 
 ---
 
+### 5.1.4 OCSP Stapling（NIP v0.9）
+
+Agent MAY 把预先取得的 OCSP 响应附加到 IdentFrame 的 `ocsp_staple` 字段，使接收方 Node 无需实时 OCSP 往返即可验证证书吊销状态。
+
+**验证规则（接收方）**
+
+1. 把 `ocsp_staple` 从 base64url 解码，得到 DER 编码的 `OCSPResponse`。
+2. 用颁发 CA 的证书（取自 `cert_chain` 或 Node 本地信任库）验证该 OCSP 响应的签名。
+3. 检查 `thisUpdate` 与 `nextUpdate`：若当前时间晚于 `nextUpdate`，返回 `NIP-OCSP-STAPLE-EXPIRED`。
+4. 在 `SingleResponse` 中检查由 `serial` 标识的那张证书的 `certStatus`。若为 `revoked`，返回 `NIP-CERT-REVOKED`。
+5. 通过全部检查的 staple 覆盖该 serial 的任何已缓存吊销状态；Node SHOULD NOT 再发起实时 OCSP 请求。
+
+当 `ocsp_staple` 缺省时，Node MAY 按 `NWM.ocsp_url`（§4.1）声明的 URL 发起在线 OCSP 查询。该查询为可选项，但对 `"verified"` 保证等级的端点 RECOMMENDED。
+
+**X.509 OID 注册表（NIP v0.9 —— PEN 65715 arc）**
+
+| OID | 名称 | ASN.1 类型 | 描述 |
+|-----|------|-----------|------|
+| `1.3.6.1.4.1.65715.2.1` | `id-nid-assurance-level` | UTF8String | Agent 保证等级（`anonymous` / `attested` / `verified`）。CA MUST 在颁发时填充。|
+| `1.3.6.1.4.1.65715.2.2` | `id-nps-node-roles` | SEQUENCE OF UTF8String | `AnnounceFrame.node_roles` / `IdentFrame.node_roles` 携带的角色标签。CA SHOULD 从注册请求中填充。Phase 3 起强制。|
+| `1.3.6.1.4.1.65715.2.3` | `id-nps-capabilities` | SEQUENCE OF UTF8String | 能力字符串（词汇与 `IdentFrame.capabilities` 相同）。CA MAY 填充，作为未签名 `capabilities` 字段的 CA 背书替代。Phase 3。|
+
+---
+
 ### 5.2 TrustFrame (0x21)
 
 跨 CA 信任链传递与能力授权。TrustFrame 让某一 CA（**grantor**，授权方）授权另一 CA（**grantee**，受权方）颁发的 IdentFrame 中携带的 `capabilities` 被已信任 grantor 的 Node 接受 —— 而无需将 grantee 加入每个 Node 的 `trusted_issuers` 列表。授权按能力子集与一组 `nwp://` URL 模式作 scope 限制；通过 grantor 的签名做到端到端可验证。开源 SDK 承载完整 wire frame，并 MAY 提供针对显式 pin 住的 grantor anchor 的基础验证；托管多 CA federation、trust-anchor discovery、吊销 feed 与商业 trust-chain policy 属于 NPS Cloud 范畴。
@@ -346,7 +373,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 | `frame` | uint8 | 必填 | 固定为 `0x21`。|
 | `grantor_nid` | string（NID）| 必填 | 授权方 CA 的 NID。MUST 出现在验证方 Node 的 `trusted_issuers` 中，TrustFrame 才会生效。|
 | `grantee_ca` | string（NID）| 必填 | 受权方 CA 的 NID。`issued_by` 等于 `grantee_ca` 的 IdentFrame 在该授权下被接受。|
-| `trust_scope` | array of string | 必填 | 本次授权覆盖的能力字符串。MUST 是 §5.1 中标准 `capabilities` 枚举的子集（`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read` / `llm:complete` / `llm:stream` / `llm:tool_call` / `llm:embed` / `llm:rerank`）。受权方 MUST NOT 颁发携带该集合外能力的下游 IdentFrame。|
+| `trust_scope` | array of string | 必填 | 本次授权覆盖的能力字符串。MUST 是 §5.1 中标准 `capabilities` 枚举的子集（`nwp:query` / `nwp:action` / `nwp:stream` / `ncp:stream` / `nop:delegate` / `nop:orchestrate` / `topology:read` / `llm:complete` / `llm:context` / `llm:stream` / `llm:tool_call` / `llm:embed` / `llm:rerank`）。受权方 MUST NOT 颁发携带该集合外能力的下游 IdentFrame。|
 | `nodes` | array of string | 必填 | 本次信任适用的 `nwp://` URL 模式。`*` 匹配单段路径；`**` 匹配多段路径。空数组表示不覆盖任何 Node（授权事实上失效）。|
 | `issued_at` | string（ISO 8601 UTC）| 必填 | 颁发时间。|
 | `expires_at` | string（ISO 8601 UTC）| 必填 | 过期时间。超过该时刻后帧 MUST 被拒绝并返回 `NIP-TRUST-FRAME-EXPIRED`。|
@@ -474,6 +501,32 @@ IdentFrame   Agent 自动触发      立即生效         30 天
              新旧并行 1 小时      该 NID 请求
 ```
 
+### 6.1 短时 / 可续期证书 profile（边缘 mTLS）
+
+在 `nps-ingress`（L2）网关终结原生模式双向 TLS 的边缘部署（NPS-RFC-0006 §6.3），可以借助
+**短时证书**在不做逐请求 OCSP 往返的前提下把吊销暴露窗口降到最小。本 profile 是对标准有效期
+档位（§2.1）的增量补充，由 CA 在颁发时选定。
+
+| 属性 | 标准 Node 证书 | **短时边缘证书** |
+|------|----------------|------------------|
+| 有效期 | 90 天 | **1–24 小时**（默认 6 小时）|
+| 续期触发 | 到期前 7 天 | **续期窗口 = 剩余有效期的 25%** |
+| 续期重叠 | 新旧并行 1 小时 | 新旧并行至旧证书的 `expires_at` |
+| 吊销依赖 | OCSP / CRL | **有效期 ≤ OCSP 缓存 TTL** —— 短有效期本身即主要吊销手段，OCSP 只作纵深防御 |
+| 与 OCSP staple 的交互 | 可选 | 网关 SHOULD 装订（`IdentFrame.ocsp_staple`，NIP v0.9 §8.2）；staple 响应若比证书剩余有效期还旧，MUST 刷新（`NIP-OCSP-STAPLE-EXPIRED`）|
+
+规则：
+
+1. 短时边缘证书的有效期 MUST 落在 `[1h, 24h]` 区间内。请求颁发超出该区间的证书返回
+   `NIP-CA-SESSION-VALIDITY-INVALID`（复用会话 NID 路径的错误码，§5）。
+2. CA SHOULD 支持**在线续期**（ACME `agent-01`，NPS-RFC-0002），使边缘节点无需运营方介入即可
+   在续期窗口到来前自行续期。
+3. 依赖方（例如 `nps-ingress`）MUST 以 `NIP-CERT-EXPIRED` 拒绝 `expires_at ≤ now` 的短时证书；
+   由于有效期本身很短，当证书有效期 ≤ 依赖方配置的 OCSP 缓存 TTL 时，依赖方 MAY 跳过逐请求
+   OCSP 查询。
+4. 短时边缘证书参与 TLS 1.3 会话恢复（NPS-RFC-0006 §6.4）：恢复票据 MUST NOT 比签发它的那张
+   证书活得更久。
+
 ---
 
 ## 7. 验证流程
@@ -543,6 +596,83 @@ Phase-3 flag day(`v1.0.0-beta.1`,NPS-RFC-0003 §8.1)将强制的 CA 证明校验
 角色与能力检查为**子集**检查(frame 声明不得超过 CA 证明范围);少声明是允许的。这在不改变
 wire 格式的前提下,收口了 Phase 1–2 遗留的自声明缺口(§5.1、NPS-2 §12.4)。
 
+### 7.6 可移植 CA 与验证 Profile（NIP v0.13）
+
+本 profile 使 §7 验证方与开源 CA 生命周期在各 SDK 之间保持确定性。语言无关的
+[`revocation_policy_vectors.json`](conformance/nip/revocation_policy_vectors.json)
+与 [`signed_crl_vectors.json`](conformance/nip/signed_crl_vectors.json)
+用例为规范性要求。
+
+**验证顺序**
+
+完整验证方 MUST 按以下顺序执行适用的检查，并在第一个失败处停止：
+
+1. 有效期；
+2. 直接受信任的颁发者，或一条有效的 pin 住 grantor 的 TrustFrame 路径；
+3. 帧签名、可选的 X.509 链，以及 Phase-3 检查；
+4. 存在 lineage 时的父 / 组状态；
+5. 实时吊销策略；
+6. 所需能力；
+7. 目标 Node scope。
+
+对外结果沿用既有的 §7 步骤编号：实时吊销仍为步骤 4，能力为步骤 5，scope 为步骤 6。
+
+**吊销模式**
+
+接收方 MUST 暴露带两个取值的 `revocation_mode` 策略：
+
+- `if_configured` 是 alpha 期的兼容默认值。未配置任何吊销源时，记录一条诊断信息后继续验证。
+- `required` 在未配置任何吊销源时以 `NIP-OCSP-UNAVAILABLE` 拒绝。`public-federated` 部署 MUST 使用该模式。
+
+已配置的吊销源按以下固定顺序查询：
+
+1. 已验证的本地 CRL / 缓存；
+2. 实时吊销回调；
+3. 等价于 `INipCaStore` 的按 serial 查询；
+4. CA 声明的 OCSP 端点。
+
+结果为已吊销时立即以 `NIP-CERT-REVOKED` 停止。已配置吊销源出现异常、传输失败、非成功 HTTP
+响应或响应格式错误时，MUST fail closed 并返回 `NIP-OCSP-UNAVAILABLE`。既有的 `ocsp_fail_open`
+兼容逃生口仅适用于 OCSP 可用性失败；它 MUST 默认为 `false`，且 MUST NOT 在 `public-federated`
+部署中开启。一份已配置且当前有效、但不含该 serial 的本地 CRL，即可在无需在线查询的情况下满足
+`required` 模式。
+
+**可移植的开源 CA 生命周期**
+
+- Register MUST 拒绝重复 NID 与重复 serial。
+- Renew MUST 追加新 serial，同时保留先前记录以供审计。
+- Revoke MUST 更新当前存活记录，并使其对实时验证与下一次 CRL 响应可见。
+- CA store MUST 支持按 NID 与 serial 查询、已吊销枚举、父级枚举与全量枚举。管理侧的全量枚举通过
+  `GET /v1/certificates` 暴露，需 Operator 授权。
+- `/.well-known/nps-ca.endpoints.ocsp` MUST 指向一个真实提供服务的端点。CA MUST 省略自身不提供的端点。
+
+`GET /v1/crl` 返回一份带签名的 JSON 制品：
+
+```json
+{
+  "issued_by": "urn:nps:org:ca.example.com",
+  "issued_at": "2026-07-29T01:00:00Z",
+  "entries": [
+    {
+      "nid": "urn:nps:agent:ca.example.com:agent-001",
+      "serial": "0x0001",
+      "revoked_at": "2026-07-29T00:00:00Z",
+      "reason": "key_compromise"
+    }
+  ],
+  "signature": "ed25519:..."
+}
+```
+
+签名覆盖去掉 `signature` 并对 `issued_by`、`issued_at`、`entries` 内容递归排序后形成的 RFC 8785
+规范化 JSON 对象。客户端 MUST 先用 `/.well-known/nps-ca` 提供的 CA 公钥验证该签名，才能把这些
+条目当作本地吊销源使用。条目 MUST 按 `(revoked_at, serial, nid)` 升序输出，使相同的 CA 状态与
+`issued_at` 产出确定性的制品内容。
+
+本 profile 新增一个管理类 HTTP 端点，不新增任何帧字段或错误码。
+
+---
+
 ## 8. NIP CA Server OSS API
 
 | 方法 | 路径 | 认证 | 描述 |
@@ -557,6 +687,7 @@ wire 格式的前提下,收口了 Phase 1–2 遗留的自声明缺口(§5.1、N
 | POST | `/v1/orchestrators/groups/{group_nid}/revoke` | Operator Cert | （NPS-CR-0003）吊销该组，并级联吊销其下所有仍存活的会话 |
 | GET | `/v1/orchestrators/groups/{group_nid}/sessions` | Operator Cert | （NPS-CR-0003）列出该组已颁发的会话（审计用途）|
 | GET | `/v1/ca/cert` | 无 | CA 公钥证书 |
+| GET | `/v1/certificates` | Operator Cert | 枚举已颁发的证书记录，供审计使用 |
 | GET | `/v1/crl` | 无 | 证书吊销列表 |
 | GET | `/.well-known/nps-ca` | 无 | CA 发现端点 |
 
@@ -580,6 +711,24 @@ wire 格式的前提下,收口了 Phase 1–2 遗留的自声明缺口(§5.1、N
 }
 ```
 
+### 8.1 Registration Authority（RA）端点（NPS-CR-0005，stub）
+
+NPS-CR-0005 引入三档 Registration Authority（RA）模型，**在上文 Operator 凭证的
+`POST /v1/agents/register` 流程之外**，再提供若干由策略驱动的 Agent 准入路径。默认档位仍为
+`operator_only` —— 新档位通过 `NipCaOptions.EnrollmentTier` 显式开启，并新增以下端点：
+
+| 方法 | 路径 | 认证 | 描述 |
+|------|------|------|------|
+| POST | `/v1/enrollment/tokens` | Operator Cert | （NPS-CR-0005，Tier 2）签发一次性、按 NID 限定 scope 的 bootstrap token。|
+| GET  | `/v1/enrollment/pending` | Operator Cert | （NPS-CR-0005，Tier 3）列出等待管理员裁决的注册请求。|
+| POST | `/v1/enrollment/pending/{id}/approve` | Operator Cert | （NPS-CR-0005，Tier 3）批准一条待决请求并颁发 IdentFrame。|
+| POST | `/v1/enrollment/pending/{id}/reject` | Operator Cert | （NPS-CR-0005，Tier 3）以运营方给出的理由拒绝一条待决请求。|
+
+三个档位（allowlist / bootstrap token / pending queue）、新增错误码（`NIP-RA-TOKEN-INVALID`、
+`NIP-RA-TOKEN-EXPIRED`、`NIP-RA-NID-NOT-ALLOWED`、`NIP-RA-PENDING-REJECTED`）以及
+`NipCaOptions.EnrollmentTier` 选择器，由 **[NPS-CR-0005](./cr/NPS-CR-0005-nip-ca-ra-model.md)**
+完整定义。这些端点的正文、请求 / 响应结构与验证流程将在 CR-0005 进入 Implemented 后落入本节。
+
 ---
 
 ## 9. 错误码
@@ -592,12 +741,15 @@ wire 格式的前提下,收口了 Phase 1–2 遗留的自声明缺口(§5.1、N
 | `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | 颁发者不在信任列表 |
 | `NIP-CERT-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | 证书缺少所需能力 |
 | `NIP-CERT-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | 证书 scope 不覆盖目标路径 |
+| `NIP-CERT-CAPABILITIES-EXCEEDED` | `NPS-AUTH-FORBIDDEN` | `IdentFrame.capabilities` 声明了 CA 背书的 `id-nps-capabilities` 扩展中不存在的能力；Phase-3 强制校验（NIP v0.12 §7.5）|
 | `NIP-CA-NID-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | NID 不存在 |
 | `NIP-CA-NID-ALREADY-EXISTS` | `NPS-CLIENT-CONFLICT` | NID 已存在（重复注册）|
 | `NIP-CA-SERIAL-DUPLICATE` | `NPS-CLIENT-CONFLICT` | 证书序列号已存在 |
 | `NIP-CA-RENEWAL-TOO-EARLY` | `NPS-CLIENT-BAD-PARAM` | 尚未到续期窗口 |
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | 请求 scope 超出父级 scope |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP 服务暂不可用 |
+| `NIP-OCSP-STAPLE-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | `IdentFrame.ocsp_staple` 的 `nextUpdate` 已过期 —— staple 已陈旧，Agent 必须刷新后重发（NIP v0.9 §5.1.4）|
+| `NIP-CERT-NODE-ROLES-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.node_roles` 与 `id-nps-node-roles` X.509 扩展不一致；Phase 3 强制校验（NIP v0.10）|
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame 签名或格式不合法 —— 见 §5.2 |
 | `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` 已过期 —— 见 §5.2 |
 | `NIP-TRUST-FRAME-GRANTOR-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `grantor_nid` 自身的 CA 证书已被吊销或过期 —— 见 §5.2 |
@@ -640,9 +792,13 @@ OCSP 响应时间 SHOULD 归一化（固定延迟至 200ms），防止通过响�
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.14 | 2026-08-12 | 新增标准 `llm:context` capability，用于 NWP §7.6 有状态 LLM context 生命周期，并允许 TrustFrame `trust_scope` 覆盖它。Completion mutation 还要求 `llm:complete`；owner 授权的 status/release 只需 `llm:context`。Context ID 只是 locator，不是 bearer authorization。不新增 frame 字段或 NIP 错误码。 |
+| 0.13 | 2026-07-29 | 新增 §7.6 **可移植 CA 与验证 Profile**：确定性的验证顺序与吊销源顺序、`if_configured` 与 fail-closed 的 `required` 两种吊销模式、带签名的确定性 CRL 语义、CA store 全量枚举，以及需鉴权的 `GET /v1/certificates`。新增共享的吊销策略与签名 CRL 测试向量。无新增 frame 字段或错误码。|
 | 0.12 | 2026-07-23 | 新增 §7.5 **Phase-3 强制模式**：接收侧 `phase3_enforcement` 验证策略开关，把 Phase-1–2 可选的 CA 声明校验（assurance / node_roles / capabilities / OCSP-staple）在 `v1.0.0-beta.1` flag day 之前提前变为硬性 MUST —— flag day 因此只是默认值切换而非代码变更。角色/能力检查为子集检查（不得声称未经 CA 见证的内容）；各检查仅在对应证书扩展存在时生效（自声明 NID 不受影响）。新增错误码 `NIP-CERT-CAPABILITIES-EXCEEDED`（`NPS-AUTH-FORBIDDEN`）。增量、向后兼容。（由 edge 线 0.11 重编号 —— 已发布的 alpha.16 线独立地把 0.11 用于下面的 LLM capability 字符串。）|
 | 0.11 | 2026-07-04 | 新增标准 LLM capability 字符串（`llm:complete`、`llm:stream`、`llm:tool_call`、`llm:embed`、`llm:rerank`），用于 NWP LLM/Thinking Profile 的发现与授权。TrustFrame `trust_scope` 可覆盖这些能力。无新增 frame 字段或错误码。 |
-| 0.10 | 2026-06-12 | 新增 §6.1 **边缘 mTLS 短时/可续期证书 profile**：1–24 小时有效期（默认 6 小时），用于 `nps-ingress`（L2）终结的原生模式 mTLS（NPS-RFC-0006 §6.3）；续期窗口 = 剩余有效期 25%；ACME `agent-01` 在线自续期；有效期 ≤ OCSP 缓存 TTL，以短有效期作为主要吊销手段；OCSP staple 刷新交互（`NIP-OCSP-STAPLE-EXPIRED`）；恢复票据受证书有效期约束（NPS-RFC-0006 §6.4）。复用现有错误码；无新错误码。（正文中文翻译待补，见 version-matrix translation_lag） |
+| 0.10 | 2026-06-12 | 新增 §6.1 **边缘 mTLS 短时/可续期证书 profile**：1–24 小时有效期（默认 6 小时），用于 `nps-ingress`（L2）终结的原生模式 mTLS（NPS-RFC-0006 §6.3）；续期窗口 = 剩余有效期 25%；ACME `agent-01` 在线自续期；有效期 ≤ OCSP 缓存 TTL，以短有效期作为主要吊销手段；OCSP staple 刷新交互（`NIP-OCSP-STAPLE-EXPIRED`）；恢复票据受证书有效期约束（NPS-RFC-0006 §6.4）。复用现有错误码（`NIP-CA-SESSION-VALIDITY-INVALID`、`NIP-CERT-EXPIRED`）；无新错误码。 |
+| 0.10 | 2026-06-03 | `IdentFrame.node_roles`（`string[]`，可选）—— 自声明角色标签，词汇与 `NDP.AnnounceFrame.node_roles` 相同；Phase 3 起对 `id-nps-node-roles` X.509 扩展（OID 65715.2.2）做门控校验；新增错误码 `NIP-CERT-NODE-ROLES-MISMATCH`。|
+| 0.9 | 2026-05-31 | `IdentFrame.ocsp_staple`（base64url DER OCSPResponse）：§5.1.4 装订规则（验签、`nextUpdate` 检查、`NIP-OCSP-STAPLE-EXPIRED`）；X.509 OID 表：`id-nid-assurance-level` 65715.2.1、`id-nps-node-roles` 65715.2.2、`id-nps-capabilities` 65715.2.3（PEN 65715 —— NPS-CR-0004）。|
 | 0.8 | 2026-05-11 | 扩展 §5.2 TrustFrame：补全字段定义表（10 个字段，新增必填的 `issued_at` / `serial` / `signer_nid` 用于吊销与审计追溯）、签名规范化规则（与 §5.1 IdentFrame 一致）、错误码子表与完整示例。§7 新增 TrustFrame 验证说明（IdentFrame 的 `issued_by` 是 `grantee_ca` 时，存在 `trusted_issuers` 中 `grantor_nid` 颁发、覆盖该请求的有效 TrustFrame 即可准入）。§9 新增 4 个错误码：`NIP-TRUST-FRAME-EXPIRED`、`NIP-TRUST-FRAME-GRANTOR-REVOKED`、`NIP-TRUST-FRAME-SCOPE-EXCEEDS-GRANTOR`、`NIP-TRUST-FRAME-NODES-PATTERN-INVALID`。|
 | 0.7 | 2026-05-07 | **NPS-CR-0003**：编排器组 NID 与短寿命会话 NID。新增 §3.1，在 `entity-type = agent` 上保留 `group-` / `session-` 标识符前缀。新增带签名的 `IdentFrame.lineage` 对象，含 `role` / `parent_nid` / `group_nid` / `session_id` / `purpose` / `owner_user_id` / `owner_key_id`（§5.1.3）。新增 RevokeFrame 原因 `parent_revoked`（§5.3）。验证流程新增链路检查步骤 **3a**（§7）。CA Server 新增 4 个端点 `/v1/orchestrators/groups/...`（§8）。新增 7 个错误码（§9）：`NIP-CA-GROUP-REVOKED`、`NIP-CA-PARENT-NOT-FOUND`、`NIP-CA-PARENT-NOT-GROUP`、`NIP-CA-SESSION-VALIDITY-INVALID`、`NIP-CA-JWS-INVALID`、`NIP-CA-JWS-EXPIRED`、`NIP-CERT-PARENT-REVOKED`。普通单 NID 注册流程完全向后兼容；编排器场景为可选启用。|
 | 0.6 | 2026-05-01 | 在标准 `capabilities` 注册表中新增 `topology:read`（§5.1 能力表）。Anchor Node 在 Phase 1–2 需以此能力门控拓扑读操作（`topology.snapshot` / `topology.stream`），对应 NPS-2 §12.4 最低授权绑定（M6）。Phase 1–2 为自声明并密钥签名；CA 认证角色绑定（`id-nps-node-roles` 证书扩展）推迟到 Phase 3，待 RFC-0002 稳定后落地。 |

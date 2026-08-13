@@ -525,7 +525,12 @@ Encapsulates a full response body; the most common response frame. Also used for
 | `token_est` | uint32 | optional | Estimated CGN consumption for this response (see [token-budget.md](./token-budget.md)) |
 | `tokenizer_used` | string | optional | Identifier of the tokenizer actually applied |
 | `cached` | bool | optional | `true` = response came from server-side cache |
+| `request_id` | string | optional | Correlates a unary response with the originating request. For synchronous NWP operations, the producer SHOULD copy the request frame's `request_id` |
 | `inline_anchor` | object | optional | Latest AnchorFrame included inline when the Schema has been updated, avoiding an extra RTT (see §5.4) |
+
+`cached` describes caching of the complete NWP response. It MUST NOT be interpreted
+as a model prefix/KV-cache hit. Protocol-specific payloads MAY expose a distinct
+cache-usage object when the underlying runtime can report one.
 
 **Connection-negotiation CapsFrame**
 

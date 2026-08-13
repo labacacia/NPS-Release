@@ -6,18 +6,19 @@ English | [中文版](./README.cn.md)
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.16-orange.svg)](CHANGELOG.md)
-[![NCP](https://img.shields.io/badge/NCP-v0.9-5b8cff.svg)]()
-[![NWP](https://img.shields.io/badge/NWP-v0.17-4af0b0.svg)]()
-[![NIP](https://img.shields.io/badge/NIP-v0.11-7b61ff.svg)]()
-[![NDP](https://img.shields.io/badge/NDP-v0.9-f0a050.svg)]()
-[![NOP](https://img.shields.io/badge/NOP-v0.7-ff8c42.svg)]()
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.17-orange.svg)](CHANGELOG.md)
+[![Candidate](https://img.shields.io/badge/candidate-v1.0.0--alpha.18-blue.svg)](CHANGELOG.md)
+[![NCP](https://img.shields.io/badge/NCP-v0.11-5b8cff.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.21-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.14-7b61ff.svg)]()
+[![NDP](https://img.shields.io/badge/NDP-v0.12-f0a050.svg)]()
+[![NOP](https://img.shields.io/badge/NOP-v0.9-ff8c42.svg)]()
 
 NPS is a complete web infrastructure protocol suite designed for AI Agents and models. It consists of five sub-protocols covering AI communication, web access, identity, node discovery, and multi-agent orchestration.
 
-> Current release line: `v1.0.0-alpha.16`. Source and spec repos are synced;
-> .NET package artifacts are attached to the GitHub Release and published to
-> the Nexus feed.
+> Latest published release: `v1.0.0-alpha.17`. The source, spec, and SDK
+> distribution branches are preparing the unreleased `v1.0.0-alpha.18`
+> portable server/runtime conformance candidate.
 
 ---
 
@@ -39,11 +40,11 @@ NPS is a complete web infrastructure protocol suite designed for AI Agents and m
 
 | Protocol | Analogy | Spec Version | Implementation Status | Port (default / standalone) |
 |----------|---------|--------------|-----------------------|-----------------------------|
-| **NCP** Neural Communication Protocol | Wire Format | v0.9 | ✅ Reference impl complete; native-mode connection preamble and Tier-3 BinaryVector v1 (`binary_vector.v1`) landed | 17433 / — |
-| **NWP** Neural Web Protocol | Node request/response | v0.17 | ✅ Memory / Action / Complex / **Anchor** / **Bridge** Node — Anchor renamed from Gateway and Bridge introduced by NPS-CR-0001; Bridge Node includes outbound HTTP/HTTPS, gRPC JSON unary, MCP JSON-RPC, and A2A JSON-RPC dispatchers plus inbound MCP/A2A server adapters; Memory / Action Nodes can also serve native-mode NWP over NCP sessions; `llm.complete` now has official Action/Caps/Stream DTO and payload codec contracts; model-serving Action/Complex Nodes advertise the new NWM `profiles.llm` LLM/Thinking Profile; HTTP overlay binding rejections now have canonical NWP error codes; Anchor Node gained `topology.snapshot` / `topology.stream` reserved query types (NPS-CR-0002); NWM gained optional `stability` / `sla` / `billing` fields for marketplace discovery (issue #36); CR-0002 Phase 2 spec gaps closed — DiffFrame `cgn_est` per-event budget field, `anchor_state` sub-type enum, split topology read/subscribe capability gate, mid-stream auth/reputation rejection (issue #41) | 17433 / 17434 |
-| **NIP** Neural Identity Protocol | TLS / PKI | v0.11 | ✅ CA + identity verifier; assurance levels (NPS-RFC-0003) + reputation log entry (NPS-RFC-0004) reference types landed; standard `llm:*` capability strings registered for NWP LLM/Thinking Profile discovery and authorization | 17433 / 17435 |
-| **NDP** Neural Discovery Protocol | DNS | v0.9 | ✅ Registry + announce validator; AnnounceFrame gained `activation_mode` + `node_roles`/`cluster_anchor`/`bridge_protocols` (NPS-CR-0001; legacy `node_kind` is parse-time alias only); v0.7 adds registry security profiles (`local-dev` / `org-private` / `public-federated`) + anti-poisoning + graph_seq rollback defense (issue #33) | 17433 / 17436 |
-| **NOP** Neural Orchestration Protocol | SMTP / MQ | v0.7 | ✅ Orchestration engine + security hardening implemented; saga compensation semantics added | 17433 / 17437 |
+| **NCP** Neural Communication Protocol | Wire Format | v0.11 | ✅ Native server handshake profile: bounded preamble/Hello reads, TLS-ready authenticated streams, deterministic Caps negotiation, and shared vectors across six SDKs | 17433 / — |
+| **NWP** Neural Web Protocol | Node request/response | v0.21 | Candidate: stateful LLM context/delta contract with owner-bound opaque IDs, atomic CAS lifecycle, strict no-fallback semantics, measured reuse, and shared vectors; portable node/bridge baseline retained | 17433 / 17434 |
+| **NIP** Neural Identity Protocol | TLS / PKI | v0.14 | Candidate: adds `llm:context` authorization and TrustFrame scope support; portable CA/verifier, live revocation, signed CRL, and fail-closed baseline retained | 17433 / 17435 |
+| **NDP** Neural Discovery Protocol | DNS | v0.12 | ✅ Signed Announce admission, sequence fences, liveness, cluster-conflict handling, and direction-aware Bridge discovery vectors across six SDKs | 17433 / 17436 |
+| **NOP** Neural Orchestration Protocol | SMTP / MQ | v0.9 | ✅ Deterministic DAG/retry/aggregation/saga profile, hardened callbacks, delegation/lease semantics, CR-0007 runtime vectors, and runner OCI SpawnSpec support | 17433 / 17437 |
 
 ### Local dev stack
 
@@ -67,10 +68,10 @@ NPS in production runs as **six resident services across three layers** —
 see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) for
 the full design, [`tools/daemons/`](tools/daemons/) for the binaries.
 
-| Layer | Daemon | Port | Status (alpha.16 release) |
+| Layer | Daemon | Port | Status (alpha.18 candidate) |
 |-------|--------|------|------------------|
 | 1 (host-local) | [`npsd`](tools/daemons/npsd/)             | 17433 | L1 minimum plus loopback dev-stack support |
-| 1 (host-local) | [`nps-runner`](tools/daemons/nps-runner/) | —     | L3 task-claim / lease semantics aligned to NPS-CR-0007 |
+| 1 (host-local) | [`nps-runner`](tools/daemons/nps-runner/) | —     | CR-0007 lease renewal, portable OCI SpawnSpec/reference resolution, and lifecycle enforcement |
 | 2 (network entry) | [`nps-ingress`](tools/daemons/nps-ingress/)   | 8080  | Native-mode TLS/mTLS ingress boundary aligned to RFC-0006 |
 | 2 (network entry) | [`nps-registry`](tools/daemons/nps-registry/) | 17436 | NDP registry with liveness / staleness semantics |
 | 3 (trust anchor) | [`nps-cloud-ca`](tools/daemons/nps-cloud-ca/)  | 17435 | Deferral skeleton (points at [`tools/nip-ca-server`](tools/nip-ca-server/)) |
@@ -118,12 +119,12 @@ Every Agent holds a **NID** (Neural Identity Descriptor) in the form `urn:nps:ag
 nps/
 ├── spec/                    # Language-agnostic specification (SSoT)
 │   ├── NPS-0-Overview.md    # Suite overview v0.4
-│   ├── NPS-1-NCP.md         # NCP spec v0.9
-│   ├── NPS-2-NWP.md         # NWP spec v0.17
-│   ├── NPS-3-NIP.md         # NIP spec v0.11
-│   ├── NPS-4-NDP.md         # NDP spec v0.9
-│   ├── NPS-5-NOP.md         # NOP spec v0.7
-│   ├── frame-registry.yaml  # Machine-readable frame registry v0.13
+│   ├── NPS-1-NCP.md         # NCP spec v0.11
+│   ├── NPS-2-NWP.md         # NWP spec v0.21
+│   ├── NPS-3-NIP.md         # NIP spec v0.14
+│   ├── NPS-4-NDP.md         # NDP spec v0.12
+│   ├── NPS-5-NOP.md         # NOP spec v0.9
+│   ├── frame-registry.yaml  # Machine-readable frame registry v0.14
 │   ├── version-matrix.yaml  # Machine-readable suite/spec version oracle
 │   ├── error-codes.md       # Unified error code namespace
 │   ├── status-codes.md      # NPS native status codes + HTTP mapping
@@ -134,11 +135,11 @@ nps/
 │   └── rfcs/                # RFC process + 4 drafts (NCP preamble, X.509/ACME NID, assurance levels, reputation log)
 ├── impl/
 │   ├── dotnet/              # C# / .NET 10 reference implementation (includes samples/ + benchmarks/)
-│   ├── python/              # Python SDK v1.0.0-alpha.16 release line synced
-│   ├── typescript/          # TypeScript SDK v1.0.0-alpha.16 release line synced
-│   ├── java/                # Java SDK v1.0.0-alpha.16 release line synced
-│   ├── rust/                # Rust SDK v1.0.0-alpha.16 release line synced
-│   └── go/                  # Go SDK v1.0.0-alpha.16 release line synced
+│   ├── python/              # Python SDK v1.0.0-alpha.18 candidate
+│   ├── typescript/          # TypeScript SDK v1.0.0-alpha.18 candidate
+│   ├── java/                # Java SDK v1.0.0-alpha.18 candidate
+│   ├── rust/                # Rust SDK v1.0.0-alpha.18 candidate
+│   └── go/                  # Go SDK v1.0.0-alpha.18 candidate
 ├── tools/
 │   ├── daemons/                # Six resident services. 4 OSS published as labacacia/nps-daemons bundle (npsd / nps-runner / nps-ingress / nps-registry); 2 cloud daemons published as private innolotus/nps-cloud-ca + innolotus/nps-ledger
 │   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core; published standalone at labacacia/nip-ca-server (subdir example/ holds 5 frozen reference ports)
@@ -167,57 +168,56 @@ nps/
 
 ## Implementation Status
 
-The table below describes the current source tree. The `1.0.0-alpha.16`
-release artifacts have been produced; the .NET package bundle is attached to
-the GitHub Release and published to Nexus.
+The table below describes the current `1.0.0-alpha.18` candidate source tree.
+The latest published package line remains `1.0.0-alpha.17`.
 
 ### C# / .NET (`impl/dotnet/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `NPS.Core` | 1.0.0-alpha.16 | ✅ Available | Frame codec (MsgPack/JSON), dual-header mode (4B/8B), frame registry, Anchor cache |
-| `NPS.NWP` | 1.0.0-alpha.16 | ✅ Available | Memory / Action / Complex / Anchor / Bridge Node middleware; native-mode NWP serving over NCP sessions; `/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`; graph traversal + X-NWP-Depth + cycle detection; SSRF + idempotency + priority + async task lifecycle |
-| `NPS.NIP` | 1.0.0-alpha.16 | ✅ Available | CA library (key generation, certificate issuance/revocation, typed remote CA client, OCSP, CRL), `NipIdentVerifier` 6-step identity verification |
-| `NPS.NDP` | 1.0.0-alpha.16 | ✅ Available | NDP frame types (Announce/Resolve/Graph), in-memory registry (TTL eviction), announce signature validator |
-| `NPS.NOP` | 1.0.0-alpha.16 | ✅ Available | DAG orchestration engine (condition eval, input mapping, K-of-N sync, retry/backoff) + §8.2 delegation chain depth limit + §8.4 callback SSRF guard and exponential backoff retry |
-| `NPS.Conformance` | 1.0.0-alpha.16 | ✅ Available | Node L1/L2 conformance case catalog, run manifest model, and CI validation helpers |
-| `tools/nip-ca-server` | 1.0.0-alpha.16 | ✅ Available | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
-| Compat ingresses | 1.0.0-alpha.16 | ✅ Available | MCP Ingress (JSON-RPC 2.0, MCP 2024-11-05), A2A Ingress (Google A2A v0.2), gRPC Ingress (HTTP/2, 4 unary RPCs); renamed from `*-bridge` by NPS-CR-0001 — see `docs/compat/index.en.md` |
-| Daemons | 1.0.0-alpha.16 | ✅ Available | Six resident services: `npsd` (L1 minimum), `nps-runner`, `nps-ingress`, `nps-registry`, `nps-cloud-ca`, `nps-ledger` (RFC-0004 in-memory log); see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) |
+| `NPS.Core` | 1.0.0-alpha.18 | Candidate | Frame codec (MsgPack/JSON), dual-header mode (4B/8B), frame registry, Anchor cache, NativeAOT-safe codecs |
+| `NPS.NWP` | 1.0.0-alpha.18 | Candidate | Memory / Action / Complex / Anchor / Bridge Node middleware; native-mode NWP serving over NCP sessions; `/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`; graph traversal + X-NWP-Depth + cycle detection; SSRF + idempotency + priority + async task lifecycle |
+| `NPS.NIP` | 1.0.0-alpha.18 | Candidate | CA library (key generation, certificate issuance/revocation, typed remote CA client, OCSP, CRL), `NipIdentVerifier` 6-step identity verification |
+| `NPS.NDP` | 1.0.0-alpha.18 | Candidate | NDP frame types (Announce/Resolve/Graph), in-memory registry (TTL eviction), announce signature validator |
+| `NPS.NOP` | 1.0.0-alpha.18 | Candidate | DAG orchestration engine (condition eval, input mapping, K-of-N sync, retry/backoff) + §8.2 delegation chain depth limit + §8.4 callback SSRF guard and exponential backoff retry |
+| `NPS.Conformance` | 1.0.0-alpha.18 | Candidate | Node L1/L2 conformance case catalog, run manifest model, and CI validation helpers |
+| `tools/nip-ca-server` | 1.0.0-alpha.18 | Candidate | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
+| Compat ingresses | 1.0.0-alpha.17 | ✅ Final deprecated release | MCP Ingress (JSON-RPC 2.0, MCP 2024-11-05), A2A Ingress (Google A2A v0.2), gRPC Ingress (HTTP/2, 4 unary RPCs); retired from the synchronized train in alpha.18 in favor of `NPS.NWP.Bridge` |
+| Daemons | 1.0.0-alpha.18 | Candidate | Six resident services: `npsd` (L1 minimum), `nps-runner`, `nps-ingress`, `nps-registry`, `nps-cloud-ca`, `nps-ledger` (RFC-0004 in-memory log); see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) |
 | Samples | — | ✅ Available | `samples/NPS.Samples.NopDag` — 3-node NOP DAG end-to-end over real HTTP; `demos/nps-demo` — 4-scene business demo (NIP → AnchorFrame → NOP → DiffFrame) |
 | Benchmarks | — | ✅ Available | `benchmarks/NPS.Benchmarks.TokenSavings` → **45.0% token saving vs REST** (exceeds Phase 1 ≥30% exit criterion); `benchmarks/NPS.Benchmarks.WireSize` → **63.6% MsgPack vs JSON** (exceeds Phase 2 ≤50% exit criterion) |
 
-.NET SDK test gate: **696 tests** across NPS.Core / NWP / NIP (incl. AssuranceLevel, Reputation, X.509/ACME, revocation, storage, remote CA client) / NDP / NOP / Anchor / Bridge / native NCP / native NWP / conformance / samples / benchmarks; plus **48 ingress tests** (15 mcp + 18 a2a + 15 grpc).
+.NET SDK test gate: **955 tests** across NPS.Core / NWP / NIP (incl. AssuranceLevel, Reputation, X.509/ACME, revocation, storage, remote CA client) / NDP / NOP / Anchor / Bridge / native NCP / native NWP / conformance / samples / benchmarks; plus **48 frozen compat-ingress tests** (15 mcp + 18 a2a + 15 grpc).
 
 ### Python (`impl/python/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-lib` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, asyncio + httpx, Ed25519 signing, 162 tests, 97% coverage. Python import module remains `nps_sdk`. |
+| `nps-lib` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, asyncio + httpx, Ed25519 signing, 1368 tests, 92.25% coverage. Python import module remains `nps_sdk`. |
 
 ### TypeScript (`impl/typescript/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `@labacacia/nps-sdk` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 271 tests. The earlier npm `1.0.0-alpha.11` tarball omitted `dist/` and was deprecated; `1.0.0-alpha.16` ships `dist/` and the `alpha` dist-tag now resolves to it. |
+| `@labacacia/nps-sdk` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 1167 tests. The latest published `1.0.0-alpha.17` package includes `dist/`. |
 
 ### Java (`impl/java/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-java` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 87 tests |
+| `nps-java` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 689 tests |
 
 ### Rust (`impl/rust/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-rs` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 88 tests |
+| `nps-rs` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 751 tests |
 
 ### Go (`impl/go/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.16 | ✅ Available | Full NCP + NWP + NIP + NDP + NOP implementation, Go 1.25+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 75 tests |
+| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Go 1.23+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 679 tests |
 
 ---
 

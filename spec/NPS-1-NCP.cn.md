@@ -5,7 +5,7 @@
 **Spec Number**: NPS-1  
 **Status**: Proposed  
 **Version**: 0.11
-**Date**: 2026-06-27
+**Date**: 2026-07-05
 **Port**: 17433（默认，全协议族共用）  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 
@@ -210,6 +210,61 @@ Client (Agent)                        Server (Node)
 
 完整设计动机、备选方案、SDK 推进 phase，参见 [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.cn.md)。
 
+### 2.6.2 原生服务端互操作 Profile（NCP v0.11）
+
+本 Profile 定义可移植的原生模式 NCP 服务端在外部可观测层面的最小行为要求，对 TCP 与 QUIC 流式实现同等适用。
+[`conformance/ncp/native_server_handshake_vectors.json`](conformance/ncp/native_server_handshake_vectors.json)
+中的语言无关用例为规范性内容。
+
+**传输与读取边界**
+
+1. 配置了传输层认证时，服务端 MUST 在读取 NCP 前导之前先完成认证或流封装 hook。
+   要求认证流的部署，若未配置 hook 或 hook 返回原始未认证流，MUST 在本地失败。
+2. 服务端 MUST 对前导读取设定上界，默认上限为 10 秒。
+   非法或不完整的前导按 §2.6.1 静默关闭。
+3. 前导有效之后，服务端 MUST 对完整 Hello 读取（头部加 Payload）单独设定上界，默认上限为 5 秒。
+4. 服务端 MUST 在为 Hello Payload 分配内存之前先检查帧头。
+   `max_hello_payload` 默认 65,535 字节，并 MUST 可配置为更低的部署上限。
+5. 第一个帧 MUST 是未加密的 Tier-1 JSON `HelloFrame`，且 `EXT=0`。帧类型错误、编码 Tier 为保留值、
+   `ENC=1`、`EXT=1`、头部/Payload 格式错误、Payload 超限或 Hello 超时，均导致静默关闭。
+   这些准入前失败 MUST NOT 发出 `ErrorFrame`。
+6. 一旦成功解码 Hello，服务端 MUST 要么发送一个握手 `CapsFrame` 并建立会话，要么发送一个 `ErrorFrame`
+   并关闭连接。在连接仍处于握手状态时，服务端 MUST NOT 继续读取应用帧。
+
+服务端 MUST 对外暴露有界的前导与 Hello 超时。部署 MAY 调低默认值，但 MUST NOT 在不受信任的监听端口上同时禁用这两个上限。
+
+**确定性协商**
+
+服务端按其配置的 Profile 对解码后的 Hello 求值：
+
+- 双端都声明一个闭区间 `min_version`-`nps_version` 范围。省略 `min_version` 等同于该端的 `nps_version`。
+  版本使用严格的 `major.minor` 形式。会话版本取交集中的最高版本。无交集则返回 `NCP-VERSION-INCOMPATIBLE`。
+- 稳定默认编码取客户端有序 `supported_encodings` 列表中第一个同时被服务端启用、且为 `msgpack` 或 `json`
+  的 token。无稳定交集则返回 `NCP-ENCODING-UNSUPPORTED`。
+- `binary_vector.v1` 仅在双端都声明时启用。它在 `enabled_encodings` 中追加在稳定默认之后，且永不成为默认值。
+- `supported_protocols` 取双方列表的交集，按客户端偏好顺序排列。其中 MUST 含 `ncp`，否则服务端返回
+  `NCP-VERSION-INCOMPATIBLE`。
+- `max_frame_payload` 与 `max_concurrent_streams` 取双端通告值的最小值。上限为零属非法。
+- `ext_support` 仅在双端都通告 `true` 时启用。
+
+握手 `CapsFrame` 的 Payload 由握手状态区分，使用以下可移植字段。既有字段保持增量且向后兼容：
+
+| 字段 | 类型 | 必填 | 描述 |
+|---|---|---:|---|
+| `node_id` | string | 必填 | 服务端 NID |
+| `caps` | array[string] | 必填 | 服务端应用能力 |
+| `session_version` | string | 必填 | 协商出的协议版本 |
+| `negotiated_encoding` | string | 必填 | 稳定默认编码：`msgpack` 或 `json` |
+| `enabled_encodings` | array[string] | 必填 | 稳定默认编码，其后跟随协商出的扩展编码 |
+| `supported_protocols` | array[string] | 必填 | 协商出的上层协议交集 |
+| `max_frame_payload` | uint32 | 必填 | 协商出的 Payload 上限 |
+| `ext_support` | bool | 必填 | 协商出的扩展帧头支持 |
+| `max_concurrent_streams` | uint32 | 必填 | 协商出的并发流上限 |
+| `anchor_ref` | string | 可选 | 首次提供的 Schema 引用 |
+| `payload` | object | 可选 | 实现自定义的元数据 |
+
+本 Profile 不新增任何帧类型或错误码。
+
 ---
 
 ## 3. 帧格式
@@ -401,6 +456,7 @@ Schema 锚点帧，由 **Node 发布**，用于建立全局 Schema 引用，消�
     { "op": "replace", "path": "/stock", "value": 48 }
   ]
 }
+```
 
 ---
 
@@ -450,7 +506,11 @@ NCP 提供应用层语义背压，补充 TCP/QUIC 传输层流量控制：
 | `token_est` | uint32 | 可选 | 本响应预估 CGN 消耗（见 [token-budget.cn.md](token-budget.cn.md)）|
 | `tokenizer_used` | string | 可选 | 实际使用的 tokenizer 标识 |
 | `cached` | bool | 可选 | true 表示本响应来自服务端缓存 |
+| `request_id` | string | 可选 | 将 unary 响应与原始请求关联。同步 NWP 操作的生产端 SHOULD 复制请求帧的 `request_id` |
 | `inline_anchor` | object | 可选 | Schema 已更新时内联返回最新 AnchorFrame，避免额外 RTT（见 §5.4）|
+
+`cached` 描述的是完整 NWP 响应缓存，不得解释为模型 prefix/KV cache 命中。
+底层 runtime 能报告模型缓存使用量时，协议专属 payload MAY 提供独立的 cache usage 对象。
 
 **连接协商 CapsFrame**
 
@@ -521,6 +581,7 @@ NCP 提供应用层语义背压，补充 TCP/QUIC 传输层流量控制：
 | `ext_support` | bool | 可选 | 是否支持扩展帧头（EXT=1），默认 false |
 | `max_concurrent_streams` | uint32 | 可选 | 客户端可处理的最大并发流数，默认 32 |
 | `e2e_enc_algorithms` | array[string] | 可选 | 客户端支持的 E2E 加密算法列表（见 §7.4），如 `["aes-256-gcm"]` |
+| `ping_interval_ms` | uint32 | 可选 | 期望的 keepalive 间隔（毫秒）；0 = 禁用（默认）。非零时双端 SHOULD 按该间隔发送 `NopFrame`，并 MUST 在 `3 × ping_interval_ms` 内发出一个（NCP v0.8 §7.6）。|
 
 **规则**
 
@@ -573,6 +634,25 @@ NPS 统一错误帧，所有协议层共用。在原生模式下承载错误响�
   "details": { "anchor_ref": "sha256:a3f9b2c1..." }
 }
 ```
+
+---
+
+### 4.8 NopFrame (0x07) — Keepalive / Heartbeat
+
+无 Payload 的空帧。用作空闲连接上的 keepalive 探测，防止 NAT / 防火墙超时断链，并用于探测对端失活（NCP v0.8）。
+
+**字段定义**
+
+| 字段 | 类型 | 必填 | 描述 |
+|------|------|------|------|
+| `frame` | uint8 | 必填 | 固定值 `0x07` |
+
+**规则**
+
+- 在已建立的原生模式连接上，NopFrame MAY 在任意时刻发送（握手期间不可发送）
+- 接收方 MUST 接受 NopFrame，且 MUST NOT 以 ErrorFrame 响应；SHOULD 回以另一个 NopFrame
+- 当 HelloFrame 中声明了 `ping_interval_ms > 0` 时，双端 SHOULD 按声明的间隔发送 NopFrame。若在 `3 × ping_interval_ms` 内未收到任何类型的帧，该端 SHOULD 发送 `NCP-KEEPALIVE-TIMEOUT` 并关闭连接
+- NopFrame MUST NOT 携带任何 Payload；Payload 长度非零的 NopFrame MUST 以 `NCP-FRAME-PAYLOAD-TOO-LARGE` 拒绝（按 0 字节上限违规处理）
 
 ---
 
@@ -720,6 +800,8 @@ NPS 采用两级错误体系：
 | `NCP-VERSION-INCOMPATIBLE` | `NPS-PROTO-VERSION-INCOMPATIBLE` | 客户端 min_version 高于 Server 支持版本 |
 | `NCP-STREAM-WINDOW-OVERFLOW` | `NPS-STREAM-LIMIT` | 发送方在窗口耗尽后继续发送 |
 | `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | 原生模式连接首 8 字节非 `b"NPS/1.0\n"`；服务端 500 ms 内静默关闭（不发 ErrorFrame）—— 见 §2.6.1 |
+| `NCP-REKEY-REQUIRED` | `NPS-PROTO-VERSION-INCOMPATIBLE` | E2E 加密信道已达到 rekey 阈值（2^32 帧或 24 小时）；对端 MUST 在继续发送加密帧之前发起密钥轮换 |
+| `NCP-KEEPALIVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | 在 3 × `ping_interval_ms` 内未收到任何帧（含 NopFrame）；连接将被关闭 |
 
 HTTP 模式下的状态码映射见 [status-codes.cn.md](status-codes.cn.md)。
 
@@ -737,6 +819,8 @@ Schema 由 Node 发布，Agent 只读引用。Node MUST 对 anchor_id 做幂等�
 Node SHOULD 限制单连接最大并发流数（推荐默认值：32，通过 CapsFrame `max_concurrent_streams` 协商）。超出限制时返回 `NCP-STREAM-LIMIT-EXCEEDED`。
 
 ### 7.4 E2E 加密（ENC 标志正式定义）
+
+> **密钥轮换（Rekeying，NCP v0.7）**：使用 ENC=1 时，发送方 MUST 在触及以下任一阈值之前发起 rekey：(a) 当前密钥已发送 2^32 帧，(b) 密钥建立至今已满 24 小时。触发方发送 `error: "NCP-REKEY-REQUIRED"` 的 ErrorFrame 作为优雅信号；对端 MUST 在继续发送加密帧之前完成密钥轮换以作确认。密钥轮换沿用与初始密钥派生相同的 ECDH + HKDF 算法，实现 SHOULD 使用 X25519。
 
 当帧头 Flags **ENC=1** 时，帧 Payload 使用应用层端到端加密。E2E 加密独立于 TLS 传输层，适用于多跳 Relay 场景中 Relay 不可信的情况。
 
@@ -775,6 +859,26 @@ Node SHOULD 限制单连接最大并发流数（推荐默认值：32，通过 Ca
 |--------|-----------|------|
 | `NCP-ENC-NOT-NEGOTIATED` | `NPS-CLIENT-BAD-FRAME` | ENC=1 但会话未协商 E2E 加密算法 |
 | `NCP-ENC-AUTH-FAILED` | `NPS-CLIENT-BAD-FRAME` | E2E 加密 Auth Tag 验证失败（可能被篡改）|
+
+### 7.5 原生模式 TLS 绑定与双向认证
+
+原生模式的传输安全层由 **[NPS-RFC-0006](rfcs/NPS-RFC-0006-ncp-native-transport.md) §6**（Proposed）规范性定义。概括而言，非 `local-dev` 的原生模式连接 MUST：
+
+- 在 **TLS 封装**的传输（TCP）或 QUIC 内建的 TLS 1.3 之上协商套件级 ALPN token **`nps/1.0`**；禁止 STARTTLS 式的带内升级。
+- 使用基于 NIP 签发证书（RFC-0002 X.509 NID profile）的 **mutual TLS**。服务端把客户端证书中的 NID 绑定到该 NCP 会话，并 MUST 以 `NCP-NID-MISMATCH` 拒绝证书 NID 与 `IdentFrame` NID 不一致的情况。
+- 可选地为重复的短连接提供 TLS 1.3 **会话恢复票据（session-resumption ticket）**，其有效期受证书有效期与票据寿命（≤ 24 小时）双重约束；恢复只省去 TLS 握手，绝不跳过 RFC-0001 前导或 HelloFrame。
+
+该绑定即传输层准入闸门，由 `nps-ingress`（L2）守护进程终结。
+
+### 7.6 Keepalive 与对端失活检测（NCP v0.8）
+
+长连接形态的原生模式连接（TCP/QUIC）可能被 NAT 设备或防火墙静默切断。NopFrame（§4.8）提供应用层 keepalive：
+
+- 若双方在各自的 HelloFrame/CapsFrame 中都声明了 `ping_interval_ms > 0`，则在没有其他流量时，双方 SHOULD 按大致该间隔发送 NopFrame
+- 可接受的最小间隔为 **1000 ms**（1 秒）；更小的取值 MUST 按 1000 ms 处理
+- 在 `3 × ping_interval_ms` 内未收到任何类型帧的一端，MUST 发送 `NCP-KEEPALIVE-TIMEOUT` 并在 500 ms 内关闭连接
+- 若仅有一方声明了 `ping_interval_ms`，另一方 SHOULD 采用该声明值作为共同间隔
+- TCP keepalive（`SO_KEEPALIVE`）与 QUIC idle timeout 属互补机制；实现 SHOULD 在应用层 NopFrame 协议之外，同时在传输层配置这两者
 
 ---
 
@@ -845,9 +949,12 @@ NCP v0.9 的标准绑定是 NWP `QueryFrame.vector_search.vector`。marker index
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.11 | 2026-07-29 | 新增 §2.6.2 原生服务端互操作 Profile：认证先于前导的顺序要求、前导与 Hello 分别有界读取、分配安全的 Hello 上限、准入前失败的静默行为、确定性的版本/编码/协议/上限协商、可移植的握手 Caps 字段，以及共享的 `native_server_handshake_vectors.json`。属增量变更；无新增帧类型与错误码。 |
 | 0.10 | 2026-07-05 | 原生模式传输正式成为规范性内容（NPS-RFC-0006 **Accepted**）。新增原生模式下**跨 Anchor 故障转移的会话连续性**（NPS-CR-0009）：多 Anchor 所有权转移后，若连接丢失或恢复尝试返回 `NCP-NID-MISMATCH`，客户端经 NDP §9（取最高 `cluster_epoch`）重新解析，或使用 NWP `anchor_failover` 的 `successor_nid`，并重新建立会话。无新增帧与错误码（复用 `NCP-NID-MISMATCH`）。 |
 | 0.9 | 2026-06-27 | 激活 Tier-3 BinaryVector v1（`Flags.T1T0 = 10`），协商 token 为 `binary_vector.v1`；定义 `NPBV` Payload 布局、MessagePack metadata marker、float32 little-endian 向量段，以及 NWP `QueryFrame.vector_search.vector` 绑定；`0b11` 仍为保留值。 |
-| 0.8 | 2026-06-12 | 新增 §7.5 原生模式 TLS 绑定与双向认证，归纳 **NPS-RFC-0006 §6**（草案→提议）：套件级 ALPN `nps/1.0`（取代临时值 `ncp/1`）、原生模式 over TCP 强制 TLS 封装、与 NIP 证书的 mTLS + session-NID 绑定、TLS 1.3 会话恢复票据；新增错误码 `NCP-NID-MISMATCH`。gate `nps-ingress`（L2）守护进程。（正文中文翻译待补，见 version-matrix translation_lag） |
+| 0.8 | 2026-06-12 | 新增 §7.5 原生模式 TLS 绑定与双向认证，归纳 **NPS-RFC-0006 §6**（草案→提议）：套件级 ALPN `nps/1.0`（取代临时值 `ncp/1`）、原生模式 over TCP 强制 TLS 封装、与 NIP 证书的 mTLS + session-NID 绑定、TLS 1.3 会话恢复票据；新增错误码 `NCP-NID-MISMATCH`。gate `nps-ingress`（L2）守护进程。 |
+| 0.8 | 2026-06-03 | **NopFrame (0x07)** keepalive/心跳帧：空 Payload、双向；`HelloFrame.ping_interval_ms` 声明期望间隔（0 = 禁用，默认）；在 3 × 间隔内未收到任何帧时返回 `NCP-KEEPALIVE-TIMEOUT` 错误码；§7.6 对端失活检测规则。 |
+| 0.7 | 2026-05-31 | 通过 HelloFrame/CapsFrame 协商 `max_concurrent_streams`（uint32，默认 32）；超限时返回 `NCP-STREAM-LIMIT-EXCEEDED`；拒绝进行中的流时 MUST 发送 mid-stream ErrorFrame（此前为 MAY）；E2E rekey 协议（§7.4）：2^32 帧或 24 小时触发，以 `NCP-REKEY-REQUIRED` 作为信号；QUIC 流映射：每个 NCP 信道一条双向流，HelloFrame 走 stream 0。详见 [NPS-RFC-0006](rfcs/NPS-RFC-0006-ncp-native-transport.md)。 |
 | 0.6 | 2026-04-25 | 新增 §2.6.1 原生模式连接前导（8 字节常量 `b"NPS/1.0\n"`）；在 `frame-registry.yaml` 中保留帧类型字节 0x4E；新增错误码 `NCP-PREAMBLE-INVALID` 和状态码 `NPS-PROTO-PREAMBLE-INVALID`。详见 [NPS-RFC-0001](rfcs/NPS-RFC-0001-ncp-connection-preamble.cn.md)。 |
 | 0.4 | 2026-04-14 | 新增 IdentFrame (0x06) 握手帧；新增 §2.6 连接握手序列及版本协商规则；anchor_id 计算明确引用 RFC 8785 JCS；DiffFrame 新增 patch_format 字段（json_patch / binary_bitset）；CapsFrame 新增 inline_anchor；StreamFrame 流量控制语义正式化（window_size 协议）；§7.4 E2E 加密节（ENC 标志、AES-256-GCM / ChaCha20-Poly1305、Payload 布局）；§5.4 auto-anchor 协议（NCP-ANCHOR-STALE + inline_anchor）；新增错误码 NCP-ANCHOR-STALE、NCP-DIFF-FORMAT-UNSUPPORTED、NCP-VERSION-INCOMPATIBLE、NCP-STREAM-WINDOW-OVERFLOW、NCP-ENC-NOT-NEGOTIATED、NCP-ENC-AUTH-FAILED |
 | 0.3 | 2026-04-12 | 传输双模（HTTP/原生）；统一端口 17433；可配置帧大小（EXT 位）；ErrorFrame (0xFE)；NPS 状态码体系；Tier-3 标记 Reserved；AnchorFrame 所有权明确为 Node 发布；Token 估算改用 CGN |

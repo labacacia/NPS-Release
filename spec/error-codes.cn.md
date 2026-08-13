@@ -2,8 +2,8 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 1.8
-**Date**: 2026-07-29
+**Version**: 1.9
+**Date**: 2026-08-12
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -64,6 +64,13 @@ NPS 采用两级错误体系：
 | `NWP-ACTION-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | action_id 不存在于节点注册表 |
 | `NWP-ACTION-PARAMS-INVALID` | `NPS-CLIENT-UNPROCESSABLE` | 操作参数 Schema 校验失败 |
 | `NWP-ACTION-IDEMPOTENCY-CONFLICT` | `NPS-CLIENT-CONFLICT` | 相同 idempotency_key 的请求正在进行中 |
+| `NWP-LLM-CONTEXT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | 有状态 LLM context 未知/已 release，或 owner-scoped idempotency lookup 超出保留窗口（NWP §7.6）|
+| `NWP-LLM-CONTEXT-EXPIRED` | `NPS-CLIENT-GONE` | Context 存在 idle-expiry tombstone；调用方必须创建或 reset 其他 context（NWP §7.6）|
+| `NWP-LLM-CONTEXT-VERSION-CONFLICT` | `NPS-CLIENT-CONFLICT` | `base_version` 陈旧，或其他 mutation 持有 context reservation；hint SHOULD 携带当前版本（NWP §7.6）|
+| `NWP-LLM-CONTEXT-BINDING-MISMATCH` | `NPS-CLIENT-CONFLICT` | 解析后的 model、system message、tool definition 或 runtime compatibility revision 与已提交 binding 不一致（NWP §7.6）|
+| `NWP-LLM-CONTEXT-FORBIDDEN` | `NPS-AUTH-FORBIDDEN` | 认证 caller 不是 context owner，或缺少所需 scope/capability（NWP §7.6）|
+| `NWP-LLM-CONTEXT-LIMIT-EXCEEDED` | `NPS-LIMIT-RESOURCE` | 达到每 principal 活跃 context 上限；hint SHOULD 携带广告上限（NWP §7.6）|
+| `NWP-LLM-CONTEXT-OPERATION-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点支持有状态 context，但未广告/实现请求的生命周期 operation（NWP §7.6）|
 | `NWP-TASK-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | task_id 引用的异步任务不存在 |
 | `NWP-TASK-ALREADY-CANCELLED` | `NPS-CLIENT-CONFLICT` | 任务已被取消，无法继续操作 |
 | `NWP-TASK-ALREADY-COMPLETED` | `NPS-CLIENT-CONFLICT` | 任务已完成，无法取消 |
