@@ -2,7 +2,7 @@
 
 # NPS-CR-0011：有状态 LLM Context 与增量 Completion
 
-**状态**：Draft  
+**状态**：Implemented
 **目标版本**：v1.0.0-alpha.18  
 **日期**：2026-08-12  
 **作者**：Ori Lynn / INNO LOTUS PTY LTD  
@@ -218,7 +218,10 @@ Runtime 私有 cache handle 与 binding fingerprint 不上 wire。append/fork �
 有状态 `llm.complete` mutation 同时要求 `llm:complete` 与 `llm:context`；
 streaming 仍额外要求 `llm:stream`，tools 仍额外要求 `llm:tool_call`。
 Status/release 要求 `llm:context` 加 owner 授权，但不要求 `llm:complete`，因此
-principal 失去模型调用权后仍能检查和清理其保留状态。Context owner 由认证 caller NID
+principal 失去模型调用权后仍能检查和清理其保留状态。Coordinator 必须在 admission
+与 commit 时把完整的必需 capability 集合交给部署侧 authorizer；若未配置
+authorizer，有状态 surface 必须以 `NWP-LLM-CONTEXT-FORBIDDEN` fail closed，
+不得将缺少 hook 视为 allow。Context owner 由认证 caller NID
 与节点认证后的 tenant/workspace security scope 共同构成。Scope 来自已接纳身份和
 部署 policy，不来自客户端可控的 context 字段。
 
@@ -380,19 +383,27 @@ stateful 必须只发送 delta，`wire_input_bytes` 更少，`evaluated_tokens` 
 
 ## 13. 接受标准
 
-- [ ] 独立 design review 接受 operation 名、提交边界、所有权、持久级别与错误。
-- [ ] NWP/NIP/error/status 英中正文落地。
-- [ ] 六语言 SDK 提供一致 DTO 与 NWM metadata。
-- [ ] 六语言 CI 均执行共享 context vectors。
-- [ ] 至少一个 native server 通过 cancel、reconnect、restart、并发更新集成测试。
-- [ ] Ivy strict-native 集成删除私有 stateful payload codec。
-- [ ] Stateless 路径无行为回归。
-- [ ] Benchmark 同时证明 transport byte 与 evaluated-token 节省。
-- [ ] 分发前 source-of-truth 与 version-consistency gate 全绿。
+- [x] 独立 design review 接受 operation 名、提交边界、所有权、持久级别与错误。
+- [x] NWP/NIP/error/status 英中正文落地。
+- [x] 六语言 SDK 提供一致 DTO 与 NWM metadata。
+- [x] 六语言 CI 均执行共享 context vectors。
+- [x] 至少一个 native server 通过 cancel、reconnect、restart、并发更新集成测试。
+- [x] Ivy strict-native 集成删除私有 stateful payload codec。
+- [x] Stateless 路径无行为回归。
+- [x] Benchmark 同时证明 transport byte 与 evaluated-token 节省。
+- [x] 分发前 source-of-truth 与 version-consistency gate 全绿。
+
+实现验证于 2026-08-14 完成。六语言 SDK suite 均执行 19 条共享向量与 Action
+Server 集成场景。Strict-native 第二轮 benchmark 得到 `wire_input_bytes`
+756 -> 586（降低 22.5%），确定性 runtime `evaluated_tokens` 157 -> 59
+（降低 62.4%），同时保持 role/tool 有序语义一致并禁用协议 fallback。Ivy 已基于
+alpha.18 源码项目验证官方 DTO usage、并发乱序 unary correlation，以及缺失/未知
+响应 ID 的严格拒绝。同步到 NPS-Release 与 standalone SDK repo 属于 release workflow，
+不纳入本 CR 的实现 commit。
 
 ## 14. 建议 CHANGELOG 文案
 
-> **NWP 有状态 LLM context（NPS-CR-0011，Draft）**：为 `llm.complete` 增加
+> **NWP 有状态 LLM context（NPS-CR-0011，Implemented）**：为 `llm.complete` 增加
 > opt-in context/delta contract、owner-bound 不透明 context ID、CAS 版本、
 > create/append/fork/reset/status/release 生命周期、原子 stream completion、
 > NWM/NIP 发现与授权、确定性错误，以及 logical/reused/evaluated/wire 实测 usage。

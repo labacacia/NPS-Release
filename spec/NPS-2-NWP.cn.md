@@ -969,7 +969,10 @@ Append/fork MUST 保持 binding；delta 禁止 system-role message。省略 `too
 
 Stateful `llm.complete` mutation 同时要求 `llm:complete` 与 `llm:context`；
 streaming/tools 仍分别额外要求 `llm:stream` / `llm:tool_call`。Status/release
-要求 `llm:context` 加 owner 授权，但不要求 caller 继续持有模型调用权。Owner 是认证 NID 加节点认证后的
+要求 `llm:context` 加 owner 授权，但不要求 caller 继续持有模型调用权。有状态
+coordinator API 必须在每次 admission 与 commit 检查时，将完整的必需 capability
+集合传给部署侧 NIP authorizer。未安装 authorizer 的 coordinator 必须以
+`NWP-LLM-CONTEXT-FORBIDDEN` fail closed，不得把缺少 hook 当作已授权。Owner 是认证 NID 加节点认证后的
 tenant/workspace security scope；scope 来自已接纳身份与部署 policy，不得来自
 客户端可控 context 字段。每次 operation MUST 重做 NIP expiry、revocation、
 assurance、scope、capability 检查；长时间工作还 MUST 在 commit 前复检。认证

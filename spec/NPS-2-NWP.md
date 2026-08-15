@@ -991,6 +991,10 @@ Stateful `llm.complete` mutations require both `llm:complete` and
 `llm:context`; streaming and tools additionally require `llm:stream` and
 `llm:tool_call`, respectively. Status/release require `llm:context` plus owner
 authorization but do not require the caller to retain model-invocation rights.
+Stateful coordinator APIs MUST pass the complete required-capability set to the
+deployment-owned NIP authorizer at every admission and commit check. A
+coordinator with no authorizer installed MUST fail closed with
+`NWP-LLM-CONTEXT-FORBIDDEN`; it MUST NOT treat an absent hook as authorization.
 The owner is the authenticated NID plus the node's authenticated tenant/workspace
 security scope. That scope comes from admitted identity and deployment policy,
 never a client-controlled context field. Every operation MUST re-run normal NIP

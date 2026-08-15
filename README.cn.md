@@ -185,37 +185,37 @@ nps/
 | Samples | — | ✅ 可用 | `samples/NPS.Samples.NopDag` —— 真 HTTP 的 3 节点 NOP DAG 端到端；`demos/nps-demo` —— 4 幕业务 demo（NIP → AnchorFrame → NOP → DiffFrame）|
 | Benchmarks | — | ✅ 可用 | `benchmarks/NPS.Benchmarks.TokenSavings` → **相对 REST 节省 45.0% CGN**（超过 Phase 1 ≥30% 出口）；`benchmarks/NPS.Benchmarks.WireSize` → **MsgPack 相对 JSON 减少 63.6%**（超过 Phase 2 ≤50% 出口）|
 
-.NET SDK test gate：**955 tests**（NPS.Core / NWP / NIP（含 AssuranceLevel、Reputation、X.509/ACME、吊销、存储、remote CA client）/ NDP / NOP / Anchor / Bridge / native NCP / native NWP / conformance / samples / benchmarks），加上 **48 个冻结 compat-ingress tests**（15 mcp + 18 a2a + 15 grpc）。
+.NET SDK test gate：**964 tests**（NPS.Core / NWP / NIP（含 AssuranceLevel、Reputation、X.509/ACME、吊销、存储、remote CA client）/ NDP / NOP / Anchor / Bridge / native NCP / native NWP / conformance / samples / benchmarks），加上 **48 个冻结 compat-ingress tests**（15 mcp + 18 a2a + 15 grpc）。
 
 ### Python（`impl/python/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `nps-lib` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，asyncio + httpx，Ed25519 签名，1368 测试，92.25% 覆盖率。Python 导入模块仍为 `nps_sdk`。 |
+| `nps-lib` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，asyncio + httpx，Ed25519 签名，1372 测试，92.07% 覆盖率。Python 导入模块仍为 `nps_sdk`。 |
 
 ### TypeScript（`impl/typescript/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `@labacacia/nps-sdk` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，Node.js 22+，MsgPack + JSON 双编码，Ed25519 签名，1167 测试。最新已发布的 `1.0.0-alpha.17` package 包含 `dist/`。 |
+| `@labacacia/nps-sdk` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，Node.js 22+，MsgPack + JSON 双编码，Ed25519 签名，1171 测试。最新已发布的 `1.0.0-alpha.17` package 包含 `dist/`。 |
 
 ### Java（`impl/java/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `nps-java` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，Java 21，MsgPack + JSON 双编码，Ed25519 内置签名，AES-256-GCM 密钥加密，689 测试 |
+| `nps-java` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，Java 21，MsgPack + JSON 双编码，Ed25519 内置签名，AES-256-GCM 密钥加密，693 测试 |
 
 ### Rust（`impl/rust/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `nps-rs` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，Rust stable，MsgPack + JSON 双编码，Ed25519 签名，AES-256-GCM 密钥加密，Tokio 异步，751 测试 |
+| `nps-rs` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，Rust stable，MsgPack + JSON 双编码，Ed25519 签名，AES-256-GCM 密钥加密，Tokio 异步，755 测试 |
 
 ### Go（`impl/go/`）
 
 | 组件 | 版本 | 状态 | 内容 |
 |------|------|------|------|
-| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，Go 1.23+，MsgPack + JSON 双编码，Ed25519 内置签名，AES-256-GCM 密钥加密，679 测试 |
+| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.18 | 候选 | 完整 client/server 协议能力，Go 1.23+，MsgPack + JSON 双编码，Ed25519 内置签名，AES-256-GCM 密钥加密，683 测试 |
 
 ---
 
@@ -325,6 +325,7 @@ byte[] wire = codec.Encode(query); // 自动处理 4-byte/8-byte 帧头
 |------|------|
 | [REST vs NWP token 节省](docs/benchmarks/token-savings.md) | 聚合 **45.0%** CGN 节省（S1 43.1% / S2 44.0% / S3 54.2%）—— 超过 Phase 1 ≥30% 出口标准 |
 | [Tier-1 JSON vs Tier-2 MsgPack wire size](docs/benchmarks/wire-size.md) | 稳态帧聚合字节减少 **63.6%** —— 超过 Phase 2 ≤50% 出口标准 |
+| [有状态 LLM context 节省](docs/benchmarks/llm-context-savings.md) | Strict-native 第二轮 decoder 字节减少 **22.5%**、evaluated token 减少 **62.4%**，保持 role/tool 语义一致并禁用 fallback |
 
 ### 协议规范
 

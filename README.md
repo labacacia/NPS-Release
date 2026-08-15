@@ -187,37 +187,37 @@ The latest published package line remains `1.0.0-alpha.17`.
 | Samples | — | ✅ Available | `samples/NPS.Samples.NopDag` — 3-node NOP DAG end-to-end over real HTTP; `demos/nps-demo` — 4-scene business demo (NIP → AnchorFrame → NOP → DiffFrame) |
 | Benchmarks | — | ✅ Available | `benchmarks/NPS.Benchmarks.TokenSavings` → **45.0% token saving vs REST** (exceeds Phase 1 ≥30% exit criterion); `benchmarks/NPS.Benchmarks.WireSize` → **63.6% MsgPack vs JSON** (exceeds Phase 2 ≤50% exit criterion) |
 
-.NET SDK test gate: **955 tests** across NPS.Core / NWP / NIP (incl. AssuranceLevel, Reputation, X.509/ACME, revocation, storage, remote CA client) / NDP / NOP / Anchor / Bridge / native NCP / native NWP / conformance / samples / benchmarks; plus **48 frozen compat-ingress tests** (15 mcp + 18 a2a + 15 grpc).
+.NET SDK test gate: **964 tests** across NPS.Core / NWP / NIP (incl. AssuranceLevel, Reputation, X.509/ACME, revocation, storage, remote CA client) / NDP / NOP / Anchor / Bridge / native NCP / native NWP / conformance / samples / benchmarks; plus **48 frozen compat-ingress tests** (15 mcp + 18 a2a + 15 grpc).
 
 ### Python (`impl/python/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-lib` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, asyncio + httpx, Ed25519 signing, 1368 tests, 92.25% coverage. Python import module remains `nps_sdk`. |
+| `nps-lib` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, asyncio + httpx, Ed25519 signing, 1372 tests, 92.07% coverage. Python import module remains `nps_sdk`. |
 
 ### TypeScript (`impl/typescript/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `@labacacia/nps-sdk` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 1167 tests. The latest published `1.0.0-alpha.17` package includes `dist/`. |
+| `@labacacia/nps-sdk` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 1171 tests. The latest published `1.0.0-alpha.17` package includes `dist/`. |
 
 ### Java (`impl/java/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-java` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 689 tests |
+| `nps-java` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 693 tests |
 
 ### Rust (`impl/rust/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-rs` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 751 tests |
+| `nps-rs` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 755 tests |
 
 ### Go (`impl/go/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Go 1.23+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 679 tests |
+| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Go 1.23+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 683 tests |
 
 ---
 
@@ -329,6 +329,7 @@ byte[] wire = codec.Encode(query); // auto-handles 4-byte / 8-byte frame headers
 |--------|--------|
 | [REST vs NWP token savings](docs/benchmarks/token-savings.md) | Aggregate **45.0%** CGN reduction (S1 43.1% / S2 44.0% / S3 54.2%) — exceeds Phase 1 ≥30% exit criterion |
 | [Tier-1 JSON vs Tier-2 MsgPack wire size](docs/benchmarks/wire-size.md) | Aggregate **63.6%** byte reduction on steady-state frames — exceeds Phase 2 ≤50% exit criterion |
+| [Stateful LLM context savings](docs/benchmarks/llm-context-savings.md) | Strict-native second turn: **22.5%** fewer decoder bytes and **62.4%** fewer evaluated tokens, with role/tool semantic parity and fallback disabled |
 
 ### Protocol Specifications
 

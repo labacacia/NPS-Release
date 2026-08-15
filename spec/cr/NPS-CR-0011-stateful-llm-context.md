@@ -2,7 +2,7 @@ English | [Chinese](./NPS-CR-0011-stateful-llm-context.cn.md)
 
 # NPS-CR-0011: Stateful LLM Context and Delta Completion
 
-**Status**: Draft  
+**Status**: Implemented
 **Target**: v1.0.0-alpha.18  
 **Date**: 2026-08-12  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
@@ -251,6 +251,10 @@ Stateful `llm.complete` mutations require both `llm:complete` and
 `llm:tool_call` as today. Status/release require `llm:context` plus owner
 authorization but not `llm:complete`, so a principal that loses model-invocation
 rights can still inspect and clean up its retained state.
+The coordinator MUST provide the complete required-capability set to its
+deployment-owned authorizer at admission and commit. If that authorizer is not
+configured, the stateful surface fails closed with
+`NWP-LLM-CONTEXT-FORBIDDEN`; an absent hook is never an allow decision.
 The context owner is the authenticated caller NID plus the node's authenticated
 tenant/workspace security scope. That scope comes from the admitted identity and
 deployment policy, not from a client-controlled context field.
@@ -429,21 +433,31 @@ MUST use strict native mode with protocol fallback disabled.
 
 ## 13. Acceptance Criteria
 
-- [ ] Independent design review accepts operation names, commit boundary,
+- [x] Independent design review accepts operation names, commit boundary,
       ownership, persistence levels, and errors.
-- [ ] NWP/NIP/error/status specs land in English and Chinese.
-- [ ] All six SDKs expose matching DTOs and NWM metadata.
-- [ ] All six SDKs run the shared context vectors in CI.
-- [ ] At least one native server passes cancel, reconnect, restart, and
+- [x] NWP/NIP/error/status specs land in English and Chinese.
+- [x] All six SDKs expose matching DTOs and NWM metadata.
+- [x] All six SDKs run the shared context vectors in CI.
+- [x] At least one native server passes cancel, reconnect, restart, and
       concurrent-update integration tests.
-- [ ] Strict-native Ivy integration deletes its private stateful payload codec.
-- [ ] The stateless path has no behavioral regression.
-- [ ] The benchmark demonstrates both transport-byte and evaluated-token savings.
-- [ ] Source-of-truth and version-consistency gates are green before distribution.
+- [x] Strict-native Ivy integration deletes its private stateful payload codec.
+- [x] The stateless path has no behavioral regression.
+- [x] The benchmark demonstrates both transport-byte and evaluated-token savings.
+- [x] Source-of-truth and version-consistency gates are green before distribution.
+
+Implementation verification completed on 2026-08-14. All six SDK suites execute
+the 19 shared vectors and the Action Server integration scenarios. The strict-native
+second-turn benchmark reports `wire_input_bytes` 756 -> 586 (22.5% lower) and
+deterministic runtime `evaluated_tokens` 157 -> 59 (62.4% lower), with ordered
+role/tool semantic parity and protocol fallback disabled. Ivy validates official
+DTO usage, concurrent out-of-order unary correlation, and strict missing/unknown
+response-ID rejection against the alpha.18 source projects. Distribution to
+NPS-Release and standalone SDK repositories remains a release workflow step and
+is intentionally not part of the CR implementation commit.
 
 ## 14. Proposed CHANGELOG Entry
 
-> **NWP stateful LLM context (NPS-CR-0011, Draft)**: add an opt-in context/delta
+> **NWP stateful LLM context (NPS-CR-0011, Implemented)**: add an opt-in context/delta
 > contract for `llm.complete`, opaque owner-bound context IDs, CAS versions,
 > create/append/fork/reset/status/release lifecycle, atomic stream completion,
 > NWM/NIP discovery and authorization, deterministic errors, and measured
