@@ -6,8 +6,7 @@ English | [中文版](./README.cn.md)
 
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
-[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.17-orange.svg)](CHANGELOG.md)
-[![Candidate](https://img.shields.io/badge/candidate-v1.0.0--alpha.18-blue.svg)](CHANGELOG.md)
+[![Release](https://img.shields.io/badge/release-v1.0.0--alpha.18-orange.svg)](CHANGELOG.md)
 [![NCP](https://img.shields.io/badge/NCP-v0.11-5b8cff.svg)]()
 [![NWP](https://img.shields.io/badge/NWP-v0.21-4af0b0.svg)]()
 [![NIP](https://img.shields.io/badge/NIP-v0.14-7b61ff.svg)]()
@@ -16,9 +15,8 @@ English | [中文版](./README.cn.md)
 
 NPS is a complete web infrastructure protocol suite designed for AI Agents and models. It consists of five sub-protocols covering AI communication, web access, identity, node discovery, and multi-agent orchestration.
 
-> Latest published release: `v1.0.0-alpha.17`. The source, spec, and SDK
-> distribution branches are preparing the unreleased `v1.0.0-alpha.18`
-> portable server/runtime conformance candidate.
+> Latest published release: `v1.0.0-alpha.18`, including NWP 0.21 stateful
+> LLM context, six-SDK lifecycle parity, and strict-native savings gates.
 
 ---
 
@@ -168,22 +166,22 @@ nps/
 
 ## Implementation Status
 
-The table below describes the current `1.0.0-alpha.18` candidate source tree.
-The latest published package line remains `1.0.0-alpha.17`.
+The table below describes the released `1.0.0-alpha.18` source tree.
+The latest published package line is `1.0.0-alpha.18`.
 
 ### C# / .NET (`impl/dotnet/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `NPS.Core` | 1.0.0-alpha.18 | Candidate | Frame codec (MsgPack/JSON), dual-header mode (4B/8B), frame registry, Anchor cache, NativeAOT-safe codecs |
-| `NPS.NWP` | 1.0.0-alpha.18 | Candidate | Memory / Action / Complex / Anchor / Bridge Node middleware; native-mode NWP serving over NCP sessions; `/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`; graph traversal + X-NWP-Depth + cycle detection; SSRF + idempotency + priority + async task lifecycle |
-| `NPS.NIP` | 1.0.0-alpha.18 | Candidate | CA library (key generation, certificate issuance/revocation, typed remote CA client, OCSP, CRL), `NipIdentVerifier` 6-step identity verification |
-| `NPS.NDP` | 1.0.0-alpha.18 | Candidate | NDP frame types (Announce/Resolve/Graph), in-memory registry (TTL eviction), announce signature validator |
-| `NPS.NOP` | 1.0.0-alpha.18 | Candidate | DAG orchestration engine (condition eval, input mapping, K-of-N sync, retry/backoff) + §8.2 delegation chain depth limit + §8.4 callback SSRF guard and exponential backoff retry |
-| `NPS.Conformance` | 1.0.0-alpha.18 | Candidate | Node L1/L2 conformance case catalog, run manifest model, and CI validation helpers |
-| `tools/nip-ca-server` | 1.0.0-alpha.18 | Candidate | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
+| `NPS.Core` | 1.0.0-alpha.18 | Released | Frame codec (MsgPack/JSON), dual-header mode (4B/8B), frame registry, Anchor cache, NativeAOT-safe codecs |
+| `NPS.NWP` | 1.0.0-alpha.18 | Released | Memory / Action / Complex / Anchor / Bridge Node middleware; native-mode NWP serving over NCP sessions; `/.nwm`·`/.schema`·`/actions`·`/invoke`·`/query`·`/system.task.*`; graph traversal + X-NWP-Depth + cycle detection; SSRF + idempotency + priority + async task lifecycle |
+| `NPS.NIP` | 1.0.0-alpha.18 | Released | CA library (key generation, certificate issuance/revocation, typed remote CA client, OCSP, CRL), `NipIdentVerifier` 6-step identity verification |
+| `NPS.NDP` | 1.0.0-alpha.18 | Released | NDP frame types (Announce/Resolve/Graph), in-memory registry (TTL eviction), announce signature validator |
+| `NPS.NOP` | 1.0.0-alpha.18 | Released | DAG orchestration engine (condition eval, input mapping, K-of-N sync, retry/backoff) + §8.2 delegation chain depth limit + §8.4 callback SSRF guard and exponential backoff retry |
+| `NPS.Conformance` | 1.0.0-alpha.18 | Released | Node L1/L2 conformance case catalog, run manifest model, and CI validation helpers |
+| `tools/nip-ca-server` | 1.0.0-alpha.18 | Released | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
 | Compat ingresses | 1.0.0-alpha.17 | ✅ Final deprecated release | MCP Ingress (JSON-RPC 2.0, MCP 2024-11-05), A2A Ingress (Google A2A v0.2), gRPC Ingress (HTTP/2, 4 unary RPCs); retired from the synchronized train in alpha.18 in favor of `NPS.NWP.Bridge` |
-| Daemons | 1.0.0-alpha.18 | Candidate | Six resident services: `npsd` (L1 minimum), `nps-runner`, `nps-ingress`, `nps-registry`, `nps-cloud-ca`, `nps-ledger` (RFC-0004 in-memory log); see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) |
+| Daemons | 1.0.0-alpha.18 | Released | Six resident services: `npsd` (L1 minimum), `nps-runner`, `nps-ingress`, `nps-registry`, `nps-cloud-ca`, `nps-ledger` (RFC-0004 in-memory log); see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) |
 | Samples | — | ✅ Available | `samples/NPS.Samples.NopDag` — 3-node NOP DAG end-to-end over real HTTP; `demos/nps-demo` — 4-scene business demo (NIP → AnchorFrame → NOP → DiffFrame) |
 | Benchmarks | — | ✅ Available | `benchmarks/NPS.Benchmarks.TokenSavings` → **45.0% token saving vs REST** (exceeds Phase 1 ≥30% exit criterion); `benchmarks/NPS.Benchmarks.WireSize` → **63.6% MsgPack vs JSON** (exceeds Phase 2 ≤50% exit criterion) |
 
@@ -193,31 +191,31 @@ The latest published package line remains `1.0.0-alpha.17`.
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-lib` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, asyncio + httpx, Ed25519 signing, 1372 tests, 92.07% coverage. Python import module remains `nps_sdk`. |
+| `nps-lib` | 1.0.0-alpha.18 | Released | Full client/server protocol surface, asyncio + httpx, Ed25519 signing, 1372 tests, 92.07% coverage. Python import module remains `nps_sdk`. |
 
 ### TypeScript (`impl/typescript/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `@labacacia/nps-sdk` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 1171 tests. The latest published `1.0.0-alpha.17` package includes `dist/`. |
+| `@labacacia/nps-sdk` | 1.0.0-alpha.18 | Released | Full client/server protocol surface, Node.js 22+, MsgPack + JSON dual encoding, Ed25519 signing, 1171 tests. The latest published `1.0.0-alpha.18` package includes `dist/`. |
 
 ### Java (`impl/java/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-java` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 693 tests |
+| `nps-java` | 1.0.0-alpha.18 | Released | Full client/server protocol surface, Java 21, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 693 tests |
 
 ### Rust (`impl/rust/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `nps-rs` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 755 tests |
+| `nps-rs` | 1.0.0-alpha.18 | Released | Full client/server protocol surface, Rust stable, MsgPack + JSON dual encoding, Ed25519 signing, AES-256-GCM key encryption, Tokio async, 755 tests |
 
 ### Go (`impl/go/`)
 
 | Component | Version | Status | Contents |
 |-----------|---------|--------|----------|
-| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.18 | Candidate | Full client/server protocol surface, Go 1.23+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 683 tests |
+| `github.com/labacacia/NPS-sdk-go` | 1.0.0-alpha.18 | Released | Full client/server protocol surface, Go 1.23+, MsgPack + JSON dual encoding, Ed25519 built-in signing, AES-256-GCM key encryption, 683 tests |
 
 ---
 
