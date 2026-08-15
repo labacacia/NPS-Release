@@ -8,7 +8,7 @@
 
 在 NPS 达到 v1.0 稳定版之前，套件内所有仓库 —— 规范、各 SDK（.NET / Python / TypeScript / Java / Rust / Go）、CA Server、兼容 Bridge —— 同步使用同一个预发布版本号。
 
-## [1.0.0-alpha.18] —— 未发布
+## [1.0.0-alpha.18] —— 2026-08-15
 
 ### 新增
 
@@ -20,13 +20,30 @@
   不透明 context ID、create/append/fork/reset/status/release、CAS 版本、原子
   unary/async 原子取消语义、NWM 0.2 发现、NIP 0.14 `llm:context` 授权、确定性错误，
   以及共享生命周期/replay/restart/accounting 向量（NPS-Dev#90）。Stateless
-  completion 保持兼容，stateful 请求绝不静默 fallback。alpha.18 参考 server
-  会拒绝 stateful streaming；terminal-stream commit 留待后续实现。
+  completion 保持兼容，stateful 请求绝不静默 fallback。六语言参考 server
+  均实现 stateful NDJSON streaming：仅在成功终帧原子提交，异常结束会中止，
+  已完成序列可在新的 `stream_id` 下进行幂等重放。
 - 新增用于有界活跃对象上限的 `NPS-LIMIT-RESOURCE`，以及在 decoder 边界测量
   请求的 `LlmUsageDto.wire_input_bytes`。
+- 新增六语言 stateful LLM 黑盒集成覆盖：验证重连与响应丢失恢复、并发
+  append/CAS 仅一个请求胜出，以及 server 重启后 process-local context
+  明确丢失。
+- 新增基于官方 MessagePack `ActionFrame` decoder 的 CR-0011 strict-native
+  第二轮基准。确定性门禁在禁用 fallback 时验证 delta-only role/tool 语义等价，
+  并分别报告更低的 decoder `wire_input_bytes` 与 runtime `evaluated_tokens`。
 
 ### 修复
 
+- 六语言有状态 LLM Action coordinator 在未配置部署侧 authorizer 时改为 fail
+  closed，并在 admission/commit 向 authorizer 传入精确 capability 集合
+  （`llm:complete` + `llm:context`，使用 stream/tool 时再追加相应 capability）。
+- 六语言的 19 条 CR-0011 共享合规向量改为 fixture-driven：测试会实际执行并
+  校验每条 vector 的 `input`、`pre_state` 与 `expected` contract，不再只把
+  fixture 当作 ID dispatch 清单。
+- 六语言 Action Server 的 stateful LLM streaming 语义完成对齐：
+  `stream=true` 不得与 async ack 组合；context receipt 只出现在成功终帧；
+  失败或未完整结束的流会中止且不进入缓存；成功重试会在 server 新生成的
+  stream identifier 下重放完全相同的序列。
 - 修复 .NET NativeAOT MessagePack resolver 对可空 `UInt64` 的缺失支持，恢复
   NDP `AnnounceFrame.cluster_epoch` 的 Tier-2 round-trip；同时覆盖 Graph latency
   的 null 与有值两种可选 primitive 情况（NPS-Dev#89）。

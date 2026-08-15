@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NET / Python / TypeScript / Java / Rust / Go), CA Servers, and compat bridges — is synchronized to the same pre-release version tag.
 
-## [1.0.0-alpha.18] — Unreleased
+## [1.0.0-alpha.18] — 2026-08-15
 
 ### Added
 
@@ -23,13 +23,33 @@ Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NE
   discovery, NIP 0.14 `llm:context` authorization, deterministic errors, and
   shared lifecycle/replay/restart/accounting vectors (NPS-Dev#90). Stateless
   completion remains compatible and stateful requests never silently fallback.
-  The alpha.18 reference servers reject stateful streaming without fallback;
-  terminal-stream commit remains specified for a later implementation round.
+  All six reference servers implement stateful NDJSON streaming with atomic
+  terminal-frame commit, abnormal-termination abort, and completed-sequence
+  idempotent replay under a fresh `stream_id`.
 - Added `NPS-LIMIT-RESOURCE` for bounded live-object limits and
   `LlmUsageDto.wire_input_bytes` for decoder-boundary request measurement.
+- Added six-SDK black-box integration coverage for stateful LLM reconnect and
+  lost-response recovery, single-winner concurrent append/CAS behavior, and
+  process-local context loss after a server restart.
+- Added a strict-native CR-0011 second-turn benchmark using the official
+  MessagePack `ActionFrame` decoder. The deterministic gate verifies delta-only
+  role/tool semantic parity with fallback disabled and separately reports lower
+  decoder `wire_input_bytes` and runtime `evaluated_tokens`.
 
 ### Fixed
 
+- Made all six stateful LLM Action coordinators fail closed when no deployment
+  authorizer is configured, and pass the exact admission/commit capability set
+  (`llm:complete` + `llm:context`, plus stream/tool capabilities when used) to
+  that authorizer.
+- Made the 19 shared CR-0011 conformance vectors fixture-driven in all six SDKs:
+  tests now execute and validate each vector's `input`, `pre_state`, and
+  `expected` contract instead of using the fixture only as an ID dispatch list.
+- Aligned stateful LLM streaming across all six Action Server implementations:
+  `stream=true` is incompatible with async acknowledgement, context receipts
+  appear only on successful terminal chunks, failed or incomplete streams are
+  aborted and never cached, and successful retries replay the exact sequence
+  under a new server-owned stream identifier.
 - Fixed the .NET NativeAOT MessagePack resolver for nullable `UInt64`, restoring
   Tier-2 round trips for NDP `AnnounceFrame.cluster_epoch`; optional primitive
   coverage now also exercises null and populated graph latency values
