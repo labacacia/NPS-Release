@@ -179,7 +179,7 @@ nps/
 | `NPS.NOP` | 1.0.0-alpha.18 | 已发布 | DAG 编排引擎（条件求值、输入映射、K-of-N 同步、重试/退避）+ §8.2 委托链深度限制 + §8.4 callback SSRF 防护及指数退避重试 |
 | `NPS.Conformance` | 1.0.0-alpha.18 | 已发布 | Node L1/L2 conformance case catalog、run manifest model 与 CI validation helper |
 | `tools/nip-ca-server` | 1.0.0-alpha.18 | 已发布 | NIP CA Server —— C# / ASP.NET Core 10、PostgreSQL、Docker。独立发布到 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)（唯一打 release 的实现）；5 个其它语言参考移植（Python / TypeScript / Java / Rust / Go）冻结在 `1.0.0-alpha.11`，放在 `tools/nip-ca-server/example/` 下。|
-| Compat 接入 | 1.0.0-alpha.17 | ✅ 最后一个 deprecated release | MCP Ingress（JSON-RPC 2.0，MCP 2024-11-05）、A2A Ingress（Google A2A v0.2）、gRPC Ingress（HTTP/2，4 个 unary RPC）；alpha.18 起退出同步发布列车，迁移到 `NPS.NWP.Bridge` |
+| Compat 接入 | 1.0.0-alpha.16 | 最后一次发布（2026-07-23） | MCP Ingress（JSON-RPC 2.0，MCP 2024-11-05）、A2A Ingress（Google A2A v0.2）、gRPC Ingress（HTTP/2，4 个 unary RPC）；alpha.17 曾准备过弃用版但从未发布，自 alpha.18 起退出同步发布列车，迁移到 `NPS.NWP.Bridge` |
 | Daemons | 1.0.0-alpha.18 | 已发布 | 六个常驻服务：`npsd`（L1 最小集）、`nps-runner`、`nps-ingress`、`nps-registry`、`nps-cloud-ca`、`nps-ledger`（RFC-0004 内存日志）；详见 [`docs/daemons/architecture.cn.md`](docs/daemons/architecture.cn.md) |
 | Samples | — | ✅ 可用 | `samples/NPS.Samples.NopDag` —— 真 HTTP 的 3 节点 NOP DAG 端到端；`demos/nps-demo` —— 4 幕业务 demo（NIP → AnchorFrame → NOP → DiffFrame）|
 | Benchmarks | — | ✅ 可用 | `benchmarks/NPS.Benchmarks.TokenSavings` → **相对 REST 节省 45.0% CGN**（超过 Phase 1 ≥30% 出口）；`benchmarks/NPS.Benchmarks.WireSize` → **MsgPack 相对 JSON 减少 63.6%**（超过 Phase 2 ≤50% 出口）|

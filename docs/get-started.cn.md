@@ -4,8 +4,8 @@
 
 NPS 是一套多层协议族，从哪里开始取决于你在构建什么。
 
-最新 suite release 是 `1.0.0-alpha.17`。当前文档与 SDK 说明已经对齐
-alpha.17 release 边界；各生态包管理器可用性单独跟踪。
+最新 suite release 是 `1.0.0-alpha.18`，于 2026-08-15 发布。当前文档与 SDK 说明
+已经对齐 alpha.18 release 边界；各生态包管理器可用性单独跟踪。
 
 ---
 
@@ -15,14 +15,16 @@ alpha.17 release 边界；各生态包管理器可用性单独跟踪。
 
 | 语言 | 安装 | Wiki 快速入门 |
 |------|------|--------------|
-| Python     | `pip install nps-lib==1.0.0a13`                          | [SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
-| TypeScript | `npm install @labacacia/nps-sdk@alpha`                   | [SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
-| Rust       | `cargo add nps-sdk@=1.0.0-alpha.17`                       | [SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.17`  | [SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
-| Java       | `implementation("com.labacacia.nps:nps-java:1.0.0-alpha.17")` | [SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
-| .NET       | `dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.17` | [SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
+| Python     | `pip install nps-lib==1.0.0a18`                          | [SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
+| TypeScript | `npm install @labacacia/nps-sdk@1.0.0-alpha.18`          | [SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
+| Rust       | `cargo add nps-sdk@=1.0.0-alpha.18`                       | [SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
+| Go         | `go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.18`  | [SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| Java       | `implementation("com.labacacia.nps:nps-java:1.0.0-alpha.18")` | [SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
+| .NET       | `dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.18` | [SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.17` 包含 package build 输出；`alpha` dist-tag 指向最新已发布 alpha。
+> Python 说明：PyPI 会归一化预发布后缀，套件的 `1.0.0-alpha.18` 在 PyPI 上发布为 `1.0.0a18`。
+>
+> npm 说明：请显式指定版本号，或使用 `alpha` dist-tag —— 两者都解析到 `1.0.0-alpha.18`。不带修饰的 `latest` dist-tag 仍刻意停留在 `1.0.0-alpha.7`，因此不加版本号或 tag 直接 `npm install @labacacia/nps-sdk` **不会**装到当前发布版。
 
 ---
 

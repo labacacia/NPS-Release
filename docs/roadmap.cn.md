@@ -2,7 +2,7 @@
 
 > [English](roadmap.md) | 中文版
 
-NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 suite release 为 **v1.0.0-alpha.17**，已交付六 SDK 可移植 server/conformance profile、多 Anchor HA、双向 Bridge serving、NIP Phase-3 enforcement、NOP wire key 修正与 daemon runtime 加固。Alpha.18 是当前尚未发布的候选版。
+NPS 的路径分为四个 Phase — 从草案规范走向正式标准。最新 suite release 为 **v1.0.0-alpha.18**，于 2026-08-15 发布，在六个 SDK 中交付 NPS-CR-0011 / NWP 0.21 有状态 LLM context 契约 —— owner 绑定的 context id、`create` / `append` / `fork` / `reset` / `status` / `release`、compare-and-swap 版本、原子取消、NWM 0.2 发现能力，以及 NIP 0.14 `llm:context` 授权 —— 另含官方 NWP LLM usage 遥测与 unary `request_id` 关联，以及新增的 `NPS-LIMIT-RESOURCE` 错误码。
 
 ---
 

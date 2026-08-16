@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — a complete internet protocol stack purpose-built for AI agents and neural models.
 >
-> Candidate 1.0.0-alpha.18 · latest suite release 1.0.0-alpha.17 · Apache 2.0 · [中文版](index.cn.md)
+> Latest suite release 1.0.0-alpha.18 (2026-08-15) · Apache 2.0 · [中文版](index.cn.md)
 
 ---
 
@@ -32,25 +32,27 @@ NPS solves all four **at the wire level**:
 
 ```bash
 # Python
-pip install nps-lib==1.0.0a13
+pip install nps-lib==1.0.0a18
 
 # TypeScript
-npm install @labacacia/nps-sdk@alpha
+npm install @labacacia/nps-sdk@1.0.0-alpha.18
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.17
+cargo add nps-sdk@=1.0.0-alpha.18
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.17
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.18
 
 # Java (Gradle)
-implementation("com.labacacia.nps:nps-java:1.0.0-alpha.17")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.18")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.17
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.18
 ```
 
-> npm note: `@labacacia/nps-sdk@1.0.0-alpha.17` includes the package build output; the `alpha` dist-tag resolves to the latest published alpha.
+> Python note: PyPI normalizes the pre-release suffix, so the suite's `1.0.0-alpha.18` is published as `1.0.0a18`.
+>
+> npm note: pin the explicit version, or use the `alpha` dist-tag — both resolve to `1.0.0-alpha.18`. The unqualified `latest` dist-tag is deliberately still `1.0.0-alpha.7`, so `npm install @labacacia/nps-sdk` with no version or tag will **not** give you the current release.
 
 ---
 
@@ -65,7 +67,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.17
 
 ## Status
 
-**v1.0.0-alpha.17** — the published SDK/spec line tracks NCP v0.11, NWP v0.20, NIP v0.13, NDP v0.12, and NOP v0.9. It delivers portable server/conformance profiles across all six SDKs, multi-Anchor HA, bidirectional Bridge serving, NIP Phase-3 enforcement, corrected NOP wire keys, and hardened daemon runtime behavior. The unreleased alpha.18 candidate adds NWP 0.21 stateful LLM context semantics and related SDK/runtime work. **NIP CA Server** and the public **NPS Daemons** bundle remain independently published at alpha.16 while their alpha.18 candidates are prepared.
+**v1.0.0-alpha.18** — released 2026-08-15. The published SDK/spec line tracks NCP v0.11, NWP v0.21, NIP v0.14, NDP v0.12, and NOP v0.9. It delivers NPS-CR-0011 stateful LLM context across all six SDKs — owner-bound context ids, `create` / `append` / `fork` / `reset` / `status` / `release`, compare-and-swap versions, atomic cancellation, NWM 0.2 discovery, and NIP 0.14 `llm:context` authorization — plus official NWP LLM usage telemetry with unary `request_id` correlation, the new `NPS-LIMIT-RESOURCE` code, and a .NET NativeAOT nullable-`UInt64` fix. **NIP CA Server** and the public **NPS Daemons** bundle are independently published, and ship alpha.18 alongside the suite.
 
 ---
 

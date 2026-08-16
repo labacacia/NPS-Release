@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The latest suite release is **v1.0.0-alpha.17**. It delivers portable server/conformance profiles across all six SDKs, multi-Anchor HA, bidirectional Bridge serving, NIP Phase-3 enforcement, corrected NOP wire keys, and hardened daemon runtime behavior. Alpha.18 is the current unreleased candidate.
+NPS is on a four-phase path from draft specification to formal standard. The latest suite release is **v1.0.0-alpha.18**, published 2026-08-15. It delivers the NPS-CR-0011 / NWP 0.21 stateful LLM context contract across all six SDKs — owner-bound context ids, `create` / `append` / `fork` / `reset` / `status` / `release`, compare-and-swap versions, atomic cancellation, NWM 0.2 discovery, and NIP 0.14 `llm:context` authorization — plus official NWP LLM usage telemetry with unary `request_id` correlation and the new `NPS-LIMIT-RESOURCE` code.
 
 ---
 

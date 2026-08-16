@@ -2,11 +2,13 @@
 
 > [English](sdks.md) | 中文版
 
-六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。当前已对齐 suite release **1.0.0-alpha.17**；各生态包管理器可用性单独跟踪。
+六种官方 SDK，每种均完整实现五层协议（NCP + NWP + NIP + NDP + NOP）。当前已对齐 suite release **1.0.0-alpha.18**（2026-08-15 发布）；各生态包管理器可用性单独跟踪。
 
-> alpha.17 release 说明：六个 SDK 已统一可移植 server/conformance profile、修正 NOP wire key，并对齐 HA/Bridge/NIP enforcement 能力面。
+> alpha.18 release 说明：六个 SDK 均已实现 NPS-CR-0011 / NWP 0.21 有状态 LLM context 契约 —— owner 绑定的 context id、`create` / `append` / `fork` / `reset` / `status` / `release`、compare-and-swap 版本、原子取消、NWM 0.2 发现能力，以及 NIP 0.14 `llm:context` 授权 —— 另含官方 NWP LLM usage 遥测与 unary `request_id` 关联，以及新增的 `NPS-LIMIT-RESOURCE` 错误码。
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.17` 包含 package build 输出；安装 `@labacacia/nps-sdk@alpha` 即可获取最新已发布 alpha。
+> npm 说明：请安装 `@labacacia/nps-sdk@1.0.0-alpha.18`，或使用 `alpha` dist-tag —— 两者解析到同一个版本。不带修饰的 `latest` dist-tag 仍刻意停留在 `1.0.0-alpha.7`，因此不加 tag 直接 `npm install @labacacia/nps-sdk` **不会**装到当前发布版。
+>
+> Python 说明：PyPI 会归一化预发布后缀 —— 请安装 `nps-lib==1.0.0a18`。
 
 ---
 
@@ -19,7 +21,7 @@
 | TypeScript | `@labacacia/nps-sdk`                                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [Wiki: SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
 | Java       | `com.labacacia.nps:nps-java`                                 | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [Wiki: SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
 | Rust       | `nps-sdk`                                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [Wiki: SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.26.5   | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.23     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
 
 安装命令、极简示例、功能覆盖对照表等深度内容，请访问上方各语言 Wiki 页面，或查阅 [SDK-Quickstart](https://github.com/labacacia/NPS-Release/wiki/SDK-Quickstart) 获取语言无关的入门教程。
 
@@ -27,7 +29,7 @@
 
 ## NIP CA Server
 
-可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构，自 `v1.0.0-alpha.11` 起从 SDK 拆出独立发布；当前公共文档跟踪 alpha.16 的签名 CRL 与 remote-client 边界。
+可独立部署的 Neural Identity Protocol（NPS-3 §8）证书颁发机构，自 `v1.0.0-alpha.11` 起从 SDK 拆出独立发布；当前已随套件发布到 `v1.0.0-alpha.18`。签名 CRL 与 remote-client 边界在 alpha.16 交付。
 
 | 仓库 | 技术栈 | 快速开始 |
 |------|--------|----------|
@@ -39,7 +41,7 @@
 
 ## NPS Daemons
 
-标准三层 NPS 拓扑的参考部署二进制，最新已发布版本为 `v1.0.0-alpha.16`，当前文档跟踪 alpha.16 release 的 native NCP TLS/mTLS 与 NWP serving 边界。
+标准三层 NPS 拓扑的参考部署二进制，最新已发布版本为 `v1.0.0-alpha.18`，与套件同步发布。native NCP TLS/mTLS 与 NWP serving 在 alpha.16 交付。
 
 | 仓库 | Daemon | 快速开始 |
 |------|--------|----------|

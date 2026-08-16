@@ -2,7 +2,7 @@
 
 > **Neural Protocol Suite** — 为 AI Agent 和神经模型量身设计的完整互联网协议栈。
 >
-> 候选版 1.0.0-alpha.18 · 最新 suite release 1.0.0-alpha.17 · Apache 2.0 · [English](index.md)
+> 最新 suite release 1.0.0-alpha.18（2026-08-15 发布）· Apache 2.0 · [English](index.md)
 
 ---
 
@@ -32,25 +32,27 @@ NPS 在**协议层面**同时解决这四个问题：
 
 ```bash
 # Python
-pip install nps-lib==1.0.0a13
+pip install nps-lib==1.0.0a18
 
 # TypeScript
-npm install @labacacia/nps-sdk@alpha
+npm install @labacacia/nps-sdk@1.0.0-alpha.18
 
 # Rust
-cargo add nps-sdk@=1.0.0-alpha.17
+cargo add nps-sdk@=1.0.0-alpha.18
 
 # Go
-go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.17
+go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.18
 
 # Java (Gradle)
-implementation("com.labacacia.nps:nps-java:1.0.0-alpha.17")
+implementation("com.labacacia.nps:nps-java:1.0.0-alpha.18")
 
 # .NET
-dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.17
+dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.18
 ```
 
-> npm 说明：`@labacacia/nps-sdk@1.0.0-alpha.17` 包含 package build 输出；`alpha` dist-tag 指向最新已发布 alpha。
+> Python 说明：PyPI 会归一化预发布后缀，套件的 `1.0.0-alpha.18` 在 PyPI 上发布为 `1.0.0a18`。
+>
+> npm 说明：请显式指定版本号，或使用 `alpha` dist-tag —— 两者都解析到 `1.0.0-alpha.18`。不带修饰的 `latest` dist-tag 仍刻意停留在 `1.0.0-alpha.7`，因此不加版本号或 tag 直接 `npm install @labacacia/nps-sdk` **不会**装到当前发布版。
 
 ---
 
@@ -65,7 +67,7 @@ dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.17
 
 ## 状态
 
-**v1.0.0-alpha.17** — 已发布的 SDK/spec line 跟踪 NCP v0.11、NWP v0.20、NIP v0.13、NDP v0.12、NOP v0.9，交付六 SDK 可移植 server/conformance profile、多 Anchor HA、双向 Bridge serving、NIP Phase-3 enforcement、NOP wire key 修正与 daemon runtime 加固。尚未发布的 alpha.18 候选新增 NWP 0.21 有状态 LLM context 语义及相应 SDK/runtime。**NIP CA Server** 与公开 **NPS Daemons** bundle 的独立发布仍停在 alpha.16，alpha.18 候选正在准备。
+**v1.0.0-alpha.18** — 于 2026-08-15 发布。已发布的 SDK/spec line 跟踪 NCP v0.11、NWP v0.21、NIP v0.14、NDP v0.12、NOP v0.9，在六个 SDK 中交付 NPS-CR-0011 有状态 LLM context —— owner 绑定的 context id、`create` / `append` / `fork` / `reset` / `status` / `release`、compare-and-swap 版本、原子取消、NWM 0.2 发现能力，以及 NIP 0.14 `llm:context` 授权 —— 另外还包含官方 NWP LLM usage 遥测与 unary `request_id` 关联、新增的 `NPS-LIMIT-RESOURCE` 错误码，以及 .NET NativeAOT nullable `UInt64` 修复。**NIP CA Server** 与公开 **NPS Daemons** bundle 保持独立发布，并已随套件同步发布 alpha.18。
 
 ---
 

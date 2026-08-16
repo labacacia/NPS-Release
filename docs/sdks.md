@@ -2,11 +2,13 @@
 
 > English | [中文版](sdks.cn.md)
 
-Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — aligned to suite release **1.0.0-alpha.17**. Package-manager availability is tracked per ecosystem.
+Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + NDP + NOP) — aligned to suite release **1.0.0-alpha.18** (published 2026-08-15). Package-manager availability is tracked per ecosystem.
 
-> alpha.17 release note: all six SDKs share portable server/conformance profiles, corrected NOP wire keys, and the HA/Bridge/NIP enforcement surface.
+> alpha.18 release note: all six SDKs implement the NPS-CR-0011 / NWP 0.21 stateful LLM context contract — owner-bound context ids, `create` / `append` / `fork` / `reset` / `status` / `release`, compare-and-swap versions, atomic cancellation, NWM 0.2 discovery, and NIP 0.14 `llm:context` authorization — plus official NWP LLM usage telemetry with unary `request_id` correlation and the new `NPS-LIMIT-RESOURCE` code.
 
-> npm note: `@labacacia/nps-sdk@1.0.0-alpha.17` includes the package build output; install `@labacacia/nps-sdk@alpha` for the latest published alpha.
+> npm note: install `@labacacia/nps-sdk@1.0.0-alpha.18`, or use the `alpha` dist-tag — both resolve to the same release. The unqualified `latest` dist-tag is deliberately still `1.0.0-alpha.7`, so an untagged `npm install @labacacia/nps-sdk` will **not** give you the current release.
+>
+> Python note: PyPI normalizes the pre-release suffix — install `nps-lib==1.0.0a18`.
 
 ---
 
@@ -19,7 +21,7 @@ Six official SDKs — each implementing all five protocols (NCP + NWP + NIP + ND
 | TypeScript | `@labacacia/nps-sdk`                                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [Wiki: SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
 | Java       | `com.labacacia.nps:nps-java`                                 | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [Wiki: SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
 | Rust       | `nps-sdk`                                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [Wiki: SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.26.5   | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.23     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
 
 For install commands, minimal examples, and per-feature coverage tables, see the per-language Wiki pages above or [SDK-Quickstart](https://github.com/labacacia/NPS-Release/wiki/SDK-Quickstart) for a language-agnostic walkthrough.
 
@@ -27,7 +29,7 @@ For install commands, minimal examples, and per-feature coverage tables, see the
 
 ## NIP CA Server
 
-Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Independently versioned from the SDKs since `v1.0.0-alpha.11`; current public docs track the alpha.16 signed-CRL and remote-client boundary.
+Standalone deployable Certificate Authority for the Neural Identity Protocol (NPS-3 §8). Independently versioned from the SDKs since `v1.0.0-alpha.11`; currently published at `v1.0.0-alpha.18` alongside the suite. The signed-CRL and remote-client boundary landed in alpha.16.
 
 | Repo | Stack | Quickstart |
 |------|-------|------------|
@@ -39,7 +41,7 @@ For operator guides and embedding options (SQLite vs PostgreSQL) see [Wiki: NIP-
 
 ## NPS Daemons
 
-Reference deployment binaries for the standard three-layer NPS topology, currently published at `v1.0.0-alpha.16` with alpha.16 release docs for native NCP TLS/mTLS and NWP serving.
+Reference deployment binaries for the standard three-layer NPS topology, currently published at `v1.0.0-alpha.18` alongside the suite. Native NCP TLS/mTLS and NWP serving landed in alpha.16.
 
 | Repo | Daemons | Quickstart |
 |------|---------|------------|

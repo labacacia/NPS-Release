@@ -2,8 +2,8 @@
 
 # NPS 路线图
 
-**Version**: 0.8
-**Date**: 2026-08-01
+**Version**: 0.9
+**Date**: 2026-08-16
 **归属**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -339,38 +339,69 @@ v1.0.0-alpha.7 待开展任务：
 
 ---
 
-## alpha.18 — 🚧 下一个（目标 2026-09）—— **Pre-beta.1 加固**
+## alpha.18 — 2026-08-15 ✅ —— **已发布至全部 registry** —— **范围已缩减**
 
-> **主题**：*beta.1 前加固* —— 对每个协议做生产加固并清理发布工程欠账，为 `v1.0.0-beta.1` 的 NIP Phase-3 flag day 铺路。不引入大范围功能波；唯一受控设计例外是 NPS-Dev#90，即 NWP stateful LLM context/delta contract，使模型输入 token 节省能被真实测量，而不只停留在传输层节省。
+> **原定主题**：*beta.1 前加固* —— 对每个协议做生产加固并清理发布工程欠账，为 `v1.0.0-beta.1` 的 NIP Phase-3 flag day 铺路；唯一受控设计例外是 NPS-Dev#90，即 NWP stateful LLM context/delta contract。
 >
-> **铁律（自 alpha.11）**：每个 alpha 五协议 **spec 与六 SDK 同步推进**，不允许 ".NET 参考先行" 缺口。下述每项都落 spec + go/java/python/rust/typescript/.NET + conformance 向量 + CN 译文 + 文档四面。
+> **实际交付**：那个"设计例外"成了本版的全部内容。alpha.18 交付了 **NWP 0.21 上的 NPS-CR-0011 有状态 LLM context 契约**、它所需的 NIP 0.14 授权面，以及发布工程清理 —— 但**五条逐协议加固线中有三条没有落地**。见下方"范围缩减"，它们原样顺延至 [alpha.19](#alpha19--下一个目标-2026-10--协议加固顺延)。
 
-**目标版本**：NCP 0.12 / NWP 0.21 / NIP 0.14 / NDP 0.13 / NOP 0.10；`error-codes.md` 1.9 / `frame-registry.yaml` 0.15。
+**实际发布版本**：NCP 0.11（未变）/ NWP **0.21** / NIP **0.14** / NDP 0.12（未变）/ NOP 0.9（未变）；`error-codes.md` **1.9** / `frame-registry.yaml` 0.14（未变）。
 
-**当前基线（2026-08-12）**：
-- ✅ NPS-1..NPS-5 中文规范已与英文在结构和语义上对齐（NPS-Dev#87）；alpha.18 不再背历史译债。
-- ✅ alpha.17 wire-key 尾项已在 Dev 事实源收口，包括 Java/Rust `DelegateFrame` 对齐（NPS-Dev#86）。
-- 🚧 alpha.18 首批：官方 NWP LLM usage/unary correlation（NPS-Dev#88）与 .NET nullable-`UInt64` NativeAOT resolver 修复（NPS-Dev#89）。
-- 🚧 发布欠账：TypeScript 动态包版本、可维护的 Go 最低版本、删除式 standalone 物化、conformance fixture vendoring、registry 发布权限检查。
+**范围缩减 —— 哪些没做**。自 alpha.11 起的铁律是每个 alpha 五协议 **spec 与六 SDK 同步推进**。**alpha.18 是 alpha.11 以来第一个没有做到的版本**，路线图如实记录这一点，而不是把原计划照抄成已完成。原定本版交付的 NCP 0.12、NDP 0.13、NOP 0.10 与 `frame-registry.yaml` 0.15 **均未启动**；CHANGELOG 从未声称交付过它们。这三条线内容不变，整体顺延到 alpha.19。
 
-**逐协议加固**：
+**发布关口**：
 
-| 协议 | 版本 | 已有基线 | alpha.18 验收 |
+1. **规范内容** —— ✅ **部分完成（五协议中的两个）**。NWP v0.21 与 NIP v0.14 推进；`error-codes.md` v1.9。NCP / NDP / NOP 未变 —— 见"范围缩减"。
+2. **跨 SDK 实现对等**（硬关口，就已交付部分而言）—— ✅ **完成**。CR-0011 有状态 LLM context 在六个 SDK（Go / Java / Python / Rust / TypeScript / .NET）全部实现且测试全绿：有状态 NDJSON 流式传输具备终帧原子提交、异常终止 abort，以及已完成序列在新 `stream_id` 下的幂等重放。
+3. **合规性** —— ✅ **完成**。19 条共享 CR-0011 向量在六个 SDK 中改为 **fixture 驱动** —— 每条向量的 `input`、`pre_state`、`expected` 都被真正执行和校验，而不再只把 fixture 当作 ID 派发清单。六 SDK 黑盒覆盖有状态重连、丢响应恢复、并发 append/CAS 单赢家语义，以及服务端重启后的进程内 context 丢失。
+4. **发布工程欠账（P18-0）** —— ✅ **完成**。TypeScript `VERSION` 改为从包元数据推导，不再硬编码；Go 支持下限从不可维持的最低版本降至 **Go 1.23**；OSV 关口下 Java MessagePack → 0.9.11、Jackson → 2.18.9、BouncyCastle → 1.84；standalone 物化删除旧源码同时保留 distribution-only 文件；各 standalone 都带上自己执行的 conformance fixture；registry preflight 证明的是发布权限而非匿名读取。
+5. **分发** —— ✅ **完成**。Dev 已同步到 `NPS-Release/spec`、六个 standalone SDK 仓、daemon/工具分发与镜像；`NPS-Release/version.yaml` 最后 bump；已打 tag 并发布到全部 registry（PyPI、npm、crates.io ×8、NuGet ×11 同时发往 nuget.org **与** InnoLotus Nexus、Maven Central、Go proxy），以及 GitHub releases 与 Gitee 镜像。
+6. **中文翻译** —— ✅ 无历史译债：NPS-1..NPS-5 中文规范在发布前已于 NPS-Dev#87 与英文达成结构与语义对齐。
+7. **状态卫生** —— ✅ **CR-0011** → Implemented；NPS-Dev#86 / #87 已合并，#88 / #89 / #90 已关闭；发布时 issue 追踪器无未决项。
+
+**逐协议交付**：
+
+| 协议 | 版本 | 说明 |
+|---|---|---|
+| **NWP** | v0.21 | **NPS-CR-0011 有状态 LLM context** —— owner-bound 不透明 context ID；`create` / `append` / `fork` / `reset` / `status` / `release`；compare-and-swap 版本；unary 与 async 的原子取消语义；NWM 0.2 发现；确定性错误；共享的生命周期 / 重放 / 重启 / 计量向量。无状态补全保持兼容，有状态请求绝不静默回退。另含官方 **LLM usage 遥测**（`input_tokens`、`output_tokens`、prefix/KV-cache 命中、复用与实际评估 token）与 unary `CapsFrame.request_id` 关联（NPS-Dev#88），并把 `CapsFrame.cached` 与模型 prefix/KV-cache 复用明确区分；新增 `LlmUsageDto.wire_input_bytes` 用于解码边界的请求测量 |
+| **NIP** | v0.14 | 为 CR-0011 面提供 `llm:context` 授权。六个有状态 LLM Action 协调器在未配置部署授权器时一律 **fail closed**，并把准确的准入/提交能力集（`llm:complete` + `llm:context`，用到流/工具时再加上对应能力）传给该授权器 |
+| **NCP** | v0.11 *（未变）* | 原定 0.12 加固 —— runtime keepalive timer、确定性超时关连、QUIC connection migration / 0-RTT 拒绝 / 流控 / 背压、共享 idle/dead-peer/oversized-Nop 向量 —— **未启动，顺延至 alpha.19** |
+| **NDP** | v0.12 *（未变）* | #89（`AnnounceFrame` 的 .NET nullable-`UInt64` NativeAOT resolver 修复）作为实现修复交付，未 bump 规范。原定 0.13 加固 —— sequence/epoch fence 持久化与恢复、重启/分区/stale/同 epoch split/loop 故障向量 —— **未启动，顺延至 alpha.19** |
+| **NOP** | v0.9 *（未变）* | 原定 0.10 加固 —— 有界滑窗重放/逐出、TTL 过期、`weighted_first_k`、`merge_all` 在六 runtime 一致执行，以及丢包/乱序/重复/超时向量 —— **未启动，顺延至 alpha.19** |
+| **共享** | error-codes v1.9 · frame-registry v0.14 *（未变）* | 新增 `NPS-LIMIT-RESOURCE` 用于有界活动对象上限，以及 CR-0011 的确定性错误集。`frame-registry.yaml` 0.15 原本与那三个未交付的协议 bump 配套，随它们一同顺延 |
+| **基准** | — | 使用官方 MessagePack `ActionFrame` 解码器的 strict-native CR-0011 第二轮基准：确定性关口在禁用回退的前提下验证 delta-only 的 role/tool 语义对等，并单独报告更低的解码器 `wire_input_bytes` 与运行时 `evaluated_tokens` |
+
+**不在范围（→ beta.1）**：NIP Phase-3 flag day 本身；多区域 NPS Cloud CA（Phase 3）；1.0 spec 冻结。
+
+---
+
+## alpha.19 — 🚧 下一个（目标 2026-10）—— **协议加固（顺延）**
+
+> **主题**：*协议加固* —— 完成 alpha.18 已规划但未交付的三条逐协议加固线，在 `v1.0.0-beta.1` 之前恢复同步推进铁律。
+>
+> **铁律（自 alpha.11）**：每个 alpha 五协议 **spec 与六 SDK 同步推进**，不允许 ".NET 参考先行" 缺口。下述每项都落 spec + go/java/python/rust/typescript/.NET + conformance 向量 + CN 译文 + 文档四面。alpha.18 打破了这条铁律；alpha.19 的存在就是为了把它恢复。
+
+**目标版本**：NCP **0.12** / NDP **0.13** / NOP **0.10**；`frame-registry.yaml` **0.15**。NWP 与 NIP 保持 0.21 / 0.14，除非加固 delta 另有需要。
+
+**基线（2026-08-16）**：alpha.18 已发布至全部 registry；issue 追踪器无未决项；中文规范与英文对齐；alpha.18 P18-0 所列发布工程欠账已清。
+
+**逐协议加固**（自 alpha.18 原样顺延）：
+
+| 协议 | 版本 | 已有基线 | 验收 |
 |---|---|---|---|
 | **NCP** | 0.12 | 已有 NopFrame、`ping_interval_ms`、dead-peer 规则和 native TCP/QUIC profile | 六 SDK 都执行 runtime keepalive timer 与确定性超时关连；定稿 QUIC connection migration、0-RTT 拒绝、流控/背压策略；共享 idle/dead-peer/oversized-Nop 向量 |
-| **NWP** | 0.21 | 已有拓扑授权、Subscribe cursor、LLM DTO、可移植 native/HTTP server | 所有 server 强制执行授权与可续订 subscription；统一 stability/SLA/billing metadata；交付 #88；把 #90 写成经评审的 CR，覆盖 append/fork/reset/release、归属、过期、usage 与 streaming correlation，再落六 SDK |
-| **NIP** | 0.14 | 已有 edge-mTLS profile、吊销模式、可移植 CA 验证和 Phase-3 开关 | 短寿证书续期互操作；OCSP/CRL timeout/stale/unknown 下 fail-closed；提供 advisory 迁移工具，报告 beta.1 Phase-3 会拒绝的输入 |
-| **NDP** | 0.13 | 已有 resolve-time staleness、health、三跳联邦、registry profile 与 `cluster_epoch` | 持久化并恢复 sequence/epoch fence；用共享故障向量覆盖重启、分区、stale、同 epoch split、loop 与恢复；交付 #89 |
+| **NDP** | 0.13 | 已有 resolve-time staleness、health、三跳联邦、registry profile 与 `cluster_epoch` | 持久化并恢复 sequence/epoch fence；用共享故障向量覆盖重启、分区、stale、同 epoch split、loop 与恢复 |
 | **NOP** | 0.10 | 已有聚合策略、ACK/NAK 字段、result TTL 与可移植 orchestrator profile | 六 runtime 一致执行有界滑窗重放/逐出、TTL 过期、`weighted_first_k`、`merge_all`；新增丢包/乱序/重复/超时 conformance 向量 |
 
-**执行关口**：
-1. **P18-0 —— 事实清理**：关闭实际已发布的 issue；落 #88/#89；删除 TS 静态版本漂移；建立并测试 Go 1.23 下限；修正 EN/CN 发布手册。
-2. **P18-1 —— Spec/design freeze**：每协议一份规范性 hardening delta；#90 通过 CR review；五协议及共享 registry bump；EN/CN 与共享正向/负向/故障向量同批落地。
-3. **P18-2 —— Runtime parity**：六 SDK 全部执行 P18-1 行为。只移植字段/DTO 不算完成；timer、持久化、取消、过期、重放和故障路径都必须可运行。
-4. **P18-3 —— 故障与打包关口**：六语言测试、NativeAOT、可用语言的 race/concurrency、故障向量、package dry-run、安全与依赖扫描，均在文档化最低工具链上通过。
-5. **P18-4 —— 分发**：用删除语义和 distribution 排除物化 standalone；vendoring 各自执行的 conformance fixture；Dev→Release/SDK 达到零未解释漂移；再走常规 pre-release review。tag/publish 仍需单独批准。
+**同样自 alpha.18 计划顺延**：NWP 的可续订 subscription 强制执行与可移植 stability/SLA/billing metadata；NIP 的短寿证书续期互操作、OCSP/CRL 在 timeout/stale/unknown 下 fail-closed，以及报告 beta.1 Phase-3 会拒绝哪些输入的 advisory 工具。这些原本是与版本 bump 配套的 NWP/NIP 加固项，而已发布的 0.21 / 0.14 是因别的原因 bump 的，并未覆盖它们。
 
-**发布手册铁律**：crates 是含 `nps-conformance` 的 **8** 个；standalone 同步删除旧源码并保留明确的 distribution-only 文件；每个 standalone 都带自己执行的 conformance fixture；Maven 无 `zip` 时可用 Python `zipfile`；registry preflight 必须证明发布权限（`cargo owner --list`、npm granular 读写 token + publish 2FA bypass），不能只证明匿名读取。
+**执行关口**：
+1. **P19-1 —— Spec/design freeze**：每协议一份规范性 hardening delta；bump NCP / NDP / NOP 与 `frame-registry.yaml`；EN/CN 与共享正向/负向/故障向量同批落地。
+2. **P19-2 —— Runtime parity**：六 SDK 全部执行 P19-1 行为。只移植字段/DTO 不算完成；timer、持久化、取消、过期、重放和故障路径都必须可运行。
+3. **P19-3 —— 故障与打包关口**：六语言测试、NativeAOT、可用语言的 race/concurrency、故障向量、package dry-run、安全与依赖扫描，均在文档化最低工具链上通过。
+4. **P19-4 —— 分发**：用删除语义和 distribution 排除物化 standalone；vendoring 各自执行的 conformance fixture；Dev→Release/SDK 达到零未解释漂移；再走常规 pre-release review。tag/publish 仍需单独批准。
+
+**发布手册铁律**：crates 是含 `nps-conformance` 的 **8** 个；NuGet 家族是 **11** 个包；standalone 同步删除旧源码并保留明确的 distribution-only 文件；每个 standalone 都带自己执行的 conformance fixture；Maven 无 `zip` 时可用 Python `zipfile`；registry preflight 必须证明发布权限（`cargo owner --list`、npm granular 读写 token + publish 2FA bypass），不能只证明匿名读取。
 
 **不在范围（→ beta.1）**：NIP Phase-3 flag day 本身；多区域 NPS Cloud CA（Phase 3）；1.0 spec 冻结。
 

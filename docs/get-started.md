@@ -4,9 +4,9 @@
 
 NPS is a multi-layer protocol suite. Where you start depends on what you're building.
 
-The latest suite release is `1.0.0-alpha.17`. The documentation and SDK notes
-are aligned with the alpha.17 release boundary; package-manager availability is
-tracked per ecosystem.
+The latest suite release is `1.0.0-alpha.18`, published 2026-08-15. The
+documentation and SDK notes are aligned with the alpha.18 release boundary;
+package-manager availability is tracked per ecosystem.
 
 ---
 
@@ -16,14 +16,16 @@ You need an **SDK**. Pick your language and follow the quickstart on the Wiki.
 
 | Language | Install | Wiki quickstart |
 |----------|---------|-----------------|
-| Python     | `pip install nps-lib==1.0.0a13`                          | [SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
-| TypeScript | `npm install @labacacia/nps-sdk@alpha`                   | [SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
-| Rust       | `cargo add nps-sdk@=1.0.0-alpha.17`                       | [SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.17`  | [SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
-| Java       | `implementation("com.labacacia.nps:nps-java:1.0.0-alpha.17")` | [SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
-| .NET       | `dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.17` | [SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
+| Python     | `pip install nps-lib==1.0.0a18`                          | [SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
+| TypeScript | `npm install @labacacia/nps-sdk@1.0.0-alpha.18`          | [SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
+| Rust       | `cargo add nps-sdk@=1.0.0-alpha.18`                       | [SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
+| Go         | `go get github.com/labacacia/NPS-sdk-go@v1.0.0-alpha.18`  | [SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| Java       | `implementation("com.labacacia.nps:nps-java:1.0.0-alpha.18")` | [SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
+| .NET       | `dotnet add package LabAcacia.NPS.Core --version 1.0.0-alpha.18` | [SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
 
-> npm note: `@labacacia/nps-sdk@1.0.0-alpha.17` includes the package build output; the `alpha` dist-tag resolves to the latest published alpha.
+> Python note: PyPI normalizes the pre-release suffix, so the suite's `1.0.0-alpha.18` is published as `1.0.0a18`.
+>
+> npm note: pin the explicit version, or use the `alpha` dist-tag — both resolve to `1.0.0-alpha.18`. The unqualified `latest` dist-tag is deliberately still `1.0.0-alpha.7`, so `npm install @labacacia/nps-sdk` with no version or tag will **not** give you the current release.
 
 ---
 

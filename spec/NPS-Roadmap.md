@@ -2,8 +2,8 @@ English | [中文版](./NPS-Roadmap.cn.md)
 
 # NPS Roadmap
 
-**Version**: 0.8
-**Date**: 2026-08-01
+**Version**: 0.9
+**Date**: 2026-08-16
 **Owner**: LabAcacia / INNO LOTUS PTY LTD  
 
 ---
@@ -373,38 +373,69 @@ Each phase breaks into three segments:
 
 ---
 
-## alpha.18 — 🚧 next (target 2026-09) — **Pre-beta.1 Hardening**
+## alpha.18 — 2026-08-15 ✅ — **released to all registries** — **scope reduced**
 
-> **Theme**: *Pre-beta.1 Hardening* — production-harden every protocol and clear release-engineering debt ahead of the `v1.0.0-beta.1` NIP Phase-3 flag day. No broad feature wave is admitted. The sole scoped design exception is NPS-Dev#90, the NWP stateful LLM context/delta contract required to make model-input token-savings claims measurable rather than transport-only.
+> **Theme as planned**: *Pre-beta.1 Hardening* — production-harden every protocol and clear release-engineering debt ahead of the `v1.0.0-beta.1` NIP Phase-3 flag day, with NPS-Dev#90 (the NWP stateful LLM context/delta contract) as the single scoped design exception.
 >
-> **Standing rule (since alpha.11)**: every alpha advances all five protocols in **spec *and* all six SDKs** in lockstep — no ".NET-reference-first" gaps. Each item below lands in spec + go/java/python/rust/typescript/.NET + conformance vectors + CN translation + the four doc surfaces.
+> **Theme as shipped**: the design exception became the release. alpha.18 delivered the **NPS-CR-0011 stateful LLM context contract on NWP 0.21**, the NIP 0.14 authorization surface it needs, and the release-engineering cleanup — but **three of the five per-protocol hardening tracks did not ship**. See *Scope reduction* below; they carry over to [alpha.19](#alpha19--next-target-2026-10--protocol-hardening-carry-over).
 
-**Target versions**: NCP 0.12 / NWP 0.21 / NIP 0.14 / NDP 0.13 / NOP 0.10; `error-codes.md` 1.9 / `frame-registry.yaml` 0.15.
+**Versions shipped**: NCP 0.11 (unchanged) / NWP **0.21** / NIP **0.14** / NDP 0.12 (unchanged) / NOP 0.9 (unchanged); `error-codes.md` **1.9** / `frame-registry.yaml` 0.14 (unchanged).
 
-**Current baseline (2026-08-12)**:
-- ✅ The NPS-1..NPS-5 CN specifications are structurally and semantically aligned with EN (NPS-Dev#87); alpha.18 carries no inherited translation backlog.
-- ✅ The alpha.17 wire-key tail is closed in the Dev source tree, including Java/Rust `DelegateFrame` parity (NPS-Dev#86).
-- 🚧 First alpha.18 tranche: official NWP LLM usage/unary correlation (NPS-Dev#88) and the .NET nullable-`UInt64` NativeAOT resolver fix (NPS-Dev#89).
-- 🚧 Release debt: dynamic TypeScript package version, a supportable Go minimum, deletion-safe standalone materialization, vendored conformance fixtures, and registry publish-capability checks.
+**Scope reduction — what did not ship.** The standing rule since alpha.11 is that every alpha advances all five protocols in **spec *and* all six SDKs** in lockstep. **alpha.18 is the first release since alpha.11 that does not meet it**, and the roadmap records that rather than restating the plan as if it had been met. NCP 0.12, NDP 0.13, NOP 0.10, and `frame-registry.yaml` 0.15 were planned for this release and were **not** started; the CHANGELOG never claimed them. The three tracks move to alpha.19 unchanged in substance.
 
-**Per-protocol hardening**:
+**Release gates**:
 
-| Protocol | Version | Existing baseline | Alpha.18 acceptance |
+1. **Spec content** — ✅ **partial (2 of 5 protocols)**. NWP v0.21 and NIP v0.14 advanced; `error-codes.md` v1.9. NCP / NDP / NOP unchanged — see *Scope reduction*.
+2. **Cross-SDK implementation parity** (hard gate, applied to what shipped) — ✅ **done**. The CR-0011 stateful LLM context is implemented in all six SDKs (Go / Java / Python / Rust / TypeScript / .NET), each with passing suites: stateful NDJSON streaming with atomic terminal-frame commit, abnormal-termination abort, and idempotent replay of a completed sequence under a fresh `stream_id`.
+3. **Conformance** — ✅ **done**. 19 shared CR-0011 vectors, made **fixture-driven** in all six SDKs — each vector's `input`, `pre_state`, and `expected` are executed and validated rather than the fixture serving as an ID dispatch list. Six-SDK black-box coverage for stateful reconnect, lost-response recovery, single-winner concurrent append/CAS, and process-local context loss after server restart.
+4. **Release-engineering debt (P18-0)** — ✅ **done**. TypeScript `VERSION` now derives from package metadata instead of a hardcoded constant; the Go support floor was lowered from an unsupportable minimum to **Go 1.23**; Java MessagePack → 0.9.11, Jackson → 2.18.9, BouncyCastle → 1.84 under the OSV gate; standalone materialization deletes stale source while preserving distribution-only files; standalones receive the conformance fixtures they execute; registry preflight proves publish capability rather than anonymous read.
+5. **Distribution** — ✅ **done**. Dev synchronized to `NPS-Release/spec`, all six standalone SDK repositories, daemon/tool distributions, and mirrors; `NPS-Release/version.yaml` bumped last; tagged and published to every registry (PyPI, npm, crates.io ×8, NuGet ×11 to nuget.org **and** the InnoLotus Nexus, Maven Central, Go proxy), plus GitHub releases and Gitee mirrors.
+6. **CN translation** — ✅ No inherited backlog: the NPS-1..NPS-5 CN specifications reached structural and semantic parity with EN in NPS-Dev#87 before the release.
+7. **Status hygiene** — ✅ **CR-0011** → Implemented; NPS-Dev#86 / #87 merged, #88 / #89 / #90 closed; the tracker carries no open issues at release.
+
+**Per-protocol deliverables**:
+
+| Protocol | Version | Notes |
+|---|---|---|
+| **NWP** | v0.21 | **NPS-CR-0011 stateful LLM context** — owner-bound opaque context IDs; `create` / `append` / `fork` / `reset` / `status` / `release`; compare-and-swap versions; atomic unary and async cancellation semantics; NWM 0.2 discovery; deterministic errors; shared lifecycle / replay / restart / accounting vectors. Stateless completion stays compatible and a stateful request never silently falls back. Also: official **LLM usage telemetry** (`input_tokens`, `output_tokens`, prefix/KV-cache hit, reused and evaluated tokens) and unary `CapsFrame.request_id` correlation (NPS-Dev#88), with `CapsFrame.cached` kept explicitly distinct from model prefix/KV-cache reuse; `LlmUsageDto.wire_input_bytes` for decoder-boundary request measurement |
+| **NIP** | v0.14 | `llm:context` authorization for the CR-0011 surface. All six stateful LLM Action coordinators **fail closed** when no deployment authorizer is configured, and pass the exact admission/commit capability set (`llm:complete` + `llm:context`, plus stream/tool capabilities when used) to that authorizer |
+| **NCP** | v0.11 *(unchanged)* | Planned 0.12 hardening — runtime keepalive timers, deterministic timeout closure, QUIC connection migration / 0-RTT rejection / flow control / backpressure, shared idle/dead-peer/oversized-Nop vectors — **not started; carried to alpha.19** |
+| **NDP** | v0.12 *(unchanged)* | #89 (.NET nullable-`UInt64` NativeAOT resolver fix for `AnnounceFrame`) shipped as an implementation fix without a spec bump. Planned 0.13 hardening — sequence/epoch fence persistence and recovery, restart/partition/stale-entry/equal-epoch-split/loop fault vectors — **not started; carried to alpha.19** |
+| **NOP** | v0.9 *(unchanged)* | Planned 0.10 hardening — bounded sliding-window replay/eviction, TTL expiry, `weighted_first_k`, `merge_all` executed identically across six runtimes, loss/reorder/duplicate/timeout vectors — **not started; carried to alpha.19** |
+| **Shared** | error-codes v1.9 · frame-registry v0.14 *(unchanged)* | `NPS-LIMIT-RESOURCE` for bounded live-object limits, plus the CR-0011 deterministic error set. `frame-registry.yaml` 0.15 was planned alongside the three unshipped protocol bumps and moves with them |
+| **Benchmark** | — | Strict-native CR-0011 second-turn benchmark using the official MessagePack `ActionFrame` decoder: a deterministic gate verifies delta-only role/tool semantic parity with fallback disabled, and separately reports lower decoder `wire_input_bytes` and runtime `evaluated_tokens` |
+
+**Out of scope (→ beta.1)**: the NIP Phase-3 **flag day** itself; multi-region NPS Cloud CA (Phase 3); the 1.0 spec freeze.
+
+---
+
+## alpha.19 — 🚧 next (target 2026-10) — **Protocol Hardening (carry-over)**
+
+> **Theme**: *Protocol Hardening* — finish the three per-protocol hardening tracks that alpha.18 planned but did not ship, and restore the standing lockstep rule before `v1.0.0-beta.1`.
+>
+> **Standing rule (since alpha.11)**: every alpha advances all five protocols in **spec *and* all six SDKs** in lockstep — no ".NET-reference-first" gaps. Each item below lands in spec + go/java/python/rust/typescript/.NET + conformance vectors + CN translation + the four doc surfaces. alpha.18 broke this rule; alpha.19 exists to restore it.
+
+**Target versions**: NCP **0.12** / NDP **0.13** / NOP **0.10**; `frame-registry.yaml` **0.15**. NWP and NIP hold at 0.21 / 0.14 unless a hardening delta requires otherwise.
+
+**Baseline (2026-08-16)**: alpha.18 is published to every registry; the tracker has no open issues; the CN specs are at parity with EN; the release-engineering debt listed under alpha.18 P18-0 is cleared.
+
+**Per-protocol hardening** (carried from alpha.18 unchanged in substance):
+
+| Protocol | Version | Existing baseline | Acceptance |
 |---|---|---|---|
 | **NCP** | 0.12 | NopFrame, `ping_interval_ms`, dead-peer rules, and native TCP/QUIC profiles already exist | Runtime keepalive timers and deterministic timeout closure in all six SDKs; QUIC connection migration, 0-RTT rejection, flow-control, and backpressure policy; shared idle/dead-peer/oversized-Nop vectors |
-| **NWP** | 0.21 | Topology authorization, Subscribe cursor fields, LLM DTOs, and portable native/HTTP servers already exist | Enforce authorization and resumable-subscription behavior in every server; make stability/SLA/billing metadata portable; ship #88; define #90 as a reviewed CR with append/fork/reset/release, ownership, expiry, usage, and streaming correlation, then implement it across all six SDKs |
-| **NIP** | 0.14 | Edge-mTLS profile, revocation modes, portable CA verification, and Phase-3 switch already exist | Short-lived certificate renewal interoperability; fail-closed OCSP/CRL behavior under timeout/stale/unknown responses; advisory migration tooling that reports what beta.1 Phase-3 enforcement would reject |
-| **NDP** | 0.13 | Resolve-time staleness, health, three-hop federation, registry profile, and `cluster_epoch` already exist | Persist and recover sequence/epoch fences; prove restart, partition, stale-entry, equal-epoch split, loop, and recovery behavior with shared fault vectors; ship #89 |
+| **NDP** | 0.13 | Resolve-time staleness, health, three-hop federation, registry profile, and `cluster_epoch` already exist | Persist and recover sequence/epoch fences; prove restart, partition, stale-entry, equal-epoch split, loop, and recovery behavior with shared fault vectors |
 | **NOP** | 0.10 | Aggregate strategies, ACK/NAK fields, result TTL, and portable orchestrator profile already exist | Execute bounded sliding-window replay/eviction, TTL expiry, `weighted_first_k`, and `merge_all` identically across six runtimes; add loss/reorder/duplicate/timeout conformance vectors |
 
-**Execution gates**:
-1. **P18-0 — Fact cleanup**: close already-shipped issues; land #88/#89; remove static TS version drift; establish and test the Go 1.23 floor; correct the EN/CN release runbooks.
-2. **P18-1 — Spec/design freeze**: write one normative hardening delta per protocol, promote the #90 contract through CR review, bump the five specs and shared registries, and land EN/CN plus shared positive/negative/fault vectors together.
-3. **P18-2 — Runtime parity**: implement every P18-1 behavior in all six SDKs. A field-only DTO port does not satisfy this gate; timers, persistence, cancellation, expiry, replay, and failure paths must execute.
-4. **P18-3 — Fault and package gates**: run six-language suites, NativeAOT, race/concurrency tests where available, fault vectors, package dry-runs, and security/dependency scans at the documented minimum toolchains.
-5. **P18-4 — Distribution**: materialize standalones with deletion and distribution excludes, vendor their conformance fixtures, reach zero unexplained Dev→Release/SDK drift, then perform the normal pre-release review. Tagging and publishing remain separately approved actions.
+**Also carried from the alpha.18 plan**: NWP resumable-subscription enforcement and portable stability/SLA/billing metadata; NIP short-lived certificate renewal interoperability, fail-closed OCSP/CRL behavior under timeout/stale/unknown responses, and the advisory tool that reports what beta.1 Phase-3 enforcement would reject. These were planned as NWP/NIP hardening alongside the version bumps that *did* ship for other reasons, so they are not covered by 0.21 / 0.14 as released.
 
-**Release-runbook invariants**: crates is **8** crates including `nps-conformance`; standalone sync deletes stale source while preserving documented distribution-only files; every standalone receives the conformance fixtures it executes; Maven packaging has a Python `zipfile` fallback; registry preflight proves publish capability (`cargo owner --list`, npm granular read/write token with publish 2FA bypass), not merely anonymous read access.
+**Execution gates**:
+1. **P19-1 — Spec/design freeze**: write one normative hardening delta per protocol, bump NCP / NDP / NOP and `frame-registry.yaml`, and land EN/CN plus shared positive/negative/fault vectors together.
+2. **P19-2 — Runtime parity**: implement every P19-1 behavior in all six SDKs. A field-only DTO port does not satisfy this gate; timers, persistence, cancellation, expiry, replay, and failure paths must execute.
+3. **P19-3 — Fault and package gates**: run six-language suites, NativeAOT, race/concurrency tests where available, fault vectors, package dry-runs, and security/dependency scans at the documented minimum toolchains.
+4. **P19-4 — Distribution**: materialize standalones with deletion and distribution excludes, vendor their conformance fixtures, reach zero unexplained Dev→Release/SDK drift, then perform the normal pre-release review. Tagging and publishing remain separately approved actions.
+
+**Release-runbook invariants**: crates is **8** crates including `nps-conformance`; the NuGet family is **11** packages; standalone sync deletes stale source while preserving documented distribution-only files; every standalone receives the conformance fixtures it executes; Maven packaging has a Python `zipfile` fallback; registry preflight proves publish capability (`cargo owner --list`, npm granular read/write token with publish 2FA bypass), not merely anonymous read access.
 
 **Out of scope (→ beta.1)**: the NIP Phase-3 **flag day** itself; multi-region NPS Cloud CA (Phase 3); the 1.0 spec freeze.
 

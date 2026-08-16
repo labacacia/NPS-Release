@@ -340,7 +340,7 @@ CA Server operators upgrading from alpha.5 → alpha.6 do NOT need a forced data
 - **Tier stacking** (e.g. allowlist *and* bootstrap-token simultaneously). The `EnrollmentTier` selector is single-value by design. A multi-tier policy chain is a clean follow-up if a deployment justifies it.
 - **PKCS#10 CSR-style enrollment**. RA today takes a `nid` + `public_key` shape inherited from `/v1/agents/register`. Full CSR review (subject alt names, key usage hints, extension requests) is a heavier RFC-track change.
 - **Hardware-attested bootstrap** (TPM / SGX / SEV-SNP enrollment). The bootstrap token is a bearer secret; binding it to a TPM quote is a future CR.
-- **Cross-CA RA delegation**. A TrustFrame-style cross-CA admission flow is anticipated but lives under NIP §5.2 and the commercial NPS Cloud surface, not under this CR.
+- **Cross-CA RA delegation**. A TrustFrame-style cross-CA admission flow is anticipated but lives under NIP §5.2, not under this CR. Open implementations may validate explicitly pinned grantor anchors; managed federation policy, trust-anchor discovery, and revocation feeds are NPS Cloud concerns.
 - **Streaming notification for pending decisions**. Agents poll `/v1/enrollment/pending/{id}` today. A push channel (server-sent events or NOP-style stream) is a future enhancement.
 - **Explicit `DELETE /v1/enrollment/tokens/{id}`**. Tokens are single-use and short-TTL; explicit revocation is not motivated by any alpha.6 use case. The endpoint shape is reserved.
 - **Renaming or restructuring the existing `/v1/agents/register` route**. This CR only *adds* admission paths; the existing route, request shape, and Operator-credential semantics are unchanged.
