@@ -17,8 +17,8 @@
 | 语言 | 包名 | 最低版本 | 仓库 | Wiki 深度文档 |
 |------|------|----------|------|--------------|
 | .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`) | .NET 10     | [NPS-sdk-dotnet](https://github.com/labacacia/NPS-sdk-dotnet) | [Wiki: SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
-| Python     | `nps-lib`                                                    | 3.11        | [NPS-sdk-py](https://github.com/labacacia/NPS-sdk-py)         | [Wiki: SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
-| TypeScript | `@labacacia/nps-sdk`                                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [Wiki: SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
+| Python     | `nps-lib`                                                    | 3.11        | [NPS-sdk-py](https://github.com/labacacia/NPS-SDK-Python)         | [Wiki: SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
+| TypeScript | `@labacacia/nps-sdk`                                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-SDK-TypeScript)         | [Wiki: SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
 | Java       | `com.labacacia.nps:nps-java`                                 | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [Wiki: SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
 | Rust       | `nps-sdk`                                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [Wiki: SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
 | Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.23     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |

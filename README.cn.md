@@ -139,7 +139,7 @@ nps/
 │   ├── rust/                # Rust SDK v1.0.0-alpha.18 候选
 │   └── go/                  # Go SDK v1.0.0-alpha.18 候选
 ├── tools/
-│   ├── daemons/                # 六个常驻服务。4 个 OSS 打 bundle 发到 labacacia/nps-daemons（npsd / nps-runner / nps-ingress / nps-registry）；2 个 cloud daemon 私有发到 innolotus/nps-cloud-ca + innolotus/nps-ledger
+│   ├── daemons/                # 六个常驻服务。4 个 OSS 打 bundle 发到 labacacia/nps-daemons（npsd / nps-runner / nps-ingress / nps-registry）；2 个 cloud daemon 私有发到 labacacia/NPS-Cloud-CA + labacacia/NPS-Ledger
 │   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core；独立发布到 labacacia/nip-ca-server（example/ 收录 5 个冻结的参考移植）
 │   ├── release/                # 发布同步脚本（dev → 各独立发布仓）
 │   └── mirror-to-gitee/        # Gitee 镜像同步脚本（GitHub → Gitee，labacacia URL 改写）

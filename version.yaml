@@ -43,12 +43,12 @@ repos:
     expected: required
     manifest_file: src/NPS.Core/NPS.Core.csproj
 
-  - name: labacacia/NPS-sdk-py
+  - name: labacacia/NPS-SDK-Python
     kind: pyproject
     expected: required
     manifest_file: pyproject.toml
 
-  - name: labacacia/NPS-sdk-ts
+  - name: labacacia/NPS-SDK-TypeScript
     kind: npm-package
     expected: required
     manifest_file: package.json

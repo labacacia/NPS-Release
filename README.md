@@ -139,7 +139,7 @@ nps/
 │   ├── rust/                # Rust SDK v1.0.0-alpha.18 candidate
 │   └── go/                  # Go SDK v1.0.0-alpha.18 candidate
 ├── tools/
-│   ├── daemons/                # Six resident services. 4 OSS published as labacacia/nps-daemons bundle (npsd / nps-runner / nps-ingress / nps-registry); 2 cloud daemons published as private innolotus/nps-cloud-ca + innolotus/nps-ledger
+│   ├── daemons/                # Six resident services. 4 OSS published as labacacia/nps-daemons bundle (npsd / nps-runner / nps-ingress / nps-registry); 2 cloud daemons published as private labacacia/NPS-Cloud-CA + labacacia/NPS-Ledger
 │   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core; published standalone at labacacia/nip-ca-server (subdir example/ holds 5 frozen reference ports)
 │   ├── release/                # Release sync scripts (dev → standalone publish repos)
 │   └── mirror-to-gitee/        # Gitee mirror sync script (GitHub → Gitee with labacacia URL rewrite)
