@@ -139,15 +139,15 @@ nps/
 │   ├── rust/                # Rust SDK v1.0.0-alpha.18 候选
 │   └── go/                  # Go SDK v1.0.0-alpha.18 候选
 ├── tools/
-│   ├── daemons/                # 六个常驻服务。4 个 OSS 打 bundle 发到 labacacia/nps-daemons（npsd / nps-runner / nps-ingress / nps-registry）；2 个 cloud daemon 私有发到 innolotus/nps-cloud-ca + innolotus/nps-ledger
-│   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core；独立发布到 labacacia/nip-ca-server（example/ 收录 5 个冻结的参考移植）
+│   ├── daemons/                # 六个常驻服务。4 个 OSS 打 bundle 发到 labacacia/NPS-Daemons（npsd / nps-runner / nps-ingress / nps-registry）；2 个 cloud daemon 私有发到 labacacia/NPS-Cloud-CA + labacacia/NPS-Ledger
+│   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core；独立发布到 labacacia/NIP-CA-Server（example/ 收录 5 个冻结的参考移植）
 │   ├── release/                # 发布同步脚本（dev → 各独立发布仓）
 │   └── mirror-to-gitee/        # Gitee 镜像同步脚本（GitHub → Gitee，labacacia URL 改写）
 ├── compat/
 │   ├── mcp-ingress/          # MCP Ingress v1.0.0-alpha.16（LabAcacia.McpIngress）
 │   ├── a2a-ingress/          # A2A Ingress v1.0.0-alpha.16（LabAcacia.A2aIngress）
 │   └── grpc-ingress/         # gRPC Ingress v1.0.0-alpha.16（LabAcacia.GrpcIngress）
-└── demos/                  # 同时单独发布在 github.com/labacacia/NPS-examples
+└── demos/                  # 同时单独发布在 github.com/labacacia/NPS-Examples
     ├── nps-demo/            # 端到端业务 demo —— NIP 身份 → AnchorFrame → NOP → DiffFrame
     ├── nwp-graph-walk/      # NWP Complex Node §11 —— depth 扇出 + X-NWP-Trace 环路检测
     ├── ingress-playground/   # 一个 NWP Action Node 被 MCP + A2A + gRPC 同时前置
@@ -156,7 +156,7 @@ nps/
 
 > **单独展示仓库。** Tier-1 三个演示（`nwp-graph-walk`、`ingress-playground`、
 > `cross-sdk-interop`）同时作为一个精选仓库发布在
-> [`labacacia/NPS-examples`](https://github.com/labacacia/NPS-examples)
+> [`labacacia/NPS-Examples`](https://github.com/labacacia/NPS-Examples)
 > （[Gitee 镜像](https://gitee.com/labacacia/NPS-examples)）。代码的唯一
 > 源仍然在这里；单独仓库的意义是"可发现性"，并且每个演示都有按
 > 原理 / 作用 / 演示了什么 / 运行结果 组织的 README。
@@ -178,7 +178,7 @@ nps/
 | `NPS.NDP` | 1.0.0-alpha.18 | 已发布 | NDP 帧类型（Announce/Resolve/Graph）、内存注册表（TTL 淘汰）、公告签名验证器 |
 | `NPS.NOP` | 1.0.0-alpha.18 | 已发布 | DAG 编排引擎（条件求值、输入映射、K-of-N 同步、重试/退避）+ §8.2 委托链深度限制 + §8.4 callback SSRF 防护及指数退避重试 |
 | `NPS.Conformance` | 1.0.0-alpha.18 | 已发布 | Node L1/L2 conformance case catalog、run manifest model 与 CI validation helper |
-| `tools/nip-ca-server` | 1.0.0-alpha.18 | 已发布 | NIP CA Server —— C# / ASP.NET Core 10、PostgreSQL、Docker。独立发布到 [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server)（唯一打 release 的实现）；5 个其它语言参考移植（Python / TypeScript / Java / Rust / Go）冻结在 `1.0.0-alpha.11`，放在 `tools/nip-ca-server/example/` 下。|
+| `tools/nip-ca-server` | 1.0.0-alpha.18 | 已发布 | NIP CA Server —— C# / ASP.NET Core 10、PostgreSQL、Docker。独立发布到 [`labacacia/NIP-CA-Server`](https://github.com/labacacia/NIP-CA-Server)（唯一打 release 的实现）；5 个其它语言参考移植（Python / TypeScript / Java / Rust / Go）冻结在 `1.0.0-alpha.11`，放在 `tools/nip-ca-server/example/` 下。|
 | Compat 接入 | 1.0.0-alpha.16 | 最后一次发布（2026-07-23） | MCP Ingress（JSON-RPC 2.0，MCP 2024-11-05）、A2A Ingress（Google A2A v0.2）、gRPC Ingress（HTTP/2，4 个 unary RPC）；alpha.17 曾准备过弃用版但从未发布，自 alpha.18 起退出同步发布列车，迁移到 `NPS.NWP.Bridge` |
 | Daemons | 1.0.0-alpha.18 | 已发布 | 六个常驻服务：`npsd`（L1 最小集）、`nps-runner`、`nps-ingress`、`nps-registry`、`nps-cloud-ca`、`nps-ledger`（RFC-0004 内存日志）；详见 [`docs/daemons/architecture.cn.md`](docs/daemons/architecture.cn.md) |
 | Samples | — | ✅ 可用 | `samples/NPS.Samples.NopDag` —— 真 HTTP 的 3 节点 NOP DAG 端到端；`demos/nps-demo` —— 4 幕业务 demo（NIP → AnchorFrame → NOP → DiffFrame）|

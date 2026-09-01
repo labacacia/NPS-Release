@@ -38,60 +38,60 @@ repos:
     manifest_file: CHANGELOG.md
 
   # ── SDKs — shipped ────────────────────────────────────────────────────────
-  - name: labacacia/NPS-sdk-dotnet
+  - name: labacacia/NPS-SDK-DotNet
     kind: dotnet-csproj
     expected: required
     manifest_file: src/NPS.Core/NPS.Core.csproj
 
-  - name: labacacia/NPS-sdk-py
+  - name: labacacia/NPS-SDK-Python
     kind: pyproject
     expected: required
     manifest_file: pyproject.toml
 
-  - name: labacacia/NPS-sdk-ts
+  - name: labacacia/NPS-SDK-TypeScript
     kind: npm-package
     expected: required
     manifest_file: package.json
 
-  - name: labacacia/NPS-sdk-java
+  - name: labacacia/NPS-SDK-Java
     kind: gradle-properties
     expected: required
     manifest_file: build.gradle.kts
     version_regex: '^version\s*=\s*"([^"]+)"'
 
-  - name: labacacia/NPS-sdk-rust
+  - name: labacacia/NPS-SDK-Rust
     kind: cargo-toml
     expected: required
     manifest_file: Cargo.toml
 
-  - name: labacacia/NPS-sdk-go
+  - name: labacacia/NPS-SDK-Go
     kind: changelog
     expected: required
     manifest_file: CHANGELOG.md
 
   # ── Compatibility ingresses ───────────────────────────────────────────────
-  - name: labacacia/NPS-mcp-ingress
+  - name: labacacia/NPS-MCP-Ingress
     kind: dotnet-csproj
     expected: skip
     manifest_file: src/LabAcacia.McpIngress/LabAcacia.McpIngress.csproj
 
-  - name: labacacia/NPS-a2a-ingress
+  - name: labacacia/NPS-A2A-Ingress
     kind: dotnet-csproj
     expected: skip
     manifest_file: src/LabAcacia.A2aIngress/LabAcacia.A2aIngress.csproj
 
-  - name: labacacia/NPS-grpc-ingress
+  - name: labacacia/NPS-gRPC-Ingress
     kind: dotnet-csproj
     expected: skip
     manifest_file: src/LabAcacia.GrpcIngress/LabAcacia.GrpcIngress.csproj
 
   # ── Standalone tools ──────────────────────────────────────────────────────
-  - name: labacacia/nip-ca-server
+  - name: labacacia/NIP-CA-Server
     kind: dotnet-csproj
     expected: required
     manifest_file: NPS.NipCaServer.csproj
 
-  - name: labacacia/nps-daemons
+  - name: labacacia/NPS-Daemons
     kind: changelog
     expected: required
     manifest_file: CHANGELOG.md
@@ -113,12 +113,12 @@ repos:
     expected: stub
     manifest_file: README.md
 
-  - name: labacacia/NPS-sdk-cpp
+  - name: labacacia/NPS-SDK-CPP
     kind: stub
     expected: stub
     manifest_file: README.md
 
-  - name: labacacia/NPS-sdk-php
+  - name: labacacia/NPS-SDK-PHP
     kind: stub
     expected: stub
     manifest_file: README.md

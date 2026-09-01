@@ -16,12 +16,12 @@
 
 | 语言 | 包名 | 最低版本 | 仓库 | Wiki 深度文档 |
 |------|------|----------|------|--------------|
-| .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`) | .NET 10     | [NPS-sdk-dotnet](https://github.com/labacacia/NPS-sdk-dotnet) | [Wiki: SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
-| Python     | `nps-lib`                                                    | 3.11        | [NPS-sdk-py](https://github.com/labacacia/NPS-sdk-py)         | [Wiki: SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
-| TypeScript | `@labacacia/nps-sdk`                                         | Node 22     | [NPS-sdk-ts](https://github.com/labacacia/NPS-sdk-ts)         | [Wiki: SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
-| Java       | `com.labacacia.nps:nps-java`                                 | Java 21     | [NPS-sdk-java](https://github.com/labacacia/NPS-sdk-java)     | [Wiki: SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
-| Rust       | `nps-sdk`                                                    | Rust stable | [NPS-sdk-rust](https://github.com/labacacia/NPS-sdk-rust)     | [Wiki: SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
-| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.23     | [NPS-sdk-go](https://github.com/labacacia/NPS-sdk-go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
+| .NET       | `LabAcacia.NPS.Core` (+ `.NWP` / `.NIP` / `.NDP` / `.NOP`) | .NET 10     | [NPS-SDK-DotNet](https://github.com/labacacia/NPS-SDK-DotNet) | [Wiki: SDK-dotnet](https://github.com/labacacia/NPS-Release/wiki/SDK-dotnet) |
+| Python     | `nps-lib`                                                    | 3.11        | [NPS-SDK-Python](https://github.com/labacacia/NPS-SDK-Python)         | [Wiki: SDK-Python](https://github.com/labacacia/NPS-Release/wiki/SDK-Python) |
+| TypeScript | `@labacacia/nps-sdk`                                         | Node 22     | [NPS-SDK-TypeScript](https://github.com/labacacia/NPS-SDK-TypeScript)         | [Wiki: SDK-TypeScript](https://github.com/labacacia/NPS-Release/wiki/SDK-TypeScript) |
+| Java       | `com.labacacia.nps:nps-java`                                 | Java 21     | [NPS-SDK-Java](https://github.com/labacacia/NPS-SDK-Java)     | [Wiki: SDK-Java](https://github.com/labacacia/NPS-Release/wiki/SDK-Java) |
+| Rust       | `nps-sdk`                                                    | Rust stable | [NPS-SDK-Rust](https://github.com/labacacia/NPS-SDK-Rust)     | [Wiki: SDK-Rust](https://github.com/labacacia/NPS-Release/wiki/SDK-Rust) |
+| Go         | `github.com/labacacia/NPS-sdk-go`                            | Go 1.23     | [NPS-SDK-Go](https://github.com/labacacia/NPS-SDK-Go)         | [Wiki: SDK-Go](https://github.com/labacacia/NPS-Release/wiki/SDK-Go) |
 
 安装命令、极简示例、功能覆盖对照表等深度内容，请访问上方各语言 Wiki 页面，或查阅 [SDK-Quickstart](https://github.com/labacacia/NPS-Release/wiki/SDK-Quickstart) 获取语言无关的入门教程。
 
@@ -33,7 +33,7 @@
 
 | 仓库 | 技术栈 | 快速开始 |
 |------|--------|----------|
-| [labacacia/nip-ca-server](https://github.com/labacacia/nip-ca-server) | C# / ASP.NET Core 10，PostgreSQL 或 SQLite，单 Docker | `docker compose up -d` |
+| [labacacia/NIP-CA-Server](https://github.com/labacacia/NIP-CA-Server) | C# / ASP.NET Core 10，PostgreSQL 或 SQLite，单 Docker | `docker compose up -d` |
 
 运维指南及嵌入选项（SQLite vs PostgreSQL）请参阅 [Wiki: NIP-CA-Server-Ops](https://github.com/labacacia/NPS-Release/wiki/NIP-CA-Server-Ops)。
 
@@ -45,7 +45,7 @@
 
 | 仓库 | Daemon | 快速开始 |
 |------|--------|----------|
-| [labacacia/nps-daemons](https://github.com/labacacia/nps-daemons) | `npsd`（L1，:17433）· `nps-runner`（L1 FaaS）· `nps-ingress`（L2，:8080）· `nps-registry`（L2 NDP，:17436）| `docker compose up -d` |
+| [labacacia/NPS-Daemons](https://github.com/labacacia/NPS-Daemons) | `npsd`（L1，:17433）· `nps-runner`（L1 FaaS）· `nps-ingress`（L2，:8080）· `nps-registry`（L2 NDP，:17436）| `docker compose up -d` |
 
 `nps-ingress` 是进程级 Internet ingress daemon 名，不是 NWP 中已退役的
 **Gateway Node** 逻辑角色。CR-0001 已将该逻辑角色替换为 **Anchor Node**
