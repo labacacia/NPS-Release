@@ -1,0 +1,61 @@
+{
+  "schema_version": 1,
+  "candidate": "1.0.0-alpha.19",
+  "executed_at": "2026-09-05",
+  "source": {
+    "repository": "NPS-Dev",
+    "content_commit": "5c1bcb1b96f9f3c42113aa9b1c31620754ebce07",
+    "directory": "spec"
+  },
+  "target": {
+    "repository": "NPS-Release",
+    "content_commit": "13e125868f672698edec8fbf8232c1e24267c6eb",
+    "directory": "spec",
+    "suite_version_preserved": "1.0.0-alpha.18"
+  },
+  "synchronization": {
+    "deletion_semantics": true,
+    "synchronized_spec_files": 110,
+    "initial_changed_spec_paths": 64,
+    "release_content_paths": 24,
+    "materialized_bilingual_content_pairs": 5,
+    "source_bilingual_pairs": 123,
+    "target_bilingual_pairs": 46,
+    "excluded_paths": [
+      {
+        "pattern": "version-matrix.yaml",
+        "disposition": "NPS-Dev-only protocol/source oracle; NPS-Release uses root version.yaml"
+      },
+      {
+        "pattern": "cr/NPS-CR-0005-*",
+        "disposition": "in-flight draft retained independently until its own release gate"
+      }
+    ],
+    "required_release_content": [
+      "docs/alpha19-debt-inventory.md",
+      "docs/alpha19-debt-inventory.cn.md",
+      "docs/alpha19-p19-1-traceability.md",
+      "docs/alpha19-p19-1-traceability.cn.md",
+      "docs/alpha19-p19-4-roadmap-history-reconciliation.md",
+      "docs/alpha19-p19-4-roadmap-history-reconciliation.cn.md",
+      "docs/alpha19-p19-4-status-reconciliation.md",
+      "docs/alpha19-p19-4-status-reconciliation.cn.md",
+      "docs/daemons/architecture.md",
+      "docs/daemons/architecture.cn.md"
+    ]
+  },
+  "results": {
+    "spec_tree_drift": 0,
+    "wiki_content_warnings": 0,
+    "version_consistency": "passed",
+    "bilingual_parity": "passed",
+    "json_validation": "passed",
+    "relative_link_validation": "passed",
+    "verdict": "release_specifications_materialized"
+  },
+  "boundaries": [
+    "NPS-Release version.yaml remains 1.0.0-alpha.18 until the final coordinated bump",
+    "standalone SDK and daemon materialization remains separate work",
+    "no merge, tag, package upload, image push, registry mutation, or release publication occurred"
+  ]
+}

@@ -245,6 +245,15 @@ The reversible alpha.19 package-family record is
 PyPI, Maven, Go and Rust inventories, migrated workspace-path mappings, and
 the explicit `ready to sync` rather than `ready to tag` boundary.
 
+## Release materialization gate
+
+The reviewed alpha.19 Dev-to-Release synchronization record is
+[`alpha19-release-materialization.json`](./alpha19-release-materialization.json).
+Run `tools/scripts/check-alpha19-release-materialization.py` to verify exact
+specification parity after the two documented exclusions, deletion semantics,
+required release-content pages, relative links, bilingual counts, and the
+preserved alpha.18 `version.yaml` boundary.
+
 ---
 
 **Maintainer**: spec WG
