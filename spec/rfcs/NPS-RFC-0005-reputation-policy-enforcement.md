@@ -7,7 +7,7 @@ English | [中文版](./NPS-RFC-0005-reputation-policy-enforcement.cn.md)
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: Ori Lynn (pre-1.0 fast-track per `spec/cr/README.md`)
 **Created**: 2026-05-19
-**Last-Updated**: 2026-05-28
+**Last-Updated**: 2026-09-05
 **Accepted**: 2026-05-19 (pre-1.0 fast-track; see `spec/cr/README.md`)
 **Activated**: 2026-05-28 (v1.0.0-alpha.9 — `DefaultReputationPolicyEvaluator`, `AnchorNodeMiddleware` enforcement, and `X-NWP-Ident` assurance extraction all shipped)
 **Supersedes**: _none_
@@ -308,28 +308,28 @@ operate a local log mirror or aggregate queries to reduce per-request disclosure
 | **alpha.8** | RFC-0005 spec (this document); `ReputationPolicyEvaluator` + `AnchorNodeOptions.ReputationPolicy` in all six SDKs; NWM `reputation_policy` publication; three new error codes |
 | **alpha.9** | `IdentFrame.metadata.reputation_policy` agent-side declaration; AaaS-Profile L2-09 updated text; NPS Probe conformance check for NWM policy presence |
 
-## 7. Open Questions
+## 7. Resolved Questions
 
-1. **`on_log_unavailable` default**: this RFC defaults to `allow` for availability
-   reasons. Should the AaaS Profile L2 SHOULD require `deny` for certain incident
-   types (e.g. always deny cert-revoked regardless of log availability, using a
-   locally-cached revocation list)? A local revocation cache solves this without
-   a hard `deny` default but adds implementation complexity.
+1. **`on_log_unavailable` remains `allow`.** This preserves the accepted
+   availability default. Deployments may select `deny`; certificate revocation
+   remains an independent NIP fail-closed path and is not weakened by a missing
+   reputation log.
 
-2. **Ban persistence**: this RFC specifies that ban state is in-process and
-   cleared on restart. Should `org-private` and `public-federated` registry
-   profiles (NDP §7.3) require ban state to persist across restarts? A SQLite-
-   backed ban store would parallel the `graph_seq` persistence requirement.
+2. **Portable ban state remains process-local.** Durable ban storage is an
+   operator implementation option (the evaluator is replaceable), not a
+   requirement of the `org-private` or `public-federated` wire profiles. A
+   future CR may standardize persistence semantics if interoperability needs it.
 
-3. **Multi-log consensus**: when `log_sources` has multiple entries and they
-   disagree (log A says clean, log B says major violation), this RFC takes
-   the most restrictive result. Should the spec allow a `quorum` mode where
-   `ceil(N/2)` logs must agree before a rule fires?
+3. **Multiple logs remain fail-most-restrictive.** Quorum mode is not part of
+   the current contract. Adding it would change admission semantics and requires
+   a future CR rather than an unresolved alpha.19 default.
 
 ## 8. Change Log
 
 | Version | Date | Changes |
 |---------|------|---------|
+| Active reconciliation | 2026-09-05 | Recorded the accepted availability, process-local ban and fail-most-restrictive defaults as resolved current behavior. |
+| Active | 2026-05-28 | Six-SDK evaluator/options and reference Anchor enforcement activated. |
 | Draft | 2026-05-19 | Initial draft |
 
 ---

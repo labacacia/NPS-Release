@@ -1,0 +1,104 @@
+{
+  "schema_version": 1,
+  "candidate": "1.0.0-alpha.19-debt-closure",
+  "scope": ["P19-S03", "P19-D03", "P19-T03"],
+  "claims": [
+    {
+      "id": "RH-01",
+      "historical_context": "Phase 1 and alpha.5 RFC lifecycle snapshot",
+      "disposition": "retained_as_dated_snapshot",
+      "closed_by": "Later release sections plus the alpha.19 current-status record",
+      "annotations": [
+        {"path": "spec/NPS-Roadmap.md", "marker": "Lifecycle labels in this subsection are the Phase 1 / alpha.5 snapshot."},
+        {"path": "spec/NPS-Roadmap.cn.md", "marker": "本小节的 lifecycle 标签是 Phase 1／alpha.5 时点快照。"}
+      ],
+      "evidence": ["docs/alpha19-p19-4-status-reconciliation.md", "docs/alpha19-p19-4-status-reconciliation.cn.md"]
+    },
+    {
+      "id": "RH-02",
+      "historical_context": "Alpha.6 planning said all SDKs lacked NDP DNS TXT resolution",
+      "disposition": "superseded_by_six_sdk_implementation",
+      "closed_by": "alpha.6",
+      "annotations": [
+        {"path": "spec/NPS-Roadmap.md", "marker": "This table preserves the alpha.5 deferral snapshot."},
+        {"path": "spec/NPS-Roadmap.cn.md", "marker": "所有 SDK 尚未实现 NDP DNS TXT | **已被取代**"}
+      ],
+      "evidence": [
+        "impl/dotnet/src/NPS.NDP/Registry/InMemoryNdpRegistry.cs",
+        "impl/dotnet/tests/NPS.Tests/Ndp/NdpRegistryTests.cs",
+        "impl/python/nps_sdk/ndp/registry.py",
+        "impl/python/tests/test_ndp.py",
+        "impl/typescript/src/ndp/ndp-registry.ts",
+        "impl/typescript/tests/ndp.test.ts",
+        "impl/go/ndp/registry.go",
+        "impl/go/ndp/ndp_test.go",
+        "impl/java/src/main/java/com/labacacia/nps/ndp/InMemoryNdpRegistry.java",
+        "impl/java/src/test/java/com/labacacia/nps/ndp/NdpTest.java",
+        "impl/rust/nps-ndp/src/registry.rs",
+        "impl/rust/nps-ndp/tests/ndp_tests.rs"
+      ]
+    },
+    {
+      "id": "RH-03",
+      "historical_context": "Alpha.7 planning retained RFC-0004 full-client work",
+      "disposition": "superseded_by_capability_scoped_six_sdk_clients",
+      "closed_by": "alpha.13 through alpha.15",
+      "annotations": [
+        {"path": "spec/NPS-Roadmap.md", "marker": "six-SDK client closed across alpha.13–alpha.15."},
+        {"path": "spec/NPS-Roadmap.cn.md", "marker": "当时确为 gap，后在 alpha.13–alpha.15 关闭"},
+        {"path": "docs/roadmap.md", "marker": "RFC-0004 full-client work remained"}
+      ],
+      "evidence": ["docs/alpha19-p19-4-status-reconciliation.md"]
+    },
+    {
+      "id": "RH-04",
+      "historical_context": "Alpha.5 and alpha.11 snapshots described nps-ingress as a skeleton",
+      "disposition": "superseded_without_full_l2_certification_claim",
+      "closed_by": "alpha.13 through alpha.19 daemon closure",
+      "annotations": [
+        {"path": "spec/NPS-Roadmap.md", "marker": "This is explicitly the alpha.5 daemon snapshot."},
+        {"path": "spec/NPS-Roadmap.cn.md", "marker": "此表明确是 alpha.5 daemon 快照。"},
+        {"path": "docs/roadmap.md", "marker": "`nps-ingress` was a skeleton with L2 TLS deferred"}
+      ],
+      "evidence": ["docs/daemons/architecture.md", "tools/daemons/nps-ingress/conformance/NPS-NODE-L2-TLS-EVIDENCE.json"]
+    },
+    {
+      "id": "RH-05",
+      "historical_context": "Alpha.5 and alpha.17 snapshots described nps-runner runtime, OCI and renewal work as open",
+      "disposition": "superseded_with_remaining_l3_limits_preserved",
+      "closed_by": "alpha.13 through alpha.19 daemon closure",
+      "annotations": [
+        {"path": "spec/NPS-Roadmap.md", "marker": "At the alpha.17 close, still open for later"},
+        {"path": "spec/NPS-Roadmap.cn.md", "marker": "在 alpha.17 结束时仍待后续"},
+        {"path": "docs/roadmap.md", "marker": "`nps-runner` was a skeleton with its L3 runtime deferred"}
+      ],
+      "evidence": [
+        "docs/daemons/architecture.md",
+        "tools/daemons/nps-runner/conformance/NPS-RUNNER-CAPABILITIES.json",
+        "tools/daemons/nps-runner/tests/SpawnSpecResolverTests.cs",
+        "tools/daemons/nps-runner/tests/LeaseRenewalLoopTests.cs"
+      ]
+    },
+    {
+      "id": "RH-06",
+      "historical_context": "Alpha.5 planning treated IANA PEN assignment as pending",
+      "disposition": "closed_assigned_pen",
+      "closed_by": "NPS-CR-0004 on 2026-05-08",
+      "annotations": [
+        {"path": "spec/NPS-Roadmap.md", "marker": "R08 | **Closed 2026-05-08**"},
+        {"path": "spec/NPS-Roadmap.cn.md", "marker": "R08 | **已于 2026-05-08 关闭**"}
+      ],
+      "evidence": ["spec/cr/NPS-CR-0004-pen-wirein.md", "spec/NPS-3-NIP.md"]
+    },
+    {
+      "id": "RH-07",
+      "historical_context": "Detailed alpha.13 plan contains intentionally historical future-tense work",
+      "disposition": "retained_with_adjacent_supersession_map",
+      "closed_by": "alpha.13 through alpha.15 plus alpha.19 truth reconciliation",
+      "annotations": [
+        {"path": "docs/roadmap.md", "marker": "## Supersession map added during alpha.19"}
+      ],
+      "evidence": ["spec/NPS-Roadmap.md", "docs/alpha19-p19-4-status-reconciliation.md", "docs/daemons/architecture.md"]
+    }
+  ]
+}

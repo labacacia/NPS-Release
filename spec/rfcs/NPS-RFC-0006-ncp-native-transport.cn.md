@@ -9,7 +9,7 @@ Licensed under the Apache License, Version 2.0
 # NPS-RFC-0006：NCP 原生模式传输绑定
 
 **RFC 编号**: NPS-RFC-0006
-**状态**: 提议 (Proposed)
+**状态**: Accepted
 **版本**: 0.2
 **日期**: 2026-06-12
 **作者**: Ori Lynn / INNO LOTUS PTY LTD
@@ -186,12 +186,12 @@ mTLS 是 `nps-ingress`（L2）终结的传输层准入门；参见 NPS-Node Prof
 
 ---
 
-## 9. 开放问题
+## 9. 问题处置
 
 | ID | 问题 | 状态 |
 |----|------|------|
 | OQ-1 | IANA 注册 ALPN `nps/1.0` | 已解决（值已选定，§6.1）；IANA 注册在 IETF Internet-Draft 后续 RFC 中跟踪 |
-| OQ-2 | QUIC 版本：仅 QUIC v1 (RFC 9000)，还是同时支持 v2？ | 开放——第三阶段再定 |
+| OQ-2 | QUIC 版本：仅 QUIC v1 (RFC 9000)，还是同时支持 v2？ | 当前契约已决：仅 QUIC v1；QUIC v2 需未来 RFC 修订 |
 | OQ-3 | STARTTLS 与 TLS 封装：是否强制其中之一？ | 已解决（§6.2 —— 原生模式强制 TLS 封装；禁止 STARTTLS） |
 
 ---
@@ -200,6 +200,8 @@ mTLS 是 `nps-ingress`（L2）终结的传输层准入门；参见 NPS-Node Prof
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.2 状态对账 | 2026-09-05 | 英中均保持 Accepted，并将当前 QUIC 契约固定为 v1；QUIC v2 需要未来修订。|
+| 0.2 接受 | 2026-07-05 | Accepted；实现激活仍由独立门禁控制。|
 | 0.2 | 2026-06-12 | 草案 → **提议**。新增 §6 TLS 绑定与双向认证：套件级 ALPN `nps/1.0`（取代临时值 `ncp/1`）、原生模式 over TCP 强制 TLS 封装（解决 OQ-3）、与 NIP 证书的 mTLS + session-NID 绑定（`NCP-NID-MISMATCH`）、TLS 1.3 会话恢复票据。§7 合规新增 TLS/mTLS MUST。OQ-1/OQ-3 已解决。§7–§10 重编号。 |
 | 0.1 | 2026-05-28 | 初稿 |
 

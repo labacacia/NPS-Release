@@ -4,11 +4,11 @@ English | [中文版](./NPS-5-NOP.cn.md)
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.9
-**Date**: 2026-07-29
+**Version**: 0.10
+**Date**: 2026-08-31
 **Port**: 17433 (default, shared) / 17437 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11), NPS-2 (NWP v0.21), NPS-3 (NIP v0.14), NPS-4 (NDP v0.12)
+**Depends-On**: NPS-1 (NCP v0.12), NPS-2 (NWP v0.22), NPS-3 (NIP v0.15), NPS-4 (NDP v0.13)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > This document is the NOP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
@@ -495,6 +495,43 @@ live and owned by the same `runner_nid`; an expired, released, or reclaimed
 lease MUST return `NOP-CLAIM-CONFLICT`. The canonical `dedup_key` is lowercase
 hex SHA-256 over UTF-8 `task_id`, one NUL separator byte, and UTF-8 `dag_hash`.
 
+#### 3.5.6 Alpha.19 replay, retention, and aggregation profile (NOP v0.10)
+
+Shared transcripts live in
+[`replay_retention_vectors.json`](conformance/nop/replay_retention_vectors.json).
+
+1. **NOP-P19-01 — replay key.** The replay key is `(caller_nid, task_id)`.
+   Before dispatch, the Orchestrator atomically records the key plus a canonical
+   digest covering the immutable TaskFrame fields.
+2. **NOP-P19-02 — identical duplicate.** A duplicate with the same key and
+   digest returns the recorded running/terminal outcome and MUST NOT dispatch,
+   compensate, or callback again.
+3. **NOP-P19-03 — conflicting duplicate.** The same key with a different digest
+   is rejected with `NOP-REPLAY-CONFLICT`; neither record is mutated.
+4. **NOP-P19-04 — result TTL.** `result_ttl_seconds` is measured from atomic
+   terminal-state commit using a monotonic clock. At `now >= expires_at`, result
+   retrieval returns `NOP-TASK-RESULT-EXPIRED` and never leaks the prior result.
+5. **NOP-P19-05 — replay tombstone.** After result expiry, a tombstone remains
+   for the implementation's advertised `replay_tombstone_seconds` (minimum 300,
+   default 3600, maximum 86400). Matching duplicates remain expired and are not
+   re-dispatched until the tombstone itself expires.
+6. **NOP-P19-06 — bounded eviction.** Capacity pressure evicts expired
+   tombstones first, then the oldest terminal record. Running records are never
+   evicted. If no safe slot exists, admission fails with `NOP-REPLAY-LIMIT`.
+7. **NOP-P19-07 — terminal race.** Exactly one terminal state wins. Late worker
+   results, timeout callbacks, or cancellation acknowledgements are audit-only
+   and cannot replace the committed result or extend its TTL.
+8. **NOP-P19-08 — weighted selection.** `weighted_first_k` accepts only finite
+   numeric `result.score` values, sorts by descending score then node ID, and
+   returns exactly `min_required` results. Missing/non-finite scores are
+   `NOP-AGGREGATION-INVALID`.
+9. **NOP-P19-09 — merge-all.** `merge_all` visits successful results in stable
+   topological order, concatenates array/array collisions, and otherwise uses
+   the later value. Input objects are not mutated.
+10. **NOP-P19-10 — partial inputs.** Failed results never contribute to an
+    aggregate. `SKIPPED` satisfies the existing barrier rule but contributes no
+    value; K-unreachable remains terminal failure rather than partial success.
+
 ---
 
 ## 4. Resource Pre-flight
@@ -672,6 +709,9 @@ Orchestrator                              Worker B (Data)    Worker C (Inference
 | `NOP-CALLBACK-INVALID` | `NPS-CLIENT-BAD-PARAM` | Callback URL failed scheme, user-info, DNS, public-address, or redirect validation |
 | `NOP-CALLBACK-HMAC-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | Callback HMAC was malformed or did not match the exact raw body |
 | `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | Task result requested after `result_ttl_seconds` elapsed; result no longer retained |
+| `NOP-REPLAY-CONFLICT` | `NPS-CLIENT-CONFLICT` | The same `(caller_nid, task_id)` was reused with different immutable TaskFrame content |
+| `NOP-REPLAY-LIMIT` | `NPS-LIMIT-RESOURCE` | Replay ledger capacity is exhausted and no expired tombstone or terminal record can be safely evicted |
+| `NOP-AGGREGATION-INVALID` | `NPS-CLIENT-BAD-PARAM` | Aggregation input violates the selected strategy, such as a missing/non-finite `weighted_first_k` score |
 | `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK retransmission requested for a frame no longer available in sender's buffer (frame has been evicted) |
 | `NOP-CLAIM-CONFLICT` | `NPS-CLIENT-CONFLICT` | TaskFrame already leased by a live runner lease (NPS-CR-0007 §4.2) |
 | `NOP-SPAWN-SPEC-INVALID` | `NPS-CLIENT-BAD-PARAM` | `spawn_spec_ref` could not be resolved or failed SpawnSpec schema validation (NPS-CR-0007 §5) |
@@ -781,6 +821,7 @@ Every delegation level must pass NIP CA verification that `delegated_scope` does
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.10 | 2026-08-31 | Alpha.19 bounded replay/retention profile: caller-bound replay keys and digests, duplicate/conflict behavior, monotonic result TTL, bounded replay tombstones and safe eviction, single-winner terminal races, and deterministic `weighted_first_k` / `merge_all` / partial-input semantics. Adds three errors and shared transcripts. Depends-On advances to the alpha.19 NCP/NWP/NIP/NDP baselines. |
 | 0.9 | 2026-07-29 | **Alpha.17 portable orchestrator profile**: deterministic DAG preflight and conformance scheduling; single-evaluation condition/input mapping rules; retry, timeout, cancellation, K-of-N, and aggregation ordering; reverse-topological saga reporting; fail-closed callback DNS/SSRF and HMAC validation; per-attempt Anchor re-resolution; strict live-owner lease renewal and canonical dedup key. Adds shared orchestration and runtime/security transcripts; promotes NPS-CR-0007 to Implemented after the six-SDK and runner gates passed. |
 | 0.8 | 2026-07-05 | Multi-Anchor HA interaction (NPS-CR-0009): `DelegateFrame.target_cluster_anchor` MUST resolve to the target cluster's current active Anchor (highest `cluster_epoch`, NDP §9), and in-flight delegations MUST re-resolve to the `successor_nid` on `anchor_failover` before retry. Lease-renewal semantics formalised (§8): a renewal extends `lease_expiry`, MUST match `runner_nid`, and is rejected with `NOP-CLAIM-CONFLICT` if the lease already expired and was reclaimed. No new codes. |
 | 0.7 | 2026-06-12 | **NPS-CR-0007 — NOP ↔ L3 runtime integration**: new §8 (task-claim protocol with lease + `dedup_key`; `spawn_spec_ref` SpawnSpec content schema; idle/max-runtime enforcement; idempotent result reporting); 4 new error codes (`NOP-CLAIM-CONFLICT`, `NOP-SPAWN-SPEC-INVALID`, `NOP-RUNTIME-IDLE-TIMEOUT`, `NOP-RUNTIME-MAX-RUNTIME`); new `services/conformance/NPS-Node-L3.md` (`TC-N3-*`); Security/Changelog renumbered §9/§10. Gates the `nps-runner` L3 FaaS runtime. |

@@ -3,13 +3,13 @@ English | [中文版](./NPS-RFC-0003-agent-identity-assurance-levels.cn.md)
 ---
 **RFC Number**: NPS-RFC-0003
 **Title**: Three-tier Agent identity assurance levels for anti-scraping / trust gating
-**Status**: Accepted (Phase 1 — spec + .NET reference types landed)
+**Status**: Active (Phase 1–2 implemented across all six SDKs)
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: Ori Lynn (pre-1.0 fast-track per `spec/cr/README.md`)
 **Created**: 2026-04-21
-**Last-Updated**: 2026-04-25
+**Last-Updated**: 2026-09-05
 **Accepted**: 2026-04-25 (pre-1.0 fast-track; see `spec/cr/README.md`)
-**Activated**: _(set when first reference SDK ships, target v1.0-alpha.3)_
+**Activated**: 2026-04-25 (.NET reference types/verifier; six-SDK Phase 1–2 parity is now current)
 **Supersedes**: _none_
 **Superseded-By**: _none_
 **Affected Specs**: NPS-3 NIP, NPS-2 NWP, spec/services/NPS-AaaS-Profile.md, spec/error-codes.md, spec/status-codes.md
@@ -281,12 +281,16 @@ Nodes enumerate accepted OIDs in NWM.
 
 | SDK | Owner | Status | Notes |
 |-----|-------|--------|-------|
-| .NET | Ori Lynn | pending | Reference impl |
-| Python | _TBD_ | pending | — |
-| TypeScript | _TBD_ | pending | — |
-| Java | _TBD_ | pending | — |
-| Rust | _TBD_ | pending | — |
-| Go | _TBD_ | pending | — |
+| .NET | NPS SDK maintainers | Implemented — Phase 1–2 | Types, CA issuance, verifier and opt-in enforcement tests |
+| Python | NPS SDK maintainers | Implemented — Phase 1–2 | Types, CA issuance, verifier and opt-in enforcement tests |
+| TypeScript | NPS SDK maintainers | Implemented — Phase 1–2 | Types, CA issuance, verifier and opt-in enforcement tests |
+| Java | NPS SDK maintainers | Implemented — Phase 1–2 | Types, CA issuance, verifier and opt-in enforcement tests |
+| Rust | NPS SDK maintainers | Implemented — Phase 1–2 | Types, CA issuance, verifier and opt-in enforcement tests |
+| Go | NPS SDK maintainers | Implemented — Phase 1–2 | Types, CA issuance, verifier and opt-in enforcement tests |
+
+Phase 3 remains deliberately inactive: alpha.19 does not perform the critical-
+extension/default-enforcement flag day or remove the L0-default compatibility
+path.
 
 ### 8.3 Test Plan
 
@@ -327,25 +331,27 @@ None yet. Before `Accepted`, commit:
 
 ---
 
-## 10. Open Questions
+## 10. Resolved Questions
 
-- [ ] **OQ-1**: Where does the "reference CA policy document" live?
-  Proposed: `tools/nip-ca-server/docs/policy.md`. Owner: Ori Lynn.
-- [ ] **OQ-2**: Should L2 certs carry a mandatory legal-entity name
-  field (X.509 `O`, `jurisdictionOfIncorporation`)? Default position:
-  yes; deferred to CA policy document.
-- [ ] **OQ-3**: Does Anchor Node (NPS-AaaS-Profile) promote the
-  assurance level of the Agent it fronts, or require the backing
-  Action Node to enforce independently? Default: Anchor enforces;
-  backing Node trusts the Anchor's decision via `X-NPS-Authed-Nid`
-  header. Pending AaaS working-group sign-off.
+- [x] **OQ-1 — deployment documentation, not a wire placeholder.** The current
+  protocol does not reserve `tools/nip-ca-server/docs/policy.md`. Operator CA
+  policy documentation is deployment-owned and may be standardized later.
+- [x] **OQ-2 — no mandatory legal-entity fields in the current certificate.**
+  Phase 1–2 uses the `verified` assurance value without standardizing X.509
+  `O` or `jurisdictionOfIncorporation`. Adding those fields requires a future
+  RFC and is not alpha.19 debt.
+- [x] **OQ-3 — each enforcing Node validates independently.** NWP's top-level
+  and per-action `min_assurance_level` requirements apply at the Node that
+  executes the action. An unstandardized `X-NPS-Authed-Nid` header cannot
+  elevate or transfer assurance; an Anchor may enforce earlier as defense in
+  depth but does not replace the backing Node's check.
 
 ---
 
 ## 11. Future Work
 
-- **NPS-RFC-0004**: NID reputation log (CT-style). Complements
-  assurance levels: levels are about *provenance*, reputation is
+- **Delivered by NPS-RFC-0004**: the active CT-style NID reputation log
+  complements assurance levels: levels are about *provenance*, reputation is
   about *behavior*.
 - Follow-up: bulk-revocation flow when a CA is found to be lax about
   L2 issuance.
@@ -360,7 +366,7 @@ None yet. Before `Accepted`, commit:
 - CA/B Forum Baseline Requirements — EV / OV / DV tier shape
 - RFC 5280 §4.2.1.4 — certificatePolicies
 - NPS-RFC-0002 — X.509 + ACME for NID certs (prerequisite)
-- NPS-RFC-0004 — NID reputation log (complement, in-flight)
+- NPS-RFC-0004 — active NID reputation log complement
 - Discussion: 2026-04-20 review comment on anti-scraping
 
 ---
@@ -371,3 +377,4 @@ None yet. Before `Accepted`, commit:
 |------|--------|--------|
 | 2026-04-21 | Ori Lynn | Initial draft |
 | 2026-04-25 | Ori Lynn | Accepted via pre-1.0 fast-track. Spec changes landed: NPS-3 §5.1.1 Assurance Levels + IdentFrame `assurance_level` field, NPS-2 NWM `min_assurance_level` field, error codes `NIP-ASSURANCE-MISMATCH` / `NIP-ASSURANCE-UNKNOWN` / `NWP-AUTH-ASSURANCE-TOO-LOW`. Phase 1 .NET reference types (`NPS.NIP.AssuranceLevel` enum, `IdentFrame.AssuranceLevel`, `NipVerifyContext.MinAssuranceLevel`, `NeuralWebManifest.MinAssuranceLevel`, related error/status code constants) landed alongside; active enforcement in the verifier remains opt-in per RFC §8.1 (Phase 1 = parse only, default unchanged). Phase 2 (other 5 SDKs + 6 CA Servers issuing L1 certs via ACME — depends on RFC-0002) deferred to v1.0-alpha.4. The X.509 critical-extension flip (§4.2) coordinates with RFC-0002 and is NOT yet active. AaaS-Profile §10 OQ-3 (Gateway enforcement vs backing-Node enforcement) deferred to CR-0001 follow-up. |
+| 2026-09-05 | NPS maintainers | Reconciled status to Active and six-SDK Phase 1–2 coverage; resolved OQ-1..03. Phase 3 critical-extension/default-enforcement activation remains explicitly future. |

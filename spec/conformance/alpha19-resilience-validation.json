@@ -1,0 +1,90 @@
+{
+  "schema_version": 1,
+  "suite": "alpha.19 source candidate",
+  "source_commit": "e6446a373c5e94a6838ea4d1085558174e54bc02",
+  "executed_at": "2026-09-05",
+  "all_resilience_gates_passed": true,
+  "native_aot": {
+    "command": "dotnet publish impl/dotnet/tests/NPS.AotSmoke/NPS.AotSmoke.csproj -c Release -r linux-x64 --self-contained true -o <temporary-directory> && <temporary-directory>/NPS.AotSmoke",
+    "runtime_identifier": "linux-x64",
+    "self_contained": true,
+    "result": "passed",
+    "output": "NPS NativeAOT codec smoke passed.",
+    "warnings": [
+      "MessagePack 3.1.7 emitted IL3053 AOT-analysis warnings.",
+      "MessagePack 3.1.7 emitted IL2104 trim warnings."
+    ]
+  },
+  "go_race": {
+    "command": "go test -race -count=1 ./...",
+    "packages_with_tests": 10,
+    "packages_without_tests": 3,
+    "race_reports": 0,
+    "result": "passed"
+  },
+  "runner_stress": {
+    "command": "dotnet test tools/daemons/nps-runner/tests/NpsRunner.Tests.csproj -c Release --filter <four concurrency/fencing cases>",
+    "rounds": 30,
+    "cases_per_round": 4,
+    "case_executions": 120,
+    "failures": 0,
+    "result": "passed",
+    "cases": [
+      "LeaseStoreTests.Concurrent_claim_across_file_backed_runner_instances_grants_exactly_one",
+      "LeaseStoreTests.Expired_lease_is_reclaimable_but_stale_owner_cannot_renew_or_complete",
+      "LeaseStoreTests.Terminal_node_dedup_survives_store_reopen_and_reclaim",
+      "WorkerManagerLeaseLossTests.Reclaimed_lease_cancels_stale_worker_without_ack_or_notification"
+    ]
+  },
+  "npsd_restart_stress": {
+    "command": "dotnet test impl/dotnet/tests/NPS.Tests/NPS.Tests.csproj -c Release --filter <three durable restart cases>",
+    "rounds": 10,
+    "cases_per_round": 3,
+    "case_executions": 30,
+    "failures": 0,
+    "result": "passed",
+    "cases": [
+      "InboxTests.Undelivered_ActionFrame_survives_host_restart_bit_identical",
+      "NdpAnnouncementTests.Liveness_sequence_and_managed_key_survive_restart",
+      "SubNidIssuanceTests.Renewed_credential_survives_daemon_restart"
+    ]
+  },
+  "partition_fence_matrix": {
+    "fixture": "spec/conformance/ndp/recovery_fence_vectors.json",
+    "vectors_per_language": 8,
+    "languages": 6,
+    "ndp_vector_evaluations": 48,
+    "shared_alpha19_vectors_per_language": 47,
+    "shared_alpha19_vector_evaluations": 282,
+    "failures": 0,
+    "result": "passed",
+    "commands": {
+      ".NET": "dotnet test impl/dotnet/tests/NPS.Tests/NPS.Tests.csproj -c Release --no-build --no-restore --filter FullyQualifiedName~Alpha19HardeningTests.AllSharedVectorsAreExecutable",
+      "Python": "python3 -m pytest -o addopts= -q tests/test_alpha19_hardening.py",
+      "TypeScript": "npx vitest run tests/alpha19-hardening.test.ts",
+      "Go": "go test -count=1 ./alpha19 -run TestSharedAlpha19Vectors",
+      "Java": "./gradlew test --no-daemon --rerun-tasks --tests com.labacacia.nps.Alpha19HardeningTest.executesAllSharedVectors",
+      "Rust": "cargo test -p nps-conformance --test alpha19_hardening executes_all_shared_vectors"
+    }
+  },
+  "claim_boundary": {
+    "validated": [
+      "linux-x64 self-contained NativeAOT codec startup",
+      "Go race detector across every Go package",
+      "repeatable runner lease contention, reclaim, stale-owner fencing, durable dedup, and worker cancellation",
+      "repeatable npsd inbox, announcement-sequence, managed-key, and renewed-credential restart persistence",
+      "all six SDK policy evaluators against the shared restart and partition fence decisions"
+    ],
+    "not_certified": [
+      "live multi-node network packet-loss or partition fault injection",
+      "process kill or power-loss crash consistency during an in-flight write",
+      "long-duration soak, throughput, latency, or resource-exhaustion performance",
+      "production topology, external service, or cloud failure recovery"
+    ]
+  },
+  "excluded_from_this_gate": [
+    "dependency and security scans",
+    "package dry-runs and release-family validation",
+    "materialization, version bump, merge, tag, package, image, and release publication"
+  ]
+}

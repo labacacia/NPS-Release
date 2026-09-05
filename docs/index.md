@@ -3,6 +3,9 @@
 > **Neural Protocol Suite** — a complete internet protocol stack purpose-built for AI agents and neural models.
 >
 > Latest suite release 1.0.0-alpha.18 (2026-08-15) · Apache 2.0 · [中文版](index.cn.md)
+>
+> The specification tree contains the reviewed, unreleased alpha.19 candidate;
+> all install commands below remain pinned to the published alpha.18 packages.
 
 ---
 

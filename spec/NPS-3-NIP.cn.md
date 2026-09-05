@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.14
-**Date**: 2026-08-12
+**Version**: 0.15
+**Date**: 2026-08-31
 **Port**: 17433（默认，共用）/ 17435（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11)
+**Depends-On**: NPS-1 (NCP v0.12)
 
 ---
 
@@ -210,7 +210,7 @@ NPS 为 Agent 身份定义三个**保证等级**，参考 NIST SP 800-63 IAL 与
 | 等级 | 枚举值 | CA 最低要求 | 典型用途 |
 |------|--------|-------------|---------|
 | L0 | `"anonymous"` | 自签，或 CA 签发但无身份绑定 | 业余 Agent、开发/测试、免费只读端点 |
-| L1 | `"attested"` | NID 由 RFC-0002 兼容 CA 签发；CA 验证 NID 私钥持有（如 ACME `agent-01` 挑战）；联系邮箱或域名经过验证。**注**："RFC-0002 兼容"要求 RFC-0002 处于 Accepted 状态且使用已注册的 IANA OID。使用临时 OID `1.3.6.1.4.1.99999.1` 的原型实现不满足此合规或生产标准，须待 PEN 分配后方可（见 NPS-RFC-0002 §10 OQ-2）。| 大多数生产 Agent；默认限速级别 |
+| L1 | `"attested"` | NID 由 RFC-0002 兼容 CA 签发；CA 验证 NID 私钥持有（如 ACME `agent-01` 挑战）；联系邮箱或域名经过验证。`id-nid-assurance-level` X.509 扩展使用 IANA 已分配 OID `1.3.6.1.4.1.65715.2.1`，配套 `id-nps-node-roles` 扩展使用 `1.3.6.1.4.1.65715.2.2`（PEN 65715 于 2026-05-08 分配给 LabAcacia，见 NPS-CR-0004 与 NPS-RFC-0002 §10 OQ-2）。| 大多数生产 Agent；默认限速级别 |
 | L2 | `"verified"` | L1 要求 **加** CA 绑定运营者法律身份（org-NID 用工商注册，托管 Agent 用 AaaS 运营者签字声明）| 受监管集成、付费高级、可签合约的编排 |
 
 默认为 `"anonymous"` —— RFC-0003 之前的 NID 以及任何缺该字段的 NID 都按 L0 处理。Node 通过 NWM 中 `min_assurance_level` 声明严格要求（NPS-2 §4.1、§4.3）。
@@ -527,6 +527,25 @@ IdentFrame   Agent 自动触发      立即生效         30 天
 4. 短时边缘证书参与 TLS 1.3 会话恢复（NPS-RFC-0006 §6.4）：恢复票据 MUST NOT 比签发它的那张
    证书活得更久。
 
+### 6.2 alpha.19 续期互操作 Profile（NIP v0.15）
+
+共享 case 位于
+[`renewal_revocation_vectors.json`](conformance/nip/renewal_revocation_vectors.json)。
+
+1. **NIP-P19-01 —— 续期窗口。** 标准证书在 `not_after` 前七天开放续期；短时边缘
+   证书在原有效期剩余 25% 时开放。边界包含在窗口内。更早请求以
+   `NIP-CA-RENEWAL-TOO-EARLY` 返回，且不改变状态。
+2. **NIP-P19-02 —— 身份连续性。** 续期使用当前未过期证书认证，并保留 NID、subject、
+   lineage、assurance level、capabilities 与 scope；除非 Operator 授权的独立 mutation
+   已经收窄这些字段。续期 MUST NOT 扩大权限。
+3. **NIP-P19-03 —— 原子颁发。** 成功续期先提交新的唯一 serial 与审计记录再返回。
+   旧证书在自身 expiry 或 revoke 前仍独立有效。
+4. **NIP-P19-04 —— 幂等。** 续期请求携带 idempotency key。相同 key 与 canonical
+   request 重复时返回同一 serial；不同内容复用该 key 时为 `NIP-CA-SERIAL-DUPLICATE`，
+   且不得另发证书。
+5. **NIP-P19-05 —— resumption bound。** 绑定旧证书的 TLS session ticket 与缓存准入
+   不得晚于旧证书过期，也不得仅因颁发 replacement 而延长。
+
 ---
 
 ## 7. 验证流程
@@ -671,6 +690,24 @@ wire 格式的前提下,收口了 Phase 1–2 遗留的自声明缺口(§5.1、N
 
 本 profile 新增一个管理类 HTTP 端点，不新增任何帧字段或错误码。
 
+### 7.7 alpha.19 吊销 freshness 与 advisory Profile（NIP v0.15）
+
+6. **NIP-P19-06 —— freshness。** CRL、cache entry、staple 或 OCSP result 只有在
+   `this_update <= now < next_update` 时才为 current；到达边界即 stale，不能满足
+   `revocation_mode = required`。
+7. **NIP-P19-07 —— stale fallback。** 固定 §7.6 source 顺序中，若后续已配置 source
+   能回答，则跳过 stale source。若没有后续 source 产生 current 且 definitive 的结果，
+   以 `NIP-REVOCATION-STATE-STALE` fail closed。
+8. **NIP-P19-08 —— unknown 与 timeout。** definitive OCSP `unknown` 结果以
+   `NIP-OCSP-UNKNOWN` fail closed。timeout、transport failure、畸形数据与非成功 HTTP
+   仍映射 `NIP-OCSP-UNAVAILABLE`。`ocsp_fail_open` 不得把 `revoked`、`unknown`、
+   stale 或签名非法数据转换为成功。
+9. **NIP-P19-09 —— cache replacement。** current result 只有通过签名和 interval
+   校验后才能替换同 issuer/serial 的旧结果；`this_update` 更早的响应不得回滚 cache。
+10. **NIP-P19-10 —— Phase-3 advisory。** advisory evaluation 返回稳定排序的
+    Phase-3 拒绝检查列表，每项包含 error code 与 field。它 MUST NOT 改变
+    `phase3_enforcement`、修改 trust/revocation state，或拒绝当前 Phase 1–2 请求。
+
 ---
 
 ## 8. NIP CA Server OSS API
@@ -711,7 +748,7 @@ wire 格式的前提下,收口了 Phase 1–2 遗留的自声明缺口(§5.1、N
 }
 ```
 
-### 8.1 Registration Authority（RA）端点（NPS-CR-0005，stub）
+### 8.1 Registration Authority（RA）端点（NPS-CR-0005，Implemented）
 
 NPS-CR-0005 引入三档 Registration Authority（RA）模型，**在上文 Operator 凭证的
 `POST /v1/agents/register` 流程之外**，再提供若干由策略驱动的 Agent 准入路径。默认档位仍为
@@ -724,10 +761,11 @@ NPS-CR-0005 引入三档 Registration Authority（RA）模型，**在上文 Oper
 | POST | `/v1/enrollment/pending/{id}/approve` | Operator Cert | （NPS-CR-0005，Tier 3）批准一条待决请求并颁发 IdentFrame。|
 | POST | `/v1/enrollment/pending/{id}/reject` | Operator Cert | （NPS-CR-0005，Tier 3）以运营方给出的理由拒绝一条待决请求。|
 
-三个档位（allowlist / bootstrap token / pending queue）、新增错误码（`NIP-RA-TOKEN-INVALID`、
+三个档位（allowlist / bootstrap token / pending queue）、错误码（`NIP-RA-TOKEN-INVALID`、
 `NIP-RA-TOKEN-EXPIRED`、`NIP-RA-NID-NOT-ALLOWED`、`NIP-RA-PENDING-REJECTED`）以及
 `NipCaOptions.EnrollmentTier` 选择器，由 **[NPS-CR-0005](./cr/NPS-CR-0005-nip-ca-ra-model.md)**
-完整定义。这些端点的正文、请求 / 响应结构与验证流程将在 CR-0005 进入 Implemented 后落入本节。
+规范性定义；请求 / 响应结构与验证流程已由六个 SDK 的 CA surface 实现。本节是 API 索引，
+不是未来工作占位符。
 
 ---
 
@@ -749,6 +787,8 @@ NPS-CR-0005 引入三档 Registration Authority（RA）模型，**在上文 Oper
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | 请求 scope 超出父级 scope |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP 服务暂不可用 |
 | `NIP-OCSP-STAPLE-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | `IdentFrame.ocsp_staple` 的 `nextUpdate` 已过期 —— staple 已陈旧，Agent 必须刷新后重发（NIP v0.9 §5.1.4）|
+| `NIP-OCSP-UNKNOWN` | `NPS-AUTH-UNAUTHENTICATED` | 合法 OCSP response 无法确认请求的 issuer/serial 状态，因此 fail closed |
+| `NIP-REVOCATION-STATE-STALE` | `NPS-SERVER-UNAVAILABLE` | 没有已配置吊销源产出 current result；stale state 不能满足 required mode |
 | `NIP-CERT-NODE-ROLES-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.node_roles` 与 `id-nps-node-roles` X.509 扩展不一致；Phase 3 强制校验（NIP v0.10）|
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame 签名或格式不合法 —— 见 §5.2 |
 | `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` 已过期 —— 见 §5.2 |
@@ -792,6 +832,7 @@ OCSP 响应时间 SHOULD 归一化（固定延迟至 200ms），防止通过响�
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.15 | 2026-08-31 | alpha.19 续期/吊销加固：包含边界的标准/短时续期窗口、身份连续性、原子且幂等的颁发、旧证书 ticket bound、显式吊销 freshness 与 stale fallback、OCSP unknown fail closed、防回滚 cache replacement、确定性且不强制执行的 Phase-3 advisory 输出，以及共享向量。将 §8.1 CR-0005 RA 状态从 stub 订正为 Implemented；Depends-On 推进至 NCP 0.12。|
 | 0.14 | 2026-08-12 | 新增标准 `llm:context` capability，用于 NWP §7.6 有状态 LLM context 生命周期，并允许 TrustFrame `trust_scope` 覆盖它。Completion mutation 还要求 `llm:complete`；owner 授权的 status/release 只需 `llm:context`。Context ID 只是 locator，不是 bearer authorization。不新增 frame 字段或 NIP 错误码。 |
 | 0.13 | 2026-07-29 | 新增 §7.6 **可移植 CA 与验证 Profile**：确定性的验证顺序与吊销源顺序、`if_configured` 与 fail-closed 的 `required` 两种吊销模式、带签名的确定性 CRL 语义、CA store 全量枚举，以及需鉴权的 `GET /v1/certificates`。新增共享的吊销策略与签名 CRL 测试向量。无新增 frame 字段或错误码。|
 | 0.12 | 2026-07-23 | 新增 §7.5 **Phase-3 强制模式**：接收侧 `phase3_enforcement` 验证策略开关，把 Phase-1–2 可选的 CA 声明校验（assurance / node_roles / capabilities / OCSP-staple）在 `v1.0.0-beta.1` flag day 之前提前变为硬性 MUST —— flag day 因此只是默认值切换而非代码变更。角色/能力检查为子集检查（不得声称未经 CA 见证的内容）；各检查仅在对应证书扩展存在时生效（自声明 NID 不受影响）。新增错误码 `NIP-CERT-CAPABILITIES-EXCEEDED`（`NPS-AUTH-FORBIDDEN`）。增量、向后兼容。（由 edge 线 0.11 重编号 —— 已发布的 alpha.16 线独立地把 0.11 用于下面的 LLM capability 字符串。）|

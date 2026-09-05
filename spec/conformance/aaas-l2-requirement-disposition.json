@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "candidate": "1.0.0-alpha.19-debt-closure",
+  "profile": "NPS-AaaS-Profile",
+  "profile_version": "0.7",
+  "suite": "NPS-Node-L2",
+  "suite_version": "0.7",
+  "scope": "Current-contract disposition for NPS-AaaS-Profile L2-01 through L2-07. Component evidence is not a deployment certification.",
+  "claim_rule": {
+    "must": "A full AaaS L2 claim requires pass. fail, skip, and na are invalid.",
+    "should": "A full AaaS L2 claim requires pass or na with a non-empty exception rationale in the case message.",
+    "component_evidence": "Shows that reusable SDK behavior exists; it does not prove an assembled service deployment passed the case."
+  },
+  "requirements": [
+    {
+      "id": "L2-01",
+      "normative_level": "MUST",
+      "case_id": "TC-N2-AaaS-01",
+      "title": "TaskFrame internal orchestration",
+      "disposition": "current_required",
+      "reference_status": "component_executable",
+      "evidence": [
+        "spec/conformance/nop/dag_validation_vectors.json",
+        "spec/conformance/nop/orchestrator_transcripts.json",
+        "impl/dotnet/tests/NPS.Tests/Nwp/AnchorNodeMiddlewareTests.cs"
+      ]
+    },
+    {
+      "id": "L2-02",
+      "normative_level": "MUST",
+      "case_id": "TC-N2-AaaS-02",
+      "title": "OpenTelemetry TaskFrame context injection",
+      "disposition": "current_required",
+      "reference_status": "component_executable",
+      "evidence": [
+        "impl/dotnet/tests/NPS.Tests/Nwp/AnchorNodeMiddlewareTests.cs",
+        "impl/python/nps_sdk/nwp/anchor_server.py",
+        "impl/typescript/src/nwp/anchor-server.ts",
+        "impl/go/nwp/anchor_server.go",
+        "impl/java/src/main/java/com/labacacia/nps/nwp/AnchorNodeServer.java",
+        "impl/rust/nps-nwp/src/anchor_server.rs"
+      ]
+    },
+    {
+      "id": "L2-03",
+      "normative_level": "MUST",
+      "case_id": "TC-N2-AaaS-03",
+      "title": "CGN-Estimate token budget response",
+      "disposition": "current_required",
+      "reference_status": "component_executable",
+      "evidence": [
+        "impl/dotnet/tests/NPS.Tests/Nwp/LlmActionContractTests.cs",
+        "impl/python/tests/test_nwp_action_node_server.py",
+        "impl/typescript/tests/nwp-memory-server.test.ts",
+        "impl/go/nwp/action_node_server_test.go",
+        "impl/java/src/test/java/com/labacacia/nps/nwp/MemoryNodeServerTest.java",
+        "impl/rust/nps-nwp/tests/action_server_tests.rs"
+      ]
+    },
+    {
+      "id": "L2-04",
+      "normative_level": "MUST",
+      "case_id": "TC-N2-AaaS-04",
+      "title": "NOP preflight admission",
+      "disposition": "current_required",
+      "reference_status": "component_executable",
+      "evidence": [
+        "spec/conformance/nop/orchestrator_transcripts.json",
+        "impl/dotnet/tests/NPS.Tests/Nop/NopPreflightAndKofNTests.cs",
+        "impl/python/tests/test_nop_orchestrator.py",
+        "impl/typescript/tests/nop-orchestrator.test.ts",
+        "impl/go/nop/orchestrator_test.go",
+        "impl/java/src/test/java/com/labacacia/nps/nop/orchestration/NopOrchestratorTests.java",
+        "impl/rust/nps-nop/tests/orchestrator_tests.rs"
+      ]
+    },
+    {
+      "id": "L2-05",
+      "normative_level": "MUST",
+      "case_id": "TC-N2-AaaS-05",
+      "title": "NOP retry and timeout semantics",
+      "disposition": "current_required",
+      "reference_status": "component_executable",
+      "evidence": [
+        "spec/conformance/nop/orchestrator_transcripts.json",
+        "spec/conformance/nop/runtime_security_vectors.json",
+        "impl/dotnet/tests/NPS.Tests/Nop/NopOrchestratorTests.cs",
+        "impl/python/tests/test_nop_orchestrator.py",
+        "impl/typescript/tests/nop-orchestrator.test.ts",
+        "impl/go/nop/orchestrator_test.go",
+        "impl/java/src/test/java/com/labacacia/nps/nop/orchestration/NopOrchestratorTests.java",
+        "impl/rust/nps-nop/tests/orchestrator_tests.rs"
+      ]
+    },
+    {
+      "id": "L2-06",
+      "normative_level": "SHOULD",
+      "case_id": "TC-N2-AaaS-06",
+      "title": "Asynchronous Action lifecycle",
+      "disposition": "current_recommended_exceptionable",
+      "reference_status": "component_executable",
+      "evidence": [
+        "spec/conformance/nwp/action_frame_vectors.json",
+        "impl/dotnet/tests/NPS.Tests/Nwp/LlmActionContractTests.cs",
+        "impl/python/tests/test_nwp_action_node_server.py",
+        "impl/typescript/tests/nwp-action-server.test.ts",
+        "impl/go/nwp/action_node_server_test.go",
+        "impl/rust/nps-nwp/tests/action_server_tests.rs"
+      ]
+    },
+    {
+      "id": "L2-07",
+      "normative_level": "SHOULD",
+      "case_id": "TC-N2-AaaS-07",
+      "title": "AlignStream CGN back-pressure",
+      "disposition": "current_recommended_exceptionable",
+      "reference_status": "partial",
+      "evidence": [
+        "impl/dotnet/tests/NPS.Tests/Nop/NopFrameTests.cs",
+        "impl/python/tests/test_nop.py",
+        "impl/typescript/tests/nop.test.ts",
+        "impl/go/nop/nop_test.go",
+        "impl/java/src/test/java/com/labacacia/nps/nop/NopTest.java",
+        "impl/rust/nps-nop/tests/nop_tests.rs"
+      ],
+      "gap": "All six SDKs encode and decode window_size/ack_seq/nak_seq, but the reference repository has no case-complete sender pause, receiver restore, NAK replay, and unresolvable-NAK runtime harness. A deployment may record a reasoned SHOULD exception; it may not record pass from codec evidence alone."
+    }
+  ]
+}

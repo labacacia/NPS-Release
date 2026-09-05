@@ -2,9 +2,16 @@
 
 # NPS 路线图
 
-**Version**: 0.9
-**Date**: 2026-08-16
+**Version**: 0.10
+**Date**: 2026-09-05
 **归属**: LabAcacia / INNO LOTUS PTY LTD  
+
+> **历史章节阅读规则**：已完成 Phase／release 章节保留该 milestone 当时的
+> 状态，不是当前 gap 清单。已被取代的声明统一在
+> [alpha.19 路线图历史对账](../docs/alpha19-p19-4-roadmap-history-reconciliation.cn.md)
+> 中处置。当前 CR/RFC 与 SDK 真值以
+> [alpha.19 状态记录](../docs/alpha19-p19-4-status-reconciliation.cn.md) 为准，
+> 当前 daemon 行为以 [daemon 架构](../docs/daemons/architecture.cn.md) 为准。
 
 ---
 
@@ -45,7 +52,7 @@
 - [x] `token-budget.md` v0.2（CGN 计量 + tokenizer 解析链）
 - [x] `services/NPS-AaaS-Profile.md` v0.4（Anchor/Bridge Node、VPL、L1/L2/L3、NPS-CR-0002）
 - [x] `services/NPS-Node-Profile.md` v0.1（L1/L2/L3 + 激活模式）
-- [x] `services/conformance/NPS-Node-L1.md` v0.1（21 个 TC-N1-* 用例）
+- [x] `services/conformance/NPS-Node-L1.md` v0.1（20 个 TC-N1-* 用例）
 - [x] `services/conformance/NPS-Node-L2.md` v0.1（10 个 TC-N2-* 用例，拓扑查询）
 - [x] LabAcacia 仓库公开，Discussions 开启；`NPS-Dev` monorepo 按设计保持私有
 - [x] 已发布：alpha.1（2026-04-10）、alpha.2（2026-04-19）、alpha.3（2026-04-26）、alpha.4（2026-04-30）、alpha.5（2026-05-01）
@@ -88,6 +95,10 @@
 
 ### Phase 1 交付的 RFC / CR
 
+> 本小节的 lifecycle 标签是 Phase 1／alpha.5 时点快照。后续晋级记录在
+> 下方 release 章节；当前状态以
+> [alpha.19 状态记录](../docs/alpha19-p19-4-status-reconciliation.cn.md) 为准。
+
 - [x] **NPS-RFC-0001** — NCP 连接前导码 `b"NPS/1.0\n"`（Accepted，全六 SDK）
 - [x] **NPS-RFC-0002 Phase A/B** — X.509 NID + ACME `agent-01` 原型（Draft，全六 SDK；IANA PEN 待申请）
 - [x] **NPS-RFC-0003** — Agent 身份保证级别 `anonymous`/`attested`/`verified`（Accepted，全六 SDK）
@@ -105,6 +116,10 @@
 | `nps-runner`   | Phase 1 骨架（L3 运行时推迟）|
 | `nps-ingress`  | Phase 1 骨架（Internet 入站网关推迟）|
 | `nps-cloud-ca` | 存根（2027 Q1+）|
+
+> 此表明确是 alpha.5 daemon 快照。`nps-ingress` 与 `nps-runner` 后续已交付
+> runtime 行为；当前实现边界与证据见
+> [daemon 架构](../docs/daemons/architecture.cn.md)。
 
 ### 完成标准
 
@@ -127,8 +142,11 @@
 - [x] Token 节约基准（聚合较 REST 减少 45.0% CGN）
 - [x] NOP Orchestrator 端到端执行 3 节点 DAG
 - [x] Claude Desktop 通过 `mcp-ingress` 访问 NWP Memory Node
-- [ ] `NDP.ResolveFrame` 通过 DNS TXT 解析 `nwp://` 到物理端点
-- [ ] 首个参考产品：**NPS Studio**（人类可视化调试器）+ **NPS Probe**（Agent Coder 合规检查 CLI）
+- [x] `NDP.ResolveFrame` 通过 DNS TXT 解析 `nwp://` 到物理端点——六 SDK
+  均有 lookup／parse／fallback 源码与测试
+- [x] **NPS Probe**（Agent Coder 合规检查 CLI）——alpha.10 发布 v0.1，
+  alpha.11 发布 v0.2（5 checks）
+- [ ] **NPS Studio**（人类可视化调试器）——未启动；延后到后续周期
 
 ---
 
@@ -156,107 +174,101 @@
 | 非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手 | .NET 已接入；其他 SDK 只有枚举，无执行逻辑 |
 | **NPS-RFC-0002** 晋级 Draft → Proposed/Accepted | 已由 NPS-CR-0004（2026-05-08）关闭：IANA PEN **65715** 已分配；OID arc `1.3.6.1.4.1.65715` 替换临时 `1.3.6.1.4.1.99999`；RFC-0002 晋级 Draft → Proposed（wire-in 落地于 alpha.6）|
 
+> 此表保留 alpha.5 的 deferred 快照。拓扑客户端、DNS TXT 解析与 assurance
+> helper 在 alpha.6／alpha.7 关闭；RFC-0004 六 SDK client 在
+> alpha.13–alpha.15 关闭。当前源码／测试证据由
+> [路线图历史对账](../docs/alpha19-p19-4-roadmap-history-reconciliation.cn.md)
+> 索引。
+
 ## alpha.6 发布 — 2026-05-12 ✅
 
-alpha.6 已交付 NPS-CR-0002 Anchor topology push、IANA PEN **65715** wire-in、
-六 SDK `NDP.ResolveFrame` DNS TXT 解析，以及 NPS-RFC-0003 assurance 强制。
-
-> 以下内容是 alpha.6 发布前的规划快照，保留作历史记录，不是当前 backlog。
-
-**进行中的 RFC / CR（历史快照）**
-
 | 事项 | 备注 |
 |------|------|
-| **NPS-CR-0002 Phase 2** — 服务端 Anchor 中间件推送拓扑更新 | .NET 参考实现完成；alpha.6 关闭 `node_kind` 兼容窗口，要求 `topology.filter.node_roles` |
-| **NPS-RFC-0002** 晋级 Draft → Proposed/Accepted | 阻塞于 IANA PEN 分配 |
-
-**SDK 功能缺口（历史快照）**
-
-| 事项 | 备注 |
-|------|------|
-| 非 .NET SDK 移植 NPS-CR-0002 `AnchorNodeClient` 拓扑客户端 | .NET 参考已完成；Python/TS/Go/Java/Rust 待移植 |
-| 非 .NET SDK 移植 NPS-RFC-0004 声誉助手（`ReputationLogClient`）| .NET 仅有 Phase 1 数据类型，无客户端；全六 SDK 需完整客户端 |
-| ~~非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手~~ | ✅ 已完成 —— 全六 SDK 均有完整 `AssuranceLevel` 枚举 + 执行逻辑 |
-
-**协议 / 规范事项（历史快照）**
-
-| 事项 | 备注 |
-|------|------|
-| `NDP.ResolveFrame` DNS TXT 解析（`nwp://` → 物理端点）| 已规范化；所有 SDK 尚未实现 |
-| `nps-ingress` L2 Internet 入站网关（`:8080`→`:443` TLS 终止，NCP over TLS）| alpha.5 仅骨架；L2 合规推迟 |
-| `nps-runner` L3 FaaS 任务运行时 | 仅骨架；完整实现在 Phase 3 范围 |
-
-**工具链（历史快照）**
-
-| 事项 | 备注 |
-|------|------|
-| **NPS Studio** — NPS 帧流可视化调试器 | Phase 2 目标；尚未开始 |
-| **NPS Probe** — Agent Coder 合规检查 CLI | Phase 2 目标；尚未开始 |
+| **NPS-CR-0002 Phase 2** — 服务端 Anchor middleware push | .NET 参考实现通过 `AnchorNodeMiddleware` + `IAnchorTopologyService` 提供 topology push/notify；关闭 `node_kind` 兼容窗口，要求 `topology.filter.node_roles` |
+| **NPS-RFC-0002** wire-in（IANA PEN 65715） | NPS-CR-0004 于 2026-05-08 获得 IANA PEN **65715**；OID arc `1.3.6.1.4.1.65715` 替换临时值 `1.3.6.1.4.1.99999`；RFC-0002 从 Draft 晋级 Proposed |
+| **`NDP.ResolveFrame` DNS TXT 解析** | 六个 SDK 均实现 `nwp://` → 物理端点：`resolve_via_dns` / `resolveWithDns` / `ResolveViaDns`，并提供可注入 `DnsTxtLookup` |
+| **NPS-RFC-0003 assurance 强制** | 六个 SDK 均提供完整 `AssuranceLevel` 枚举与执行逻辑，不再只有 .NET 实现 |
 
 ---
 
 ## alpha.7 发布 — 2026-05-17 ✅
 
-alpha.7 已交付五种非 .NET `AnchorNodeClient`、NPS-CR-0005 RA 参考实现、
-CGN profile 换算、OpenTelemetry 埋点，并将 NPS-RFC-0002 晋级 Accepted。
+| 事项 | 备注 |
+|------|------|
+| **NPS-CR-0002 `AnchorNodeClient`**（5 个非 .NET SDK） | `get_snapshot` + `subscribe`（各语言使用 stream / async-generator / channel）及 MemberInfo、TopologySnapshot、TopologyFilter、TopologyEvent |
+| **NPS-CR-0005** — NIP CA RA 模型（.NET 参考） | `EnrollmentTier`、`Ca/Ra/` policy + store、4 个 enrollment 端点、4 个新错误码及 `db/003_ra_model.sql` PostgreSQL migration |
+| **CGN profile 换算规范（#51）** | `cgn-profiles.yaml` 增加 Google Gemini、Meta Llama、Mistral；同步更新 `token-budget.md` §2.3 |
+| **NWP + NOP OpenTelemetry 埋点** | NPS-sdk-dotnet 增加 `ActivitySource` + `System.Diagnostics.Metrics`，关闭 NPS-sdk-dotnet#5 |
+| **NPS-RFC-0002** Proposed → Accepted | OQ-3 已决议并留给后续 RFC；无未解开放问题 |
 
-> 以下内容是 alpha.7 tag 前的规划快照，保留作历史记录；其中 RFC-0004
-> `ReputationLogClient` 后续已在 alpha.13–15 关闭。
-
-**SDK 功能缺口（alpha.6 遗留 —— 历史发布门槛）**
-
-每次 SDK 发布必须保证六种语言在同一功能水位上。以下条目从 alpha.6 延续，
-必须在 alpha.7 打标签前全部完成。
-
-| 事项 | 范围 | 备注 |
-|------|------|------|
-| NPS-CR-0002 `AnchorNodeClient` | ✅ 完成（2026-05-17） | 全五 SDK 非 .NET 端口：`get_snapshot` + `subscribe`（各语言对应 stream/async-generator/channel）+ 拓扑数据类型（MemberInfo、TopologySnapshot、TopologyFilter、TopologyEvent × 5）|
-| NPS-RFC-0004 `ReputationLogClient` | 全六 SDK（含 .NET）| .NET 仅有 Phase 1 数据类型；需完整客户端（Phase 2 Merkle / STH / 包含证明）覆盖所有 SDK |
-
-**新规范 / 实现（历史快照）**
-
-| 事项 | 状态 | 备注 |
-|------|------|------|
-| **NPS-CR-0005** — NIP CA RA 注册授权模型 | ✅ 完成（2026-05-17） | .NET 参考实现：`EnrollmentTier` 枚举、`Ca/Ra/` 策略 + 存储层、4 个 enrollment 端点、4 个新错误码；`db/003_ra_model.sql` PostgreSQL 迁移脚本 |
-| **#51 CGN Profile 换算规范** | ✅ 完成（2026-05-17） | `cgn-profiles.yaml` 新增 Google Gemini、Meta Llama、Mistral 系列；`token-budget.md` §2.3 同步更新 |
-| **NWP + NOP OpenTelemetry 埋点** | ✅ 完成（2026-05-17） | NPS-sdk-dotnet 新增 `ActivitySource` + `System.Diagnostics.Metrics`；关闭 NPS-sdk-dotnet#5 |
-
-**进行中的 CR / RFC（历史快照）**
-
-| 事项 | 状态 | 备注 |
-|------|------|------|
-| **NPS-RFC-0002** 晋级 Proposed → Accepted | ✅ 完成（2026-05-17） | OQ-3 已决议（延后至后续 RFC）；无剩余未解 OQ |
+> 后续版本继续处理 NPS-RFC-0004 `ReputationLogClient` 六 SDK 完整客户端
+> （Phase 2 Merkle / STH / inclusion proof）；alpha.7 时 .NET 仍只有 Phase 1 类型。
+>
+> 历史处置：所有 SDK 尚未实现 NDP DNS TXT | **已被取代**；RFC-0004
+> `ReputationLogClient` 当时确为 gap，后在 alpha.13–alpha.15 关闭。当前
+> 证据见[路线图历史对账](../docs/alpha19-p19-4-roadmap-history-reconciliation.cn.md)。
 
 ---
 
 ## alpha.8 发布 — 2026-05-22 ✅
 
-交付 NWM `cgn_limit` 强制（`NWP-CGN-LIMIT-EXCEEDED`）、RFC-0005 ReputationPolicyEvaluator 与多语言移植、
-SubscribeFrame、NPS-CR-0005 RA model，并将 RFC-0002 / RFC-0005 晋级 Accepted。
+| 事项 | 备注 |
+|------|------|
+| **cgn_limit 强制**（NWP AnchorNodeMiddleware） | 执行前检查；`NWP-CGN-LIMIT-EXCEEDED` → 402；通过 NWM `token_budget.cgn_limit` 发布。六 SDK 中 Python/TS/Go 延续到 alpha.9 补齐 |
+| **RFC-0005 ReputationPolicyEvaluator** | `IReputationPolicyEvaluator`、`DefaultReputationPolicyEvaluator`、`AnchorNodeOptions.ReputationPolicy`、三个新错误码、两个响应头与 NWM `reputation_policy` 发布 |
+| **RFC-0005 Python + Go + TS 移植** | 将 cgn_limit 与 RFC-0005 reputation 接入三种 Anchor server |
+| **SubscribeFrame（0x12）** | 加入 `NPS.NWP` 及 subscription lifecycle 类型 |
+| **NPS-CR-0005 RA 模型**（.NET） | 三级 enrollment、4 个 CA 端点及 `db/003_ra_model.sql` |
+| **RFC-0002 → Accepted、RFC-0005 → Accepted** | 状态晋级 |
 
 ---
 
 ## alpha.9 发布 — 2026-05-25 ✅
 
-交付 NOP Saga compensation、NDP AnnounceFrame 字段/security profiles，以及
-十包 NPS-SDK-dotnet alpha.9 发布。
+| 事项 | 备注 |
+|------|------|
+| **NOP Saga compensation**（NPS-5 v0.5） | `DagNode` 增加 `compensate_action` / `compensate_params_mapping`，`TaskFrame` 增加 `compensation_policy`，`NopOrchestrator` 反向 DAG rollback，并新增两个错误码 |
+| **NDP v0.7 AnnounceFrame 字段** | 新增 `activation_mode`、`node_roles`、`cluster_anchor`、`spawn_spec_ref`、`bridge_protocols`、`activation_endpoint` |
+| **NDP security profile** | `local-dev` / `org-private` / `public-federated`、`InMemoryNdpRegistry` IP 范围强制与 ephemeral TTL 上限 60 秒 |
+| **NPS-SDK-dotnet alpha.9** | 10 个包全部发布到 NuGet.org + Nexus |
 
 ---
 
 ## alpha.10 发布 — 2026-05-28 ✅
 
-交付 IdentFrame assurance 提取、`NWP-AUTH-ASSURANCE-TOO-LOW` hint、
-RFC-0005 reputation metadata、NPS Probe v0.1，并推进 CR/RFC 状态。
+| 事项 | 备注 |
+|------|------|
+| **IdentFrame assurance 提取** | `AnchorNodeMiddleware` 解析 `X-NWP-Ident` → `AssuranceLevel`（RFC-0003 Phase 2），解析失败回退为 `Anonymous` |
+| **AssuranceHintUrl** | `AnchorNodeOptions.AssuranceHintUrl`；写入 `NWP-AUTH-ASSURANCE-TOO-LOW` 响应 |
+| **IdentReputationPolicyHint**（RFC-0005 §4.2） | `IdentMetadata.reputation_policy` 无签名 advisory，包含 `log_sources` + `consent` |
+| **NPS Probe v0.1 CLI** | `tools/nps-probe/` 的 4 项检查：NWM、`reputation_policy`、`token_budget`、日志运营方 `/sth`；输出 PASS/WARN/FAIL 与 `--json` |
+| **规范状态晋级** | CR-0003 → Implemented；RFC-0004 → Active；RFC-0005 → Active |
 
 ---
 
 ## alpha.11 发布 — 2026-05-28 ✅
 
-五协议同步交付：NCP `NCP-STREAM-LIMIT-EXCEEDED` / `NCP-REKEY-REQUIRED`；
-NWP CR-0006 SubscribeFrame；NIP `NIP-OCSP-STAPLE-EXPIRED` 与 PEN 65715 OID；
-NDP GraphFrame（`NDP-GRAPH-INVALID` / `NDP-GRAPH-TOO-LARGE`）及
-`NDP-FEDERATION-LOOP`；NOP `NOP-STREAM-NAK`、cross-cluster、HMAC 与
-`NOP-CALLBACK-HMAC-MISSING`。RFC-0006 当时仍为 Draft。
+> **后续发布规则**：每个 alpha 都必须同时推进五个协议（NCP / NWP / NIP /
+> NDP / NOP）的规范与 SDK 实现；不足五条实质内容的版本不得发布。
+
+| 事项 | 备注 |
+|------|------|
+| **NCP v0.7** | `max_concurrent_streams` 协商；QUIC 双向流映射；2^32 帧或 24 小时 rekey（`NCP-STREAM-LIMIT-EXCEEDED`、`NCP-REKEY-REQUIRED`） |
+| **NWP v0.13** | §13 SubscribeFrame（CR-0006 Accepted）、`topology:subscribe` MUST、NWM `trust_anchors` 与标准 `bridge_target` |
+| **NIP v0.9** | `IdentFrame.ocsp_staple`、`NIP-OCSP-STAPLE-EXPIRED`、PEN 65715.2.2/65715.2.3 OID 与 beta.1 Phase 3 flag day |
+| **NDP v0.8** | GraphFrame §3.3（`NDP-GRAPH-INVALID` / `NDP-GRAPH-TOO-LARGE`）、§9 三跳 federation（`NDP-FEDERATION-LOOP`）及 `spawn_spec_ref` schema |
+| **NOP v0.6** | AlignStream ACK/NAK（`NOP-STREAM-NAK`）、`weighted_first_k` / `merge_all`、cross-cluster delegate 与 webhook HMAC（`NOP-CALLBACK-HMAC-MISSING`） |
+| **CR-0006**（Accepted 2026-05-28） | SubscribeFrame §13 正式规范；frame registry 从 proposed 晋级 stable |
+| **RFC-0006**（Draft） | NCP native transport：TCP length prefix、QUIC stream mapping、rekey、`max_concurrent_streams` |
+| **六 SDK 对等** | Python/TS/Go/Java/Rust/.NET 同步提供 NOP saga/AlignStream/cross-cluster、NDP security/GraphFrame/Announce、NIP OCSP/OID 与 NWP SubscribeFrame/trust anchors；.NET 同步补齐相应类型与 10 个 NuGet 包 |
+| **nps-ledger alpha.11** | `POST /v1/log/federation/push`，执行 NDP §9 loop 检测与 `X-NPS-Forwarded-By` 三跳限制 |
+| **nps-probe v0.2** | 第 5 项检查验证 NWM `trust_anchors` 格式（NWP v0.13 §4.1） |
+| **nps-orchestrator alpha.11** | 版本更新并补录 alpha.9/10/11 CHANGELOG |
+| **NPS-NWP-Manager v0.1** | 初始 stub：`GET /health`、`GET /v1/nodes`、`GET /v1/nodes/list` |
+
+> 原 alpha.6/alpha.7 task queue 是发布前规划快照；其真实关闭版本与当前
+> 证据保留在[路线图历史对账](../docs/alpha19-p19-4-roadmap-history-reconciliation.cn.md)，
+> 不再与发布结果并列为当前 backlog。
 
 ---
 
@@ -371,7 +383,7 @@ NDP GraphFrame（`NDP-GRAPH-INVALID` / `NDP-GRAPH-TOO-LARGE`）及
 | **实现修复** | —— | **NOP 帧 wire key** 在 Go / Rust / TS / Java 对齐 NPS-5：`DelegateFrame` `task_id`→`parent_task_id`、`target_nid`\|`agent_nid`→`target_agent_nid`；`SyncFrame` `subtask_ids`→`wait_for`；`AlignStream` `sync_id`→`stream_id`、`source_nid`→`sender_nid`。纯合规修复；TS/Java 保留旧键解码回退 |
 | **共享** | error-codes v1.8 · frame-registry v0.14 | CR-0009 的五个错误码（`NWP-ANCHOR-NOT-LEADER`、`NWP-ANCHOR-EPOCH-FENCED`、`NWP-BRIDGE-DIRECTION-UNSUPPORTED`、`NDP-CLUSTER-SPLIT`、`NIP-CERT-CAPABILITIES-EXCEEDED`）加上 profile 波的新增 |
 
-**Daemons** —— ✅ `nps-registry` 已实现 CR-0009 最高 epoch 解析 + `NDP-CLUSTER-SPLIT`。仍待后续：`nps-ingress` 的完整 `TC-N2-*` / `TC-N2-HA-*` L2 向量覆盖；`nps-runner` 的 `SpawnSpec` OCI 镜像解析 + 租约续约边界情况。
+**Daemons** —— ✅ `nps-registry` 已实现 CR-0009 最高 epoch 解析 + `NDP-CLUSTER-SPLIT`。在 alpha.17 结束时仍待后续：`nps-ingress` 的完整 `TC-N2-*` / `TC-N2-HA-*` L2 向量覆盖；`nps-runner` 的 `SpawnSpec` OCI 镜像解析 + 租约续约边界情况。**alpha.19 已取代该现状**：ingress 现在发布 claim-scoped TLS 证据而不声称完整 L2；runner 已实现 OCI 解析／续约并明确保留的 L3 边界。见[路线图历史对账](../docs/alpha19-p19-4-roadmap-history-reconciliation.cn.md)。
 
 **不在范围内（→ beta.1）**：NIP Phase-3 **flag day** 本身（把强制变为默认 MUST）；多区域 NPS Cloud CA（Phase 3）；超出合规向量的 QUIC 生产级加固。
 
@@ -413,15 +425,19 @@ NDP GraphFrame（`NDP-GRAPH-INVALID` / `NDP-GRAPH-TOO-LARGE`）及
 
 ---
 
-## alpha.19 — 🚧 下一个（目标 2026-10）—— **协议加固（顺延）**
+## alpha.19 — 🚧 下一个（目标 2026-10）—— **清债与 alpha.20 前基线冻结**
 
-> **主题**：*协议加固* —— 完成 alpha.18 已规划但未交付的三条逐协议加固线，在 `v1.0.0-beta.1` 之前恢复同步推进铁律。
+> **主题**：*在下一轮设计之前关闭现有契约* —— 完成 alpha.18 顺延加固，关闭更早的协议／SDK／daemon／合规／文档／分发债务，并在 alpha.20 引入较大新设计之前冻结一条自洽基线。
 >
 > **铁律（自 alpha.11）**：每个 alpha 五协议 **spec 与六 SDK 同步推进**，不允许 ".NET 参考先行" 缺口。下述每项都落 spec + go/java/python/rust/typescript/.NET + conformance 向量 + CN 译文 + 文档四面。alpha.18 打破了这条铁律；alpha.19 的存在就是为了把它恢复。
 
-**目标版本**：NCP **0.12** / NDP **0.13** / NOP **0.10**；`frame-registry.yaml` **0.15**。NWP 与 NIP 保持 0.21 / 0.14，除非加固 delta 另有需要。
+**治理与清单**：[NPS-Dev#91](https://github.com/labacacia/NPS-Dev/issues/91) · [ChangeControl EPIC-004](https://github.com/innolotus/ChangeControl/issues/4) · [P19-0 历史债清单](../docs/alpha19-debt-inventory.cn.md)。清单为每个候选项分配稳定 ID、来源证据、owner、处置、下游范围与客观关闭关口。
 
-**基线（2026-08-16）**：alpha.18 已发布至全部 registry；issue 追踪器无未决项；中文规范与英文对齐；alpha.18 P18-0 所列发布工程欠账已清。
+**债务边界**：未履行的 alpha.19 前承诺、未实现的当前规范 `MUST`、缺少可执行证明的 Implemented/capability 声明、六 SDK 当前契约缺口、daemon 契约缺口，以及无法解释的源码／分发／文档漂移都在范围内。债务只能通过实现并验证、删除过期的当前声明，或证明它从一开始就明确属于未来范围来关闭。把未解决的当前行为改名为“未来”不算关闭。
+
+**目标版本**：NCP **0.12** / NWP **0.22** / NIP **0.15** / NDP **0.13** / NOP **0.10**；`frame-registry.yaml` **0.15**。NWP/NIP 之所以推进，是因为 P19-1 冻结了规范性的订阅/metadata 与续期/吊销 delta，而不只是修正文档。
+
+**基线（2026-08-31）**：alpha.18 已发布至全部 registry；已发布协议集的中文规范与英文对齐；alpha.18 P18-0 发布工程欠账已清。P19-0 在旧三协议表之外发现了更多 alpha.20 前债务，包括 daemon 状态／runtime 缺口、只有 catalog 没有执行的 Node 合规、过期 CR/RFC coverage matrix，以及当前文档真实性漂移。
 
 **逐协议加固**（自 alpha.18 原样顺延）：
 
@@ -433,15 +449,20 @@ NDP GraphFrame（`NDP-GRAPH-INVALID` / `NDP-GRAPH-TOO-LARGE`）及
 
 **同样自 alpha.18 计划顺延**：NWP 的可续订 subscription 强制执行与可移植 stability/SLA/billing metadata；NIP 的短寿证书续期互操作、OCSP/CRL 在 timeout/stale/unknown 下 fail-closed，以及报告 beta.1 Phase-3 会拒绝哪些输入的 advisory 工具。这些原本是与版本 bump 配套的 NWP/NIP 加固项，而已发布的 0.21 / 0.14 是因别的原因 bump 的，并未覆盖它们。
 
+**P19-0 冻结的额外债务族**：六 SDK 可执行行为（不以 DTO/catalog 存在代替）；`nps-ingress`、`nps-runner`、`npsd` 的 runtime／状态／认证对账；Node L1/L2 可执行 profile；NIP CR-0005 与 RFC 实现矩阵真实性；daemon／根文档／wiki 当前状态；以及 source-of-truth 到 standalone 的物化与 package 关口。权威逐项范围以 P19-0 清单为准，不以未跟踪的 TODO 搜索结果为准。
+
 **执行关口**：
-1. **P19-1 —— Spec/design freeze**：每协议一份规范性 hardening delta；bump NCP / NDP / NOP 与 `frame-registry.yaml`；EN/CN 与共享正向/负向/故障向量同批落地。
-2. **P19-2 —— Runtime parity**：六 SDK 全部执行 P19-1 行为。只移植字段/DTO 不算完成；timer、持久化、取消、过期、重放和故障路径都必须可运行。
-3. **P19-3 —— 故障与打包关口**：六语言测试、NativeAOT、可用语言的 race/concurrency、故障向量、package dry-run、安全与依赖扫描，均在文档化最低工具链上通过。
-4. **P19-4 —— 分发**：用删除语义和 distribution 排除物化 standalone；vendoring 各自执行的 conformance fixture；Dev→Release/SDK 达到零未解释漂移；再走常规 pre-release review。tag/publish 仍需单独批准。
+1. **P19-0 —— 历史债清单与范围冻结**：冻结稳定债务 ID、证据、owner、处置、下游范围与关闭关口；证明排除项不与当前契约冲突。
+2. **P19-1 —— 规范与 fixture 冻结**：编写规范性 hardening delta；bump NCP / NDP / NOP 与 `frame-registry.yaml`；EN/CN 与共享正向／负向／故障向量同批落地。
+3. **P19-2 —— 六 SDK runtime parity**：六 SDK 全部执行已接受行为。只移植字段／DTO／catalog 不算完成；timer、持久化、取消、过期、replay、准入、恢复与故障路径都必须可运行。
+4. **P19-3 —— Daemon 封口**：对账 `nps-ingress`、`nps-runner`、`npsd` 当前声明与可执行 runtime、持久化、准入、故障及 Node profile 证据。
+5. **P19-4 —— 合规与文档真实性**：执行已声明的 Node L1/L2 family；对账 CR/RFC matrix、历史／当前状态、EN/CN 文档、daemon health/README/architecture 与 Release Wiki。
+6. **P19-5 —— Package 与分发候选版**：运行六语言套件、NativeAOT、适用的 race/concurrency/restart/partition 关口、package dry-run、安全／依赖扫描；按删除语义／排除项物化 standalone 与自有 fixture；达到 Dev→Release/SDK/daemon 零未解释漂移。
+7. **P19-6 —— Pre-release review 与获批发布**：对账清单与验收证据，执行常规 pre-release review，并在任何 tag/package/image/release 改动前单独请求明确批准。
 
 **发布手册铁律**：crates 是含 `nps-conformance` 的 **8** 个；NuGet 家族是 **11** 个包；standalone 同步删除旧源码并保留明确的 distribution-only 文件；每个 standalone 都带自己执行的 conformance fixture；Maven 无 `zip` 时可用 Python `zipfile`；registry preflight 必须证明发布权限（`cargo owner --list`、npm granular 读写 token + publish 2FA bypass），不能只证明匿名读取。
 
-**不在范围（→ beta.1）**：NIP Phase-3 flag day 本身；多区域 NPS Cloud CA（Phase 3）；1.0 spec 冻结。
+**不在范围**：NIP Phase-3 flag day；多区域 NPS Cloud CA／HSM／cross-CA 扩展；1.0 spec freeze 与标准化；C++/PHP 晋级；Studio/NWP-Manager 完成；已退役 compat-ingress 的 v0.2 feature TODO；以及全部 alpha.20 新协议／产品设计。发布仍需单独批准。
 
 ---
 
@@ -503,7 +524,7 @@ Phase 0                Phase 1                  Phase 2             Phase 3
 | R05 | 竞品先达到类似定位 | 中 | 中 | NPS 差异在 Token Economy；加速 OSS 发布 |
 | R06 | Phase 3 PoC 合作方资源不到位 | 中 | 中 | 备选：内部 Demo 数据集替代真实合作方 |
 | R07 | W3C/IETF 标准化周期过长 | 高 | 低 | 事实标准路径（GitHub 社区采用）优先于正式 RFC |
-| R08 | IANA PEN 分配延迟 | 中 | 低 | RFC-0002 使用临时 OID 发布；IANA PEN 不阻塞 alpha 发布 |
+| R08 | **已于 2026-05-08 关闭** —— IANA PEN 分配延迟 | — | — | PEN **65715** 已分配，当前 OID 使用 `1.3.6.1.4.1.65715`；临时 `1.3.6.1.4.1.99999` 仅保留在明确标注的历史记录中 |
 
 ---
 

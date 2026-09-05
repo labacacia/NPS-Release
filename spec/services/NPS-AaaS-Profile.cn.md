@@ -366,6 +366,13 @@ NWP v0.13 已支持 `vector_search` 字段（§6.4），Vector Proxy Layer 只�
 | L2-08 | 维护成员注册表的 Anchor Node MUST 实现 `topology.snapshot` 与 `topology.stream` 保留查询类型，详见 [NPS-2 §12](../NPS-2-NWP.cn.md)。Version 计数器 MUST 在 Anchor 生命周期内单调，进程重启时 SHOULD 通过 rebase + `anchor_state.version_rebased` 事件保持订阅一致性。声明 L2-08 的实现 MUST 满足宿主 Anchor 的 [NPS-Node-Profile](./NPS-Node-Profile.cn.md) L1；维护活跃成员注册表的 Anchor SHOULD 同时满足 Node-Profile L2。 | NWP §12 |
 | L2-09 | SHOULD 在 NWM 中配置 `reputation_policy` 并在 Agent 接入时查询至少一个符合 NPS-RFC-0004 规范的日志运营方。L2 AaaS 部署推荐最小策略：拒绝任何级别存在 `cert-revoked` 事件的 Agent，以及过去 30 天内存在 `major` 或更高级别 `rate-limit-violation` / `tos-violation` 事件的 Agent。节点 SHOULD 在 NWM 的 `reputation_policy` 字段中公开其策略。 | NPS-RFC-0004 |
 
+L2-01..L2-07 是当前 alpha.20 前合同要求，不是占位符。其稳定用例为
+[NPS-Node-L2 v0.7](./conformance/NPS-Node-L2.cn.md#35-aaas-服务基线--l2-01-至-l2-07)
+中的 `TC-N2-AaaS-01..07`；机器可读强度、证据与声明处置见
+[`aaas-l2-requirement-disposition.json`](../conformance/aaas-l2-requirement-disposition.json)。
+完整 AaaS L2 声明要求 L2-01..L2-05 全部通过。L2-06/07 仅可在 manifest
+记录非空理由时采用 SHOULD 例外。
+
 ### 4.4 Level 3 — Advanced 合规
 
 | 要求 ID | 描述 | 对应协议 |

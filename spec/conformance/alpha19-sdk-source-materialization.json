@@ -1,0 +1,84 @@
+{
+  "schema_version": 1,
+  "candidate": "1.0.0-alpha.19",
+  "executed_at": "2026-09-05",
+  "source": {
+    "repository": "NPS-Dev",
+    "content_commit": "d2b1f7854b261c3fc468d4f0547701f70a5836d4"
+  },
+  "targets": {
+    "NPS-SDK-DotNet": {
+      "content_commit": "2d36712a5e3cdc8ade40592fef979b02bf628baa",
+      "base_branch": "main",
+      "validation": "dotnet test NPS.sln -c Release --nologo",
+      "tests_passed": 873
+    },
+    "NPS-SDK-Python": {
+      "content_commit": "13bcb2648093d3575cfa9b3da4f23576b5c182f3",
+      "base_branch": "main",
+      "validation": "python3 -m pytest -q",
+      "tests_passed": 1375,
+      "coverage_percent": 92.03
+    },
+    "NPS-SDK-TypeScript": {
+      "content_commit": "6eeae641c568db2e5d6199072315a2a985119089",
+      "base_branch": "main",
+      "validation": "npm test && npm run build",
+      "tests_passed": 1174
+    },
+    "NPS-SDK-Go": {
+      "content_commit": "37499c32b54f3d10eff29b28a094c0d1220954eb",
+      "base_branch": "feat/alpha19-runtime-version",
+      "validation": "go test ./... && go vet ./...",
+      "tests_passed": true
+    },
+    "NPS-SDK-Java": {
+      "content_commit": "485a17a64f66691b55609be9ab34cec884707047",
+      "base_branch": "main",
+      "validation": "./gradlew test --no-daemon",
+      "tests_passed": true
+    },
+    "NPS-SDK-Rust": {
+      "content_commit": "bc4f875fb70500871509f62850f0771033427eb4",
+      "base_branch": "main",
+      "validation": "cargo test --workspace && cargo clippy --workspace --all-targets -- -D warnings",
+      "tests_passed": true
+    }
+  },
+  "synchronization": {
+    "deletion_semantics": true,
+    "configured_parity_pairs": 12,
+    "initial_sdk_tree_drift_files": 181,
+    "final_sdk_tree_drift_files": 0,
+    "spec_tree_drift_files": 0,
+    "distribution_only_exclusions": [
+      "repository identity and release documentation",
+      "language build wrappers and generated output",
+      "standalone NIP CA server bundles",
+      "daemon implementation evidence and service-profile source documents"
+    ],
+    "root_build_adjustments": [
+      "TypeScript alpha19 package export and audited package lock",
+      "Rust audited workspace lock",
+      "portable Python conformance fixture discovery",
+      "portable .NET monorepo and standalone conformance test inputs"
+    ]
+  },
+  "results": {
+    "hard_source_of_truth_assertions": "passed",
+    "wiki_content_warnings": 0,
+    "sdk_tree_drift": 0,
+    "spec_tree_drift": 0,
+    "verdict": "standalone_sdk_source_materialized"
+  },
+  "finalization": {
+    "coordinated_version": "1.0.0-alpha.19",
+    "status": "materialized_on_release_branches"
+  },
+  "boundaries": [
+    "all standalone SDK package versions are finalized at 1.0.0-alpha.19 on their existing release branches",
+    "the Go materialization remains stacked on the reviewed runtime-version branch",
+    "standalone daemon materialization remains separate work",
+    "no merge, tag, package upload, registry mutation, or release publication occurred"
+  ]
+}

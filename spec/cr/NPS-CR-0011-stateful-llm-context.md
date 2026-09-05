@@ -375,10 +375,10 @@ context support merely because they can encode the DTOs.
 
 ## 10. Conformance Plan
 
-The candidate normative change adds
+The implemented normative change added
 `spec/conformance/nwp/llm_context_vectors.json` together with NWP 0.21. The
-stable case IDs are reserved below; all six SDKs must execute the file before
-this CR can move from Draft to Implemented.
+stable case IDs are listed below. All six SDKs execute the file; the completion
+evidence is recorded under the table and in §13.
 
 | ID | Required decision |
 |---|---|
@@ -455,7 +455,7 @@ response-ID rejection against the alpha.18 source projects. Distribution to
 NPS-Release and standalone SDK repositories remains a release workflow step and
 is intentionally not part of the CR implementation commit.
 
-## 14. Proposed CHANGELOG Entry
+## 14. CHANGELOG Entry
 
 > **NWP stateful LLM context (NPS-CR-0011, Implemented)**: add an opt-in context/delta
 > contract for `llm.complete`, opaque owner-bound context IDs, CAS versions,

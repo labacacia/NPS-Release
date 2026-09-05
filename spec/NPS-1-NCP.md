@@ -4,8 +4,8 @@ English | [中文版](./NPS-1-NCP.cn.md)
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.11
-**Date**: 2026-07-05
+**Version**: 0.12
+**Date**: 2026-08-31
 **Port**: 17433 (default, shared across the protocol suite)  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 
@@ -822,6 +822,7 @@ NPS uses a two-tier error model:
 | `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | Native-mode connection opened with bytes other than `b"NPS/1.0\n"`; server closes silently within 500 ms (no ErrorFrame) — see §2.6.1 |
 | `NCP-REKEY-REQUIRED` | `NPS-PROTO-VERSION-INCOMPATIBLE` | E2E-encrypted channel has reached the rekey threshold (2^32 frames or 24 h); peer MUST initiate key rotation before sending more encrypted frames |
 | `NCP-KEEPALIVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | No frame (including NopFrame) received within 3 × `ping_interval_ms`; connection will be closed |
+| `NCP-EARLY-DATA-REJECTED` | `NPS-PROTO-VERSION-INCOMPATIBLE` | An NPS frame was carried in QUIC/TLS 0-RTT early data; NPS application data starts only after handshake confirmation |
 
 HTTP-mode status mapping: see [status-codes.md](./status-codes.md).
 
@@ -900,6 +901,40 @@ Long-lived native-mode connections (TCP/QUIC) can be silently killed by NAT appl
 - When only one side declares `ping_interval_ms`, the other side SHOULD honour the declared interval as the shared interval.
 - TCP keepalive (`SO_KEEPALIVE`) and QUIC idle timeout are complementary mechanisms; implementations SHOULD configure both at the transport layer in addition to the application-layer NopFrame protocol.
 
+### 7.7 Alpha.19 connection hardening profile (NCP v0.12)
+
+The following requirement IDs freeze the portable runtime behavior used by
+[`runtime_hardening_vectors.json`](conformance/ncp/runtime_hardening_vectors.json):
+
+1. **NCP-P19-01 — effective interval.** Let `C` and `S` be the non-zero
+   `ping_interval_ms` values offered by the client and server. If both are zero,
+   application keepalive is disabled. Otherwise the effective interval is
+   `max(1000, min(C, S))` after omitting zero values.
+2. **NCP-P19-02 — receive clock.** Admission of any complete, valid inbound NCP
+   frame resets the dead-peer clock. Local sends, partial headers, malformed
+   frames, and transport-only activity do not reset it.
+3. **NCP-P19-03 — idle probe.** When no application frame has been sent for one
+   effective interval, a peer MUST enqueue exactly one payload-free NopFrame.
+   Ordinary outbound traffic resets the idle-send clock and replaces that probe.
+4. **NCP-P19-04 — deterministic close.** At `3 × effective_interval` without a
+   valid inbound frame, the connection atomically enters `closing`, emits at
+   most one `NCP-KEEPALIVE-TIMEOUT`, cancels all streams, and closes the carrier
+   within 500 ms. No application frame may be emitted after the timeout error.
+5. **NCP-P19-05 — Nop shape.** A NopFrame payload length other than zero is
+   rejected with `NCP-FRAME-PAYLOAD-TOO-LARGE` and never resets either clock.
+6. **NCP-P19-06 — no early application data.** NPS preambles, HelloFrames, and
+   all other NPS frames MUST NOT be sent or accepted as QUIC/TLS 0-RTT data.
+   A server that detects such data rejects it with
+   `NCP-EARLY-DATA-REJECTED`; handshake retry after confirmation is allowed.
+7. **NCP-P19-07 — QUIC migration identity.** QUIC path migration is allowed only
+   after handshake confirmation. It preserves the negotiated NCP session and
+   MUST NOT change its certificate/IdentFrame NID binding. A binding change is
+   rejected with `NCP-NID-MISMATCH` and closes the connection.
+8. **NCP-P19-08 — two-layer backpressure.** Both QUIC/TCP carrier credit and the
+   NCP StreamFrame application window apply. Carrier credit never authorizes a
+   sender to exceed a zero/exhausted NCP window. NopFrame is not charged to a
+   stream window, but it remains subject to carrier writability.
+
 ---
 
 ## 8. Encoding Tiers
@@ -969,6 +1004,7 @@ For NCP v0.9, the standard binding is NWP `QueryFrame.vector_search.vector`. The
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.12 | 2026-08-31 | Alpha.19 connection hardening profile: deterministic effective keepalive interval and receive/idle clocks, single timeout-close transition, payload-free Nop enforcement, replay-safe rejection of QUIC/TLS 0-RTT NPS frames, identity-preserving QUIC migration, and carrier/application backpressure composition. Adds shared runtime hardening vectors and `NCP-EARLY-DATA-REJECTED`. |
 | 0.11 | 2026-07-29 | Added §2.6.2 Native Server Interoperability Profile: authentication-before-preamble ordering, separate bounded preamble/Hello reads, allocation-safe Hello limits, silent pre-admission failure behavior, deterministic version/encoding/protocol/limit negotiation, portable handshake Caps fields, and shared `native_server_handshake_vectors.json`. Additive; no new frame type or error code. |
 | 0.10 | 2026-07-05 | Native-mode transport adopted as normative (NPS-RFC-0006 **Accepted**). New native-mode **session continuity across Anchor failover** (NPS-CR-0009): on connection loss / `NCP-NID-MISMATCH` after a multi-Anchor ownership transfer, the client re-resolves via NDP §9 (highest `cluster_epoch`) or the NWP `anchor_failover` `successor_nid` and re-establishes the session. No new frames or error codes (`NCP-NID-MISMATCH` reused). |
 | 0.9 | 2026-06-27 | Activated Tier-3 BinaryVector v1 (`Flags.T1T0 = 10`) with negotiation token `binary_vector.v1`; defined the `NPBV` payload layout, MessagePack metadata marker, float32 little-endian vector segments, and NWP `QueryFrame.vector_search.vector` binding; `0b11` remains reserved. |

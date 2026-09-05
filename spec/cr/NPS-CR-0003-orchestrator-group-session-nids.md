@@ -193,8 +193,12 @@ This is the verify-side half of cascade revocation; combined with the CA-side ca
 
 | SDK | Phase 1 (this CR) | Notes |
 |---|---|---|
-| **.NET** (`NPS.NIP`) | Required | Reference impl: extends `NipCertRecord` / `INipCaStore` / `NipCaService`, adds `NipCaService.RegisterGroupAsync` and `IssueSessionAsync`, adds JWS verification helper, extends HTTP router, adds DB migration `002_orchestrator_session.sql`. |
-| **Python / TypeScript / Java / Rust / Go** | Deferred | Tracked as follow-up tickets per the same parity model used for NPS-RFC-0002 / RFC-0003 / RFC-0004. SDK clients can already _consume_ session IdentFrames via the existing IdentFrame DTO and the unknown-field pass-through behavior; what's deferred is the `IssueSessionAsync` client-side helper. |
+| **.NET** (`NPS.NIP`) | Implemented | Reference CA service, stores, group JWS, HTTP routes and orchestration/session tests. |
+| **Python** | Implemented | CA lineage/JWS/service/router paths and tests. |
+| **TypeScript** | Implemented | CA group-JWS/store/service/router paths. |
+| **Java** | Implemented | CA group JWS/service/router paths and tests. |
+| **Rust** | Implemented | CA group-JWS/store/service/router paths and tests. |
+| **Go** | Implemented | CA store/service/router paths and tests. |
 
 ## 5. Conformance changes
 
@@ -224,18 +228,20 @@ CA-side correctness is enforced by the unit test suite added to `impl/dotnet/tes
 - **Per-session keypair attestation hardware**. Sessions get fresh Ed25519 keypairs but no requirement that they be HSM-resident; that's deployment policy.
 - **ACME `agent-01`-style challenge for session issuance**. Sessions are CA-internal; ACME is for external-domain proof and is overkill here. The group-JWS path serves the same anti-replay role.
 
-## 8. Acceptance criteria
+## 8. Implementation record
 
-- [ ] `spec/NPS-3-NIP.md` updated (§3, §5.1 lineage table, §5.3 reason enum, §7 step 3a, §8 endpoints, §9 errors, §11 changelog v0.7).
-- [ ] `spec/error-codes.md` and `spec/NPS-3-NIP.cn.md` mirrors updated.
-- [ ] `spec/cr/README.md` index updated.
-- [ ] DB migration `tools/nip-ca-server/db/002_orchestrator_session.sql`.
-- [ ] `NipCertRecord` carries `NidRole` / `ParentNid` / `LineageJson`.
-- [ ] `INipCaStore.GetByParentNidAsync` implemented in InMemory / SQLite / PostgreSQL stores.
-- [ ] `NipCaService.RegisterGroupAsync` / `IssueSessionAsync` / cascading `RevokeAsync` / chain-checking `VerifyAsync`.
-- [ ] HTTP routes: `register-group`, `sessions/issue`, `groups/{nid}/revoke`, `groups/{nid}/sessions`.
-- [ ] xUnit suite covers all five required scenarios (§5).
-- [ ] CHANGELOG.md / CHANGELOG.cn.md entries.
+Reconciled against current source on 2026-09-05:
+
+- [x] `spec/NPS-3-NIP.md` updated (§3, §5.1 lineage table, §5.3 reason enum, §7 step 3a, §8 endpoints, §9 errors, §11 changelog v0.7).
+- [x] `spec/error-codes.md` and `spec/NPS-3-NIP.cn.md` mirrors updated.
+- [x] `spec/cr/README.md` index updated.
+- [x] DB migration `tools/nip-ca-server/db/002_orchestrator_session.sql`.
+- [x] `NipCertRecord` carries `NidRole` / `ParentNid` / `LineageJson`.
+- [x] `INipCaStore.GetByParentNidAsync` implemented in InMemory / SQLite / PostgreSQL stores.
+- [x] `NipCaService.RegisterGroupAsync` / `IssueSessionAsync` / cascading `RevokeAsync` / chain-checking `VerifyAsync`.
+- [x] HTTP routes: `register-group`, `sessions/issue`, `groups/{nid}/revoke`, `groups/{nid}/sessions`.
+- [x] Reference tests cover all five required scenarios (§5); equivalent service/router behavior exists across all six SDKs.
+- [x] CHANGELOG.md / CHANGELOG.cn.md entries.
 
 ## 9. CHANGELOG entry
 

@@ -3,13 +3,13 @@
 ---
 **RFC 编号**: NPS-RFC-0001
 **标题**: 为 NCP 原生模式加入连接前导，用于流量识别
-**状态**: Accepted（Phase 1 —— spec + .NET 参考实现已落地）
+**状态**: Active（Phase 2 helper 已在六 SDK 落地）
 **作者**: Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**: Ori Lynn（1.0 之前快速通道，见 `spec/cr/README.cn.md`）
 **创建时间**: 2026-04-21
-**最近更新**: 2026-04-25
+**最近更新**: 2026-09-05
 **通过时间**: 2026-04-25（1.0 之前快速通道；见 `spec/cr/README.cn.md`）
-**激活时间**: _（首个参考 SDK 发布时填入，目标 v1.0-alpha.3）_
+**激活时间**: 2026-04-25（.NET 参考 helper；六 SDK helper parity 于 2026-04-30 完成）
 **替代**: _无_
 **被替代**: _无_
 **影响规范**: NPS-1 NCP、spec/error-codes.md、spec/status-codes.md
@@ -289,12 +289,15 @@ GA 用户依赖。现在破比 1.0 GA 后再补要便宜得多。
 
 | SDK | 负责人 | 状态 | 备注 |
 |-----|--------|------|------|
-| .NET | Ori Lynn | pending | 主参考；最先落地 |
-| Python | _待定_ | pending | |
-| TypeScript | _待定_ | pending | 浏览器：原生模式不适用；仅 Node.js |
-| Java | _待定_ | pending | |
-| Rust | _待定_ | pending | |
-| Go | _待定_ | pending | |
+| .NET | NPS SDK maintainers | 已实现 — Phase 2 helper + 测试 | `NPS.Core.Ncp.NcpPreamble`；npsd 是参考 server transport |
+| Python | NPS SDK maintainers | 已实现 — Phase 2 helper + 测试 | `nps_sdk.ncp.preamble` |
+| TypeScript | NPS SDK maintainers | 已实现 — Phase 2 helper + 测试 | 仅 Node.js；浏览器原生模式不适用 |
+| Java | NPS SDK maintainers | 已实现 — Phase 2 helper + 测试 | `com.labacacia.nps.ncp.NcpPreamble` |
+| Rust | NPS SDK maintainers | 已实现 — Phase 2 helper + 测试 | `nps_ncp::preamble` |
+| Go | NPS SDK maintainers | 已实现 — Phase 2 helper + 测试 | `ncp/preamble.go` |
+
+本矩阵不激活 Phase 3 的 default-on 翻转或 Phase 4 的 flag 删除；它们仍是
+显式兼容迁移，而非无人认领的 SDK 缺口。
 
 ### 8.3 测试计划
 
@@ -338,29 +341,27 @@ GA 用户依赖。现在破比 1.0 GA 后再补要便宜得多。
 | 指标 | 基线 | 建议 | 差值 | 方法 |
 |------|------|------|------|------|
 | 每连接线上开销 | 0 字节 | 8 字节 | +8 B | 平凡 |
-| 握手 RTT（localhost loopback）| TBD | TBD | 目标：无回归 | .NET `BenchmarkDotNet` 在原生模式 loopback |
+| 握手 RTT（localhost loopback）| 未测量 | 未测量 | 目标：无回归 | 后续 transport benchmark；不是 RFC 激活门槛 |
 | 服务端拒掉非 NPS 扫描的成本 | 完整帧解析尝试 | 8 字节 `memcmp` | 目标：至少便宜 10× | 扫描模拟工具 |
 
 ---
 
-## 10. 开放问题
+## 10. 已决问题
 
-- [ ] **OQ-1**：前导是否应带一个能力位图字节，让服务端在
-  `HelloFrame` 之前就能选择连接级特性（如"客户端支持 E2E 加密"）？需
-  shepherd 定调。_默认立场：不加——`HelloFrame` 已经有完整能力声明，
-  前导保持最小。_ 目标：`Accepted` 之前解决。
-- [ ] **OQ-2**：`PREAMBLE-WAIT` 超时 10 秒——是否应可配？Owner：
-  Ori Lynn。目标：默认留 10 秒，SDK **可以**暴露开关；`Accepted`
-  之前在本 RFC 加一条说明。
-- [ ] **OQ-3**：原生模式**服务端**是否也应发前导（双向识别）？目前
-  只是客户端 → 服务端。若有需求，延到后续 RFC。
+- [x] **OQ-1 — 不加能力位图。** Accepted 的八字节 wire contract 已定案：
+  `HelloFrame` 仍是唯一能力协商面，preamble 只负责流量识别。
+- [x] **OQ-2 — 固定规范默认值。** 六 SDK 常量均保持 10 秒
+  `PREAMBLE-WAIT`。部署可以施加更短的外层 handshake deadline，但本 RFC
+  不新增跨 SDK 配置字段。
+- [x] **OQ-3 — 仅 client 到 server。** 当前契约不包含 server-emitted
+  preamble。双向 preamble 识别需要单独未来 RFC，不属于 alpha.19 债务。
 
 ---
 
 ## 11. 后续工作
 
-- **后续 RFC**：要求原生模式在带 TLS 的传输上必须声明 `nps/1` ALPN。
-  与带内前导互补（§5.4）。
+- **已由 NPS-RFC-0006 交付**：TLS 原生模式使用 ALPN `nps/1.0`，与带内
+  preamble（§5.4）互补。
 - **后续 RFC**：把次版本协商语义正式化（前导里目前固定为 `0` 的保留
   字节）。
 - **后续 RFC（如有需求）**：服务端侧前导，实现双向识别（OQ-3）。
@@ -384,3 +385,4 @@ GA 用户依赖。现在破比 1.0 GA 后再补要便宜得多。
 |------|------|------|
 | 2026-04-21 | Ori Lynn | 初稿 |
 | 2026-04-25 | Ori Lynn | 走 1.0 之前快速通道 Accept。已落地 spec 改动：NPS-1-NCP §2.6.1、错误码 `NCP-PREAMBLE-INVALID`、状态码 `NPS-PROTO-PREAMBLE-INVALID`、`frame-registry.yaml` 中保留 `0x4E`。Phase 1 .NET 参考 helper（`NPS.Core.Ncp.NcpPreamble`）同时落地；Phase 2（其余 5 个 SDK）和 Phase 3（默认开启）按 RFC §8.1 推迟。|
+| 2026-09-05 | NPS maintainers | 状态对账为 Active，记录六 SDK Phase 2 helper/test coverage，解决 OQ-1..03，并链接 RFC-0006 ALPN 决议；Phase 3/4 兼容迁移仍未激活。|

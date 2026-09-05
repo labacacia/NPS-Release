@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-5
 **Status**: Proposed
-**Version**: 0.9
-**Date**: 2026-07-29
+**Version**: 0.10
+**Date**: 2026-08-31
 **Port**: 17433（默认，共用）/ 17437（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11)、NPS-2 (NWP v0.21)、NPS-3 (NIP v0.14)、NPS-4 (NDP v0.12)
+**Depends-On**: NPS-1 (NCP v0.12)、NPS-2 (NWP v0.22)、NPS-3 (NIP v0.15)、NPS-4 (NDP v0.13)
 **Supersedes**: NCP AlignFrame (0x05)
 
 > 本文档为 NOP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
@@ -486,6 +486,36 @@ epoch 最高的存活 Anchor。下发之前 MUST 拒绝脑裂（split brain）�
 一个 NUL 分隔字节、以及 UTF-8 编码的 `dag_hash` 计算 SHA-256 后得到的小写
 十六进制串。
 
+#### 3.5.6 alpha.19 replay、保留与聚合 Profile（NOP v0.10）
+
+共享 transcript 位于
+[`replay_retention_vectors.json`](conformance/nop/replay_retention_vectors.json)。
+
+1. **NOP-P19-01 —— replay key。** replay key 为 `(caller_nid, task_id)`。
+   Orchestrator 在 dispatch 前原子记录该 key 与覆盖 TaskFrame 不可变字段的 canonical digest。
+2. **NOP-P19-02 —— 相同重复。** key 与 digest 相同的重复请求返回已记录的
+   running/terminal outcome，MUST NOT 再次 dispatch、compensate 或 callback。
+3. **NOP-P19-03 —— 冲突重复。** 同一 key 搭配不同 digest 时以
+   `NOP-REPLAY-CONFLICT` 拒绝，且不得修改任一记录。
+4. **NOP-P19-04 —— result TTL。** `result_ttl_seconds` 从原子 terminal-state
+   commit 起用 monotonic clock 计时。`now >= expires_at` 时返回
+   `NOP-TASK-RESULT-EXPIRED`，且不得泄露原 result。
+5. **NOP-P19-05 —— replay tombstone。** result expiry 后，tombstone 继续保留实现
+   声明的 `replay_tombstone_seconds`（最小 300、默认 3600、最大 86400）。
+   tombstone 自身过期前，相同重复仍返回 expired，且不得重新 dispatch。
+6. **NOP-P19-06 —— 有界 eviction。** 容量压力下先移除已过期 tombstone，再移除
+   最旧 terminal record；绝不移除 running record。无安全 slot 时以
+   `NOP-REPLAY-LIMIT` 拒绝准入。
+7. **NOP-P19-07 —— terminal race。** 恰好一个 terminal state 胜出。迟到的 worker
+   result、timeout callback 或 cancellation ack 只进入审计，不得替换结果或延长 TTL。
+8. **NOP-P19-08 —— weighted selection。** `weighted_first_k` 只接受有限数值型
+   `result.score`，按 score 降序、再按 node ID 排序，并恰好返回 `min_required` 项。
+   缺失/非有限 score 为 `NOP-AGGREGATION-INVALID`。
+9. **NOP-P19-09 —— merge-all。** `merge_all` 按稳定拓扑顺序访问成功结果；
+   array/array 冲突执行拼接，其他冲突采用后值，且不得修改输入 object。
+10. **NOP-P19-10 —— 部分输入。** failed result 永不参与 aggregate；`SKIPPED`
+    继续满足既有 barrier 规则但不贡献值；K 已不可达时必须 terminal failure，不能部分成功。
+
 ---
 
 ## 4. 资源预检（Pre-flight）
@@ -663,6 +693,9 @@ Orchestrator                              Worker B（数据）  Worker C（推�
 | `NOP-CALLBACK-INVALID` | `NPS-CLIENT-BAD-PARAM` | callback URL 未通过 scheme、user-info、DNS、公网地址或重定向校验 |
 | `NOP-CALLBACK-HMAC-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | callback HMAC 格式非法，或与原始 body 的精确比对不匹配 |
 | `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | `result_ttl_seconds` 已过后才请求任务结果；结果不再保留 |
+| `NOP-REPLAY-CONFLICT` | `NPS-CLIENT-CONFLICT` | 同一 `(caller_nid, task_id)` 被不同的 TaskFrame 不可变内容复用 |
+| `NOP-REPLAY-LIMIT` | `NPS-LIMIT-RESOURCE` | replay ledger 容量耗尽，且没有可安全移除的过期 tombstone 或 terminal record |
+| `NOP-AGGREGATION-INVALID` | `NPS-CLIENT-BAD-PARAM` | 聚合输入违反所选 strategy，例如 `weighted_first_k` 缺少有限数值 score |
 | `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK 请求重传的帧已不在发送方缓冲区中（该帧已被淘汰）|
 | `NOP-CLAIM-CONFLICT` | `NPS-CLIENT-CONFLICT` | TaskFrame 已被一个存活的 runner 租约认领（NPS-CR-0007 §4.2）|
 | `NOP-SPAWN-SPEC-INVALID` | `NPS-CLIENT-BAD-PARAM` | `spawn_spec_ref` 无法解析，或未通过 SpawnSpec schema 校验（NPS-CR-0007 §5）|
@@ -767,6 +800,7 @@ Orchestrator MUST 验证接收到的 TaskFrame 来自可信 NID（通过 NIP 证
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.10 | 2026-08-31 | alpha.19 有界 replay/retention Profile：caller-bound replay key 与 digest、重复/冲突行为、monotonic result TTL、有界 replay tombstone 与安全 eviction、唯一 terminal winner，以及确定性的 `weighted_first_k` / `merge_all` / 部分输入语义。新增三个错误码与共享 transcript；Depends-On 推进到 alpha.19 NCP/NWP/NIP/NDP 基线。|
 | 0.9 | 2026-07-29 | **Alpha.17 可移植 Orchestrator profile**：确定性的 DAG 预检与合规性调度；condition / input_mapping 单次求值规则；重试、超时、取消、K-of-N 与聚合顺序；逆拓扑的 saga 上报；fail-closed 的 callback DNS/SSRF 与 HMAC 校验；每次尝试都重新解析 Anchor；严格的「存活 + 同属主」租约续约与规范 dedup key。新增共享的编排与运行时/安全 transcript；在六个 SDK 与 runner 关卡通过后，将 NPS-CR-0007 提升为 Implemented。 |
 | 0.8 | 2026-07-05 | 多 Anchor 高可用交互（NPS-CR-0009）：`DelegateFrame.target_cluster_anchor` MUST 解析到目标集群当前活跃的 Anchor（`cluster_epoch` 最高者，NDP §9）；发生 `anchor_failover` 时，在途委托 MUST 在重试前重新解析到 `successor_nid`。租约续约语义正式化（§8）：一次续约延长 `lease_expiry`，MUST 匹配 `runner_nid`；若租约已过期并被回收，则以 `NOP-CLAIM-CONFLICT` 拒绝。无新增错误码。 |
 | 0.7 | 2026-06-12 | **NPS-CR-0007 —— NOP↔L3 运行时集成**：新增 §8（任务认领协议：原子租约 + `dedup_key`、`NOP-CLAIM-CONFLICT`；`spawn_spec_ref` SpawnSpec 内容模式；idle/max-runtime 生命周期强制；幂等结果上报）；4 个新错误码（`NOP-CLAIM-CONFLICT`、`NOP-SPAWN-SPEC-INVALID`、`NOP-RUNTIME-IDLE-TIMEOUT`、`NOP-RUNTIME-MAX-RUNTIME`）；新增 `services/conformance/NPS-Node-L3.md`（`TC-N3-*`）；Security/Changelog 重编号为 §9/§10。gate `nps-runner` L3 FaaS 运行时。 |

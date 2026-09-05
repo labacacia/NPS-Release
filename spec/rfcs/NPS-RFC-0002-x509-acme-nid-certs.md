@@ -3,13 +3,13 @@ English | [中文版](./NPS-RFC-0002-x509-acme-nid-certs.cn.md)
 ---
 **RFC Number**: NPS-RFC-0002
 **Title**: Adopt X.509 + ACME for NID certificates
-**Status**: Accepted
+**Status**: Active
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: Ori Lynn
 **Created**: 2026-04-21
-**Last-Updated**: 2026-05-17
+**Last-Updated**: 2026-09-05
 **Accepted**: 2026-05-17
-**Activated**: _(set when first reference SDK ships)_
+**Activated**: 2026-05-17 (accepted after the reference implementation; six-SDK X.509 + `agent-01` parity had landed by 2026-04-30)
 **Supersedes**: _none_
 **Superseded-By**: _none_
 **Affected Specs**: NPS-3 NIP, tools/nip-ca-server (all language variants), spec/error-codes.md
@@ -283,12 +283,15 @@ Use X.509 but keep the current bespoke `/certs/issue` REST endpoint.
 
 | SDK | Owner | Status | Notes |
 |-----|-------|--------|-------|
-| .NET | Ori Lynn | pending | Primary reference |
-| Python | _TBD_ | pending | Use `cryptography` lib |
-| TypeScript | _TBD_ | pending | Use `@peculiar/x509` |
-| Java | _TBD_ | pending | Bouncy Castle |
-| Rust | _TBD_ | pending | `x509-parser` + `rcgen` |
-| Go | _TBD_ | pending | stdlib `crypto/x509` |
+| .NET | NPS SDK maintainers | Implemented — X.509 + `agent-01` | Primary library and CA reference |
+| Python | NPS SDK maintainers | Implemented — X.509 + `agent-01` | `cryptography`; SDK and CA tests |
+| TypeScript | NPS SDK maintainers | Implemented — X.509 + `agent-01` | SDK and CA tests |
+| Java | NPS SDK maintainers | Implemented — X.509 + `agent-01` | Bouncy Castle; SDK and CA tests |
+| Rust | NPS SDK maintainers | Implemented — X.509 + `agent-01` | `x509-parser` + `rcgen`; SDK and CA tests |
+| Go | NPS SDK maintainers | Implemented — X.509 + `agent-01` | stdlib `crypto/x509`; SDK and CA tests |
+
+This records source/test coverage, not Phase 3 activation. The v2 default-on
+flip and v1 removal remain future compatibility transitions.
 
 ### 8.3 Test Plan
 
@@ -392,7 +395,7 @@ by doing it once.
 
 ---
 
-## 10. Open Questions
+## 10. Resolved Questions
 
 - [x] **OQ-1**: Phase 1 — X.509 first, ACME later; OR both together?
   **Resolved 2026-04-27 by prototype data (see §9.3)**: bundle them.
@@ -442,5 +445,6 @@ by doing it once.
 
 | Date | Author | Change |
 |------|--------|--------|
+| 2026-09-05 | NPS maintainers | Reconciled status to Active and replaced stale six-SDK owner/status placeholders with current X.509 + `agent-01` source/test coverage. Phase 3/4 compatibility transitions remain inactive. |
 | 2026-04-27 | Claude (prototype) | Backfill §9 Empirical Data with measurements from `feat/rfc-0002-x509-acme-prototype` (.NET prototype + `NPS.Benchmarks.NipCert`). Resolve OQ-1 (bundle X.509 + ACME). Revise §8.4 thresholds (size 1200 → 1600 B; drop absolute latency target, keep ratio). |
 | 2026-04-21 | Ori Lynn | Initial draft |

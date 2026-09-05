@@ -1,12 +1,12 @@
 English | [中文版](./bilingual-parity.cn.md)
 
-# Published Snapshot Bilingual Parity
+# Release Candidate Bilingual Parity
 
 ## Scope
 
-This record covers the published `1.0.0-alpha.18` snapshot. It repairs
-translation omissions without importing the unreleased alpha.19 protocol
-versions or changing release metadata.
+This record covers the reviewed alpha.19 specification candidate materialized
+from NPS-Dev. Release metadata remains at the published `1.0.0-alpha.18`
+baseline until the final coordinated version bump.
 
 ## Reconciled surfaces
 
@@ -23,5 +23,6 @@ identifiers, Version headers, and Unicode integrity.
 
 ## Result
 
-All 40 published-snapshot pairs are aligned. The suite remains
-`1.0.0-alpha.18`; no alpha.19 materialization or publication occurred.
+All 46 release-repository pairs are aligned. The alpha.19 specifications are
+materialized for review; the suite remains `1.0.0-alpha.18`, and no alpha.19
+tag, package, image, registry upload, or release publication occurred.

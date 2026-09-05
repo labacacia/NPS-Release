@@ -3,13 +3,13 @@
 ---
 **RFC 编号**：NPS-RFC-0003
 **标题**：Agent 身份三级保证等级（反爬 / 信任分流）
-**状态**：Accepted（Phase 1 —— spec + .NET 参考类型已落地）
+**状态**：Active（Phase 1–2 已在六 SDK 落地）
 **作者**：Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**：Ori Lynn（1.0 之前快速通道，见 `spec/cr/README.cn.md`）
 **创建日期**：2026-04-21
-**最后更新**：2026-04-25
+**最后更新**：2026-09-05
 **接受日期**：2026-04-25（1.0 之前快速通道；见 `spec/cr/README.cn.md`）
-**激活日期**：_（首个参考 SDK 发版时填写，目标 v1.0-alpha.3）_
+**激活日期**：2026-04-25（.NET 参考类型/verifier；六 SDK Phase 1–2 parity 已成为当前状态）
 **取代**：_无_
 **被取代于**：_无_
 **影响的规范**：NPS-3 NIP、NPS-2 NWP、spec/services/NPS-AaaS-Profile.md、spec/error-codes.md、spec/status-codes.md
@@ -243,12 +243,15 @@ Agent (L0)                         Node
 
 | SDK | 负责人 | 状态 | 备注 |
 |-----|--------|------|------|
-| .NET | Ori Lynn | pending | 参考实现 |
-| Python | _待定_ | pending | — |
-| TypeScript | _待定_ | pending | — |
-| Java | _待定_ | pending | — |
-| Rust | _待定_ | pending | — |
-| Go | _待定_ | pending | — |
+| .NET | NPS SDK maintainers | 已实现 — Phase 1–2 | 类型、CA 签发、verifier 与 opt-in enforcement 测试 |
+| Python | NPS SDK maintainers | 已实现 — Phase 1–2 | 类型、CA 签发、verifier 与 opt-in enforcement 测试 |
+| TypeScript | NPS SDK maintainers | 已实现 — Phase 1–2 | 类型、CA 签发、verifier 与 opt-in enforcement 测试 |
+| Java | NPS SDK maintainers | 已实现 — Phase 1–2 | 类型、CA 签发、verifier 与 opt-in enforcement 测试 |
+| Rust | NPS SDK maintainers | 已实现 — Phase 1–2 | 类型、CA 签发、verifier 与 opt-in enforcement 测试 |
+| Go | NPS SDK maintainers | 已实现 — Phase 1–2 | 类型、CA 签发、verifier 与 opt-in enforcement 测试 |
+
+Phase 3 仍明确未激活：alpha.19 不执行 critical-extension/default-enforcement
+flag day，也不移除 L0-default 兼容路径。
 
 ### 8.3 测试计划
 
@@ -288,24 +291,25 @@ Agent (L0)                         Node
 
 ---
 
-## 10. 未决问题
+## 10. 已决问题
 
-- [ ] **OQ-1**：参考 CA 策略文档放在哪？建议
-  `tools/nip-ca-server/docs/policy.md`。负责人：Ori Lynn。
-- [ ] **OQ-2**：L2 证书是否必须携带法律实体名字段（X.509
-  `O`、`jurisdictionOfIncorporation`）？默认立场：是；细则
-  延后到 CA 策略文档。
-- [ ] **OQ-3**：Anchor Node（NPS-AaaS-Profile）是否可提升
-  它所代理 Agent 的保证等级，还是要求后端 Action Node 独立
-  校验？默认：Anchor 校验，后端通过 `X-NPS-Authed-Nid` header
-  信任 Anchor 决策。待 AaaS working-group 签字。
+- [x] **OQ-1 — 属于部署文档，不是 wire 占位。** 当前协议不预留
+  `tools/nip-ca-server/docs/policy.md`；operator CA policy 由部署持有，未来可
+  另行标准化。
+- [x] **OQ-2 — 当前证书不强制法律实体字段。** Phase 1–2 使用
+  `verified` assurance 值，不标准化 X.509 `O` 或
+  `jurisdictionOfIncorporation`。新增字段需要未来 RFC，不属于 alpha.19 债务。
+- [x] **OQ-3 — 每个执行强制策略的 Node 独立校验。** NWP 顶层与 per-action
+  `min_assurance_level` 约束作用于实际执行 action 的 Node。未标准化的
+  `X-NPS-Authed-Nid` header 不能提升或转移 assurance；Anchor 可以提前校验以
+  形成纵深防御，但不能替代后端 Node 校验。
 
 ---
 
 ## 11. 未来工作
 
-- **NPS-RFC-0004**：NID 声誉日志（CT 风格）。与保证等级互补：
-  等级关心**来源**，声誉关心**行为**。
+- **已由 NPS-RFC-0004 交付**：Active 的 CT 风格 NID 声誉日志与保证等级
+  互补；等级关心**来源**，声誉关心**行为**。
 - 后续：CA 被发现 L2 签发宽松时的批量吊销流。
 - 后续：为 AaaS Profile 发布 `trusted_issuers` well-known 列表。
 
@@ -317,7 +321,7 @@ Agent (L0)                         Node
 - CA/B Forum Baseline Requirements —— EV / OV / DV 等级形状
 - RFC 5280 §4.2.1.4 —— certificatePolicies
 - NPS-RFC-0002 —— NID 证书 X.509 + ACME（前置）
-- NPS-RFC-0004 —— NID 声誉日志（互补，进行中）
+- NPS-RFC-0004 —— Active 的 NID 声誉日志补充
 - 讨论：2026-04-20 关于反爬的评审意见
 
 ---
@@ -328,3 +332,4 @@ Agent (L0)                         Node
 |------|------|------|
 | 2026-04-21 | Ori Lynn | 初稿 |
 | 2026-04-25 | Ori Lynn | 走 1.0 之前快速通道 Accept。已落地 spec：NPS-3 §5.1.1 保证等级 + IdentFrame `assurance_level` 字段、NPS-2 NWM `min_assurance_level` 字段、错误码 `NIP-ASSURANCE-MISMATCH` / `NIP-ASSURANCE-UNKNOWN` / `NWP-AUTH-ASSURANCE-TOO-LOW`。Phase 1 .NET 参考类型（`NPS.NIP.AssuranceLevel` 枚举、`IdentFrame.AssuranceLevel`、`NipVerifyContext.MinAssuranceLevel`、`NeuralWebManifest.MinAssuranceLevel`、相关错误/状态码常量）同时落地；verifier 主动强制保留为 opt-in（按 RFC §8.1：Phase 1 仅 parse，默认行为不变）。Phase 2（其余 5 SDK + 6 个 CA Server 通过 ACME 颁发 L1 证书 —— 依赖 RFC-0002）推迟到 v1.0-alpha.4。X.509 critical extension 翻转（§4.2）需与 RFC-0002 协调，**尚未生效**。AaaS-Profile §10 OQ-3（Gateway 强制 vs 后端节点强制）随 CR-0001 后续处理。|
+| 2026-09-05 | NPS maintainers | 状态对账为 Active 并记录六 SDK Phase 1–2 coverage；解决 OQ-1..03。Phase 3 critical-extension/default-enforcement 激活仍明确属于未来。|

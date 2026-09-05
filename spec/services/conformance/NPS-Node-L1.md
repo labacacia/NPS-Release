@@ -20,7 +20,7 @@ English | [中文版](./NPS-Node-L1.cn.md)
 2. Start a **peer** — any implementation that already passes L1, or the .NET reference SDK.
 3. Run every test case in §3 against the IUT paired with the peer.
 4. A test case passes if and only if **all** of its acceptance criteria hold.
-5. All 21 cases MUST pass for L1 certification; no partial claim is allowed.
+5. All 20 cases MUST pass for L1 certification; no partial claim is allowed.
 6. Copy [`NPS-NODE-L1-CERTIFIED.md`](./NPS-NODE-L1-CERTIFIED.md) to the IUT repository root, fill it in, and sign the attestation with the IUT's root key.
 
 Self-certification is sufficient at this release. Third-party certification (NPS Cloud CA) is targeted for L3 in 2027 Q1+ and is out of scope here.
@@ -243,13 +243,13 @@ A conformance run produces a manifest (JSON) summarizing per-case outcomes. The 
   "cases": [
     { "id": "TC-N1-NCP-01", "result": "pass" },
     { "id": "TC-N1-NCP-02", "result": "pass" }
-    /* ... 19 more ... */
+    /* ... 18 more ... */
   ],
-  "summary": { "pass": 21, "fail": 0, "skip": 0, "na": 0 }
+  "summary": { "pass": 20, "fail": 0, "skip": 0, "na": 0 }
 }
 ```
 
-Certification is granted when **all 21 cases are `pass` or `na`** (cases N1-NIP-04, N1-NDP-04, N1-NWP-05 may be `na` when the IUT declines the optional capability).
+Certification is granted when **all 20 cases are `pass` or `na`** (cases N1-NIP-04, N1-NDP-04, N1-NWP-05 may be `na` when the IUT declines the optional capability).
 
 ---
 
@@ -269,7 +269,7 @@ The reference suite's test names MUST align with the `TC-N1-*` IDs above so a te
 
 | Version | Date | Changes |
 |---------|------|---------|
-| 0.1 | 2026-04-24 | Initial draft: 21 test cases covering NCP / NIP / NDP / NWP / Observability, paired-peer methodology, results manifest schema |
+| 0.1 | 2026-04-24 | Initial draft: 20 test cases covering NCP / NIP / NDP / NWP / Observability, paired-peer methodology, results manifest schema |
 
 ---
 

@@ -240,12 +240,12 @@ replace transport-layer TLS.
 
 ---
 
-## 9. Open Questions
+## 9. Question Dispositions
 
 | ID | Question | Status |
 |----|----------|--------|
 | OQ-1 | IANA registration for ALPN `nps/1.0` | Resolved (value chosen, §6.1); IANA registration tracked in a follow-up RFC after the IETF Internet-Draft |
-| OQ-2 | QUIC version: QUIC v1 (RFC 9000) only, or also QUIC v2? | Open — defer to Phase 3 |
+| OQ-2 | QUIC version: QUIC v1 (RFC 9000) only, or also QUIC v2? | Resolved for current contract: QUIC v1 only; QUIC v2 requires a future RFC amendment |
 | OQ-3 | STARTTLS vs. TLS-wrapped: mandate one? | Resolved (§6.2 — TLS-wrapped mandated for native mode; STARTTLS prohibited) |
 
 ---
@@ -254,6 +254,8 @@ replace transport-layer TLS.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.2 status reconciliation | 2026-09-05 | Kept Accepted status aligned in both languages and fixed the current QUIC contract to v1; QUIC v2 requires a future amendment. |
+| 0.2 acceptance | 2026-07-05 | Accepted; implementation activation remains separately gated. |
 | 0.2 | 2026-06-12 | Draft → **Proposed**. Added §6 TLS Binding & Mutual Authentication: suite-wide ALPN `nps/1.0` (supersedes provisional `ncp/1`), TLS-wrapped framing mandated for native-mode-over-TCP (resolves OQ-3), mTLS with NIP certificates + session-NID binding (`NCP-NID-MISMATCH`), TLS 1.3 session-resumption tickets. Conformance §7 gains TLS/mTLS MUSTs. OQ-1/OQ-3 resolved. §7–§10 renumbered. |
 | 0.1 | 2026-05-28 | Initial Draft |
 

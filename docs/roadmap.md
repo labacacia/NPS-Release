@@ -2,7 +2,7 @@
 
 > English | [中文版](roadmap.cn.md)
 
-NPS is on a four-phase path from draft specification to formal standard. The latest suite release is **v1.0.0-alpha.18**, published 2026-08-15. It delivers the NPS-CR-0011 / NWP 0.21 stateful LLM context contract across all six SDKs — owner-bound context ids, `create` / `append` / `fork` / `reset` / `status` / `release`, compare-and-swap versions, atomic cancellation, NWM 0.2 discovery, and NIP 0.14 `llm:context` authorization — plus official NWP LLM usage telemetry with unary `request_id` correlation and the new `NPS-LIMIT-RESOURCE` code.
+NPS is on a four-phase path from draft specification to formal standard. The latest suite release is **v1.0.0-alpha.18**, published 2026-08-15. It delivers the NPS-CR-0011 / NWP 0.21 stateful LLM context contract across all six SDKs — owner-bound context ids, `create` / `append` / `fork` / `reset` / `status` / `release`, compare-and-swap versions, atomic cancellation, NWM 0.2 discovery, and NIP 0.14 `llm:context` authorization — plus official NWP LLM usage telemetry with unary `request_id` correlation and the new `NPS-LIMIT-RESOURCE` code. The specification tree now carries the reviewed, unreleased alpha.19 debt-closure candidate; installable artifacts remain alpha.18.
 
 ---
 

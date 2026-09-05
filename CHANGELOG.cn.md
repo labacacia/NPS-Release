@@ -8,6 +8,39 @@
 
 在 NPS 达到 v1.0 稳定版之前，套件内所有仓库 —— 规范、各 SDK（.NET / Python / TypeScript / Java / Rust / Go）、CA Server、兼容 Bridge —— 同步使用同一个预发布版本号。
 
+## [1.0.0-alpha.19] —— 2026-09-05
+
+### 修复
+
+- 将已被取代的 roadmap 声明约束为有日期的历史快照，并链接其关闭版本／当前
+  证据。alpha.6 DNS TXT、alpha.7 reputation client、alpha.5/alpha.17 daemon
+  骨架／剩余工作和 provisional PEN 记录继续保留历史，但不再表现为当前 gap。
+- 依据当前源码对账 CR/RFC lifecycle、六 SDK coverage matrix 与 proposal 阶段
+  问题备注。RFC-0001/0002/0003 现为 Active，RFC-0006 英中均为 Accepted，
+  CR-0011 索引与正文均为 Implemented，并以可执行 ledger 防止 `_TBD_`/
+  `pending` coverage 回归。
+- 将当前合同 AaaS L2-01..L2-07 恢复到 Node L2 suite，不再作为未来工作整体
+  延期。v0.7 suite 现含 38 个 case；六语言 SDK catalog 与 validator 都强制
+  L2-01..05，并仅在携带有理由的例外 message 时允许 L2-06/07 记 `na`。
+- 将六语言 SDK conformance manifest emitter 全部对齐 Node L2 v0.6 与 31-case
+  catalog。Validator 现在会拒绝旧 profile 版本、错误 summary、partial-family
+  `na`，以及非法的 single-/multi-Anchor HA 适用性组合。
+- 让仓库中每个对外声明的实现证据 artifact 都可运行且完整覆盖自身 scope：npsd
+  穷举全部 20 个 L1 case，ingress 记录完整四项 TLS family，runner 穷举全部十项
+  L3 case，并以机器可读 registry 防止 profile claim 丢失对应 manifest。
+- 将 Node L1 套件计数修正为实际的 20 个 case 标题，使 Node L2 runtime catalog
+  与 manifest 版本覆盖 v0.6 的全部 31 个 case，并新增机器可读证据清单，明确区分
+  可执行、部分覆盖、仅 catalog 以及参考 IUT 不适用状态，不据此宣称认证。
+- 将 `nps-runner` 当前能力声明与可执行行为对齐：portable OCI SpawnSpec 执行和
+  周期性进程内租约续期已实现；持久化/共享租约、重启/回收保证及完整 L3 认证
+  仍未完成，当前文档不再暗示这些能力已经具备。
+- 用持久化 SQLite 协调替换 `nps-runner` 的进程内 lease：现已执行跨进程原子
+  claim、process-instance fencing、过期租约回收、跨重启 terminal dedup、
+  lease-loss worker cancellation 与 terminal-before-ack；case manifest 在
+  TaskFrame DAG/Saga 部署用例执行前继续拒绝完整 L3 认证。
+- 修复 `nps-runner` 生产依赖注入和 monorepo/standalone 两条 Docker build；
+  CI 现在执行 daemon 自有 runner test suite。
+
 ## [1.0.0-alpha.18] —— 2026-08-15
 
 ### 新增

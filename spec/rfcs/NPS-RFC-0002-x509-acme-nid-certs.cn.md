@@ -3,13 +3,13 @@
 ---
 **RFC 编号**：NPS-RFC-0002
 **标题**：NID 证书改用 X.509 + ACME
-**状态**：Accepted
+**状态**：Active
 **作者**：Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**：Ori Lynn
 **创建日期**：2026-04-21
-**最后更新**：2026-05-17
+**最后更新**：2026-09-05
 **接受日期**：2026-05-17
-**激活日期**：_（首个参考 SDK 发版时填写）_
+**激活日期**：2026-05-17（Accepted 时参考实现已存在；六 SDK X.509 + `agent-01` parity 已于 2026-04-30 落地）
 **取代**：_无_
 **被取代于**：_无_
 **影响的规范**：NPS-3 NIP、tools/nip-ca-server（所有语言版本）、spec/error-codes.md
@@ -260,12 +260,15 @@ Client (Agent)                 ACME Server (NIP CA)
 
 | SDK | 负责人 | 状态 | 备注 |
 |-----|--------|------|------|
-| .NET | Ori Lynn | pending | 参考实现 |
-| Python | _待定_ | pending | `cryptography` 库 |
-| TypeScript | _待定_ | pending | `@peculiar/x509` |
-| Java | _待定_ | pending | Bouncy Castle |
-| Rust | _待定_ | pending | `x509-parser` + `rcgen` |
-| Go | _待定_ | pending | stdlib `crypto/x509` |
+| .NET | NPS SDK maintainers | 已实现 — X.509 + `agent-01` | 主 library 与 CA 参考实现 |
+| Python | NPS SDK maintainers | 已实现 — X.509 + `agent-01` | `cryptography`；SDK 与 CA 测试 |
+| TypeScript | NPS SDK maintainers | 已实现 — X.509 + `agent-01` | SDK 与 CA 测试 |
+| Java | NPS SDK maintainers | 已实现 — X.509 + `agent-01` | Bouncy Castle；SDK 与 CA 测试 |
+| Rust | NPS SDK maintainers | 已实现 — X.509 + `agent-01` | `x509-parser` + `rcgen`；SDK 与 CA 测试 |
+| Go | NPS SDK maintainers | 已实现 — X.509 + `agent-01` | stdlib `crypto/x509`；SDK 与 CA 测试 |
+
+本表记录 source/test coverage，不激活 Phase 3。v2 default-on 翻转与删除 v1
+仍是未来兼容迁移。
 
 ### 8.3 测试计划
 
@@ -352,7 +355,7 @@ SDK 移植，把 ACME 一并合进同一个 acceptance 是更经济的做法。
 
 ---
 
-## 10. 未决问题
+## 10. 已决问题
 
 - [x] **OQ-1**：Phase 1 —— 先 X.509 后 ACME，还是一起做？
   **2026-04-27 由 prototype 数据确认（详见 §9.3）**：一起做。.NET 上
@@ -397,5 +400,6 @@ SDK 移植，把 ACME 一并合进同一个 acceptance 是更经济的做法。
 
 | 日期 | 作者 | 变更 |
 |------|------|------|
+| 2026-09-05 | NPS maintainers | 状态对账为 Active，以当前 X.509 + `agent-01` source/test coverage 替换过期六 SDK owner/status 占位；Phase 3/4 兼容迁移仍未激活。|
 | 2026-04-27 | Claude (prototype) | 用 `feat/rfc-0002-x509-acme-prototype`（.NET prototype + `NPS.Benchmarks.NipCert`）实测数据回填 §9 实测数据。OQ-1 闭环（X.509 + ACME 一起做）。§8.4 阈值修订（体积 1200 → 1600 B；删除绝对延迟目标，保留比率）。 |
 | 2026-04-21 | Ori Lynn | 初稿 |

@@ -270,10 +270,13 @@ Add to `conformance/L2-test/`:
 - [x] Spec changes per §3 merged (NWP §12 + AaaS-Profile L2-08 + Node-L2 conformance suite)
 - [x] .NET SDK types per §4 implemented and tested (`NPS.NWP.Anchor.Topology` + `NPS.NWP.Anchor.Client.AnchorNodeClient`)
 - [x] L2 conformance tests per §5 passing on the `NPS.NWP.Anchor` reference Anchor Node implementation (10/10 in `tests/NPS.Tests/Nwp/Anchor/AnchorTopologyTests.cs` — 7 TC-N2-* cases + 3 negative path cases)
-- [ ] L2 conformance tests passing on the `nps-daemon` Anchor Node implementation — **deferred**: npsd today is `node_type: "memory"`; promoting it (or adding a sibling Anchor daemon) is tracked as follow-up work
-- [ ] `nps-starmap` demo successfully renders a snapshot and updates from stream events — **deferred**: out-of-tree project; the wire contract it consumes is now stable
+- Explicit future scope: npsd remains `node_type: "memory"`; an Anchor daemon
+  product is not required to implement this CR's wire contract.
+- Explicit external scope: the out-of-tree `nps-starmap` demo is a consumer,
+  not CR activation evidence.
 - [x] CHANGELOG entry written (v1.0-alpha.4 unreleased section)
-- [ ] At least one independent reviewer signs off — **pending PR review**
+- Independent alpha.19 review is tracked by EPIC-004 P19-6 rather than left as
+  an unowned proposal-era checkbox.
 
 ## 9. CHANGELOG entry (proposed)
 
@@ -297,7 +300,10 @@ Add to `conformance/L2-test/`:
 - Cross-cluster federation queries deferred to L3.
 ```
 
-## 10. Open questions
+## 10. Proposal questions (resolved in §11.1)
+
+These are preserved as design history. Their current dispositions are the
+three implementation defaults recorded in §11.1; they are not open work.
 
 1. **Should sub-Anchor recursion via `depth: 2+` be mandatory or optional at L2?** — Mandatory simplifies clients but burdens small Anchor implementations. Default proposal: optional; clients can recurse manually by issuing one snapshot per sub-Anchor.
 

@@ -1,0 +1,72 @@
+{
+  "name": "ndp-alpha19-recovery-fences",
+  "version": "0.13.0",
+  "spec_ref": "spec/NPS-4-NDP.md §7.8",
+  "description": "Portable restart and partition transcripts for durable sequence/epoch fences. Each case evaluates one atomic recovery decision.",
+  "vectors": [
+    {
+      "id": "ndp.alpha19.recovery.001",
+      "requirement": "NDP-P19-01,NDP-P19-02",
+      "description": "A fence is not visible or acknowledged until the atomic commit succeeds.",
+      "kind": "positive",
+      "input": {"profile": "org-private", "persisted_seq": 7, "incoming_seq": 8, "commit": "success"},
+      "expected": {"acknowledged": true, "served_seq": 8, "persisted_seq": 8}
+    },
+    {
+      "id": "ndp.alpha19.recovery.002",
+      "requirement": "NDP-P19-02,NDP-P19-06",
+      "description": "A failed commit does not acknowledge or expose the new announcement.",
+      "kind": "negative",
+      "input": {"profile": "public-federated", "persisted_seq": 7, "incoming_seq": 8, "commit": "unavailable"},
+      "expected": {"acknowledged": false, "served_seq": 7, "persisted_seq": 7, "error": "NDP-STATE-UNAVAILABLE"}
+    },
+    {
+      "id": "ndp.alpha19.recovery.003",
+      "requirement": "NDP-P19-03",
+      "description": "Restart removes an expired entry but retains its replay fence.",
+      "kind": "positive",
+      "input": {"now": "2026-08-31T10:00:00Z", "record": {"nid": "urn:nps:node:example:a", "highest_seq": 12, "fresh_until": "2026-08-31T09:59:59Z"}},
+      "expected": {"live_entry": false, "highest_seq": 12, "ready": true}
+    },
+    {
+      "id": "ndp.alpha19.recovery.004",
+      "requirement": "NDP-P19-03",
+      "description": "A post-restart lower sequence cannot replace the restored fence.",
+      "kind": "negative",
+      "input": {"restored_highest_seq": 12, "incoming_seq": 11},
+      "expected": {"accepted": false, "highest_seq": 12, "error": "NDP-GRAPH-SEQ-ROLLBACK"}
+    },
+    {
+      "id": "ndp.alpha19.recovery.005",
+      "requirement": "NDP-P19-04",
+      "description": "Equal highest epochs with different live owners remain split after partition healing.",
+      "kind": "negative",
+      "input": {"cluster": "urn:nps:node:example:cluster", "owners": [{"nid": "urn:nps:node:example:a", "epoch": 9, "live": true}, {"nid": "urn:nps:node:example:b", "epoch": 9, "live": true}]},
+      "expected": {"resolved_nid": null, "error": "NDP-CLUSTER-SPLIT"}
+    },
+    {
+      "id": "ndp.alpha19.recovery.006",
+      "requirement": "NDP-P19-05",
+      "description": "A corrupt durable snapshot fails readiness instead of starting empty.",
+      "kind": "negative",
+      "input": {"profile": "org-private", "snapshot_validation": "checksum_mismatch"},
+      "expected": {"ready": false, "started_empty": false, "error": "NDP-STATE-CORRUPT"}
+    },
+    {
+      "id": "ndp.alpha19.recovery.007",
+      "requirement": "NDP-P19-07",
+      "description": "The recovery capability truth follows the selected Registry profile.",
+      "kind": "positive",
+      "input": {"profiles": ["local-dev", "org-private", "public-federated"]},
+      "expected": {"recovery": ["volatile", "durable", "durable"]}
+    },
+    {
+      "id": "ndp.alpha19.recovery.008",
+      "requirement": "NDP-P19-08",
+      "description": "Trust revocation invalidates recovered peer entries without lowering their sequence fences.",
+      "kind": "positive",
+      "input": {"revoked_origin": "urn:nps:registry:peer:b", "record": {"origin": "urn:nps:registry:peer:b", "highest_seq": 21, "live": true}},
+      "expected": {"live": false, "highest_seq": 21}
+    }
+  ]
+}

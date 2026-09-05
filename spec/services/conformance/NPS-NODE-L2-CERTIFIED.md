@@ -23,13 +23,20 @@ under the conditions recorded below for the scope listed.
 
 ## Scope of This Attestation
 
-L2 in this release covers the topology read-back requirement only. The remaining
-L2 requirements (L2-01..L2-07) are tracked in follow-up CRs.
+This template covers the case families currently defined by the v0.7 suite.
+Topology is mandatory for every L2 claim; the other families apply only when
+the IUT declares the corresponding role or transport capability. L2-01..L2-05
+are mandatory AaaS cases. L2-06/07 are SHOULD cases and require either `pass`
+or `na` with a non-empty exception rationale.
 
 | Requirement | CR | Covered by this attestation |
 |-------------|----|----------------------------|
+| L2-01..L2-05 — NOP / OTel / CGN / preflight / retry | Current AaaS Profile | Yes; mandatory |
+| L2-06..L2-07 — async / AlignStream | Current AaaS Profile | Yes; SHOULD exceptionable with rationale |
 | L2-08 — `topology.snapshot` / `topology.stream` on Anchor Nodes | [NPS-CR-0002](https://github.com/LabAcacia/nps/blob/main/spec/cr/NPS-CR-0002-anchor-topology-queries.md) | Yes |
-| L2-01..L2-07 — NOP / OTel / CGN / preflight / retry / async / AlignStream | TBD | No (future CR) |
+| NCP-over-TLS ingress | NPS-RFC-0006 | Conditional family |
+| Bridge inbound | NPS-CR-0010 | Conditional family |
+| Multi-Anchor / Registry HA | NPS-CR-0009 | Conditional families |
 
 ---
 
@@ -60,12 +67,25 @@ L2 requirements (L2-01..L2-07) are tracked in follow-up CRs.
 | **Date** | _(ISO 8601 UTC, e.g., 2026-04-27T00:00:00Z)_ |
 | **Platform** | _(e.g., linux-x64, macos-arm64, win-x64)_ |
 | **Hardware** | _(e.g., 1 vCPU / 1 GB RAM)_ |
-| **NPS-AaaS Profile version** | 0.5 |
-| **Conformance suite version** | 0.2 |
+| **NPS-AaaS Profile version** | 0.7 |
+| **Conformance suite version** | 0.7 |
 
 ## Case Outcomes
 
-_Check each box that passed. There are no optional cases at the L2-08 scope. All 12 cases MUST pass to claim certification._
+_Record every case in the emitted manifest. Check each applicable passing case;
+write `N/A` only for a whole conditional family. The topology family is always
+mandatory, partial-family `N/A` is invalid, and the single-/multi-Anchor HA
+dispositions are mutually exclusive. L2-06/07 `N/A` entries require a written
+reason in the emitted manifest's `message` field._
+
+### AaaS service baseline
+- [ ] `TC-N2-AaaS-01` — Internal work uses NOP TaskFrame (MUST)
+- [ ] `TC-N2-AaaS-02` — OpenTelemetry trace is injected into TaskFrame.context (MUST)
+- [ ] `TC-N2-AaaS-03` — CGN-Estimate budget and token_est response (MUST)
+- [ ] `TC-N2-AaaS-04` — NOP preflight gates worker dispatch (MUST)
+- [ ] `TC-N2-AaaS-05` — NOP retry and timeout semantics (MUST)
+- [ ] `TC-N2-AaaS-06` — Asynchronous Action lifecycle (SHOULD; reason required for `N/A`)
+- [ ] `TC-N2-AaaS-07` — AlignStream CGN back-pressure (SHOULD; reason required for `N/A`)
 
 ### Anchor Topology — happy paths
 - [ ] `TC-N2-AnchorTopo-01` — Snapshot of a 3-member cluster
@@ -85,6 +105,35 @@ _Check each box that passed. There are no optional cases at the L2-08 scope. All
 - [ ] `TC-N2-AnchorStream-03` — Resume from `topology.since_version`
 - [ ] `TC-N2-AnchorStream-04` — `resync_required` when version is too old
 
+### NCP-over-TLS ingress (all 4 `pass`, or all 4 `N/A`)
+- [ ] `TC-N2-Tls-01` — ALPN `nps/1.0` over TLS 1.3
+- [ ] `TC-N2-Tls-02` — Mutual TLS required
+- [ ] `TC-N2-Tls-03` — Client certificate trust and NID binding
+- [ ] `TC-N2-Tls-04` — IdentFrame/certificate NID mismatch rejection
+
+### Bridge inbound (all 6 `pass`, or all 6 `N/A`)
+- [ ] `TC-N2-BridgeIn-01` — MCP inbound required method set
+- [ ] `TC-N2-BridgeIn-02` — gRPC inbound round-trip
+- [ ] `TC-N2-BridgeIn-03` — A2A inbound round-trip
+- [ ] `TC-N2-BridgeIn-04` — Bare action resolution and ambiguity rejection
+- [ ] `TC-N2-BridgeIn-05` — Foreign-protocol error mapping
+- [ ] `TC-N2-BridgeIn-06` — Undeclared protocol or direction refusal
+
+### Multi-Anchor HA — Anchor side (all 6 `pass`, or all 6 `N/A`)
+- [ ] `TC-N2-HA-01` — `cluster_epoch` on topology read surfaces
+- [ ] `TC-N2-HA-02` — Planned `anchor_failover` wire shape
+- [ ] `TC-N2-HA-03` — Active-loss failover is terminal
+- [ ] `TC-N2-HA-04` — Quorum-loss wire shape and read-only mode
+- [ ] `TC-N2-HA-05` — Standby rejects topology writes
+- [ ] `TC-N2-HA-06` — Superseded leader is epoch fenced
+
+### Multi-Anchor HA — Registry side (both `pass`, or both `N/A`)
+- [ ] `TC-N2-HA-07` — Registry resolves the highest `cluster_epoch`
+- [ ] `TC-N2-HA-08` — Equal-epoch split-brain rejection
+
+### Single-Anchor compatibility
+- [ ] `TC-N2-HA-09` — Single-Anchor epoch-one compatibility
+
 ## Results Manifest
 
 _Paste the JSON manifest emitted by the conformance suite here:_
@@ -92,12 +141,15 @@ _Paste the JSON manifest emitted by the conformance suite here:_
 ```json
 {
   "profile": "NPS-Node-L2",
-  "profile_version": "0.1",
-  "scope": ["L2-08"],
+  "profile_version": "0.7",
+  "scope": ["L2-01", "L2-02", "L2-03", "L2-04", "L2-05", "L2-08"],
   "iut": { "name": "", "version": "", "nid": "" },
   "peer": { "name": "", "version": "" },
   "run": { "date": "", "environment": "" },
-  "cases": [],
+  "cases": [
+    { "id": "TC-N2-AaaS-01", "result": "pass" }
+    /* ... all 38 cases; L2-06/07 na require messages; only whole conditional families may be na ... */
+  ],
   "summary": { "pass": 0, "fail": 0, "skip": 0, "na": 0 }
 }
 ```

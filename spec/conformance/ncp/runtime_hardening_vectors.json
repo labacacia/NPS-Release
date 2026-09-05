@@ -1,0 +1,72 @@
+{
+  "name": "ncp-alpha19-runtime-hardening",
+  "version": "0.12.0",
+  "spec_ref": "spec/NPS-1-NCP.md §7.7",
+  "description": "Deterministic keepalive, close, QUIC early-data/migration, and two-layer backpressure decisions. Times are monotonic milliseconds from an established session origin.",
+  "vectors": [
+    {
+      "id": "ncp.alpha19.runtime.001",
+      "requirement": "NCP-P19-01",
+      "description": "The lower non-zero offer wins after applying the one-second floor.",
+      "kind": "positive",
+      "input": {"client_ping_ms": 500, "server_ping_ms": 4000},
+      "expected": {"keepalive_enabled": true, "effective_interval_ms": 1000}
+    },
+    {
+      "id": "ncp.alpha19.runtime.002",
+      "requirement": "NCP-P19-01",
+      "description": "Two zero offers disable application keepalive.",
+      "kind": "positive",
+      "input": {"client_ping_ms": 0, "server_ping_ms": 0},
+      "expected": {"keepalive_enabled": false, "effective_interval_ms": null}
+    },
+    {
+      "id": "ncp.alpha19.runtime.003",
+      "requirement": "NCP-P19-02",
+      "description": "Only a complete valid inbound frame resets the dead-peer clock.",
+      "kind": "positive",
+      "input": {"last_valid_inbound_ms": 0, "events": [{"at_ms": 900, "event": "local_send"}, {"at_ms": 1200, "event": "partial_header"}, {"at_ms": 1400, "event": "valid_inbound_frame"}]},
+      "expected": {"last_valid_inbound_ms": 1400}
+    },
+    {
+      "id": "ncp.alpha19.runtime.004",
+      "requirement": "NCP-P19-03",
+      "description": "Idle send time enqueues one payload-free probe and ordinary traffic replaces it.",
+      "kind": "positive",
+      "input": {"effective_interval_ms": 2000, "last_application_send_ms": 0, "evaluate_at_ms": 2000, "queued_probe_count": 0},
+      "expected": {"enqueue": {"frame": "0x07", "payload_length": 0}, "queued_probe_count": 1}
+    },
+    {
+      "id": "ncp.alpha19.runtime.005",
+      "requirement": "NCP-P19-04",
+      "description": "The threshold produces one timeout, cancels streams, and closes within 500 ms.",
+      "kind": "negative",
+      "input": {"effective_interval_ms": 2000, "last_valid_inbound_ms": 0, "evaluate_at_ms": 6000, "active_streams": 3},
+      "expected": {"state": "closing", "error": "NCP-KEEPALIVE-TIMEOUT", "error_count": 1, "cancelled_streams": 3, "close_by_ms": 6500, "allow_later_application_frames": false}
+    },
+    {
+      "id": "ncp.alpha19.runtime.006",
+      "requirement": "NCP-P19-05",
+      "description": "A payload-bearing Nop is invalid and does not refresh liveness.",
+      "kind": "negative",
+      "input": {"frame": "0x07", "payload_length": 1, "last_valid_inbound_ms": 20, "received_at_ms": 100},
+      "expected": {"accepted": false, "error": "NCP-FRAME-PAYLOAD-TOO-LARGE", "last_valid_inbound_ms": 20}
+    },
+    {
+      "id": "ncp.alpha19.runtime.007",
+      "requirement": "NCP-P19-06",
+      "description": "NPS application data in QUIC 0-RTT is rejected without consuming the post-handshake retry.",
+      "kind": "negative",
+      "input": {"carrier": "quic", "handshake_confirmed": false, "early_data": {"frame": "0x06"}},
+      "expected": {"accepted": false, "error": "NCP-EARLY-DATA-REJECTED", "retry_after_confirmation": true}
+    },
+    {
+      "id": "ncp.alpha19.runtime.008",
+      "requirement": "NCP-P19-07,NCP-P19-08",
+      "description": "Authenticated migration preserves identity and carrier credit cannot bypass an exhausted NCP window.",
+      "kind": "positive",
+      "input": {"handshake_confirmed": true, "bound_nid": "urn:nps:agent:example:a", "migrated_nid": "urn:nps:agent:example:a", "carrier_credit_bytes": 65536, "ncp_window_cgn": 0, "frame": "0x03"},
+      "expected": {"migration_allowed": true, "session_preserved": true, "send_allowed": false, "reason": "ncp_window_exhausted"}
+    }
+  ]
+}

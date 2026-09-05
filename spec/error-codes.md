@@ -2,8 +2,8 @@ English | [中文版](./error-codes.cn.md)
 
 # NPS Unified Error Code Namespace
 
-**Version**: 1.9
-**Date**: 2026-08-12
+**Version**: 1.10
+**Date**: 2026-08-31
 
 Error code format: `{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -41,6 +41,7 @@ NPS uses a two-level error system:
 | `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | Native-mode connection opened with bytes other than the constant preamble `b"NPS/1.0\n"`; server closes the connection silently without emitting an ErrorFrame (NPS-RFC-0001) |
 | `NCP-NID-MISMATCH` | `NPS-AUTH-UNAUTHENTICATED` | Native-mode mTLS client-certificate NID does not match the session `IdentFrame` NID, or a resumed TLS session's certificate NID differs from the ticket-bound NID (NPS-RFC-0006 §6.3–§6.4) |
 | `NCP-KEEPALIVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | No frame (including NopFrame) received within 3 × `ping_interval_ms`; connection will be closed (NCP v0.8 §7.6) |
+| `NCP-EARLY-DATA-REJECTED` | `NPS-PROTO-VERSION-INCOMPATIBLE` | NPS application data appeared in QUIC/TLS 0-RTT early data and was rejected before handshake confirmation (NCP v0.12 §7.7) |
 
 ---
 
@@ -85,6 +86,8 @@ NPS uses a two-level error system:
 | `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node does not support subscriptions with a filter |
 | `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | Subscription stream terminated because the underlying data source was interrupted |
 | `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | `resume_from_seq` is outside the node's buffer window (recommended: 10 min or 10,000 records); agent must re-query from scratch before re-subscribing |
+| `NWP-SUBSCRIBE-LEASE-INVALID` | `NPS-CLIENT-BAD-PARAM` | Renewable-subscription operation or lease/policy bounds are invalid (NWP v0.22 §13.4) |
+| `NWP-SUBSCRIBE-LEASE-EXPIRED` | `NPS-CLIENT-GONE` | Subscription lease reached its deadline and cannot be renewed or resurrected (NWP v0.22 §13.4) |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | Response would exceed the `X-NWP-Budget` limit |
 | `NWP-CGN-LIMIT-EXCEEDED` | `NPS-CLIENT-REQUEST-TOO-LARGE` | Response would exceed the effective CGN budget (`min(cgn_limit, X-NWP-Budget)`); trimming was not possible. Response body SHOULD include `effective_budget` and `estimated_cgn`. (token-budget.md §7.4) |
 | `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | `X-NWP-Depth` exceeds the node's permitted `max_depth` |
@@ -138,6 +141,8 @@ NPS uses a two-level error system:
 | `NIP-CA-RENEWAL-TOO-EARLY` | `NPS-CLIENT-BAD-PARAM` | More than 7 days until expiry; renewal window not yet open |
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | Requested scope exceeds the parent scope (delegation-chain violation) |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP service temporarily unavailable |
+| `NIP-OCSP-UNKNOWN` | `NPS-AUTH-UNAUTHENTICATED` | A valid OCSP response cannot establish status for the requested issuer/serial and fails closed (NIP v0.15 §7.7) |
+| `NIP-REVOCATION-STATE-STALE` | `NPS-SERVER-UNAVAILABLE` | No configured revocation source produced a current result; stale state cannot satisfy required mode (NIP v0.15 §7.7) |
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame signature or format is invalid — see NPS-3 §5.2 |
 | `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` is in the past — see NPS-3 §5.2 |
 | `NIP-TRUST-FRAME-GRANTOR-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `grantor_nid`'s own CA certificate is revoked or expired — see NPS-3 §5.2 |
@@ -191,6 +196,8 @@ NPS uses a two-level error system:
 | `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame issuer (signing CA) is not in the active registry profile's issuer allowlist (see NPS-4 §7.3) |
 | `NDP-CA-ATTEST-REQUIRED` | `NPS-AUTH-UNAUTHENTICATED` | Active registry profile requires a CA-attested NID and the AnnounceFrame's certificate chain does not anchor in the configured trust roots (see NPS-4 §7.3) |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry temporarily unavailable |
+| `NDP-STATE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | A persistence-required Registry cannot durably read or commit recovery state (NDP v0.13 §7.8) |
+| `NDP-STATE-CORRUPT` | `NPS-SERVER-INTERNAL` | Persisted Registry state fails schema, checksum, or monotonic-fence validation (NDP v0.13 §7.8) |
 
 ---
 
@@ -226,6 +233,9 @@ NPS uses a two-level error system:
 | `NOP-CALLBACK-INVALID` | `NPS-CLIENT-BAD-PARAM` | Callback URL failed scheme, user-info, DNS, public-address, or redirect validation (NOP v0.9) |
 | `NOP-CALLBACK-HMAC-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | Callback HMAC was malformed or did not match the exact raw body (NOP v0.9) |
 | `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | Task result requested after `result_ttl_seconds` elapsed; result no longer retained (NOP v0.7) |
+| `NOP-REPLAY-CONFLICT` | `NPS-CLIENT-CONFLICT` | The same `(caller_nid, task_id)` was reused with different immutable TaskFrame content (NOP v0.10 §3.5.6) |
+| `NOP-REPLAY-LIMIT` | `NPS-LIMIT-RESOURCE` | Replay ledger is full and no expired tombstone or terminal record can be safely evicted (NOP v0.10 §3.5.6) |
+| `NOP-AGGREGATION-INVALID` | `NPS-CLIENT-BAD-PARAM` | Aggregation input violates the selected strategy, such as a missing/non-finite `weighted_first_k` score (NOP v0.10 §3.5.6) |
 | `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK retransmission requested for a frame no longer available in sender's buffer (frame has been evicted) (NOP v0.7) |
 
 ---

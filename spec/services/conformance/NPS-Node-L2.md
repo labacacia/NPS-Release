@@ -3,20 +3,17 @@ English | [中文版](./NPS-Node-L2.cn.md)
 # NPS-Node-L2 Conformance Suite
 
 **Status**: Draft
-**Version**: 0.5
-**Date**: 2026-08-01
+**Version**: 0.7
+**Date**: 2026-09-05
 **Applies-To**: [NPS-AaaS-Profile §4.3](../NPS-AaaS-Profile.md) — Level 2 Standard
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
 
-> This document defines the test cases an Anchor Node implementation MUST pass to claim
-> NPS-AaaS-Profile L2 compliance for the **L2-08 topology read-back** requirement
-> introduced by [NPS-CR-0002](../../cr/NPS-CR-0002-anchor-topology-queries.md).
->
-> The remaining L2 requirements (L2-01 through L2-07 — NOP orchestration, OpenTelemetry
-> tracing, CGN Token Budget, preflight, retry/timeout, async actions, AlignStream
-> back-pressure) have their conformance test cases tracked in follow-up CRs and are
-> **out of scope for this document**. A future CR will collect them under additional
-> §3.x sub-sections in this same file.
+> This document defines the test cases a deployment MUST disposition before claiming
+> NPS-AaaS-Profile L2 compliance. It covers the current L2-01..L2-08 service contract,
+> plus role-conditional transport, Bridge and HA families. The historical blanket
+> deferral of L2-01..L2-07 was invalid: those requirements already exist in the
+> pre-alpha.20 normative profile. Their frozen alpha.19 disposition is recorded in
+> [`aaas-l2-requirement-disposition.json`](../../conformance/aaas-l2-requirement-disposition.json).
 
 ---
 
@@ -28,8 +25,8 @@ English | [中文版](./NPS-Node-L2.cn.md)
    SDK at `impl/dotnet/src/NPS.NWP.Anchor/` running the `AnchorNodeClient` (CR-0002 §4).
 4. Run every test case in §3 against the IUT paired with the peer.
 5. A test case passes if and only if **all** of its acceptance criteria hold.
-6. All cases in §3 MUST pass for the relevant L2 requirement (L2-08 in this document)
-   to be claimed; partial claims are not allowed.
+6. Every mandatory case in §3 MUST pass for a full claim. L2-06/07 MAY use only
+   the documented SHOULD-exception form; role-conditional families follow §4.
 7. Copy [`NPS-NODE-L2-CERTIFIED.md`](./NPS-NODE-L2-CERTIFIED.md) to the IUT repository
    root, fill it in, and sign the attestation with the IUT's root key.
 
@@ -235,16 +232,21 @@ These cases apply to an IUT that terminates native-mode NCP-over-TLS at an L2 in
 **Req**: NPS-RFC-0006 §6.3
 **Fixture**: IUT with a configured trust anchor; peer holds a NIP leaf cert chaining to it.
 **Action**:
-1. Peer connects with the valid client certificate and sends the preamble + HelloFrame + IdentFrame.
+1. Peer connects with the valid client certificate and sends the preamble + HelloFrame.
+2. Peer waits for the backend CapsFrame relayed by the IUT, then sends its IdentFrame as required
+   by NPS-1 §2.6.
 **Pass**:
 - The certificate validates to the trust anchor; the certificate subject NID is bound to the session.
-- The terminated NCP byte stream is proxied to the backend verbatim (preamble + frames replayed).
+- The backend receives the preamble + HelloFrame before sending CapsFrame, and receives the
+  IdentFrame only after its NID passes the certificate binding check.
 
 #### TC-N2-Tls-04 — IdentFrame/certificate NID mismatch → `NCP-NID-MISMATCH`
 **Req**: NPS-RFC-0006 §6.3, error code `NCP-NID-MISMATCH`
 **Fixture**: IUT as above.
 **Action**:
-1. Peer presents a valid certificate for NID `urn:nps:agent:A` but its IdentFrame declares NID `urn:nps:agent:B`.
+1. Peer presents a valid certificate for NID `urn:nps:agent:A`, sends preamble + HelloFrame, and
+   waits for the backend CapsFrame relayed by the IUT.
+2. Peer then sends an IdentFrame declaring NID `urn:nps:agent:B`.
 **Pass**:
 - The IUT closes the session with `NCP-NID-MISMATCH` and does NOT forward the IdentFrame to the backend.
 
@@ -466,6 +468,78 @@ surface used to drive it.
 - The IUT never emits `NWP-ANCHOR-NOT-LEADER` or `NWP-ANCHOR-EPOCH-FENCED` during the run.
 - All twelve §3.1 cases still pass unchanged against this IUT.
 
+### 3.5 AaaS Service Baseline — L2-01 through L2-07
+
+These cases close the former follow-up-only gap. They exercise the assembled AaaS
+service boundary, not merely an SDK codec. L2-01..L2-05 are mandatory and cannot be
+`na`. L2-06/07 are SHOULD requirements: a deployment that deliberately does not
+implement one MAY record `na`, but the case result MUST carry a non-empty `message`
+explaining the exception. Component evidence and gaps are indexed in
+[`aaas-l2-requirement-disposition.json`](../../conformance/aaas-l2-requirement-disposition.json).
+
+#### TC-N2-AaaS-01 — Internal work is represented by a NOP TaskFrame
+**Req**: L2-01 (MUST), [NPS-5 §3.1](../../NPS-5-NOP.md)
+**Fixture**: IUT exposes one Action whose implementation requires two ordered internal worker operations; the harness captures the IUT-to-orchestrator boundary.
+**Action**: Send a valid ActionFrame and allow the service to start internal orchestration.
+**Pass**:
+- Before either worker is dispatched, the IUT submits one valid TaskFrame.
+- Its DAG contains both worker operations and preserves their dependency order.
+- The service does not bypass NOP with an implementation-private task envelope.
+
+#### TC-N2-AaaS-02 — OpenTelemetry trace is injected into TaskFrame.context
+**Req**: L2-02 (MUST), [NPS-5 §3.1.2](../../NPS-5-NOP.md)
+**Fixture**: Same service boundary as TC-N2-AaaS-01 with TaskFrame capture enabled.
+**Action**: Invoke once with a valid W3C `traceparent`, then once without one.
+**Pass**:
+- The first TaskFrame preserves the inbound 32-hex `trace_id` and carries a fresh 16-hex `span_id` plus the inbound trace flags.
+- The second TaskFrame generates valid non-zero `trace_id` and `span_id` values.
+- The context is propagated to every DelegateFrame created for the task.
+
+#### TC-N2-AaaS-03 — CGN-Estimate budget and token_est response
+**Req**: L2-03 (MUST), [token-budget §2.1–§2.4](../../token-budget.md)
+**Fixture**: IUT Action returns a deterministic logical payload and accepts a CGN-Estimate budget.
+**Action**: Invoke with sufficient and insufficient budgets using JSON and one other supported encoding.
+**Pass**:
+- Every successful response carries a non-negative uint32 `token_est` and identifies the estimate surface rather than CGN-Billing.
+- Equivalent logical payloads produce the same estimate across encodings.
+- The insufficient-budget path truncates/refuses according to the advertised policy and never silently exceeds the accepted budget.
+
+#### TC-N2-AaaS-04 — NOP preflight gates worker dispatch
+**Req**: L2-04 (MUST), [NPS-5 §4](../../NPS-5-NOP.md)
+**Fixture**: A two-worker TaskFrame has `preflight=true`; the harness can make either worker available or unavailable.
+**Action**: Run once with one unavailable worker and once with both available.
+**Pass**:
+- An unavailable preflight returns `NOP-RESOURCE-INSUFFICIENT` and dispatches no task node.
+- Successful preflight probes each distinct `(agent, action)` pair before the first task dispatch.
+- The successful run then executes the DAG exactly once.
+
+#### TC-N2-AaaS-05 — NOP retry and timeout semantics
+**Req**: L2-05 (MUST), [NPS-5 §3.5.2](../../NPS-5-NOP.md)
+**Fixture**: A worker can return retryable/non-retryable failures or exceed node/overall deadlines.
+**Action**: Exercise retry success, retry exhaustion, a non-retryable error, node timeout and overall timeout.
+**Pass**:
+- Only selected retryable errors are retried, never beyond `max_retries`, with the same logical subtask and idempotency identity.
+- Exhaustion preserves the worker error; non-retryable failures dispatch once.
+- Node and overall deadline breaches terminate as `NOP-DELEGATE-TIMEOUT` and `NOP-TASK-TIMEOUT`, with no late result changing the terminal state.
+
+#### TC-N2-AaaS-06 — Asynchronous Action lifecycle
+**Req**: L2-06 (SHOULD), [NPS-2 §7.2–§7.3](../../NPS-2-NWP.md)
+**Fixture**: IUT advertises an Action and has a queryable task store.
+**Action**: Submit `ActionFrame.async=true`, poll `system.task.status`, and cancel a separate running task.
+**Pass**:
+- Submission returns the pending acknowledgement shape with stable `task_id`, `poll_url` and `request_id`.
+- Status advances monotonically to the correct completed/failed result shape.
+- Cancellation reaches `cancelled`; terminal and unknown-task negative paths return the specified errors.
+
+#### TC-N2-AaaS-07 — AlignStream CGN back-pressure
+**Req**: L2-07 (SHOULD), [NPS-5 §3.4.1–§3.4.2](../../NPS-5-NOP.md)
+**Fixture**: Worker and orchestrator exchange a multi-frame AlignStream through a controllable CGN window.
+**Action**: Exhaust the window, restore it with a reverse frame, ACK consumed sequence numbers, then NAK a retained and an evicted sequence.
+**Pass**:
+- The sender pauses before exceeding the current CGN window and resumes only after window restoration.
+- `ack_seq` advances the retained window; a resolvable `nak_seq` replays from the requested sequence without reordering.
+- An evicted sequence returns `NOP-STREAM-NAK-UNRESOLVABLE`; no frame is silently skipped.
+
 ---
 
 ## 4. Results Manifest
@@ -476,8 +550,8 @@ manifest is embedded into [`NPS-NODE-L2-CERTIFIED.md`](./NPS-NODE-L2-CERTIFIED.m
 ```json
 {
   "profile": "NPS-Node-L2",
-  "profile_version": "0.5",
-  "scope": ["L2-08"],
+  "profile_version": "0.7",
+  "scope": ["L2-01", "L2-02", "L2-03", "L2-04", "L2-05", "L2-08"],
   "iut": {
     "name": "example-anchor",
     "version": "0.1.0",
@@ -492,6 +566,13 @@ manifest is embedded into [`NPS-NODE-L2-CERTIFIED.md`](./NPS-NODE-L2-CERTIFIED.m
     "environment": "linux-x64 / 1 vCPU / 1 GB"
   },
   "cases": [
+    { "id": "TC-N2-AaaS-01", "result": "pass" },
+    { "id": "TC-N2-AaaS-02", "result": "pass" },
+    { "id": "TC-N2-AaaS-03", "result": "pass" },
+    { "id": "TC-N2-AaaS-04", "result": "pass" },
+    { "id": "TC-N2-AaaS-05", "result": "pass" },
+    { "id": "TC-N2-AaaS-06", "result": "na", "message": "Documented SHOULD exception: this service exposes synchronous Actions only." },
+    { "id": "TC-N2-AaaS-07", "result": "na", "message": "Documented SHOULD exception: this service emits final results only and does not advertise AlignStream." },
     { "id": "TC-N2-AnchorTopo-01", "result": "pass" },
     { "id": "TC-N2-AnchorTopo-02", "result": "pass" },
     { "id": "TC-N2-AnchorTopo-03", "result": "pass" },
@@ -524,17 +605,22 @@ manifest is embedded into [`NPS-NODE-L2-CERTIFIED.md`](./NPS-NODE-L2-CERTIFIED.m
     { "id": "TC-N2-HA-08", "result": "na" },
     { "id": "TC-N2-HA-09", "result": "pass" }
   ],
-  "summary": { "pass": 17, "fail": 0, "skip": 0, "na": 14 }
+  "summary": { "pass": 22, "fail": 0, "skip": 0, "na": 16 }
 }
 ```
 
-The example above is a **single-Anchor** Anchor-only IUT: it passes the 12 topology and
-4 TLS cases, is not a Bridge, does not run a Registry, and declares no multi-Anchor HA —
-so `TC-N2-HA-01..08` are `na` and only the backward-compatibility case `TC-N2-HA-09`
-is exercised.
+The example above is a **single-Anchor AaaS service**: it passes the five mandatory
+L2-01..L2-05 cases, records explicit SHOULD exceptions for L2-06/07, passes the 12
+topology and 4 TLS cases, is not a Bridge, does not run a Registry, and declares no
+multi-Anchor HA. `TC-N2-HA-01..08` are therefore `na`, while `TC-N2-HA-09` passes.
 
 Certification is granted **per case family, all-or-nothing within the family**:
 
+- **AaaS mandatory baseline** (`TC-N2-AaaS-01..05`) — all five MUST `pass` for a
+  full AaaS L2 claim; `na`, `skip`, and component-only evidence are insufficient.
+- **AaaS recommendations** (`TC-N2-AaaS-06..07`) — each SHOULD `pass`. `na` is
+  accepted only with a non-empty case `message` documenting the implementation's
+  reasoned exception.
 - **L2-08 topology** (`TC-N2-AnchorTopo-*`, `TC-N2-AnchorStream-*`) — all 12 MUST `pass`
   for any L2 claim. There are no optional cases; an Anchor Node either implements
   `topology.snapshot` and `topology.stream` per [NPS-2 §12](../../NPS-2-NWP.md) or it does not.
@@ -555,8 +641,8 @@ Certification is granted **per case family, all-or-nothing within the family**:
 A family marked `na` in full does not block certification of the others; a family
 partially `na` is a manifest error.
 
-When future CRs cover the remaining L2 requirements (L2-01..L2-07), the `scope`
-array above will expand and the `summary` totals will update accordingly.
+The seven AaaS cases are part of the current pre-alpha.20 contract. They MUST NOT
+be removed from `scope` or treated as a future-CR exemption.
 
 ---
 
@@ -564,7 +650,8 @@ array above will expand and the `summary` totals will update accordingly.
 
 | Language | Path | Status |
 |----------|------|--------|
-| .NET 10 (xUnit) | `impl/dotnet/tests/NPS.Tests/Daemons/Npsd/AnchorTopologyConformanceTests.cs` | Implemented alongside this CR |
+| .NET 10 (xUnit), Anchor topology | `impl/dotnet/tests/NPS.Tests/Nwp/Anchor/AnchorTopologyTests.cs` | Implemented |
+| .NET 10 (xUnit), NCP-over-TLS ingress | `tools/daemons/nps-ingress/tests/IngressTlsConformanceTests.cs` | Implemented; `TC-N2-Tls-01..04` |
 | Python | `impl/python/tests/conformance/node_l2/` | TODO (Phase 2) |
 | TypeScript | `impl/typescript/tests/conformance/node-l2/` | TODO (Phase 2) |
 
@@ -577,6 +664,8 @@ test-run report maps 1:1 onto the §4 manifest.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.7 | 2026-09-05 | Added stable `TC-N2-AaaS-01..07` cases for current AaaS L2-01..L2-07 instead of deferring them wholesale. L2-01..05 are mandatory; L2-06/07 permit only reasoned SHOULD exceptions. Expanded the manifest to 38 cases and linked the machine-readable alpha.19 disposition. |
+| 0.6 | 2026-08-31 | Corrected `TC-N2-Tls-03..04` to exercise the normative interactive NPS-1 §2.6 sequence: preamble + Hello, relayed backend Caps, then Ident. This prevents a pipelined-only test from missing implementations that deadlock or bypass certificate/Ident binding on the normal post-Caps path. |
 | 0.5 | 2026-08-01 | New §3.4 **Multi-Anchor High Availability** (`TC-N2-HA-01..09`) realizing the `TC-N2-HA-*` family promised by [NPS-CR-0009](../../cr/NPS-CR-0009-multi-anchor-ha.md) §4: `cluster_epoch` present on both topology read surfaces, `anchor_failover` wire shape on planned handover and on active loss (terminal event then stream close), `anchor_quorum_lost` wire shape plus degraded read-only operation and recovery at a fresh epoch, `NWP-ANCHOR-NOT-LEADER` on a standby write, `NWP-ANCHOR-EPOCH-FENCED` on a superseded leader, NDP highest-epoch resolution with no downgrade, equal-epoch split-brain → `NDP-CLUSTER-SPLIT`, and single-Anchor backward compatibility at `cluster_epoch = 1`. §2 gains a multi-Anchor fixture row; §4 manifest now enumerates four case families (12 topology + 4 TLS + 6 bridge + 9 HA) and defines the mutually exclusive HA-Anchor-side / single-Anchor-backward-compat pairing. Two points left open by CR-0009 (lower-epoch inbound frames; the `anchor_state` sub-type used to signal quorum recovery) are called out in §3.4 rather than asserted. |
 | 0.4 | 2026-07-23 | New §3.3 **Bridge Node Inbound** (`TC-N2-BridgeIn-01..06`) realizing the `TC-N2-BRIDGE-IN-*` family promised by [NPS-CR-0010](../../cr/NPS-CR-0010-bridge-bidirectional.md) §4: full MCP method set incl. `resources/*`, gRPC + A2A inbound round-trips, bare-vs-qualified name resolution, §16.3 error-mapping fidelity, and `NWP-BRIDGE-DIRECTION-UNSUPPORTED` refusal. §4 manifest now enumerates all three case families (12 topology + 4 TLS + 6 bridge) with per-family certification and `na` semantics. Also retro-adds the missing 0.3 changelog row. |
 | 0.3 | 2026-06-12 | (Retro-added row — change shipped in alpha.13 without a changelog entry.) New §3.2 **NCP-over-TLS Ingress** (`TC-N2-Tls-01..04`) validating the NPS-RFC-0006 §6 admission gate: ALPN `nps/1.0`, mTLS requirement, trust-anchor validation + session NID binding, and `NCP-NID-MISMATCH` on IdentFrame/certificate mismatch. |

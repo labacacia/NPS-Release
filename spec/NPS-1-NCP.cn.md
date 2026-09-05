@@ -4,8 +4,8 @@
 
 **Spec Number**: NPS-1  
 **Status**: Proposed  
-**Version**: 0.11
-**Date**: 2026-07-05
+**Version**: 0.12
+**Date**: 2026-08-31
 **Port**: 17433（默认，全协议族共用）  
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD  
 
@@ -802,6 +802,7 @@ NPS 采用两级错误体系：
 | `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | 原生模式连接首 8 字节非 `b"NPS/1.0\n"`；服务端 500 ms 内静默关闭（不发 ErrorFrame）—— 见 §2.6.1 |
 | `NCP-REKEY-REQUIRED` | `NPS-PROTO-VERSION-INCOMPATIBLE` | E2E 加密信道已达到 rekey 阈值（2^32 帧或 24 小时）；对端 MUST 在继续发送加密帧之前发起密钥轮换 |
 | `NCP-KEEPALIVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | 在 3 × `ping_interval_ms` 内未收到任何帧（含 NopFrame）；连接将被关闭 |
+| `NCP-EARLY-DATA-REJECTED` | `NPS-PROTO-VERSION-INCOMPATIBLE` | NPS 帧出现在 QUIC/TLS 0-RTT early data 中；NPS 应用数据只能在握手确认后开始 |
 
 HTTP 模式下的状态码映射见 [status-codes.cn.md](status-codes.cn.md)。
 
@@ -880,6 +881,34 @@ Node SHOULD 限制单连接最大并发流数（推荐默认值：32，通过 Ca
 - 若仅有一方声明了 `ping_interval_ms`，另一方 SHOULD 采用该声明值作为共同间隔
 - TCP keepalive（`SO_KEEPALIVE`）与 QUIC idle timeout 属互补机制；实现 SHOULD 在应用层 NopFrame 协议之外，同时在传输层配置这两者
 
+### 7.7 alpha.19 连接加固 Profile（NCP v0.12）
+
+以下要求 ID 冻结
+[`runtime_hardening_vectors.json`](conformance/ncp/runtime_hardening_vectors.json)
+所验证的可移植 runtime 行为：
+
+1. **NCP-P19-01 —— 有效间隔。** 令 `C`、`S` 为 client 与 server 提供的非零
+   `ping_interval_ms`。两者都为零时禁用应用层 keepalive；否则先忽略零值，再取
+   `max(1000, min(C, S))`。
+2. **NCP-P19-02 —— 接收时钟。** 只有完整且合法的入站 NCP 帧被接纳时才重置
+   dead-peer 时钟。本地发送、残缺 header、畸形帧和仅传输层活动均不得重置。
+3. **NCP-P19-03 —— 空闲探针。** 一个有效间隔内未发送应用帧时，一端 MUST
+   恰好排入一个无 payload 的 NopFrame。普通出站流量重置 idle-send 时钟并取代探针。
+4. **NCP-P19-04 —— 确定性关闭。** 连续 `3 × effective_interval` 未收到合法入站帧时，
+   连接原子进入 `closing`，最多发送一个 `NCP-KEEPALIVE-TIMEOUT`，取消所有 stream，
+   并在 500 ms 内关闭 carrier。timeout error 之后不得再发送应用帧。
+5. **NCP-P19-05 —— Nop 形态。** payload 长度非零的 NopFrame 以
+   `NCP-FRAME-PAYLOAD-TOO-LARGE` 拒绝，且不得重置任一时钟。
+6. **NCP-P19-06 —— 禁止 early application data。** NPS preamble、HelloFrame
+   和其他 NPS 帧 MUST NOT 作为 QUIC/TLS 0-RTT 数据发送或接收。服务端检测到时以
+   `NCP-EARLY-DATA-REJECTED` 拒绝；握手确认后允许重试。
+7. **NCP-P19-07 —— QUIC migration 身份。** 只有握手确认后才允许 QUIC path
+   migration；迁移保留既有 NCP session，不得改变证书/IdentFrame NID 绑定。
+   绑定变化以 `NCP-NID-MISMATCH` 拒绝并关闭连接。
+8. **NCP-P19-08 —— 双层背压。** QUIC/TCP carrier credit 与 NCP StreamFrame
+   应用窗口同时生效。carrier credit 不得授权发送方越过已耗尽的 NCP 窗口。
+   NopFrame 不计入 stream 窗口，但仍受 carrier 可写性约束。
+
 ---
 
 ## 8. 编码层级
@@ -949,6 +978,7 @@ NCP v0.9 的标准绑定是 NWP `QueryFrame.vector_search.vector`。marker index
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.12 | 2026-08-31 | alpha.19 连接加固 Profile：确定性的有效 keepalive 间隔与收发时钟、单次 timeout-close 迁移、无 payload Nop 强制、拒绝 QUIC/TLS 0-RTT NPS 帧、保持身份绑定的 QUIC migration，以及 carrier/application 双层背压组合。新增共享 runtime hardening 向量与 `NCP-EARLY-DATA-REJECTED`。|
 | 0.11 | 2026-07-29 | 新增 §2.6.2 原生服务端互操作 Profile：认证先于前导的顺序要求、前导与 Hello 分别有界读取、分配安全的 Hello 上限、准入前失败的静默行为、确定性的版本/编码/协议/上限协商、可移植的握手 Caps 字段，以及共享的 `native_server_handshake_vectors.json`。属增量变更；无新增帧类型与错误码。 |
 | 0.10 | 2026-07-05 | 原生模式传输正式成为规范性内容（NPS-RFC-0006 **Accepted**）。新增原生模式下**跨 Anchor 故障转移的会话连续性**（NPS-CR-0009）：多 Anchor 所有权转移后，若连接丢失或恢复尝试返回 `NCP-NID-MISMATCH`，客户端经 NDP §9（取最高 `cluster_epoch`）重新解析，或使用 NWP `anchor_failover` 的 `successor_nid`，并重新建立会话。无新增帧与错误码（复用 `NCP-NID-MISMATCH`）。 |
 | 0.9 | 2026-06-27 | 激活 Tier-3 BinaryVector v1（`Flags.T1T0 = 10`），协商 token 为 `binary_vector.v1`；定义 `NPBV` Payload 布局、MessagePack metadata marker、float32 little-endian 向量段，以及 NWP `QueryFrame.vector_search.vector` 绑定；`0b11` 仍为保留值。 |
