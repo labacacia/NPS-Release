@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "candidate": "1.0.0-alpha.19-debt-closure",
+  "scope": "Repository implementations that advertise Node profile or profile-family evidence. SDK libraries are manifest emitters and validators, not deployment IUTs.",
+  "implementations": [
+    {
+      "implementation": "npsd",
+      "profile": "NPS-Node-L1",
+      "profile_version": "0.1",
+      "claim": "not_claimed",
+      "case_scope": "complete_profile",
+      "expected_case_count": 20,
+      "manifest": "tools/daemons/npsd/conformance/NPS-NODE-L1-MANIFEST.json"
+    },
+    {
+      "implementation": "nps-ingress",
+      "profile": "NPS-Node-L2",
+      "profile_version": "0.7",
+      "claim": "family_only",
+      "case_scope": "TC-N2-Tls-01..04",
+      "expected_case_count": 4,
+      "manifest": "tools/daemons/nps-ingress/conformance/NPS-NODE-L2-TLS-EVIDENCE.json"
+    },
+    {
+      "implementation": "nps-runner",
+      "profile": "NPS-Node-L3",
+      "profile_version": "0.2",
+      "claim": "not_claimed",
+      "case_scope": "complete_profile",
+      "expected_case_count": 10,
+      "manifest": "tools/daemons/nps-runner/conformance/NPS-NODE-L3-MANIFEST.json"
+    }
+  ],
+  "rules": [
+    "Every listed manifest carries a runnable command and enumerates its complete advertised case scope.",
+    "not_claimed manifests may use partial or unexecuted evidence states but may not omit cases from a complete-profile scope.",
+    "family_only manifests must pass every case in the advertised family and must not imply full-profile certification.",
+    "Node L2 emitted manifests must reject partial-family na and enforce the single-Anchor versus multi-Anchor applicability invariant."
+  ]
+}

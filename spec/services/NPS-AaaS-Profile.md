@@ -360,6 +360,14 @@ only needs to implement this interface for seamless integration.
 | L2-08 | MUST implement `topology.snapshot` and `topology.stream` reserved query types on Anchor Nodes that maintain a member registry, per [NPS-2 §12](../NPS-2-NWP.md). The version counter MUST be monotonic per Anchor lifetime and SHOULD survive in-process restarts via rebase + `anchor_state.version_rebased` event. Implementations claiming L2-08 MUST satisfy [NPS-Node-Profile](./NPS-Node-Profile.md) L1 for the host running the Anchor; an Anchor maintaining an active member registry SHOULD also satisfy Node-Profile L2. | NWP §12 |
 | L2-09 | SHOULD configure a `reputation_policy` in the NWM and consult at least one NPS-RFC-0004 compliant log operator on agent admission. The recommended minimum policy for L2 AaaS deployments is: reject agents with an active `cert-revoked` incident of any severity, or a `rate-limit-violation` / `tos-violation` incident of `major` or higher within the last 30 days. Nodes SHOULD publish their `reputation_policy` under the NWM `reputation_policy` key. | NPS-RFC-0004 |
 
+L2-01..L2-07 are current pre-alpha.20 requirements, not placeholders. Their
+stable cases are `TC-N2-AaaS-01..07` in
+[NPS-Node-L2 v0.7](./conformance/NPS-Node-L2.md#35-aaas-service-baseline--l2-01-through-l2-07),
+with machine-readable strength, evidence and claim disposition in
+[`aaas-l2-requirement-disposition.json`](../conformance/aaas-l2-requirement-disposition.json).
+A full AaaS L2 claim requires L2-01..L2-05 to pass. L2-06/07 may use a SHOULD
+exception only when the manifest records a non-empty rationale.
+
 ### 4.4 Level 3 — Advanced Compliance
 
 | Req ID | Description | Protocol |

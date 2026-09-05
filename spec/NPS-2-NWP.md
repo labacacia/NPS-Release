@@ -4,11 +4,11 @@ English | [中文版](./NPS-2-NWP.cn.md)
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.21
-**Date**: 2026-08-12
+**Version**: 0.22
+**Date**: 2026-08-31
 **Port**: 17433 (default, shared) / 17434 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11), NPS-3 (NIP v0.14), NPS-4 (NDP v0.12)
+**Depends-On**: NPS-1 (NCP v0.12), NPS-3 (NIP v0.15), NPS-4 (NDP v0.13)
 
 > This document is the NWP detailed specification. For a suite overview see [NPS-0-Overview.md](NPS-0-Overview.md).
 
@@ -180,6 +180,7 @@ Every node MUST expose a machine-readable manifest at `/.nwm`, MIME type: `appli
 | `stability` | string | Optional | Lifecycle stage: `"experimental"` / `"stable"` / `"deprecated"`. Marketplace / NeuronHub discovery clients use this to filter or warn on non-stable services. Default: `"stable"` (backward-compatible — pre-0.11 manifests are treated as stable). Per-action override permitted via ActionSpec.stability (§4.6). |
 | `sla` | object | Optional | SLO commitments for the node, see §4.7. Advisory only; the protocol does not enforce these. Per-action override permitted via ActionSpec.sla (§4.6). |
 | `billing` | object | Optional | Commercial metadata for the node (metering profile + price hint), see §4.8. Advisory only; the protocol does not collect or settle charges. Per-action override permitted via ActionSpec.billing (§4.6). |
+| `subscription_policy` | object | Optional | Renewable-subscription limits: `default_lease_seconds`, `max_lease_seconds`, and `renew_before_seconds`; see §13.4. Absence means the v0.21 unleased compatibility behavior. |
 | `trust_anchors` | array of strings | Optional | NIDs of CA nodes the Anchor accepts as IdentFrame issuers (e.g. `["urn:nps:agent:ca.example.com:root"]`). Consumers SHOULD use this to pre-validate their issuer before connecting. When absent, the node accepts any CA trusted by the NIP verification chain. |
 | `profiles` | object | Optional | Structured protocol profiles layered on top of the base node role, see §4.2a. Unknown profile keys MUST be ignored by consumers. |
 
@@ -363,6 +364,30 @@ Advisory commercial metadata. The protocol does not authorize, meter, or settle 
 | `billing_unit` | string | Unit string when `metering_profile = "metered"`, e.g. `"per-token"` / `"per-request"` / `"per-cgn"` / `"per-second"`. |
 | `price_hint` | string | Indicative price in ISO-4217 currency-prefixed decimal form, e.g. `"USD 0.0002"` per `billing_unit`. Hint only — the operator's external contract is authoritative. |
 | `currency` | string | ISO-4217 currency code (e.g. `"USD"`, `"EUR"`, `"CNY"`). Optional convenience field; `price_hint` already encodes the currency prefix. |
+
+### 4.4c Alpha.19 portable metadata normalization (NWP v0.22)
+
+The requirement IDs below are exercised by
+[`alpha19_hardening_vectors.json`](conformance/nwp/alpha19_hardening_vectors.json):
+
+1. **NWP-P19-01 — stability.** Producers MUST emit only `experimental`,
+   `stable`, or `deprecated`. Absence normalizes to `stable`. Consumers preserve
+   an unknown raw value but normalize it to `experimental` for filtering and
+   MUST NOT rank it as stable.
+2. **NWP-P19-02 — SLA.** `p95_latency_ms`, when present, is a positive uint32;
+   `availability` is a decimal fraction in `(0, 1]`; and the three standard
+   `sla_tier` values retain their defined ordering. An unknown tier is preserved
+   but is unranked. Invalid advisory sub-fields are ignored with a diagnostic;
+   they do not invalidate unrelated manifest fields.
+3. **NWP-P19-03 — billing.** `free` forbids `billing_unit`, `price_hint`, and
+   `currency`; `metered` requires a non-empty `billing_unit`; a `price_hint`
+   MUST match `^[A-Z]{3} [0-9]+(\\.[0-9]+)?$`, and a separate `currency`, when
+   present, MUST equal its prefix. Unknown metering profiles normalize to
+   `metered` without inventing a price.
+4. **NWP-P19-04 — action overrides.** Action-level metadata overrides only
+   fields it supplies. Missing fields fall through to the normalized top-level
+   value. An invalid override sub-field is ignored and falls through rather
+   than erasing a valid top-level value.
 
 ### 4.5 Complete NWM Example
 
@@ -1441,12 +1466,14 @@ SubscribeFrame opens a server-push subscription on a Memory or Anchor Node. The 
 |-------|------|----------|-------------|
 | `frame` | uint8 | Required | Fixed value `0x12` |
 | `subscription_id` | string | Required | Client-generated UUID v4; used to correlate events and cancel the subscription |
+| `operation` | string | Optional | `open` (default), `renew`, or `close`. `renew` and `close` address an existing `subscription_id` and MUST omit target/filter fields. |
 | `type` | string | Optional | Reserved subscribe type identifier per §12. When set, type-specific fields apply and `anchor_ref` semantics are defined by the type. Absent: per-anchor subscribe behavior below |
 | `anchor_ref` | string | Conditionally Required | anchor_id of the subscribed data. Required for default per-anchor subscriptions; omitted when a reserved `type` defines its own target semantics (for example `topology.stream`) |
 | `filter` | object | Optional | Same filter syntax as QueryFrame `filter` (§6); if absent, all events match |
 | `heartbeat_interval_ms` | uint32 | Optional | If set, server MUST emit a heartbeat DiffFrame (empty payload, `event_type = "heartbeat"`) at this interval; default 0 (no heartbeat) |
 | `max_events` | uint32 | Optional | Server closes the subscription after delivering this many events; 0 = unlimited |
 | `cursor` | string | Optional | Resume from a prior position; if the cursor is expired the server MUST return `NWP-SUBSCRIBE-SEQ-TOO-OLD` |
+| `lease_seconds` | uint32 | Optional | Requested lease for `open` or `renew`. Valid only when `subscription_policy` is advertised; the server clamps it to `max_lease_seconds`. Zero is invalid. |
 
 ### 13.2 Lifecycle
 
@@ -1482,6 +1509,29 @@ The following error codes (defined in §14) apply to SubscribeFrame operations:
 - `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` — filter expression not supported by this node
 - `NWP-SUBSCRIBE-INTERRUPTED` — server-side interruption
 - `NWP-SUBSCRIBE-SEQ-TOO-OLD` — cursor position is no longer available
+
+### 13.4 Alpha.19 renewable subscription profile (NWP v0.22)
+
+5. **NWP-P19-05 — capability truth.** A node supports lease operations only
+   when it advertises `subscription_policy`. Its default and maximum MUST be
+   positive, and `renew_before_seconds` MUST be less than the maximum.
+6. **NWP-P19-06 — open.** `operation` absent means `open`. The server applies
+   the requested lease or `default_lease_seconds`, clamps it to the maximum, and
+   returns `lease_seconds` plus RFC 3339 `expires_at` in the opening CapsFrame.
+7. **NWP-P19-07 — binding.** Renew and close are authorized against the same
+   authenticated principal, target, and reserved `type` captured at open time.
+   A different principal receives the existing authorization error and learns
+   no subscription state.
+8. **NWP-P19-08 — renew.** A valid renew accepted before expiry replaces the
+   deadline with `accepted_at + effective_lease_seconds` and returns the new
+   deadline. It never rewinds a cursor or resets event `seq`.
+9. **NWP-P19-09 — expiry.** At `now >= expires_at`, the server atomically closes
+   the subscription, emits at most one terminal event carrying
+   `NWP-SUBSCRIBE-LEASE-EXPIRED` when the transport is writable, and releases
+   resources. Renew after expiry returns the same error and cannot resurrect it.
+10. **NWP-P19-10 — invalid requests.** Zero leases, invalid policy bounds,
+    target/filter fields on renew/close, or an unknown operation return
+    `NWP-SUBSCRIBE-LEASE-INVALID` without mutating the subscription.
 
 ---
 
@@ -1523,6 +1573,8 @@ The following error codes (defined in §14) apply to SubscribeFrame operations:
 | `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | Node does not support filtered subscriptions |
 | `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | Subscription stream terminated due to underlying data source interruption |
 | `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | `cursor` is outside the node's retention window; full re-query or reserved-type resync required |
+| `NWP-SUBSCRIBE-LEASE-INVALID` | `NPS-CLIENT-BAD-PARAM` | Renewable-subscription operation or lease/policy bounds are invalid |
+| `NWP-SUBSCRIBE-LEASE-EXPIRED` | `NPS-CLIENT-GONE` | Subscription lease reached its deadline and cannot be renewed or resurrected |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | Response would exceed the token budget |
 | `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | depth exceeds the node's allowed max_depth |
 | `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | Node graph contains a circular reference |
@@ -1806,6 +1858,7 @@ correlation behavior are required across HTTP and native hosts.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.22 | 2026-08-31 | Alpha.19 NWM/subscription hardening: deterministic stability/SLA/billing normalization and action fallback; advertised renewable subscription policy; open/renew/close operations with principal binding, clamped leases, explicit deadlines, non-resurrectable expiry, and shared conformance vectors. Adds two subscription errors. Depends-On advances to NCP 0.12, NIP 0.15, and NDP 0.13. |
 | 0.21 | 2026-08-12 | **NPS-CR-0011 stateful LLM context/delta completion**: NWM LLM profile 0.2 advertises explicit context operations/persistence/limits; `llm.complete` gains optional owner-bound opaque context requests and terminal receipts; adds status/release lifecycle actions, CAS versions, binding checks, atomic cancellation/stream commit, restart/idempotency semantics, measured `wire_input_bytes`, seven deterministic errors, and shared conformance vectors. Stateless completion remains compatible and stateful requests never silently fall back. Depends-On NIP advanced to v0.14 for `llm:context`. No new frame type. |
 | 0.20 | 2026-07-29 | Added §16.5 portable Node/Bridge server profile and shared cross-language vectors. Standardized HTTP/native admission, role dispatch, canonical/legacy MIME handling for the alpha.17 compatibility window, finite body limits, cancellation, correlation propagation, Bridge dispatcher/SSRF/deadline preflight, async task mode, and terminal telemetry outcomes. Added `NWP-HTTP-BODY-TOO-LARGE` → `NPS-LIMIT-PAYLOAD`; no new frame type. Depends-On advanced to NCP v0.11 and NIP v0.13. |
 | 0.19 | 2026-07-23 | **NPS-CR-0010 Bridge Node is bidirectional**: resolved the spec's own contradiction — the §2.1 taxonomy, the "Removed types" note, and NPS-CR-0001 all defined Bridge Node as NPS↔non-NPS translation, while the §2.1 callout and the normative MUST list narrowed it to NPS→external only. The narrowing existed solely to keep the name `Bridge` distinct from the then-separate `compat/*-ingress` packages; those are now absorbed into the Bridge package and the restriction is lifted. Bridge Node semantics restructured into **Outbound** (unchanged) + **Inbound** (new) MUST lists; MCP inbound MUST serve `resources/*` as well as `tools/*`. §16 split into two independent conformance profiles (§16.1.1 outbound / §16.1.2 inbound), a normative direction declaration (§16.2), and normative per-protocol error-mapping tables (§16.3) that a single implementation MUST serve in both directions. Role-vs-library boundary made explicit: only a deployment announcing `node_roles: ["bridge"]` is a Bridge Node. `Depends-On` NDP bumped to v0.11 (defines `bridge_inbound_protocols`). One new error code `NWP-BRIDGE-DIRECTION-UNSUPPORTED`. Additive and backward-compatible: an outbound-only Bridge Node remains conformant unchanged. (Renumbered from the edge-line 0.16 — the released alpha.16 line had independently used 0.15–0.17 for the LLM profile series below.) |

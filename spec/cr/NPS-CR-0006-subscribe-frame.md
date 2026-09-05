@@ -85,16 +85,20 @@ The five existing codes are confirmed as authoritative:
 
 ## 4. SDK Impact
 
-All six SDKs must implement or verify the following after alpha.11:
+Current source status, reconciled on 2026-09-05:
 
 | Language | SubscribeFrame types | Lifecycle helpers | Cursor resume |
 |----------|---------------------|-------------------|---------------|
-| .NET | ✅ alpha.8 | ✅ alpha.8 | ✅ alpha.8 |
-| Python | ✗ → alpha.11 | ✗ → alpha.11 | ✗ → alpha.11 |
-| TypeScript | ✗ → alpha.11 | ✗ → alpha.11 | ✗ → alpha.11 |
-| Go | ✗ → alpha.11 | ✗ → alpha.11 | ✗ → alpha.11 |
-| Java | ✗ → alpha.11 | ✗ → alpha.11 | ✗ → alpha.11 |
-| Rust | ✗ → alpha.11 | ✗ → alpha.11 | ✗ → alpha.11 |
+| .NET | Implemented | Server lifecycle handler | Cursor field + replay semantics |
+| Python | Implemented | Wire helper only | Cursor field implemented; high-level subscribe client not exposed |
+| TypeScript | Implemented | `NwpClient.subscribe` | Cursor field implemented |
+| Go | Implemented | `NwpClient.Subscribe` | Cursor field implemented |
+| Java | Implemented | `NwpClient.subscribe` | Cursor field implemented |
+| Rust | Implemented | Wire helper only | Cursor field implemented; high-level subscribe client not exposed |
+
+Python and Rust's missing convenience client is non-normative API surface, not
+a missing `SubscribeFrame` or cursor wire implementation. It remains visible
+without presenting a stale release target.
 
 ---
 

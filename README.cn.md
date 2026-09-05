@@ -7,16 +7,19 @@
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
 [![Release](https://img.shields.io/badge/release-v1.0.0--alpha.18-orange.svg)](CHANGELOG.cn.md)
-[![NCP](https://img.shields.io/badge/NCP-v0.11-5b8cff.svg)]()
-[![NWP](https://img.shields.io/badge/NWP-v0.21-4af0b0.svg)]()
-[![NIP](https://img.shields.io/badge/NIP-v0.14-7b61ff.svg)]()
-[![NDP](https://img.shields.io/badge/NDP-v0.12-f0a050.svg)]()
-[![NOP](https://img.shields.io/badge/NOP-v0.9-ff8c42.svg)]()
+[![NCP](https://img.shields.io/badge/NCP-v0.12-5b8cff.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.22-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.15-7b61ff.svg)]()
+[![NDP](https://img.shields.io/badge/NDP-v0.13-f0a050.svg)]()
+[![NOP](https://img.shields.io/badge/NOP-v0.10-ff8c42.svg)]()
 
 NPS 是面向 AI Agent 和模型的完整 Web 基础协议族，由五个子协议组成，覆盖 AI 通信、Web 访问、身份认证、节点发现与多 Agent 编排。
 
 > 最新已发布版本为 `v1.0.0-alpha.18`，包含 NWP 0.21 有状态 LLM context、
 > 六 SDK 生命周期对齐与 strict-native 节省门禁。
+>
+> 当前分支包含经审查、尚未发布的 alpha.19 规范候选：NCP 0.12 / NWP 0.22 /
+> NIP 0.15 / NDP 0.13 / NOP 0.10。安装命令与 package 表仍固定在已发布的 alpha.18 线。
 
 ---
 
@@ -38,11 +41,11 @@ NPS 是面向 AI Agent 和模型的完整 Web 基础协议族，由五个子协�
 
 | 协议 | 类比 | 规范版本 | 实现状态 | 端口 (默认/独立) |
 |------|------|----------|----------|-----------------|
-| **NCP** Neural Communication Protocol | Wire Format | v0.11 | ✅ 原生服务握手 Profile：有界 preamble/Hello 读取、TLS-ready authenticated stream、确定性 Caps 协商，并由六 SDK 共用向量验证 | 17433 / — |
-| **NWP** Neural Web Protocol | 节点请求/响应 | v0.21 | 候选规范：有状态 LLM context/delta contract，含 owner-bound 不透明 ID、原子 CAS 生命周期、严格禁止 fallback、实测复用与共享向量；保留可移植 Node/Bridge 基线 | 17433 / 17434 |
-| **NIP** Neural Identity Protocol | TLS / PKI | v0.14 | 候选规范：新增 `llm:context` 授权与 TrustFrame scope；保留可移植 CA/verifier、实时吊销、签名 CRL 与 fail-closed 基线 | 17433 / 17435 |
-| **NDP** Neural Discovery Protocol | DNS | v0.12 | ✅ 签名 Announce 准入、序列栅栏、liveness、集群冲突与方向感知 Bridge discovery，由六 SDK 共用向量验证 | 17433 / 17436 |
-| **NOP** Neural Orchestration Protocol | SMTP / MQ | v0.9 | ✅ 确定性 DAG/retry/aggregation/saga Profile、callback 加固、委派/租约、CR-0007 runtime 向量与 runner OCI SpawnSpec 支持 | 17433 / 17437 |
+| **NCP** Neural Communication Protocol | Wire Format | v0.12 | alpha.19 候选：确定性 keepalive/close 时钟、防重放 QUIC 策略、保持身份的迁移与两层背压 | 17433 / — |
+| **NWP** Neural Web Protocol | 节点请求/响应 | v0.22 | alpha.19 候选：可续期订阅租约与可移植 stability/SLA/billing 归一化 | 17433 / 17434 |
+| **NIP** Neural Identity Protocol | TLS / PKI | v0.15 | alpha.19 候选：确定性续期、吊销新鲜度/未知响应处理与 Phase-3 advisory 真实性 | 17433 / 17435 |
+| **NDP** Neural Discovery Protocol | DNS | v0.13 | alpha.19 候选：持久化 sequence/epoch 栅栏与 fail-closed 重启/分区恢复 | 17433 / 17436 |
+| **NOP** Neural Orchestration Protocol | SMTP / MQ | v0.10 | alpha.19 候选：有界重放 ledger、单调结果 TTL、安全驱逐与确定性聚合 | 17433 / 17437 |
 
 ### 本地 Dev Stack
 
@@ -66,7 +69,7 @@ NPS 在生产环境跑作 **三层、六个常驻服务** —— 完整设计见
 [`docs/daemons/architecture.cn.md`](docs/daemons/architecture.cn.md)，
 二进制在 [`tools/daemons/`](tools/daemons/)。
 
-| 层 | Daemon | 端口 | 状态（alpha.18 候选）|
+| 层 | Daemon | 端口 | 状态（已发布 alpha.18 基线）|
 |----|--------|------|-----------------|
 | 1（本机基础设施）| [`npsd`](tools/daemons/npsd/)             | 17433 | L1 最小集 + loopback dev-stack 支持 |
 | 1（本机基础设施）| [`nps-runner`](tools/daemons/nps-runner/) | —     | CR-0007 租约续期、portable OCI SpawnSpec/引用解析与生命周期强制 |
@@ -117,13 +120,12 @@ NPS 从零开始，通过 **AnchorFrame Schema 锚定**、**Cognon (CGN) 标准�
 nps/
 ├── spec/                    # 语言无关规范文档（SSoT）
 │   ├── NPS-0-Overview.md    # 套件总览 v0.4
-│   ├── NPS-1-NCP.md         # NCP 规范 v0.11
-│   ├── NPS-2-NWP.md         # NWP 规范 v0.21
-│   ├── NPS-3-NIP.md         # NIP 规范 v0.14
-│   ├── NPS-4-NDP.md         # NDP 规范 v0.12
-│   ├── NPS-5-NOP.md         # NOP 规范 v0.9
-│   ├── frame-registry.yaml  # 机器可读帧注册表 v0.14
-│   ├── version-matrix.yaml  # 机器可读 suite/spec 版本 oracle
+│   ├── NPS-1-NCP.md         # NCP 规范 v0.12
+│   ├── NPS-2-NWP.md         # NWP 规范 v0.22
+│   ├── NPS-3-NIP.md         # NIP 规范 v0.15
+│   ├── NPS-4-NDP.md         # NDP 规范 v0.13
+│   ├── NPS-5-NOP.md         # NOP 规范 v0.10
+│   ├── frame-registry.yaml  # 机器可读帧注册表 v0.15
 │   ├── error-codes.md       # 统一错误码命名空间
 │   ├── status-codes.md      # NPS 原生状态码 + HTTP 映射
 │   ├── token-budget.md      # CGN 计量规范
@@ -131,6 +133,7 @@ nps/
 │   ├── services/
 │   │   └── NPS-AaaS-Profile.md  # AaaS 合规性规范 v0.2
 │   └── rfcs/                # RFC 流程 + 4 份草案（NCP 前导 / X.509+ACME NID / 身份保证等级 / 声誉日志）
+├── version.yaml             # 已发布 suite 版本 oracle；最后升版
 ├── impl/
 │   ├── dotnet/              # C# / .NET 10 参考实现（含 samples/ + benchmarks/）
 │   ├── python/              # Python SDK v1.0.0-alpha.18 候选

@@ -7,16 +7,20 @@ English | [中文版](./README.cn.md)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Status](https://img.shields.io/badge/status-Phase%201-green.svg)]()
 [![Release](https://img.shields.io/badge/release-v1.0.0--alpha.18-orange.svg)](CHANGELOG.md)
-[![NCP](https://img.shields.io/badge/NCP-v0.11-5b8cff.svg)]()
-[![NWP](https://img.shields.io/badge/NWP-v0.21-4af0b0.svg)]()
-[![NIP](https://img.shields.io/badge/NIP-v0.14-7b61ff.svg)]()
-[![NDP](https://img.shields.io/badge/NDP-v0.12-f0a050.svg)]()
-[![NOP](https://img.shields.io/badge/NOP-v0.9-ff8c42.svg)]()
+[![NCP](https://img.shields.io/badge/NCP-v0.12-5b8cff.svg)]()
+[![NWP](https://img.shields.io/badge/NWP-v0.22-4af0b0.svg)]()
+[![NIP](https://img.shields.io/badge/NIP-v0.15-7b61ff.svg)]()
+[![NDP](https://img.shields.io/badge/NDP-v0.13-f0a050.svg)]()
+[![NOP](https://img.shields.io/badge/NOP-v0.10-ff8c42.svg)]()
 
 NPS is a complete web infrastructure protocol suite designed for AI Agents and models. It consists of five sub-protocols covering AI communication, web access, identity, node discovery, and multi-agent orchestration.
 
 > Latest published release: `v1.0.0-alpha.18`, including NWP 0.21 stateful
 > LLM context, six-SDK lifecycle parity, and strict-native savings gates.
+>
+> This branch contains the reviewed, unreleased alpha.19 specification
+> candidate: NCP 0.12 / NWP 0.22 / NIP 0.15 / NDP 0.13 / NOP 0.10. Install
+> commands and package tables remain pinned to the published alpha.18 line.
 
 ---
 
@@ -38,11 +42,11 @@ NPS is a complete web infrastructure protocol suite designed for AI Agents and m
 
 | Protocol | Analogy | Spec Version | Implementation Status | Port (default / standalone) |
 |----------|---------|--------------|-----------------------|-----------------------------|
-| **NCP** Neural Communication Protocol | Wire Format | v0.11 | ✅ Native server handshake profile: bounded preamble/Hello reads, TLS-ready authenticated streams, deterministic Caps negotiation, and shared vectors across six SDKs | 17433 / — |
-| **NWP** Neural Web Protocol | Node request/response | v0.21 | Candidate: stateful LLM context/delta contract with owner-bound opaque IDs, atomic CAS lifecycle, strict no-fallback semantics, measured reuse, and shared vectors; portable node/bridge baseline retained | 17433 / 17434 |
-| **NIP** Neural Identity Protocol | TLS / PKI | v0.14 | Candidate: adds `llm:context` authorization and TrustFrame scope support; portable CA/verifier, live revocation, signed CRL, and fail-closed baseline retained | 17433 / 17435 |
-| **NDP** Neural Discovery Protocol | DNS | v0.12 | ✅ Signed Announce admission, sequence fences, liveness, cluster-conflict handling, and direction-aware Bridge discovery vectors across six SDKs | 17433 / 17436 |
-| **NOP** Neural Orchestration Protocol | SMTP / MQ | v0.9 | ✅ Deterministic DAG/retry/aggregation/saga profile, hardened callbacks, delegation/lease semantics, CR-0007 runtime vectors, and runner OCI SpawnSpec support | 17433 / 17437 |
+| **NCP** Neural Communication Protocol | Wire Format | v0.12 | Alpha.19 candidate: deterministic keepalive/close clocks, replay-safe QUIC policy, identity-preserving migration, and two-layer backpressure | 17433 / — |
+| **NWP** Neural Web Protocol | Node request/response | v0.22 | Alpha.19 candidate: renewable subscription leases and portable stability/SLA/billing normalization | 17433 / 17434 |
+| **NIP** Neural Identity Protocol | TLS / PKI | v0.15 | Alpha.19 candidate: deterministic renewal, revocation freshness/unknown handling, and Phase-3 advisory truth | 17433 / 17435 |
+| **NDP** Neural Discovery Protocol | DNS | v0.13 | Alpha.19 candidate: durable sequence/epoch fences and fail-closed restart/partition recovery | 17433 / 17436 |
+| **NOP** Neural Orchestration Protocol | SMTP / MQ | v0.10 | Alpha.19 candidate: bounded replay ledger, monotonic result TTL, safe eviction, and deterministic aggregation | 17433 / 17437 |
 
 ### Local dev stack
 
@@ -66,7 +70,7 @@ NPS in production runs as **six resident services across three layers** —
 see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) for
 the full design, [`tools/daemons/`](tools/daemons/) for the binaries.
 
-| Layer | Daemon | Port | Status (alpha.18 candidate) |
+| Layer | Daemon | Port | Status (published alpha.18 baseline) |
 |-------|--------|------|------------------|
 | 1 (host-local) | [`npsd`](tools/daemons/npsd/)             | 17433 | L1 minimum plus loopback dev-stack support |
 | 1 (host-local) | [`nps-runner`](tools/daemons/nps-runner/) | —     | CR-0007 lease renewal, portable OCI SpawnSpec/reference resolution, and lifecycle enforcement |
@@ -117,13 +121,12 @@ Every Agent holds a **NID** (Neural Identity Descriptor) in the form `urn:nps:ag
 nps/
 ├── spec/                    # Language-agnostic specification (SSoT)
 │   ├── NPS-0-Overview.md    # Suite overview v0.4
-│   ├── NPS-1-NCP.md         # NCP spec v0.11
-│   ├── NPS-2-NWP.md         # NWP spec v0.21
-│   ├── NPS-3-NIP.md         # NIP spec v0.14
-│   ├── NPS-4-NDP.md         # NDP spec v0.12
-│   ├── NPS-5-NOP.md         # NOP spec v0.9
-│   ├── frame-registry.yaml  # Machine-readable frame registry v0.14
-│   ├── version-matrix.yaml  # Machine-readable suite/spec version oracle
+│   ├── NPS-1-NCP.md         # NCP spec v0.12
+│   ├── NPS-2-NWP.md         # NWP spec v0.22
+│   ├── NPS-3-NIP.md         # NIP spec v0.15
+│   ├── NPS-4-NDP.md         # NDP spec v0.13
+│   ├── NPS-5-NOP.md         # NOP spec v0.10
+│   ├── frame-registry.yaml  # Machine-readable frame registry v0.15
 │   ├── error-codes.md       # Unified error code namespace
 │   ├── status-codes.md      # NPS native status codes + HTTP mapping
 │   ├── token-budget.md      # CGN metering spec
@@ -131,6 +134,7 @@ nps/
 │   ├── services/
 │   │   └── NPS-AaaS-Profile.md  # AaaS compliance profile v0.2
 │   └── rfcs/                # RFC process + 4 drafts (NCP preamble, X.509/ACME NID, assurance levels, reputation log)
+├── version.yaml             # Published suite-version oracle; bumped last
 ├── impl/
 │   ├── dotnet/              # C# / .NET 10 reference implementation (includes samples/ + benchmarks/)
 │   ├── python/              # Python SDK v1.0.0-alpha.18 candidate

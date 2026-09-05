@@ -226,8 +226,10 @@ Implementations MAY claim L1 with one but not both, and MUST declare which.
 **Internal impact**:
 - `nps-daemon` (in development under `labacacia/nps-daemon`): not yet implementing Gateway Node logic, so no migration burden. Updates align with new CR before first L1 release.
 - `nps-claude-bridge` (planned): unaffected — does not depend on Gateway Node.
-- NeuronHub design documents: TO UPDATE — replace Gateway Node references with Anchor Node where the cluster-entrypoint role is intended.
-- LabCubes presentation materials: TO UPDATE if Gateway Node was mentioned.
+- NeuronHub design documents were downstream migration consumers; their
+  current status is not an NPS wire-contract activation gate.
+- LabCubes presentation material was likewise downstream communication scope,
+  not an implementation requirement for this CR.
 
 **Migration window**: Single release. alpha.3 introduces the split with the deprecation stub described in §4. alpha.4 removes the stub.
 
@@ -240,16 +242,19 @@ To prevent scope creep, the following are explicitly NOT part of this CR:
 - **Process-level naming** — the Internet ingress process name is now `nps-ingress` (formerly `nps-gateway`) and remains a deployment-layer decision. Anchor Node and `nps-ingress` are orthogonal layers (logical role vs deployment form) and may co-locate in a single process or be split across processes; that is a deployment concern, not a spec concern.
 - **NDP Discovery semantics** — Anchor Node maintains cluster-internal topology; cross-cluster discovery remains NDP's responsibility. This CR does not modify NDP discovery semantics beyond the `Announce` field additions in §3.4.
 
-## 8. Acceptance criteria
+## 8. Implementation record
 
-This CR is considered accepted and ready to merge when:
+Reconciled against current source on 2026-09-05:
 
-- [ ] All affected spec files updated per §3
-- [ ] .NET SDK changes per §4 implemented and `dotnet test` passes
-- [ ] L1 conformance tests per §5 updated and passing against the reference daemon implementation
-- [ ] `CHANGELOG.md` entry written
-- [ ] Migration impact items in §6 confirmed (NeuronHub design doc updated, etc.)
-- [ ] At least one independent reviewer (besides the author) signs off
+- [x] Affected specifications define Anchor and Bridge as distinct roles and
+  reject the removed `gateway` wire value.
+- [x] SDK and daemon source expose current Anchor/Bridge behavior and tests.
+- [x] Node profile/conformance material uses the split roles.
+- [x] Changelog and in-tree migration documentation are present.
+- Downstream product/design-document migrations are not NPS protocol
+  activation gates.
+- Independent alpha.19 review is tracked by EPIC-004 P19-6 rather than left as
+  an unowned proposal-era checkbox.
 
 ## 9. CHANGELOG entry (proposed text)
 

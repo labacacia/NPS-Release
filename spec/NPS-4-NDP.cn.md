@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-4
 **Status**: Proposed
-**Version**: 0.12
-**Date**: 2026-07-29
+**Version**: 0.13
+**Date**: 2026-08-31
 **Port**: 17433（默认，共用）/ 17436（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11)、NPS-3 (NIP v0.14)
+**Depends-On**: NPS-1 (NCP v0.12)、NPS-3 (NIP v0.15)
 
 ---
 
@@ -295,6 +295,8 @@ ndp-forwarded-by: urn:nps:agent:registry-a.example.com:r1, urn:nps:agent:registr
 | `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame 的 `graph_seq` 小于接收方已为该 NID 接受的最高值（回滚企图）|
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame 序号不连续 |
 | `NDP-FEDERATION-LOOP` | `NPS-CLIENT-CONFLICT` | 联邦转发通过 `ndp-forwarded-by` hop 列表检测到环路 |
+| `NDP-STATE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | 要求持久化的 Registry 无法持久读取或提交恢复状态 |
+| `NDP-STATE-CORRUPT` | `NPS-SERVER-INTERNAL` | 持久化 Registry 恢复状态未通过 schema、checksum 或单调 fence 校验 |
 | `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame 的签发者（签名 CA）不在当前注册表 profile 的签发者白名单中 |
 | `NDP-CA-ATTEST-REQUIRED` | `NPS-AUTH-UNAUTHENTICATED` | 当前注册表 profile 要求 CA 背书的 NID，但 AnnounceFrame 证书链未锚定到配置的信任根 |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry 暂时不可用 |
@@ -381,12 +383,39 @@ Registry 所采用的 profile 隐含相应的运营方信任级别。合规部�
 
 Registry MUST NOT 声明其无法满足相应运营方信任要求的 profile。
 
+### 7.8 alpha.19 持久恢复 Profile（NDP v0.13）
+
+以下要求 ID 冻结 restart 与 partition 行为；共享 transcript 位于
+[`recovery_fence_vectors.json`](conformance/ndp/recovery_fence_vectors.json)。
+
+1. **NDP-P19-01 —— 持久状态。** `org-private` 与 `public-federated` Registry
+   MUST 至少持久保存每个 NID 已接受的最高 `graph_seq` 及 canonical body digest、
+   每个集群已接受的最高 ownership epoch，以及每个存活条目的 freshness deadline、
+   origin 与 trust class。
+2. **NDP-P19-02 —— 可见前提交。** 推进 sequence 或 epoch fence 的 mutation
+   MUST 先原子提交新 fence 与条目，之后才能 acknowledge、供 ResolveFrame 返回或转发给 peer。
+3. **NDP-P19-03 —— 恢复顺序。** 启动时必须先恢复并校验 sequence/epoch fence，
+   再接收流量；随后移除过期 live entry，但保留其 fence。恢复出的较低 sequence/epoch
+   永不得替换更高的持久值。
+4. **NDP-P19-04 —— 同 epoch 脑裂。** restart 或 partition healing 后，同一最高
+   cluster epoch 上的两个不同存活 owner 仍是 `NDP-CLUSTER-SPLIT`；不得用到达时间裁决。
+5. **NDP-P19-05 —— 损坏策略。** 要求持久化的 Registry 在 schema、checksum
+   或单调校验失败时 MUST 以 `NDP-STATE-CORRUPT` 拒绝 ready，不得静默从空状态启动。
+6. **NDP-P19-06 —— store 不可用。** 无法持久读取或提交状态时返回
+   `NDP-STATE-UNAVAILABLE`，且 MUST NOT acknowledge 受影响的 announce/federation mutation。
+7. **NDP-P19-07 —— local-dev 边界。** `local-dev` MAY 使用纯内存状态，但 MUST
+   在 health/capability 输出声明 `recovery = "volatile"`；其余 profile MUST 声明
+   `recovery = "durable"`。
+8. **NDP-P19-08 —— 联邦 provenance。** 恢复的联邦条目保留 origin Registry 与
+   trust class。撤销双边信任协议时，使匹配的恢复条目失效，但不降低无关 fence。
+
 ---
 
 ## 8. 变更历史
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.13 | 2026-08-31 | alpha.19 持久恢复 Profile：原子持久 sequence/epoch fence、有序 restart recovery、保留同 epoch 脑裂、状态损坏/不可用时 fail closed、显式 volatile/durable 能力真实性、联邦 provenance，以及共享 restart/partition transcript。|
 | 0.12 | 2026-07-29 | 定义 Registry Conformance profile：additive 的 `graph_seq` wire 字段及其兼容行为；确定性的签名体 canonicalization；有序的 签名/profile/重放/冲突/陈旧 准入流程；完全重复与 advisory liveness 刷新的语义区分；条目过期/下线后仍保留序列栅栏；最高 epoch 的集群解析与脑裂行为；按方向区分且已排序的 Bridge 能力发现；以及跨语言共享的 canonicalization / Registry 测试向量。|
 | 0.11 | 2026-07-12 | **NPS-CR-0010 Bridge Node 是双向的**：AnnounceFrame (0x30) 新增可选 `bridge_inbound_protocols`（string 数组，取值域同 `bridge_protocols`）—— 该节点**入向服务**（外部 → NPS）的外部协议集。`bridge_protocols` 保持其原有含义不变（**出向**桥接的协议集）。缺省/为空 ⇒ 不暴露入向面，即 alpha.16 之前的纯出向 Bridge Node。声明 `"bridge"` 的节点 MUST 保证两个数组至少一个非空。Additive / 向后兼容；无新增 NDP 错误码。|
 | 0.10 | 2026-07-05 | **NPS-CR-0009 多 Anchor 高可用**：AnnounceFrame (0x30) 新增可选 `cluster_epoch`（uint64，默认 1）—— 集群所有权栅栏。新增 §9 解析规则：对一个 `cluster_anchor` NID 解析出 `cluster_epoch` 最高的存活 Anchor；同 epoch 的脑裂 → `NDP-CLUSTER-SPLIT`；联邦 Registry 传播 `(cluster_anchor, cluster_epoch, active_nid)` 三元组并优先取更高 epoch（每集群单调）。新增一个错误码 `NDP-CLUSTER-SPLIT`。Additive / 向后兼容（单 Anchor 集群保持 epoch 1）。|

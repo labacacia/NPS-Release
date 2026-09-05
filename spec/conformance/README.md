@@ -26,33 +26,47 @@ other can decode for the cases listed.
 ```
 spec/conformance/
 ├── README.md                            # this file — vector format + consumption rules
+├── NODE-PROFILE-CASE-INVENTORY.md       # Node L1/L2 evidence map (not certification)
+├── NODE-PROFILE-CASE-INVENTORY.cn.md    # Chinese evidence-map companion
+├── node-profile-case-inventory.json     # machine-readable case/evidence inventory
+├── node-profile-implementation-manifests.json # advertised implementation manifest registry
+├── aaas-l2-requirement-disposition.json # current-contract L2-01..L2-07 strength/case/evidence map
+├── alpha19-status-reconciliation.json    # CR/RFC lifecycle, SDK coverage and question disposition
+├── alpha19-roadmap-history-reconciliation.json # dated roadmap claims, closures and current evidence
+├── alpha19-six-sdk-validation.json       # P19-5 six-language test-matrix evidence
+├── alpha19-resilience-validation.json    # P19-5 NativeAOT, race, restart and partition evidence
 ├── ncp/
 │   ├── anchor_id_vectors.json           # AnchorFrame anchor_id (RFC 8785 JCS + SHA-256)
 │   ├── binary_vector_payload_vectors.json # Tier-3 BinaryVector v1 payload layout + malformed-payload cases
 │   ├── encoding_policy_vectors.json     # Negotiated encoding policy + unnegotiated Tier-3 rejection
 │   ├── frame_header_vectors.json        # 4-byte / 8-byte fixed header encode + decode
 │   ├── hello_caps_vectors.json          # HelloFrame ↔ CapsFrame capability negotiation
-│   └── native_server_handshake_vectors.json # Native admission, bounds, and deterministic negotiation
+│   ├── native_server_handshake_vectors.json # Native admission, bounds, and deterministic negotiation
+│   └── runtime_hardening_vectors.json    # Alpha.19 keepalive, close, QUIC, and backpressure decisions
 ├── nip/
 │   ├── ident_signature_vectors.json     # IdentFrame Ed25519 signature canonical form
 │   ├── revocation_policy_vectors.json   # Ordered live-revocation and fail-open/closed policy
 │   ├── scope_matching_vectors.json      # NID scope.nodes glob match (positive + negative)
-│   └── signed_crl_vectors.json           # Deterministic signed CA revocation artifacts
+│   ├── signed_crl_vectors.json           # Deterministic signed CA revocation artifacts
+│   └── renewal_revocation_vectors.json  # Alpha.19 renewal, freshness, OCSP, and advisory decisions
 ├── nwp/
 │   ├── filter_dsl_vectors.json          # QueryFrame filter DSL parse + evaluate
 │   ├── action_frame_vectors.json        # ActionFrame: idempotency, async lifecycle, system.task.*, callback_url
 │   ├── llm_context_vectors.json         # Stateful LLM context: CAS, ownership, lifecycle, replay, usage
 │   ├── subscribe_frame_vectors.json     # SubscribeFrame: seq monotonicity, cursor, SSE wire, topology.stream events
 │   ├── query_frame_aggregation_vectors.json  # QueryFrame aggregation + topology.snapshot shape
+│   ├── alpha19_hardening_vectors.json   # Alpha.19 NWM normalization + renewable subscription leases
 │   ├── portable_node_server_vectors.json # HTTP/native Node admission and dispatch profile
 │   └── bridge_lifecycle_vectors.json     # Bridge preflight, SSRF, deadline, cancellation, correlation
 ├── ndp/
 │   ├── announce_canonicalization_vectors.json # Announce signed body + Ed25519 verification
-│   └── registry_consistency_vectors.json      # Registry convergence, expiry, epoch, and Bridge discovery
+│   ├── registry_consistency_vectors.json      # Registry convergence, expiry, epoch, and Bridge discovery
+│   └── recovery_fence_vectors.json       # Alpha.19 durable restart/partition fence decisions
 └── nop/
     ├── dag_validation_vectors.json      # DAG cycle detection + max-node + chain-depth
     ├── orchestrator_transcripts.json    # Deterministic DAG/retry/aggregation/saga sessions
-    └── runtime_security_vectors.json    # Callback, lease, delegation, SpawnSpec, lifecycle
+    ├── runtime_security_vectors.json    # Callback, lease, delegation, SpawnSpec, lifecycle
+    └── replay_retention_vectors.json    # Alpha.19 replay ledger, TTL, eviction, and aggregation
 ```
 
 `ndp/` carries the NDP 0.12 Registry Conformance profile. Its transcript
@@ -70,6 +84,42 @@ profile. It asserts stateless compatibility, owner-bound opaque IDs, atomic
 CAS/commit/abort, lifecycle tombstones, restart truth, idempotent stream replay,
 authorization re-checks, and measured token/wire accounting.
 
+The five `alpha19`/hardening files freeze the P19-1 design boundary before any
+six-SDK port begins. Together they cover 46 stable requirement IDs from NCP
+0.12, NWP 0.22, NIP 0.15, NDP 0.13, and NOP 0.10. The traceability matrix is
+[`docs/alpha19-p19-1-traceability.md`](../../docs/alpha19-p19-1-traceability.md).
+
+The root-level Node profile inventory maps every Node L1/L2 case heading to
+current reference-repository evidence and an explicit gap status. It is an
+evidence index, not a protocol vector set and not a certification claim; the
+normative service-tier profiles remain under `spec/services/conformance/`.
+`node-profile-implementation-manifests.json` separately enumerates every
+repository implementation that advertises profile or family evidence, the
+manifest that records its complete claimed scope, and whether certification is
+explicitly withheld.
+`aaas-l2-requirement-disposition.json` separately freezes each pre-alpha.20
+AaaS L2-01..L2-07 requirement, its normative strength, stable v0.7 case ID,
+reference component evidence and full-claim rule. Run
+`tools/scripts/check-aaas-l2-disposition.py` to verify the two language specs,
+self-attestation templates, evidence paths and all six SDK catalogs together.
+`alpha19-status-reconciliation.json` records current CR/RFC lifecycle,
+six-SDK evidence, resolved-question disposition and deliberately inactive
+future phases. Run `tools/scripts/check-alpha19-status-reconciliation.py` to
+verify indexes, bilingual RFC bodies, coverage tables and evidence paths.
+`alpha19-roadmap-history-reconciliation.json` records when superseded roadmap
+claims were true, what closed them and which current source/tests replace them.
+Run `tools/scripts/check-alpha19-roadmap-history.py` to verify the historical
+markers, six-SDK DNS evidence and closed PEN/daemon statements.
+`alpha19-six-sdk-validation.json` records the P19-5 full language-test matrix,
+exact commands, counts, exclusions and security observations. Run
+`tools/scripts/check-alpha19-six-sdk-validation.py` to validate the evidence
+shape and totals.
+`alpha19-resilience-validation.json` records the P19-5 NativeAOT and Go race
+results, repeated runner/npsd resilience cases, six-language NDP partition-fence
+matrix and explicit non-certification boundary. Run
+`tools/scripts/check-alpha19-resilience-validation.py` to validate the evidence
+shape and totals.
+
 ## Vector file format
 
 Every vector file is a single top-level JSON object with this shape:
@@ -83,6 +133,7 @@ Every vector file is a single top-level JSON object with this shape:
   "vectors": [
     {
       "id":          "<unique-within-file, e.g. \"ncp.anchor_id.001\">",
+      "requirement": "<normative requirement ID or comma-separated IDs>",
       "description": "<what this case proves>",
       "kind":        "positive | negative",
       "input":       { ... },
@@ -111,8 +162,10 @@ Conventions:
 Each SDK CI workflow MUST:
 
 1. Check out this directory (vendored, submodule, or fetched at CI start).
-2. For every `.json` file under `spec/conformance/`, load all vectors and run
-   the corresponding code path (encode/decode/sign/match/validate).
+2. For every protocol-vector `.json` file under the `ncp/`, `nip/`, `nwp/`,
+   `ndp/`, and `nop/` subdirectories, load all vectors and run the corresponding
+   code path (encode/decode/sign/match/validate). The root-level
+   `node-profile-case-inventory.json` is metadata and is not a vector file.
 3. For each `kind: "positive"` vector — assert SDK output bit-equals
    `expected`.
 4. For each `kind: "negative"` vector — assert the SDK rejects the input and
@@ -167,6 +220,30 @@ These vectors do **not** cover:
 - Performance benchmarks. Those live under `docs/benchmarks/`.
 - TLS / transport behaviour. Tested per-SDK against real TLS stacks.
 - Free-form fuzz corpora. SDKs SHOULD maintain their own.
+
+## Bilingual documentation gate
+
+The alpha.19 EN/CN contract is recorded in
+[`alpha19-bilingual-parity.json`](./alpha19-bilingual-parity.json). Run
+`tools/scripts/check-alpha19-bilingual-parity.py --release-root ../NPS-Release`
+from the repository root to validate every bilingual Markdown pair in both the
+source candidate and the published release snapshot.
+
+## Security validation gate
+
+The alpha.19 point-in-time dependency, workflow, and Git-history security
+record is [`alpha19-security-validation.json`](./alpha19-security-validation.json).
+Run `tools/scripts/check-alpha19-security-validation.py` to validate the
+recorded ecosystem results, residual-risk disclosure, and immutable action
+references. The live scanners are defined in `.github/workflows/security.yml`.
+
+## Package dry-run gate
+
+The reversible alpha.19 package-family record is
+[`alpha19-package-dry-run.json`](./alpha19-package-dry-run.json). Run
+`tools/scripts/check-alpha19-package-dry-run.py` to validate the NuGet, npm,
+PyPI, Maven, Go and Rust inventories, migrated workspace-path mappings, and
+the explicit `ready to sync` rather than `ready to tag` boundary.
 
 ---
 

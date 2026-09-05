@@ -4,11 +4,11 @@ English | [中文版](./NPS-3-NIP.cn.md)
 
 **Spec Number**: NPS-3
 **Status**: Proposed
-**Version**: 0.14
-**Date**: 2026-08-12
+**Version**: 0.15
+**Date**: 2026-08-31
 **Port**: 17433 (default, shared) / 17435 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11)
+**Depends-On**: NPS-1 (NCP v0.12)
 
 ---
 
@@ -530,6 +530,30 @@ Rules:
 4. Short-lived edge certs participate in TLS 1.3 session resumption (NPS-RFC-0006 §6.4): a
    resumption ticket MUST NOT outlive the certificate it was issued under.
 
+### 6.2 Alpha.19 renewal interoperability profile (NIP v0.15)
+
+Shared cases live in
+[`renewal_revocation_vectors.json`](conformance/nip/renewal_revocation_vectors.json).
+
+1. **NIP-P19-01 — renewal window.** Standard certificates open renewal seven
+   days before `not_after`; short-lived edge certificates open at 25% of their
+   original validity remaining. The boundary is inclusive. Earlier requests
+   return `NIP-CA-RENEWAL-TOO-EARLY` without changing state.
+2. **NIP-P19-02 — identity continuity.** Renewal authenticates the current,
+   unexpired certificate and preserves NID, subject, lineage, assurance level,
+   capabilities, and scope unless an Operator-authorized separate mutation has
+   already narrowed them. Renewal MUST NOT expand authority.
+3. **NIP-P19-03 — atomic issue.** A successful renewal commits a new unique
+   serial and audit record before returning it. The old certificate remains
+   independently valid until its own expiry or revocation.
+4. **NIP-P19-04 — idempotency.** A renewal request carries an idempotency key.
+   Repeating the same key and canonical request returns the same issued serial;
+   reusing it with different content is `NIP-CA-SERIAL-DUPLICATE` and never
+   issues another certificate.
+5. **NIP-P19-05 — resumption bound.** TLS session tickets and cached admission
+   bound to the old certificate expire no later than that certificate and are
+   never extended merely because a replacement was issued.
+
 ---
 
 ## 7. Verification Flow
@@ -691,6 +715,28 @@ same CA state and `issued_at` produce a deterministic artifact body.
 This profile adds one administrative HTTP endpoint and no frame field or error
 code.
 
+### 7.7 Alpha.19 revocation freshness and advisory profile (NIP v0.15)
+
+6. **NIP-P19-06 — freshness.** A CRL, cache entry, staple, or OCSP result is
+   current only while `this_update <= now < next_update`. At the boundary it is
+   stale and cannot satisfy `revocation_mode = required`.
+7. **NIP-P19-07 — stale fallback.** A stale source is skipped in the fixed §7.6
+   source order when a later configured source can answer. If no later source
+   produces a current definitive result, verification fails with
+   `NIP-REVOCATION-STATE-STALE`.
+8. **NIP-P19-08 — unknown and timeout.** A definitive OCSP `unknown` result
+   fails with `NIP-OCSP-UNKNOWN`. Timeout, transport failure, malformed data,
+   and non-success HTTP remain `NIP-OCSP-UNAVAILABLE`. `ocsp_fail_open` never
+   converts `revoked`, `unknown`, stale, or invalidly signed data into success.
+9. **NIP-P19-09 — cache replacement.** A current result may replace an older
+   result for the same issuer/serial only after signature and interval
+   validation. A response with an earlier `this_update` cannot roll back cache
+   state.
+10. **NIP-P19-10 — Phase-3 advisory.** Advisory evaluation returns a stable,
+    sorted list of the exact Phase-3 checks that would reject an IdentFrame,
+    including error code and field. It MUST NOT change `phase3_enforcement`,
+    mutate trust/revocation state, or reject the current Phase 1–2 request.
+
 ---
 
 ## 8. NIP CA Server OSS API
@@ -731,7 +777,7 @@ code.
 }
 ```
 
-### 8.1 Registration Authority (RA) endpoints (NPS-CR-0005, stub)
+### 8.1 Registration Authority (RA) endpoints (NPS-CR-0005, Implemented)
 
 NPS-CR-0005 introduces a three-tier Registration Authority (RA) model that admits agents into the CA along policy-driven paths *in addition to* the Operator-credential `POST /v1/agents/register` flow above. The default tier remains `operator_only` — the new tiers are opt-in via `NipCaOptions.EnrollmentTier` and add the following endpoints:
 
@@ -742,7 +788,7 @@ NPS-CR-0005 introduces a three-tier Registration Authority (RA) model that admit
 | POST | `/v1/enrollment/pending/{id}/approve` | Operator Cert | (NPS-CR-0005, Tier 3) Approve a pending request and issue the IdentFrame. |
 | POST | `/v1/enrollment/pending/{id}/reject` | Operator Cert | (NPS-CR-0005, Tier 3) Reject a pending request with an operator-supplied reason. |
 
-The three tiers (allowlist / bootstrap token / pending queue), the new error codes (`NIP-RA-TOKEN-INVALID`, `NIP-RA-TOKEN-EXPIRED`, `NIP-RA-NID-NOT-ALLOWED`, `NIP-RA-PENDING-REJECTED`), and the `NipCaOptions.EnrollmentTier` selector are specified in full by **[NPS-CR-0005](./cr/NPS-CR-0005-nip-ca-ra-model.md)**. The body, request/response shapes, and verification flow for these endpoints will land in this section once CR-0005 reaches Implemented.
+The three tiers (allowlist / bootstrap token / pending queue), the error codes (`NIP-RA-TOKEN-INVALID`, `NIP-RA-TOKEN-EXPIRED`, `NIP-RA-NID-NOT-ALLOWED`, `NIP-RA-PENDING-REJECTED`), request/response shapes, verification flow, and `NipCaOptions.EnrollmentTier` selector are normatively specified by **[NPS-CR-0005](./cr/NPS-CR-0005-nip-ca-ra-model.md)** and implemented by all six SDK CA surfaces. This section is an API index, not a future-work placeholder.
 
 ---
 
@@ -764,6 +810,8 @@ The three tiers (allowlist / bootstrap token / pending queue), the new error cod
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | Requested scope exceeds the parent scope |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP service temporarily unavailable |
 | `NIP-OCSP-STAPLE-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | `IdentFrame.ocsp_staple` `nextUpdate` has elapsed — staple is stale; Agent must refresh and resend (NIP v0.9 §5.1.4) |
+| `NIP-OCSP-UNKNOWN` | `NPS-AUTH-UNAUTHENTICATED` | A valid OCSP response cannot establish status for the requested issuer/serial and therefore fails closed |
+| `NIP-REVOCATION-STATE-STALE` | `NPS-SERVER-UNAVAILABLE` | No configured revocation source produced a current result; stale state cannot satisfy required mode |
 | `NIP-CERT-NODE-ROLES-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.node_roles` does not match the `id-nps-node-roles` X.509 extension; Phase 3 enforcement (NIP v0.10) |
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame signature or format is invalid — see §5.2 |
 | `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` is in the past — see §5.2 |
@@ -807,6 +855,7 @@ At every link in the delegation chain, scope MUST NOT exceed that of its parent.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.15 | 2026-08-31 | Alpha.19 renewal/revocation hardening: inclusive standard/short-lived renewal windows, identity continuity, atomic/idempotent issuance, old-cert ticket bounds, explicit revocation freshness and stale fallback, fail-closed OCSP unknown, rollback-safe cache replacement, deterministic non-enforcing Phase-3 advisory output, and shared vectors. Corrects §8.1 CR-0005 RA status from stub to Implemented. Depends-On advances to NCP 0.12. |
 | 0.14 | 2026-08-12 | Added standard `llm:context` capability for the NWP §7.6 stateful LLM context lifecycle and admitted it into TrustFrame `trust_scope`. Completion mutations also require `llm:complete`; owner-authorized status/release remain available with `llm:context` alone. Context identifiers are locators, not bearer authorization. No new frame field or NIP error code. |
 | 0.13 | 2026-07-29 | Added §7.6 Portable CA and Verification Profile: deterministic verification/source order, `if_configured` and fail-closed `required` revocation modes, signed deterministic CRL semantics, full CA-store enumeration, and authenticated `GET /v1/certificates`. Added shared revocation-policy and signed-CRL vectors. No new frame field or error code. |
 | 0.12 | 2026-07-23 | New §7.5 **Phase-3 enforcement mode**: a receiver-side `phase3_enforcement` verification-policy flag that turns the Phase-1–2 opt-in CA-attestation checks (assurance / node_roles / capabilities / OCSP-staple) into hard MUSTs ahead of the `v1.0.0-beta.1` flag day — so the flag day is a default change, not a code change. Role/capability checks are subset checks (no un-attested claims); each applies only when the corresponding cert extension is present (self-declared NIDs unaffected). One new error code `NIP-CERT-CAPABILITIES-EXCEEDED` (`NPS-AUTH-FORBIDDEN`). Additive / backward-compatible. (Renumbered from the edge-line 0.11 — the released alpha.16 line had independently used 0.11 for the LLM capability strings below.) |

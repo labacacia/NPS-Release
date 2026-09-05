@@ -330,9 +330,9 @@ status lookup 的 context-store interface。内存 store 足以声明 `connectio
 
 ## 10. 合规计划
 
-候选规范变更随 NWP 0.21 新增
-`spec/conformance/nwp/llm_context_vectors.json`。下方保留稳定 case ID；六语言
-SDK 全部执行该文件后，本 CR 才能从 Draft 进入 Implemented。
+已实现的规范变更随 NWP 0.21 新增
+`spec/conformance/nwp/llm_context_vectors.json`。下方列出稳定 case ID；六语言
+SDK 已全部执行该文件，完成证据记录于表后与 §13。
 
 | ID | 必须判定 |
 |---|---|
@@ -401,7 +401,7 @@ alpha.18 源码项目验证官方 DTO usage、并发乱序 unary correlation，�
 响应 ID 的严格拒绝。同步到 NPS-Release 与 standalone SDK repo 属于 release workflow，
 不纳入本 CR 的实现 commit。
 
-## 14. 建议 CHANGELOG 文案
+## 14. CHANGELOG 文案
 
 > **NWP 有状态 LLM context（NPS-CR-0011，Implemented）**：为 `llm.complete` 增加
 > opt-in context/delta contract、owner-bound 不透明 context ID、CAS 版本、

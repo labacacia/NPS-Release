@@ -1,0 +1,227 @@
+{
+  "schema_version": 1,
+  "candidate": "1.0.0-alpha.19-debt-closure",
+  "scope": "Reference-repository evidence for every case heading in NPS-Node-L1 v0.1 and NPS-Node-L2 v0.7. This is an inventory, not a certification manifest.",
+  "taxonomy": {
+    "executable_iut": "A runnable test exercises the case against the named implementation boundary.",
+    "component_executable": "Runnable component tests cover the behavior, but not the suite's complete paired-peer IUT fixture.",
+    "partial": "Some acceptance criteria have executable evidence; at least one criterion or fixture remains unexecuted.",
+    "catalog_only": "The case is specified and catalogued but has no case-complete executable evidence.",
+    "not_applicable_reference_iut": "The optional capability is explicitly declined by the reference IUT; this is not a global exemption."
+  },
+  "profiles": {
+    "node_l1": {
+      "profile": "NPS-Node-L1",
+      "suite_version": "0.1",
+      "spec": "spec/services/conformance/NPS-Node-L1.md",
+      "reference_iut": "npsd",
+      "spec_case_count": 20,
+      "catalog_case_count": 20,
+      "summary": {
+        "executable_iut": 8,
+        "component_executable": 0,
+        "partial": 6,
+        "catalog_only": 5,
+        "not_applicable_reference_iut": 1
+      },
+      "groups": [
+        {
+          "status": "executable_iut",
+          "ids": [
+            "TC-N1-NCP-02",
+            "TC-N1-NCP-04",
+            "TC-N1-NIP-04",
+            "TC-N1-NDP-01",
+            "TC-N1-NDP-02",
+            "TC-N1-NWP-01",
+            "TC-N1-NWP-02",
+            "TC-N1-NWP-03"
+          ],
+          "evidence": [
+            "impl/dotnet/tests/NPS.Tests/Daemons/Npsd/NativeNcpTests.cs",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Npsd/SubNidIssuanceTests.cs",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Npsd/NdpAnnouncementTests.cs",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Npsd/InboxTests.cs"
+          ]
+        },
+        {
+          "status": "partial",
+          "ids": ["TC-N1-NCP-01", "TC-N1-NCP-03"],
+          "evidence": [
+            "impl/dotnet/tests/NPS.Tests/Ncp/FrameCodecTests.cs",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Npsd/NativeNcpTests.cs"
+          ],
+          "gap": "No general-purpose all-L1-frame echo IUT exists, and the literal default-port/non-loopback process fixture has not run."
+        },
+        {
+          "status": "partial",
+          "ids": ["TC-N1-NIP-01", "TC-N1-NIP-02", "TC-N1-NIP-03"],
+          "evidence": [
+            "tools/daemons/npsd/RootIdentity.cs",
+            "impl/dotnet/tests/NPS.Tests/Nip/NipIdentVerifierTests.cs",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Npsd/SubNidIssuanceTests.cs"
+          ],
+          "gap": "Identity primitives and issued sub-NIDs are tested, but the full root-key permission/restart, peer Ident exchange, and node-NID IUT cases are not mapped 1:1."
+        },
+        {
+          "status": "partial",
+          "ids": ["TC-N1-NDP-03"],
+          "evidence": [
+            "impl/dotnet/tests/NPS.Tests/Daemons/Npsd/NdpAnnouncementTests.cs#Signed_announce_is_accepted_and_resolved_by_local_registry",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Registry/RegistryClusterEndpointTests.cs#Resolve_StillResolvesPlainNwpTargets"
+          ],
+          "gap": "Known-target HTTP resolution is integrated, but the paired-peer ResolveFrame plus unknown-target ErrorFrame case is not executed as written."
+        },
+        {
+          "status": "catalog_only",
+          "ids": [
+            "TC-N1-NDP-04",
+            "TC-N1-NWP-04",
+            "TC-N1-OBS-01",
+            "TC-N1-OBS-02",
+            "TC-N1-OBS-03"
+          ],
+          "gap": "Graph snapshot, the specified 1-vCPU/1-GB performance run, and the three structured frame-log cases have no case-complete executable harness."
+        },
+        {
+          "status": "not_applicable_reference_iut",
+          "ids": ["TC-N1-NWP-05"],
+          "evidence": [
+            "tools/daemons/npsd/conformance/NPS-NODE-L1-MANIFEST.json",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Npsd/InboxTests.cs#Health_advertises_durable_ephemeral_pull_and_declines_resident_push"
+          ],
+          "gap": "Optional resident/hybrid push is deliberately declined by the npsd ephemeral-pull profile."
+        }
+      ]
+    },
+    "node_l2": {
+      "profile": "NPS-Node-L2",
+      "suite_version": "0.7",
+      "spec": "spec/services/conformance/NPS-Node-L2.md",
+      "reference_iut": "family-specific: Anchor middleware, nps-ingress, Bridge adapters, and nps-registry",
+      "spec_case_count": 38,
+      "catalog_case_count": 38,
+      "summary": {
+        "executable_iut": 6,
+        "component_executable": 16,
+        "partial": 11,
+        "catalog_only": 5,
+        "not_applicable_reference_iut": 0
+      },
+      "groups": [
+        {
+          "status": "component_executable",
+          "ids": [
+            "TC-N2-AaaS-01",
+            "TC-N2-AaaS-02",
+            "TC-N2-AaaS-03",
+            "TC-N2-AaaS-04",
+            "TC-N2-AaaS-05",
+            "TC-N2-AaaS-06"
+          ],
+          "evidence": [
+            "spec/conformance/aaas-l2-requirement-disposition.json",
+            "spec/conformance/nop/orchestrator_transcripts.json",
+            "spec/conformance/nwp/action_frame_vectors.json"
+          ],
+          "gap": "Reusable SDK components execute the mapped behavior, but no assembled AaaS deployment is certified by component evidence alone."
+        },
+        {
+          "status": "partial",
+          "ids": ["TC-N2-AaaS-07"],
+          "evidence": ["spec/conformance/aaas-l2-requirement-disposition.json"],
+          "gap": "All six SDKs round-trip AlignStream flow-control fields, but no case-complete runtime exercises sender pause, receiver restore, ACK retention and NAK replay/eviction."
+        },
+        {
+          "status": "component_executable",
+          "ids": [
+            "TC-N2-AnchorTopo-01",
+            "TC-N2-AnchorTopo-02",
+            "TC-N2-AnchorTopo-03",
+            "TC-N2-AnchorTopo-04",
+            "TC-N2-AnchorTopo-06",
+            "TC-N2-AnchorTopo-08",
+            "TC-N2-AnchorStream-03",
+            "TC-N2-AnchorStream-04"
+          ],
+          "evidence": ["impl/dotnet/tests/NPS.Tests/Nwp/Anchor/AnchorTopologyTests.cs"],
+          "gap": "The in-memory Anchor middleware and TestServer behavior execute, but not the complete external paired-peer deployment fixture."
+        },
+        {
+          "status": "partial",
+          "ids": [
+            "TC-N2-AnchorStream-01",
+            "TC-N2-AnchorStream-02",
+            "TC-N2-AnchorTopo-07"
+          ],
+          "evidence": ["impl/dotnet/tests/NPS.Tests/Nwp/Anchor/AnchorTopologyTests.cs"],
+          "gap": "Join/leave are injected directly rather than through Announce/TTL expiry, and filter rejection is exercised on stream rather than the specified snapshot path."
+        },
+        {
+          "status": "catalog_only",
+          "ids": ["TC-N2-AnchorTopo-05"],
+          "gap": "No executable test exceeds the configured topology depth cap."
+        },
+        {
+          "status": "executable_iut",
+          "ids": ["TC-N2-Tls-01", "TC-N2-Tls-02", "TC-N2-Tls-03", "TC-N2-Tls-04"],
+          "evidence": [
+            "tools/daemons/nps-ingress/tests/IngressTlsConformanceTests.cs",
+            "tools/daemons/nps-ingress/conformance/NPS-NODE-L2-TLS-EVIDENCE.json"
+          ]
+        },
+        {
+          "status": "partial",
+          "ids": [
+            "TC-N2-BridgeIn-01",
+            "TC-N2-BridgeIn-02",
+            "TC-N2-BridgeIn-03",
+            "TC-N2-BridgeIn-04",
+            "TC-N2-BridgeIn-05"
+          ],
+          "evidence": [
+            "impl/dotnet/tests/NPS.Tests/Nwp/BridgeNodeTests.cs",
+            "compat/mcp-ingress/tests/LabAcacia.McpIngress.Tests/McpIngressTests.cs",
+          "compat/grpc-ingress/tests/LabAcacia.GrpcIngress.Tests/NwpIngressServiceTests.cs",
+            "compat/a2a-ingress/tests/LabAcacia.A2aIngress.Tests/A2aIngressTests.cs"
+          ],
+          "gap": "Adapters and important paths execute, but no tests carry these conformance IDs and several all-criteria fixtures (notably ambiguity and the complete foreign-error matrix) remain incomplete."
+        },
+        {
+          "status": "catalog_only",
+          "ids": ["TC-N2-BridgeIn-06"],
+          "gap": "No executable case proves undeclared inbound protocol or direction refusal with NWP-BRIDGE-DIRECTION-UNSUPPORTED."
+        },
+        {
+          "status": "component_executable",
+          "ids": ["TC-N2-HA-02", "TC-N2-HA-04"],
+          "evidence": ["impl/dotnet/tests/NPS.Tests/Nwp/NwpAnchorFailoverTests.cs"],
+          "gap": "Wire factories execute, but no multi-Anchor failover/quorum deployment is driven."
+        },
+        {
+          "status": "partial",
+          "ids": ["TC-N2-HA-01", "TC-N2-HA-09"],
+          "evidence": [
+            "impl/dotnet/tests/NPS.Tests/Nwp/NwpAnchorFailoverTests.cs",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Registry/RegistryClusterEndpointTests.cs#Announce_WithoutClusterEpoch_DefaultsToOne"
+          ],
+          "gap": "Epoch serialization/defaulting executes, but every topology surface and the absence of HA events for a single Anchor are not proven together."
+        },
+        {
+          "status": "executable_iut",
+          "ids": ["TC-N2-HA-07", "TC-N2-HA-08"],
+          "evidence": [
+            "impl/dotnet/tests/NPS.Tests/Daemons/Registry/RegistryClusterEndpointTests.cs#ClusterResolve_ReturnsHighestEpochAnchor",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Registry/RegistryClusterEndpointTests.cs#ClusterResolve_EqualEpoch_Returns409ClusterSplit",
+            "impl/dotnet/tests/NPS.Tests/Daemons/Registry/SqliteNdpRegistryClusterTests.cs"
+          ]
+        },
+        {
+          "status": "catalog_only",
+          "ids": ["TC-N2-HA-03", "TC-N2-HA-05", "TC-N2-HA-06"],
+          "gap": "Terminal failover, standby write rejection, and stale-leader epoch fencing have constants/types but no executable IUT behavior."
+        }
+      ]
+    }
+  }
+}

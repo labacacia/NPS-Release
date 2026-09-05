@@ -1,11 +1,11 @@
 中文 | [English](./bilingual-parity.md)
 
-# 已发布快照双语一致性
+# 发行候选双语一致性
 
 ## 范围
 
-本记录覆盖已发布的 `1.0.0-alpha.18` 快照。它只修复翻译遗漏，不导入尚未
-发布的 alpha.19 协议版本，也不改变 release metadata。
+本记录覆盖从 NPS-Dev 物化的、经审查 alpha.19 规范候选。在最后的协调版本
+升级之前，release metadata 仍保持在已发布的 `1.0.0-alpha.18` 基线。
 
 ## 已对齐表面
 
@@ -21,5 +21,5 @@ heading 结构、code-fence language、技术标识符、Version header 与 Unic
 
 ## 结果
 
-40 个已发布快照文档对全部对齐。套件仍为 `1.0.0-alpha.18`；未执行 alpha.19
-物化或发布。
+46 个发行仓文档对全部对齐。alpha.19 规范已物化供审查；套件仍为
+`1.0.0-alpha.18`，且未执行 alpha.19 tag、package、image、registry upload 或 release publication。

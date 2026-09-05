@@ -2,8 +2,8 @@
 
 # NPS 统一错误码命名空间
 
-**Version**: 1.9
-**Date**: 2026-08-12
+**Version**: 1.10
+**Date**: 2026-08-31
 
 错误码格式：`{PROTOCOL}-{CATEGORY}-{DETAIL}`
 
@@ -41,6 +41,7 @@ NPS 采用两级错误体系：
 | `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | 原生模式连接首 8 字节非常量前导 `b"NPS/1.0\n"`；服务端静默关闭连接，不返回 ErrorFrame（NPS-RFC-0001） |
 | `NCP-NID-MISMATCH` | `NPS-AUTH-UNAUTHENTICATED` | 原生模式 mTLS 客户端证书 NID 与会话 `IdentFrame` NID 不一致，或恢复会话的证书 NID 与票据绑定 NID 不一致（NPS-RFC-0006 §6.3–§6.4） |
 | `NCP-KEEPALIVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | 在 3 × `ping_interval_ms` 内未收到任何帧（含 NopFrame）；连接将被关闭（NCP v0.8 §7.6） |
+| `NCP-EARLY-DATA-REJECTED` | `NPS-PROTO-VERSION-INCOMPATIBLE` | NPS 应用数据出现在 QUIC/TLS 0-RTT early data 中，并在握手确认前被拒绝（NCP v0.12 §7.7）|
 
 ---
 
@@ -85,6 +86,8 @@ NPS 采用两级错误体系：
 | `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点不支持带 filter 的订阅 |
 | `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | 订阅流因底层数据源中断而终止 |
 | `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | resume_from_seq 超出节点缓冲范围（推荐缓冲 10 分钟或 10,000 条）；Agent 须全量重查后重新订阅 |
+| `NWP-SUBSCRIBE-LEASE-INVALID` | `NPS-CLIENT-BAD-PARAM` | 可续订订阅 operation 或 lease/policy bounds 非法（NWP v0.22 §13.4）|
+| `NWP-SUBSCRIBE-LEASE-EXPIRED` | `NPS-CLIENT-GONE` | 订阅 lease 已到 deadline，不能 renew 或复活（NWP v0.22 §13.4）|
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | 响应将超过 X-NWP-Budget 限制 |
 | `NWP-CGN-LIMIT-EXCEEDED` | `NPS-CLIENT-REQUEST-TOO-LARGE` | 响应会超过有效 CGN 预算 `min(cgn_limit, X-NWP-Budget)`，且无法继续裁剪；响应 SHOULD 包含 `effective_budget` 与 `estimated_cgn`（token-budget.md §7.4） |
 | `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | X-NWP-Depth 超过节点允许的 max_depth |
@@ -144,6 +147,8 @@ NPS 采用两级错误体系：
 | `NIP-CA-JWS-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | group-JWS session 自签发请求的签名、protected header 或 payload 无效（NPS-CR-0003） |
 | `NIP-CA-JWS-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | group-JWS session 自签发请求已超过允许的时间窗口（NPS-CR-0003） |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP 服务暂时不可用 |
+| `NIP-OCSP-UNKNOWN` | `NPS-AUTH-UNAUTHENTICATED` | 合法 OCSP response 无法确认请求的 issuer/serial 状态，因此 fail closed（NIP v0.15 §7.7）|
+| `NIP-REVOCATION-STATE-STALE` | `NPS-SERVER-UNAVAILABLE` | 没有已配置吊销源产出 current result；stale state 不能满足 required mode（NIP v0.15 §7.7）|
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame 签名或格式不合法 —— 见 NPS-3 §5.2 |
 | `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` 已过期 —— 见 NPS-3 §5.2 |
 | `NIP-TRUST-FRAME-GRANTOR-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `grantor_nid` 自身的 CA 证书已被吊销或过期 —— 见 NPS-3 §5.2 |
@@ -191,6 +196,8 @@ NPS 采用两级错误体系：
 | `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame 的签发者（签名 CA）不在当前注册表 profile 的签发者白名单中（见 NPS-4 §7.3）|
 | `NDP-CA-ATTEST-REQUIRED` | `NPS-AUTH-UNAUTHENTICATED` | 当前注册表 profile 要求 CA 背书的 NID，但 AnnounceFrame 证书链未锚定到配置的信任根（见 NPS-4 §7.3）|
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry 暂时不可用 |
+| `NDP-STATE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | 要求持久化的 Registry 无法持久读取或提交恢复状态（NDP v0.13 §7.8）|
+| `NDP-STATE-CORRUPT` | `NPS-SERVER-INTERNAL` | 持久化 Registry state 未通过 schema、checksum 或单调 fence 校验（NDP v0.13 §7.8）|
 
 ---
 
@@ -226,6 +233,9 @@ NPS 采用两级错误体系：
 | `NOP-CALLBACK-INVALID` | `NPS-CLIENT-BAD-PARAM` | callback URL 未通过 scheme、user-info、DNS、公网地址或重定向校验（NOP v0.9）|
 | `NOP-CALLBACK-HMAC-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | callback HMAC 格式错误，或与精确原始 body 不匹配（NOP v0.9）|
 | `NOP-TASK-RESULT-EXPIRED` | `NPS-CLIENT-NOT-FOUND` | 任务结果超过 `result_ttl_seconds` 后不再保留（NOP v0.7）|
+| `NOP-REPLAY-CONFLICT` | `NPS-CLIENT-CONFLICT` | 同一 `(caller_nid, task_id)` 被不同的 TaskFrame 不可变内容复用（NOP v0.10 §3.5.6）|
+| `NOP-REPLAY-LIMIT` | `NPS-LIMIT-RESOURCE` | replay ledger 已满，且没有可安全移除的过期 tombstone 或 terminal record（NOP v0.10 §3.5.6）|
+| `NOP-AGGREGATION-INVALID` | `NPS-CLIENT-BAD-PARAM` | 聚合输入违反所选 strategy，例如 `weighted_first_k` 缺少有限数值 score（NOP v0.10 §3.5.6）|
 | `NOP-STREAM-NAK-UNRESOLVABLE` | `NPS-STREAM-SEQ-GAP` | NAK 请求的帧已从发送方缓冲区淘汰（NOP v0.7）|
 
 ---

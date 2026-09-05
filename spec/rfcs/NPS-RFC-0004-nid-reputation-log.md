@@ -7,7 +7,7 @@ English | [中文版](./NPS-RFC-0004-nid-reputation-log.cn.md)
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: Ori Lynn (pre-1.0 fast-track per `spec/cr/README.md`)
 **Created**: 2026-04-21
-**Last-Updated**: 2026-05-28
+**Last-Updated**: 2026-09-05
 **Accepted**: 2026-04-26 (pre-1.0 fast-track; see `spec/cr/README.md`)
 **Activated**: 2026-05-28 (v1.0.0-alpha.9 — entry wire format, .NET `ReputationLogClient`, and `DefaultReputationPolicyEvaluator` log-query path all shipped)
 **Supersedes**: _none_
@@ -418,12 +418,16 @@ A single LabAcacia-operated registry.
 
 | SDK | Owner | Status | Notes |
 |-----|-------|--------|-------|
-| .NET | Ori Lynn | ✅ Phase 1+2 done; Phase 3 (gossip) in alpha.5 | Reference log operator also in .NET (`nps-ledger`) |
-| Python | _TBD_ | Phase 1+2 pending | Client only |
-| TypeScript | _TBD_ | Phase 1+2 pending | — |
-| Java | _TBD_ | Phase 1+2 pending | — |
-| Rust | _TBD_ | Phase 1+2 pending | — |
-| Go | _TBD_ | Phase 1+2 pending | — |
+| .NET | NPS SDK maintainers | Implemented — SDK client/proofs + operator Phases 1–3 | `NPS.NIP.Reputation`; reference `nps-ledger` operator and gossip |
+| Python | NPS SDK maintainers | Implemented — SDK client/proof helpers | No log-operator claim |
+| TypeScript | NPS SDK maintainers | Implemented — SDK client/proof helpers | No log-operator claim |
+| Java | NPS SDK maintainers | Implemented — SDK client/proof helpers | No log-operator claim |
+| Rust | NPS SDK maintainers | Implemented — SDK client/proof helpers | No log-operator claim |
+| Go | NPS SDK maintainers | Implemented — SDK client/proof helpers | No log-operator claim |
+
+The SDK rows cover portable wire/client/proof behavior. They do not claim six
+independent log-operator implementations; `nps-ledger` remains the reference
+operator evidence.
 
 ### 8.3 Test Plan
 
@@ -464,18 +468,20 @@ None yet. Before `Accepted`:
 
 ---
 
-## 10. Open Questions
+## 10. Resolved Questions
 
 - [x] **OQ-1**: STH gossip protocol — resolved (v1.0-alpha.5): lightweight NPS-native
   variant (analogous to RFC 9162 §8.1.4); see §4.5 for full design.
-- [ ] **OQ-2**: Dispute mechanism — can a `subject_nid` post a
-  `dispute` entry against an allegation about themselves? Default:
-  yes, as `incident: self-dispute` referencing the original `seq`.
-- [ ] **OQ-3**: Does the log store evidence blobs or only hashes?
-  Default: hashes only; blobs hosted by the issuer at `evidence_ref`.
-- [ ] **OQ-4**: Entry TTL / expiration. GDPR-style "right to be
-  forgotten" interaction? Default: no expiration; Merkle proofs
-  require retention. Regulatory handling deferred.
+- [x] **OQ-2 — disputes use the existing extensible entry contract.** A subject
+  may submit a signed `contract-dispute` entry and point `evidence_ref` at the
+  challenged record/evidence. No `self-dispute` wire enum is added in this RFC.
+- [x] **OQ-3 — hashes and references only.** The log stores the signed entry,
+  optional `evidence_sha256`, and optional `evidence_ref`; it does not host
+  evidence blobs.
+- [x] **OQ-4 — no protocol TTL.** Append-only entries do not expire because STH
+  and inclusion-proof validity requires retention. Jurisdiction-specific
+  redaction or access policy is deployment/legal work and cannot rewrite the
+  signed Merkle history under this RFC.
 
 ---
 
@@ -504,6 +510,7 @@ None yet. Before `Accepted`:
 
 | Date | Author | Change |
 |------|--------|--------|
+| 2026-09-05 | NPS maintainers | Reconciled six-SDK client/proof coverage without claiming six operators; resolved OQ-2..04 against the extensible entry, evidence-reference and append-only retention contracts. |
 | 2026-04-21 | Ori Lynn | Initial draft |
 | 2026-04-26 | Ori Lynn | Accepted via pre-1.0 fast-track. Phase 1 spec changes landed: NPS-3 §5.1.2 Reputation Log Entry (12-field signed JSON, 8-value `incident` enum, 5-step `severity` enum, JCS dual-signature rule), error codes `NIP-REPUTATION-ENTRY-INVALID` / `NIP-REPUTATION-LOG-UNREACHABLE` / `NWP-AUTH-REPUTATION-BLOCKED`, new `NPS-DOWNSTREAM-UNAVAILABLE` status code. Phase 1 .NET reference types landed under `NPS.NIP.Reputation.*`. Phase 2 (Merkle tree + STH + inclusion proofs + NDP `/.nid/reputation` discovery + NWM `reputation_policy` parsing) deferred to v1.0-alpha.4 per RFC §8.1. Phase 3 (default policy in AaaS Profile L2 + STH gossip) deferred to alpha.11+. |
 | 2026-05-01 | Ori Lynn | Phase 3 spec landed (v1.0-alpha.5): §4.5 STH Gossip Protocol (30s push cycle, `/v1/log/gossip/sth` endpoint, monotonicity + consistency-proof verification, fork detection); OQ-1 resolved; two new error codes `NIP-REPUTATION-GOSSIP-FORK` / `NIP-REPUTATION-GOSSIP-SIG-INVALID`; AaaS-Profile L2 default `reputation_policy` added in `NPS-AaaS-Profile.md`. Phase 3 .NET reference implementation in `nps-ledger`. |

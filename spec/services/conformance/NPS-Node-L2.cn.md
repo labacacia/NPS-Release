@@ -3,18 +3,16 @@
 # NPS-Node-L2 合规测试套件
 
 **Status**: Draft
-**Version**: 0.5
-**Date**: 2026-08-01
+**Version**: 0.7
+**Date**: 2026-09-05
 **Applies-To**: [NPS-AaaS-Profile §4.3](../NPS-AaaS-Profile.cn.md) — Level 2 Standard
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
 
-> 本文档定义 Anchor Node 实现声明 NPS-AaaS-Profile L2 合规所 MUST 通过的测试用例，
-> 当前版本仅覆盖 [NPS-CR-0002](../../cr/NPS-CR-0002-anchor-topology-queries.md) 引入的
-> **L2-08 拓扑读取** 要求。
->
-> 其余 L2 要求（L2-01 至 L2-07 —— NOP 编排、OpenTelemetry 追踪、CGN Token Budget、
-> 预检、重试 / 超时、异步 Action、AlignStream 背压）的测试用例由后续 CR 跟进，
-> **不在本文档范围**。后续 CR 将在本文件追加 §3.x 子节收录。
+> 本文定义部署声明 NPS-AaaS-Profile L2 合规前必须处置的测试用例。它覆盖当前
+> L2-01..L2-08 服务合同，以及按角色适用的 transport、Bridge 与 HA 用例族。
+> 历史上把 L2-01..L2-07 整体延期是无效的：这些要求已经存在于 alpha.20 之前的
+> 规范 Profile。其 alpha.19 冻结处置见
+> [`aaas-l2-requirement-disposition.json`](../../conformance/aaas-l2-requirement-disposition.json)。
 
 ---
 
@@ -26,7 +24,8 @@
    （`impl/dotnet/src/NPS.NWP.Anchor/` 下的 `AnchorNodeClient`，CR-0002 §4）。
 4. 将 IUT 与 peer 配对，逐条跑完 §3 所有测试用例。
 5. 用例通过当且仅当 **全部** 验收条件成立。
-6. §3 全部用例 MUST 通过，方可声明对应的 L2 要求（本文件即 L2-08）；不接受部分声明。
+6. 完整声明要求 §3 每个强制 case 都通过。L2-06/07 仅可采用有记录的 SHOULD
+   例外；按角色适用的 family 遵循 §4。
 7. 将 [`NPS-NODE-L2-CERTIFIED.md`](./NPS-NODE-L2-CERTIFIED.md) 复制到 IUT 仓库根目录，
    填完每个字段，用 IUT 的 root 私钥对声明块签名。
 
@@ -226,16 +225,20 @@ NCP v0.8 §7.5 新增的传输安全准入门。
 **Req**：NPS-RFC-0006 §6.3
 **前置**：IUT 配置了信任锚；Peer 持有链到该信任锚的 NIP 叶证书。
 **操作**：
-1. Peer 携带有效客户端证书连接，并发送 preamble + HelloFrame + IdentFrame。
+1. Peer 携带有效客户端证书连接，并发送 preamble + HelloFrame。
+2. Peer 等待 IUT 转发后端 CapsFrame，再按 NPS-1 §2.6 发送 IdentFrame。
 **通过条件**：
 - 证书验证到信任锚；证书主体 NID 绑定到会话。
-- 终结后的 NCP 字节流被原样代理到后端（preamble + 帧重放）。
+- 后端先收到 preamble + HelloFrame 并发送 CapsFrame；只有 IdentFrame NID 通过证书绑定
+  检查后，后端才收到该 IdentFrame。
 
 #### TC-N2-Tls-04 —— IdentFrame 与证书 NID 不一致 → `NCP-NID-MISMATCH`
 **Req**：NPS-RFC-0006 §6.3，错误码 `NCP-NID-MISMATCH`
 **前置**：IUT 同上。
 **操作**：
-1. Peer 出示 NID 为 `urn:nps:agent:A` 的有效证书，但其 IdentFrame 声明 NID `urn:nps:agent:B`。
+1. Peer 出示 NID 为 `urn:nps:agent:A` 的有效证书，发送 preamble + HelloFrame，并等待
+   IUT 转发后端 CapsFrame。
+2. Peer 随后发送声明 NID `urn:nps:agent:B` 的 IdentFrame。
 **通过条件**：
 - IUT 以 `NCP-NID-MISMATCH` 关闭会话，且不把该 IdentFrame 转发给后端。
 
@@ -447,6 +450,77 @@ CR-0009 §1 刻意不规定共识传输 —— 因此每个用例只给出**可�
 - 全程不发出 `NWP-ANCHOR-NOT-LEADER` 或 `NWP-ANCHOR-EPOCH-FENCED`。
 - §3.1 的十二个用例对该 IUT 依然全部原样通过。
 
+### 3.5 AaaS 服务基线 —— L2-01 至 L2-07
+
+这些用例关闭原先仅 follow-up 跟踪的缺口。它们验证组装后的 AaaS 服务边界，
+而不只是 SDK codec。L2-01..L2-05 为强制项，不得记 `na`。L2-06/07 为 SHOULD：
+部署若有意识地不实现其中一项，可以记 `na`，但该 case 结果 MUST 携带非空
+`message` 解释例外。组件证据与缺口索引见
+[`aaas-l2-requirement-disposition.json`](../../conformance/aaas-l2-requirement-disposition.json)。
+
+#### TC-N2-AaaS-01 —— 内部工作使用 NOP TaskFrame 表达
+**要求**：L2-01（MUST），[NPS-5 §3.1](../../NPS-5-NOP.cn.md)
+**前置**：IUT 暴露一个需要两个有序内部 worker 操作的 Action；harness 可捕获 IUT 到 orchestrator 的边界。
+**操作**：发送合法 ActionFrame，并允许服务启动内部编排。
+**通过条件**：
+- 任一 worker dispatch 前，IUT 提交一个合法 TaskFrame。
+- DAG 包含两个 worker 操作并保留依赖顺序。
+- 服务不得用实现私有 task envelope 绕过 NOP。
+
+#### TC-N2-AaaS-02 —— 向 TaskFrame.context 注入 OpenTelemetry trace
+**要求**：L2-02（MUST），[NPS-5 §3.1.2](../../NPS-5-NOP.cn.md)
+**前置**：同 TC-N2-AaaS-01，并启用 TaskFrame 捕获。
+**操作**：先携带合法 W3C `traceparent` 调用一次，再不带 trace 调用一次。
+**通过条件**：
+- 首个 TaskFrame 保留入站 32 位 hex `trace_id`，携带新生成的 16 位 hex `span_id` 与入站 trace flags。
+- 第二个 TaskFrame 生成合法、非零的 `trace_id` 与 `span_id`。
+- context 传播到该 task 产生的每个 DelegateFrame。
+
+#### TC-N2-AaaS-03 —— CGN-Estimate 预算与 token_est 应答
+**要求**：L2-03（MUST），[token-budget §2.1–§2.4](../../token-budget.cn.md)
+**前置**：IUT Action 返回确定的逻辑 payload，并接受 CGN-Estimate budget。
+**操作**：用充足／不足 budget，分别通过 JSON 与另一种受支持 encoding 调用。
+**通过条件**：
+- 每个成功应答都携带非负 uint32 `token_est`，并标识 estimate 面而非 CGN-Billing。
+- 等价逻辑 payload 跨 encoding 产生相同 estimate。
+- budget 不足路径按声明策略截断／拒绝，且绝不静默超过已接受 budget。
+
+#### TC-N2-AaaS-04 —— NOP preflight 阻断 worker dispatch
+**要求**：L2-04（MUST），[NPS-5 §4](../../NPS-5-NOP.cn.md)
+**前置**：双 worker TaskFrame 设置 `preflight=true`；harness 可让任一 worker 可用或不可用。
+**操作**：一个 worker 不可用运行一次，两个都可用再运行一次。
+**通过条件**：
+- preflight 不可用返回 `NOP-RESOURCE-INSUFFICIENT`，且不 dispatch 任何 task node。
+- 成功 preflight 在首个 task dispatch 前探测每个不同 `(agent, action)` 对。
+- 成功运行随后只执行一次 DAG。
+
+#### TC-N2-AaaS-05 —— NOP 重试与超时语义
+**要求**：L2-05（MUST），[NPS-5 §3.5.2](../../NPS-5-NOP.cn.md)
+**前置**：worker 可返回 retryable／non-retryable 失败，或超过 node／overall deadline。
+**操作**：执行重试后成功、重试耗尽、不可重试错误、node timeout 与 overall timeout。
+**通过条件**：
+- 仅选中的 retryable 错误会重试，绝不超过 `max_retries`，并复用同一逻辑 subtask 与幂等身份。
+- 耗尽时保留 worker error；不可重试错误只 dispatch 一次。
+- node／overall deadline 分别以 `NOP-DELEGATE-TIMEOUT`／`NOP-TASK-TIMEOUT` 终结；迟到结果不得改写终态。
+
+#### TC-N2-AaaS-06 —— 异步 Action 生命周期
+**要求**：L2-06（SHOULD），[NPS-2 §7.2–§7.3](../../NPS-2-NWP.cn.md)
+**前置**：IUT 声明一个 Action，并具有可查询 task store。
+**操作**：提交 `ActionFrame.async=true`，轮询 `system.task.status`，并取消另一个运行中的 task。
+**通过条件**：
+- 提交返回 pending acknowledgement，包含稳定 `task_id`、`poll_url` 与 `request_id`。
+- 状态单调推进到正确的 completed／failed 结果形态。
+- 取消达到 `cancelled`；终态与未知 task 负路径返回规定错误。
+
+#### TC-N2-AaaS-07 —— AlignStream CGN 背压
+**要求**：L2-07（SHOULD），[NPS-5 §3.4.1–§3.4.2](../../NPS-5-NOP.cn.md)
+**前置**：worker 与 orchestrator 通过可控 CGN window 交换多帧 AlignStream。
+**操作**：耗尽 window，以反向帧恢复，ACK 已消费序号，再分别 NAK 一个保留与一个已淘汰序号。
+**通过条件**：
+- sender 在超过当前 CGN window 前暂停，仅在 window 恢复后继续。
+- `ack_seq` 推进保留窗口；可解析 `nak_seq` 从请求序号开始重放且不乱序。
+- 已淘汰序号返回 `NOP-STREAM-NAK-UNRESOLVABLE`，不得静默跳帧。
+
 ---
 
 ## 4. 结果清单
@@ -457,8 +531,8 @@ CR-0009 §1 刻意不规定共识传输 —— 因此每个用例只给出**可�
 ```json
 {
   "profile": "NPS-Node-L2",
-  "profile_version": "0.5",
-  "scope": ["L2-08"],
+  "profile_version": "0.7",
+  "scope": ["L2-01", "L2-02", "L2-03", "L2-04", "L2-05", "L2-08"],
   "iut": {
     "name": "example-anchor",
     "version": "0.1.0",
@@ -473,6 +547,13 @@ CR-0009 §1 刻意不规定共识传输 —— 因此每个用例只给出**可�
     "environment": "linux-x64 / 1 vCPU / 1 GB"
   },
   "cases": [
+    { "id": "TC-N2-AaaS-01", "result": "pass" },
+    { "id": "TC-N2-AaaS-02", "result": "pass" },
+    { "id": "TC-N2-AaaS-03", "result": "pass" },
+    { "id": "TC-N2-AaaS-04", "result": "pass" },
+    { "id": "TC-N2-AaaS-05", "result": "pass" },
+    { "id": "TC-N2-AaaS-06", "result": "na", "message": "有记录的 SHOULD 例外：本服务仅暴露同步 Action。" },
+    { "id": "TC-N2-AaaS-07", "result": "na", "message": "有记录的 SHOULD 例外：本服务仅发送最终结果，不声明 AlignStream。" },
     { "id": "TC-N2-AnchorTopo-01", "result": "pass" },
     { "id": "TC-N2-AnchorTopo-02", "result": "pass" },
     { "id": "TC-N2-AnchorTopo-03", "result": "pass" },
@@ -505,16 +586,21 @@ CR-0009 §1 刻意不规定共识传输 —— 因此每个用例只给出**可�
     { "id": "TC-N2-HA-08", "result": "na" },
     { "id": "TC-N2-HA-09", "result": "pass" }
   ],
-  "summary": { "pass": 17, "fail": 0, "skip": 0, "na": 14 }
+  "summary": { "pass": 22, "fail": 0, "skip": 0, "na": 16 }
 }
 ```
 
-上面的示例是一个**单 Anchor** 且仅 Anchor 角色的 IUT：它通过 12 个拓扑用例与 4 个 TLS 用例，
-不是 Bridge、不跑 Registry、也未声明多 Anchor HA —— 因此 `TC-N2-HA-01..08` 记 `na`，
-只跑向后兼容用例 `TC-N2-HA-09`。
+上面的示例是一个**单 Anchor AaaS 服务**：它通过五个强制 L2-01..L2-05 用例，
+为 L2-06/07 记录明确 SHOULD 例外，并通过 12 个拓扑与 4 个 TLS 用例；它不是 Bridge、
+不跑 Registry、也未声明多 Anchor HA。因此 `TC-N2-HA-01..08` 记 `na`，
+`TC-N2-HA-09` 通过。
 
 认证**按用例族授予，族内全有或全无**：
 
+- **AaaS 强制基线**（`TC-N2-AaaS-01..05`）—— 完整 AaaS L2 声明要求五项全部
+  `pass`；`na`、`skip` 与仅组件证据都不充分。
+- **AaaS 建议项**（`TC-N2-AaaS-06..07`）—— 每项 SHOULD `pass`。只有对应用例
+  `message` 非空并记录实现方的有理由例外时，才接受 `na`。
 - **L2-08 拓扑**（`TC-N2-AnchorTopo-*`、`TC-N2-AnchorStream-*`）—— 任何 L2 主张都要求
   12 个用例全部 `pass`。本族没有可选用例：要么实现 [NPS-2 §12](../../NPS-2-NWP.cn.md)
   定义的 `topology.snapshot` / `topology.stream`，要么不实现。
@@ -533,8 +619,8 @@ CR-0009 §1 刻意不规定共识传输 —— 因此每个用例只给出**可�
 
 某个族整体记 `na` 不阻塞其他族的认证；族内部分 `na` 属于 manifest 错误。
 
-后续 CR 覆盖其余 L2 要求（L2-01..L2-07）时，上面的 `scope` 数组与
-`summary` 总数会同步扩展。
+这七个 AaaS 用例属于当前 alpha.20 前合同。不得从 `scope` 删除，也不得作为
+future-CR 豁免处理。
 
 ---
 
@@ -542,7 +628,8 @@ CR-0009 §1 刻意不规定共识传输 —— 因此每个用例只给出**可�
 
 | 语言 | 路径 | 状态 |
 |------|------|------|
-| .NET 10（xUnit）| `impl/dotnet/tests/NPS.Tests/Daemons/Npsd/AnchorTopologyConformanceTests.cs` | 与本 CR 同期落地 |
+| .NET 10（xUnit），Anchor 拓扑 | `impl/dotnet/tests/NPS.Tests/Nwp/Anchor/AnchorTopologyTests.cs` | 已实现 |
+| .NET 10（xUnit），NCP-over-TLS ingress | `tools/daemons/nps-ingress/tests/IngressTlsConformanceTests.cs` | 已实现；`TC-N2-Tls-01..04` |
 | Python | `impl/python/tests/conformance/node_l2/` | TODO（Phase 2）|
 | TypeScript | `impl/typescript/tests/conformance/node-l2/` | TODO（Phase 2）|
 
@@ -554,6 +641,8 @@ CR-0009 §1 刻意不规定共识传输 —— 因此每个用例只给出**可�
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.7 | 2026-09-05 | 为当前 AaaS L2-01..L2-07 增加稳定 `TC-N2-AaaS-01..07`，不再整体延期。L2-01..05 为强制项；L2-06/07 仅允许有理由的 SHOULD 例外。manifest 扩展到 38 个 case，并链接 alpha.19 机器可读处置。 |
+| 0.6 | 2026-08-31 | 修正 `TC-N2-Tls-03..04`，使其执行 NPS-1 §2.6 的规范性交互序列：preamble + Hello、转发后端 Caps、随后发送 Ident。避免仅测试 pipeline 情形，从而漏掉正常 Caps 后路径中的死锁或证书/Ident 绑定绕过。 |
 | 0.5 | 2026-08-01 | 新增 §3.4 **多 Anchor 高可用**（`TC-N2-HA-01..09`），落地 [NPS-CR-0009](../../cr/NPS-CR-0009-multi-anchor-ha.md) §4 承诺的 `TC-N2-HA-*` 族：两个拓扑读表面均携带 `cluster_epoch`、计划内交接与活跃方失联两种 `anchor_failover` 线格式（后者为终结事件并关闭流）、`anchor_quorum_lost` 线格式及降级只读运行与新 epoch 恢复、standby 写 → `NWP-ANCHOR-NOT-LEADER`、被取代 leader → `NWP-ANCHOR-EPOCH-FENCED`、NDP 最高 epoch 解析且不降级、同 epoch 脑裂 → `NDP-CLUSTER-SPLIT`、单 Anchor 在 `cluster_epoch = 1` 下的向后兼容。§2 增加"多 Anchor 前置"行；§4 manifest 现枚举四个用例族（12 拓扑 + 4 TLS + 6 bridge + 9 HA），并定义 HA Anchor 侧与单 Anchor 向后兼容用例的互斥关系。CR-0009 留白的两点（低 epoch 入站帧；quorum 恢复所用的 `anchor_state` 子类型）在 §3.4 中显式标注而非断言。 |
 | 0.4 | 2026-07-23 | 新增 §3.3 **Bridge Node 入站**（`TC-N2-BridgeIn-01..06`），落地 [NPS-CR-0010](../../cr/NPS-CR-0010-bridge-bidirectional.md) §4 承诺的 `TC-N2-BRIDGE-IN-*` 族：MCP 完整方法集（含 `resources/*`）、gRPC + A2A 入站往返、裸名/限定名解析、§16.3 错误映射保真、`NWP-BRIDGE-DIRECTION-UNSUPPORTED` 拒绝。§4 manifest 枚举全部三个用例族（12 拓扑 + 4 TLS + 6 bridge），按族认证并定义 `na` 语义。同时补记缺失的 0.3 变更行。 |
 | 0.3 | 2026-06-12 | （补记行 —— 该变更随 alpha.13 发布时未写变更历史。）新增 §3.2 **NCP-over-TLS 入站终结**（`TC-N2-Tls-01..04`），验证 NPS-RFC-0006 §6 准入门：ALPN `nps/1.0`、mTLS 强制、信任锚验证 + 会话 NID 绑定、IdentFrame/证书 NID 不一致时 `NCP-NID-MISMATCH`。 |

@@ -7,7 +7,7 @@
 **作者**：Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**：Ori Lynn（1.0 之前快速通道，见 `spec/cr/README.cn.md`）
 **创建日期**：2026-04-21
-**最后更新**：2026-05-28
+**最后更新**：2026-09-05
 **接受日期**：2026-04-26（1.0 之前快速通道；见 `spec/cr/README.cn.md`）
 **激活日期**：2026-05-28（v1.0.0-alpha.9 — 条目 wire 格式、.NET ReputationLogClient 及 DefaultReputationPolicyEvaluator 日志查询路径均已发布）
 **取代**：_无_
@@ -384,12 +384,15 @@ LabAcacia 运营一个单独注册表。
 
 | SDK | 负责人 | 状态 | 备注 |
 |-----|--------|------|------|
-| .NET | Ori Lynn | Phase 1+2 ✅ / Phase 3 ✅ | 参考日志运营方；Phase 3 gossip 在 alpha.5 落地 |
-| Python | _待定_ | pending | Phase 1 只实现 client；Phase 2 运营方 |
-| TypeScript | _待定_ | pending | — |
-| Java | _待定_ | pending | — |
-| Rust | _待定_ | pending | — |
-| Go | _待定_ | pending | — |
+| .NET | NPS SDK maintainers | 已实现 — SDK client/proof + operator Phase 1–3 | `NPS.NIP.Reputation`；参考 `nps-ledger` operator 与 gossip |
+| Python | NPS SDK maintainers | 已实现 — SDK client/proof helper | 不声明 log operator |
+| TypeScript | NPS SDK maintainers | 已实现 — SDK client/proof helper | 不声明 log operator |
+| Java | NPS SDK maintainers | 已实现 — SDK client/proof helper | 不声明 log operator |
+| Rust | NPS SDK maintainers | 已实现 — SDK client/proof helper | 不声明 log operator |
+| Go | NPS SDK maintainers | 已实现 — SDK client/proof helper | 不声明 log operator |
+
+SDK 行只覆盖可移植的 wire/client/proof 行为，不声明六套独立 log operator；
+`nps-ledger` 仍是参考 operator 证据。
 
 ### 8.3 测试计划
 
@@ -428,17 +431,18 @@ LabAcacia 运营一个单独注册表。
 
 ---
 
-## 10. 未决问题
+## 10. 已决问题
 
 - [x] **OQ-1**：STH gossip 协议——复用 CT gossip（RFC 9162
   §8.1.4）还是定义一个更轻变体？**已决议**：采用轻量 NPS 原生变体（§4.5）。
-- [ ] **OQ-2**：申诉机制——`subject_nid` 能否对自己被指控的条目
-  发布一个 `dispute` 条目？默认：可以，作为 `incident: self-dispute`
-  引用原 `seq`。
-- [ ] **OQ-3**：日志是存证据 blob 还是只存 hash？默认：只存 hash；
-  blob 由 issuer 在 `evidence_ref` 自行托管。
-- [ ] **OQ-4**：条目 TTL / 过期。与 GDPR 式"被遗忘权"的交互？
-  默认：无过期；Merkle 证明要求保留。合规处理延后。
+- [x] **OQ-2 — 申诉沿用现有可扩展 entry contract。** Subject 可以提交已签名
+  `contract-dispute` entry，并用 `evidence_ref` 指向被质疑记录/证据；本 RFC
+  不新增 `self-dispute` wire enum。
+- [x] **OQ-3 — 只存 hash 与引用。** Log 保存 signed entry、可选
+  `evidence_sha256` 和 `evidence_ref`，不托管 evidence blob。
+- [x] **OQ-4 — 协议层无 TTL。** Append-only entry 不过期，因为 STH 与 inclusion
+  proof 有效性要求保留历史。特定司法辖区的脱敏/访问策略属于部署与法律工作，
+  不能在本 RFC 下重写已签名 Merkle 历史。
 
 ---
 
@@ -467,6 +471,7 @@ LabAcacia 运营一个单独注册表。
 
 | 日期 | 作者 | 变更 |
 |------|------|------|
+| 2026-09-05 | NPS maintainers | 对账六 SDK client/proof coverage，且不声明六套 operator；依据可扩展 entry、evidence reference 与 append-only retention 契约解决 OQ-2..04。|
 | 2026-04-21 | Ori Lynn | 初稿 |
 | 2026-04-26 | Ori Lynn | 走 1.0 之前快速通道 Accept。Phase 1 spec 改动已落地：NPS-3 §5.1.2 声誉日志条目（12 字段签名 JSON、8 项 `incident` 枚举、5 级 `severity` 枚举、JCS 双签名规则），错误码 `NIP-REPUTATION-ENTRY-INVALID` / `NIP-REPUTATION-LOG-UNREACHABLE` / `NWP-AUTH-REPUTATION-BLOCKED`，新增状态码 `NPS-DOWNSTREAM-UNAVAILABLE`。Phase 1 .NET 参考类型已落地于 `NPS.NIP.Reputation.*`。Phase 2（Merkle 树 + STH + inclusion proof + NDP `/.nid/reputation` 发现 + NWM `reputation_policy` 解析）按 RFC §8.1 推迟到 v1.0-alpha.4。Phase 3（AaaS Profile L2 默认策略 + STH gossip）推迟到 alpha.11+。|
 | 2026-05-01 | Ori Lynn | Phase 3 落地（v1.0-alpha.5）：新增 §4.5 STH Gossip 协议（gossip 端点 + 推送周期 + 配置 + 错误码）；§4.7（原 §4.5）错误码表新增 `NIP-REPUTATION-GOSSIP-FORK` / `NIP-REPUTATION-GOSSIP-SIG-INVALID`；原 §4.7 向后兼容性改编号为 §4.8；OQ-1 已关闭；SDK 矩阵更新 .NET Phase 3 ✅；nps-ledger GossipState + GossipService + `GET /v1/log/gossip/sth` 已落地。|

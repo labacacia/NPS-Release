@@ -4,11 +4,11 @@ English | [中文版](./NPS-4-NDP.cn.md)
 
 **Spec Number**: NPS-4
 **Status**: Proposed
-**Version**: 0.12
-**Date**: 2026-07-29
+**Version**: 0.13
+**Date**: 2026-08-31
 **Port**: 17433 (default, shared) / 17436 (optional dedicated)
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11), NPS-3 (NIP v0.14)
+**Depends-On**: NPS-1 (NCP v0.12), NPS-3 (NIP v0.15)
 
 ---
 
@@ -307,6 +307,8 @@ ndp-forwarded-by: urn:nps:agent:registry-a.example.com:r1, urn:nps:agent:registr
 | `NDP-GRAPH-SEQ-ROLLBACK` | `NPS-CLIENT-BAD-FRAME` | AnnounceFrame `graph_seq` is lower than the highest value the receiver has accepted for this NID (rollback attempt) |
 | `NDP-GRAPH-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | GraphFrame sequence numbers are not contiguous |
 | `NDP-FEDERATION-LOOP` | `NPS-CLIENT-CONFLICT` | Federation forwarding detected a loop via the `ndp-forwarded-by` hop list |
+| `NDP-STATE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | A persistence-required Registry cannot durably read or commit its recovery state |
+| `NDP-STATE-CORRUPT` | `NPS-SERVER-INTERNAL` | Persisted Registry recovery state fails schema, checksum, or monotonic-fence validation |
 | `NDP-ISSUER-NOT-ALLOWED` | `NPS-AUTH-FORBIDDEN` | AnnounceFrame issuer (signing CA) is not in the active registry profile's issuer allowlist |
 | `NDP-CA-ATTEST-REQUIRED` | `NPS-AUTH-UNAUTHENTICATED` | Active registry profile requires a CA-attested NID and the AnnounceFrame's certificate chain does not anchor in the configured trust roots |
 | `NDP-REGISTRY-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | NDP Registry temporarily unavailable |
@@ -404,12 +406,46 @@ The profile a Registry runs under implies a corresponding operator-side trust le
 
 A Registry MUST NOT advertise a profile whose operator trust requirements it cannot meet.
 
+### 7.8 Alpha.19 persistent recovery profile (NDP v0.13)
+
+The following requirement IDs freeze restart and partition behavior. Shared
+transcripts live in
+[`recovery_fence_vectors.json`](conformance/ndp/recovery_fence_vectors.json).
+
+1. **NDP-P19-01 — durable state.** `org-private` and `public-federated`
+   Registries MUST durably store, at minimum, the highest accepted `graph_seq`
+   and canonical-body digest per NID, the highest accepted ownership epoch per
+   cluster, and every live entry's freshness deadline, origin, and trust class.
+2. **NDP-P19-02 — commit before visibility.** A mutation that advances a
+   sequence or epoch fence MUST commit the new fence and entry atomically before
+   it is acknowledged, served by ResolveFrame, or forwarded to a peer.
+3. **NDP-P19-03 — recovery order.** Startup restores and validates sequence and
+   epoch fences before accepting traffic. It then removes expired live entries
+   without deleting their fences. A recovered lower sequence/epoch can never
+   replace a higher persisted value.
+4. **NDP-P19-04 — equal-epoch split.** Two different live owners at the same
+   highest cluster epoch remain `NDP-CLUSTER-SPLIT` after restart or partition
+   healing; wall-clock arrival order is not a tie-breaker.
+5. **NDP-P19-05 — corruption policy.** A persistence-required Registry MUST
+   refuse readiness with `NDP-STATE-CORRUPT` when schema, checksum, or monotonic
+   validation fails. It MUST NOT silently start from an empty state.
+6. **NDP-P19-06 — unavailable store.** A persistence-required Registry that
+   cannot durably read or commit state reports `NDP-STATE-UNAVAILABLE` and MUST
+   NOT acknowledge the affected announce/federation mutation.
+7. **NDP-P19-07 — local-dev boundary.** `local-dev` MAY use memory-only state,
+   but MUST declare `recovery = "volatile"`; the other profiles MUST declare
+   `recovery = "durable"` in health/capability output.
+8. **NDP-P19-08 — federation provenance.** Recovered federated entries retain
+   their origin Registry and trust class. Revoking a bilateral trust agreement
+   invalidates matching recovered entries without lowering unrelated fences.
+
 ---
 
 ## 8. Change Log
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 0.13 | 2026-08-31 | Alpha.19 persistent recovery profile: atomic durable sequence/epoch fences, ordered restart recovery, equal-epoch split preservation, fail-closed corrupt/unavailable state handling, explicit volatile/durable capability truth, federation provenance, and shared restart/partition transcripts. |
 | 0.12 | 2026-07-29 | Defines the Registry Conformance profile: additive `graph_seq` wire field and compatibility behavior; deterministic signed-body canonicalization; ordered signature/profile/replay/conflict/staleness admission; exact duplicate versus advisory liveness refresh semantics; retained sequence fences after expiry/offline; highest-epoch cluster resolution and split-brain behavior; direction-specific, sorted Bridge capability discovery; and shared cross-language canonicalization/registry vectors. |
 | 0.11 | 2026-07-12 | **NPS-CR-0010 Bridge Node is bidirectional**: AnnounceFrame (0x30) gains optional `bridge_inbound_protocols` (array of strings, same value domain as `bridge_protocols`) — the external protocols the node **serves inbound** (external → NPS). `bridge_protocols` keeps its exact prior meaning (protocols bridged **outbound**). Absent/empty `bridge_inbound_protocols` ⇒ no inbound surface, i.e. exactly a pre-alpha.16 outbound-only Bridge Node. A node declaring `"bridge"` MUST have at least one of the two arrays non-empty. Additive / backward-compatible; no new NDP error codes. |
 | 0.10 | 2026-07-05 | **NPS-CR-0009 multi-Anchor HA**: AnnounceFrame (0x30) gains optional `cluster_epoch` (uint64, default 1) — the cluster-ownership fence. New §9 resolution rule: resolve the highest-`cluster_epoch` live Anchor for a `cluster_anchor` NID; equal-epoch split-brain → `NDP-CLUSTER-SPLIT`; federated Registries propagate `(cluster_anchor, cluster_epoch, active_nid)` and prefer higher epoch (monotonic per cluster). One new error code `NDP-CLUSTER-SPLIT`. Additive / backward-compatible (single-Anchor clusters keep epoch 1). |

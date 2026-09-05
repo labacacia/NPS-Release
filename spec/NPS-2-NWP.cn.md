@@ -4,11 +4,11 @@
 
 **Spec Number**: NPS-2
 **Status**: Proposed
-**Version**: 0.21
-**Date**: 2026-08-12
+**Version**: 0.22
+**Date**: 2026-08-31
 **Port**: 17433（默认，共用）/ 17434（可选独立）
 **Authors**: Ori Lynn / INNO LOTUS PTY LTD
-**Depends-On**: NPS-1 (NCP v0.11)、NPS-3 (NIP v0.14)、NPS-4 (NDP v0.12)
+**Depends-On**: NPS-1 (NCP v0.12)、NPS-3 (NIP v0.15)、NPS-4 (NDP v0.13)
 
 > 本文档为 NWP 详细规范。套件总览见 [NPS-0-Overview.cn.md](NPS-0-Overview.cn.md)。
 
@@ -180,6 +180,7 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `stability` | string | 可选 | 生命周期阶段：`"experimental"` / `"stable"` / `"deprecated"`。Marketplace / NeuronHub 发现客户端据此过滤或对非 stable 服务给出告警。默认 `"stable"`（向后兼容——0.11 之前的清单一律视为 stable）。可在 ActionSpec.stability（§4.6）上做 per-action 覆盖。|
 | `sla` | object | 可选 | 节点的 SLO 承诺，见 §4.7。仅供参考，协议层不做强制。可在 ActionSpec.sla（§4.6）上做 per-action 覆盖。|
 | `billing` | object | 可选 | 节点的商业元数据（计量 profile + 价格提示），见 §4.8。仅供参考，协议层不收取也不结算费用。可在 ActionSpec.billing（§4.6）上做 per-action 覆盖。|
+| `subscription_policy` | object | 可选 | 可续订订阅限制：`default_lease_seconds`、`max_lease_seconds` 与 `renew_before_seconds`，见 §13.4。缺省表示 v0.21 无 lease 的兼容行为。|
 | `trust_anchors` | array of strings | 可选 | Anchor 接受作为 IdentFrame 签发者的 CA 节点 NID 列表（例如 `["urn:nps:agent:ca.example.com:root"]`）。消费方 SHOULD 据此在连接前预校验自己的签发者。缺省时，节点接受任何被 NIP 验证链信任的 CA。|
 | `profiles` | object | 可选 | 叠加在基础节点角色上的结构化协议 profile，见 §4.2a。Consumer MUST 忽略无法识别的 profile key。|
 
@@ -363,6 +364,26 @@ segment     = 1*(ALPHA / DIGIT / "-" / "_")
 | `billing_unit` | string | `metering_profile = "metered"` 时的计量单位，例如 `"per-token"` / `"per-request"` / `"per-cgn"` / `"per-second"`。|
 | `price_hint` | string | 指示性价格，采用 ISO-4217 货币前缀 + 十进制数的形式，例如按 `billing_unit` 计的 `"USD 0.0002"`。仅为提示——以运营方的外部合同为准。|
 | `currency` | string | ISO-4217 货币代码（例如 `"USD"`、`"EUR"`、`"CNY"`）。可选的便利字段；`price_hint` 本身已含货币前缀。|
+
+### 4.4c alpha.19 可移植 metadata 归一化（NWP v0.22）
+
+以下要求 ID 由
+[`alpha19_hardening_vectors.json`](conformance/nwp/alpha19_hardening_vectors.json)
+验证：
+
+1. **NWP-P19-01 —— stability。** producer MUST 只发 `experimental`、`stable`
+   或 `deprecated`；缺省归一化为 `stable`。consumer 保留未知 raw value，但在过滤时
+   归一化为 `experimental`，且 MUST NOT 把它按 stable 排名。
+2. **NWP-P19-02 —— SLA。** `p95_latency_ms` 若存在则为正 uint32；
+   `availability` 为 `(0, 1]` 内的小数；三个标准 `sla_tier` 保持既定顺序。
+   未知 tier 保留但不参与排名。无效 advisory 子字段被忽略并记录诊断，不使其他 manifest 字段失效。
+3. **NWP-P19-03 —— billing。** `free` 禁止 `billing_unit`、`price_hint`、`currency`；
+   `metered` 要求非空 `billing_unit`；`price_hint` MUST 匹配
+   `^[A-Z]{3} [0-9]+(\\.[0-9]+)?$`；单独的 `currency` 若存在必须与其前缀一致。
+   未知 metering profile 归一化为 `metered`，但不得虚构价格。
+4. **NWP-P19-04 —— action override。** action 层 metadata 只覆盖它提供的字段；
+   缺失字段回退到已归一化的 top-level 值。无效 override 子字段被忽略并回退，
+   不得擦除合法 top-level 值。
 
 ### 4.5 NWM 完整示例
 
@@ -1405,12 +1426,14 @@ SubscribeFrame 在 Memory Node 或 Anchor Node 上开启一个服务端推送订
 |------|------|------|------|
 | `frame` | uint8 | 必填 | 固定值 `0x12` |
 | `subscription_id` | string | 必填 | 客户端生成的 UUID v4；用于关联事件与取消订阅 |
+| `operation` | string | 可选 | `open`（默认）、`renew` 或 `close`。`renew`/`close` 定位已有 `subscription_id`，并 MUST 省略 target/filter 字段。|
 | `type` | string | 可选 | §12 定义的保留订阅类型标识符。设置后，类型特定字段生效，且 `anchor_ref` 的语义由该类型定义。缺省时按下述 per-anchor 订阅行为处理 |
 | `anchor_ref` | string | 条件必填 | 所订阅数据的 anchor_id。默认 per-anchor 订阅时必填；当保留 `type` 自行定义目标语义时省略（例如 `topology.stream`）|
 | `filter` | object | 可选 | 与 QueryFrame `filter`（§6）相同的过滤语法；缺省则匹配全部事件 |
 | `heartbeat_interval_ms` | uint32 | 可选 | 设置后，服务端 MUST 按此间隔发出心跳 DiffFrame（空 payload，`event_type = "heartbeat"`）；默认 0（无心跳）|
 | `max_events` | uint32 | 可选 | 服务端在推送这么多事件后关闭订阅；0 = 不限 |
 | `cursor` | string | 可选 | 从先前位置恢复；若 cursor 已过期，服务端 MUST 返回 `NWP-SUBSCRIBE-SEQ-TOO-OLD` |
+| `lease_seconds` | uint32 | 可选 | `open` 或 `renew` 请求的 lease。仅在声明 `subscription_policy` 时有效；服务端 clamp 到 `max_lease_seconds`。零值非法。|
 
 ### 13.2 生命周期
 
@@ -1446,6 +1469,25 @@ SubscribeFrame 在 Memory Node 或 Anchor Node 上开启一个服务端推送订
 - `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` —— 本节点不支持该 filter 表达式
 - `NWP-SUBSCRIBE-INTERRUPTED` —— 服务端中断
 - `NWP-SUBSCRIBE-SEQ-TOO-OLD` —— cursor 位置已不可用
+
+### 13.4 alpha.19 可续订订阅 Profile（NWP v0.22）
+
+5. **NWP-P19-05 —— 能力真实性。** 节点只有声明 `subscription_policy` 才支持
+   lease operation。default 与 maximum MUST 为正，且 `renew_before_seconds`
+   MUST 小于 maximum。
+6. **NWP-P19-06 —— open。** 缺省 `operation` 表示 `open`。服务端采用请求值或
+   `default_lease_seconds`，clamp 到 maximum，并在 opening CapsFrame 返回
+   `lease_seconds` 与 RFC 3339 `expires_at`。
+7. **NWP-P19-07 —— binding。** renew/close 必须绑定 open 时捕获的同一认证 principal、
+   target 与保留 `type`。不同 principal 得到既有授权错误，且不得获知订阅状态。
+8. **NWP-P19-08 —— renew。** expiry 前接受的合法 renew 把 deadline 替换为
+   `accepted_at + effective_lease_seconds` 并返回新 deadline；不得回退 cursor 或重置 event `seq`。
+9. **NWP-P19-09 —— expiry。** `now >= expires_at` 时服务端原子关闭订阅；transport
+   可写时最多发送一次携带 `NWP-SUBSCRIBE-LEASE-EXPIRED` 的 terminal event，并释放资源。
+   expiry 后 renew 返回同一错误，且不得复活订阅。
+10. **NWP-P19-10 —— 非法请求。** 零 lease、非法 policy bounds、renew/close
+    携带 target/filter，或未知 operation，均以 `NWP-SUBSCRIBE-LEASE-INVALID`
+    拒绝，且不得改变订阅。
 
 ---
 
@@ -1487,6 +1529,8 @@ SubscribeFrame 在 Memory Node 或 Anchor Node 上开启一个服务端推送订
 | `NWP-SUBSCRIBE-FILTER-UNSUPPORTED` | `NPS-SERVER-UNSUPPORTED` | 节点不支持带 filter 的订阅 |
 | `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | 订阅流因数据源中断而终止 |
 | `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | `cursor` 落在节点保留窗口之外；需全量重查或走保留类型的 resync 流程 |
+| `NWP-SUBSCRIBE-LEASE-INVALID` | `NPS-CLIENT-BAD-PARAM` | 可续订订阅 operation 或 lease/policy bounds 非法 |
+| `NWP-SUBSCRIBE-LEASE-EXPIRED` | `NPS-CLIENT-GONE` | 订阅 lease 已到 deadline，不能 renew 或复活 |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | 响应将超过 token 预算 |
 | `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | depth 超过节点允许的 max_depth |
 | `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | 节点图谱存在循环引用 |
@@ -1735,6 +1779,7 @@ native 模式下，不受支持的已解码 frame type MUST 产生 `NPS-CLIENT-B
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| 0.22 | 2026-08-31 | alpha.19 NWM/订阅加固：确定性的 stability/SLA/billing 归一化与 action fallback；声明式可续订 subscription policy；带 principal binding、lease clamp、显式 deadline、不可复活 expiry 的 open/renew/close operation，以及共享合规向量。新增两个订阅错误码；Depends-On 推进至 NCP 0.12、NIP 0.15、NDP 0.13。|
 | 0.21 | 2026-08-12 | **NPS-CR-0011 有状态 LLM context/增量 completion**：NWM LLM profile 0.2 显式广告 context operation/persistence/limit；`llm.complete` 新增可选的 owner-bound 不透明 context request 与终结 receipt；新增 status/release 生命周期 action、CAS 版本、binding 校验、原子 cancel/stream commit、重启/幂等语义、实测 `wire_input_bytes`、七个确定性错误与共享合规向量。Stateless completion 保持兼容，stateful 请求绝不静默降级。Depends-On NIP 推进到 v0.14，以使用 `llm:context`。不新增 frame type。 |
 | 0.20 | 2026-07-29 | 新增 §16.5 可移植 Node/Bridge 服务端 profile 与跨语言共享向量。标准化 HTTP/native admission、角色分发、alpha.17 兼容窗口内的规范/旧 MIME 处理、有限 body 上限、取消、关联标识传播、Bridge dispatcher/SSRF/deadline preflight、异步 task mode 与终态 telemetry outcome。新增 `NWP-HTTP-BODY-TOO-LARGE` → `NPS-LIMIT-PAYLOAD`；不增加 frame type。Depends-On 推进到 NCP v0.11 与 NIP v0.13。 |
 | 0.19 | 2026-07-23 | **NPS-CR-0010 Bridge Node 是双向的**：解决规范自身的矛盾 —— §2.1 节点分类表、"已移除类型"注记、以及 NPS-CR-0001 本身都把 Bridge Node 定义为 NPS↔非-NPS 双向翻译，而 §2.1 的 callout 与规范性 MUST 列表却把它收窄成仅 NPS→外部。该收窄的唯一存在理由是让 `Bridge` 一名与当时独立的 `compat/*-ingress` 包区分开；那些包现已并入 Bridge 包，限制解除。Bridge Node 语义重构为 **出向**（不变）+ **入向**（新增）两组 MUST；MCP 入向 MUST 同时提供 `resources/*` 与 `tools/*`。§16 拆为两个独立合规 profile（§16.1.1 出向 / §16.1.2 入向）、规范性方向声明（§16.2）、以及规范性的分协议错误映射表（§16.3）—— 后者 MUST 由同一份实现同时服务两个方向。明确「角色 vs 库」边界：只有发出 `node_roles: ["bridge"]` 公告的部署才是 Bridge Node。`Depends-On` 升级 NDP 至 v0.11（定义 `bridge_inbound_protocols`）。新增一个错误码 `NWP-BRIDGE-DIRECTION-UNSUPPORTED`。Additive 且向后兼容：纯出向 Bridge Node 无需改动即保持合规。（正文中文翻译已同步 §2.1 与 §16 全章；由 edge 线 0.16 重编号 —— 已发布的 alpha.16 线独立把 0.15–0.17 用于下方 LLM profile 系列。）|

@@ -1,0 +1,96 @@
+{
+  "name": "nwp-alpha19-hardening",
+  "version": "0.22.0",
+  "spec_ref": "spec/NPS-2-NWP.md §4.4c, §13.4",
+  "description": "Portable NWM metadata normalization and renewable-subscription lease decisions.",
+  "vectors": [
+    {
+      "id": "nwp.alpha19.metadata.001",
+      "requirement": "NWP-P19-01",
+      "description": "Missing stability normalizes to stable.",
+      "kind": "positive",
+      "input": {"stability": null},
+      "expected": {"normalized": "stable", "diagnostics": []}
+    },
+    {
+      "id": "nwp.alpha19.metadata.002",
+      "requirement": "NWP-P19-01",
+      "description": "An unknown stability value is preserved but ranked conservatively.",
+      "kind": "positive",
+      "input": {"stability": "preview"},
+      "expected": {"raw": "preview", "normalized": "experimental", "rank_as_stable": false}
+    },
+    {
+      "id": "nwp.alpha19.metadata.003",
+      "requirement": "NWP-P19-02",
+      "description": "Invalid SLA sub-fields are ignored without invalidating the manifest.",
+      "kind": "positive",
+      "input": {"sla": {"p95_latency_ms": 0, "availability": "1.001", "sla_tier": "gold"}},
+      "expected": {"manifest_valid": true, "normalized_sla": {"sla_tier_raw": "gold", "sla_tier_rank": null}, "diagnostics": ["p95_latency_ms", "availability"]}
+    },
+    {
+      "id": "nwp.alpha19.metadata.004",
+      "requirement": "NWP-P19-03",
+      "description": "A metered price and currency must agree.",
+      "kind": "positive",
+      "input": {"billing": {"metering_profile": "metered", "billing_unit": "per-cgn", "price_hint": "USD 0.002", "currency": "EUR"}},
+      "expected": {"normalized_billing": {"metering_profile": "metered", "billing_unit": "per-cgn"}, "diagnostics": ["currency"]}
+    },
+    {
+      "id": "nwp.alpha19.metadata.005",
+      "requirement": "NWP-P19-04",
+      "description": "An invalid action override falls through to the valid top-level field.",
+      "kind": "positive",
+      "input": {"top_level": {"sla": {"p95_latency_ms": 250, "availability": "0.999"}}, "action": {"sla": {"p95_latency_ms": 0}}},
+      "expected": {"effective_sla": {"p95_latency_ms": 250, "availability": "0.999"}, "diagnostics": ["action.sla.p95_latency_ms"]}
+    },
+    {
+      "id": "nwp.alpha19.subscription.001",
+      "requirement": "NWP-P19-05,NWP-P19-06",
+      "description": "Open uses the default lease and returns a deterministic deadline.",
+      "kind": "positive",
+      "input": {"policy": {"default_lease_seconds": 60, "max_lease_seconds": 300, "renew_before_seconds": 15}, "request": {"operation": "open", "subscription_id": "sub-1"}, "accepted_at": "2026-08-31T12:00:00Z"},
+      "expected": {"lease_seconds": 60, "expires_at": "2026-08-31T12:01:00Z", "status": "open"}
+    },
+    {
+      "id": "nwp.alpha19.subscription.002",
+      "requirement": "NWP-P19-06",
+      "description": "A requested lease is clamped to the advertised maximum.",
+      "kind": "positive",
+      "input": {"policy": {"default_lease_seconds": 60, "max_lease_seconds": 300, "renew_before_seconds": 15}, "request": {"operation": "open", "subscription_id": "sub-2", "lease_seconds": 900}, "accepted_at": "2026-08-31T12:00:00Z"},
+      "expected": {"lease_seconds": 300, "expires_at": "2026-08-31T12:05:00Z"}
+    },
+    {
+      "id": "nwp.alpha19.subscription.003",
+      "requirement": "NWP-P19-07",
+      "description": "Another principal cannot renew an existing subscription or learn its state.",
+      "kind": "negative",
+      "input": {"owner_nid": "urn:nps:agent:example:a", "caller_nid": "urn:nps:agent:example:b", "operation": "renew", "subscription_id": "sub-1"},
+      "expected": {"accepted": false, "error": "NWP-AUTH-NID-SCOPE-VIOLATION", "state_disclosed": false}
+    },
+    {
+      "id": "nwp.alpha19.subscription.004",
+      "requirement": "NWP-P19-08",
+      "description": "Renew replaces the deadline from acceptance time and preserves sequence/cursor.",
+      "kind": "positive",
+      "input": {"operation": "renew", "accepted_at": "2026-08-31T12:00:50Z", "lease_seconds": 120, "prior_seq": 42, "prior_cursor": "cur-42"},
+      "expected": {"expires_at": "2026-08-31T12:02:50Z", "seq": 42, "cursor": "cur-42"}
+    },
+    {
+      "id": "nwp.alpha19.subscription.005",
+      "requirement": "NWP-P19-09",
+      "description": "Renew at the exact deadline cannot resurrect the subscription.",
+      "kind": "negative",
+      "input": {"operation": "renew", "now": "2026-08-31T12:01:00Z", "expires_at": "2026-08-31T12:01:00Z"},
+      "expected": {"accepted": false, "status": "closed", "error": "NWP-SUBSCRIBE-LEASE-EXPIRED", "terminal_event_count": 1}
+    },
+    {
+      "id": "nwp.alpha19.subscription.006",
+      "requirement": "NWP-P19-10",
+      "description": "Renew carrying a target/filter is rejected without mutation.",
+      "kind": "negative",
+      "input": {"operation": "renew", "subscription_id": "sub-1", "anchor_ref": "sha256:abc", "lease_seconds": 60},
+      "expected": {"accepted": false, "error": "NWP-SUBSCRIBE-LEASE-INVALID", "state_mutated": false}
+    }
+  ]
+}

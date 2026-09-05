@@ -8,7 +8,7 @@
 
 ## 当前状态
 
-NPS 最新 suite release 为 `v1.0.0-alpha.18`，于 2026-08-15 发布，SDK/spec 文档已经对齐 alpha.18 release。第一批生产采用者预计在 Phase 3（2027 Q1+）出现。如果你正在评估 NPS 的生产场景，欢迎在 [NPS-Release](https://github.com/labacacia/NPS-Release) 仓库开一个 GitHub Discussion。
+NPS 最新 suite release 为 `v1.0.0-alpha.18`，于 2026-08-15 发布。SDK 安装指南仍对齐 alpha.18；规范树包含经审查、尚未发布的 alpha.19 候选。第一批生产采用者预计在 Phase 3（2027 Q1+）出现。如果你正在评估 NPS 的生产场景，欢迎在 [NPS-Release](https://github.com/labacacia/NPS-Release) 仓库开一个 GitHub Discussion。
 
 ---
 

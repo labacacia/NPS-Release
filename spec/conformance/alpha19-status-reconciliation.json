@@ -1,0 +1,85 @@
+{
+  "schema_version": 1,
+  "candidate": "1.0.0-alpha.19-debt-closure",
+  "scope": "Current CR/RFC lifecycle, six-SDK coverage, question disposition, and explicit future boundaries. Historical roadmap text is outside this artifact.",
+  "lifecycle": {
+    "change_requests": {
+      "NPS-CR-0011": "Implemented"
+    },
+    "rfcs": {
+      "NPS-RFC-0001": "Active",
+      "NPS-RFC-0002": "Active",
+      "NPS-RFC-0003": "Active",
+      "NPS-RFC-0004": "Active",
+      "NPS-RFC-0005": "Active",
+      "NPS-RFC-0006": "Accepted"
+    }
+  },
+  "sdk_evidence": {
+    "dotnet": {
+      "rfc_0001": ["impl/dotnet/src/NPS.Core/Ncp/NcpPreamble.cs", "impl/dotnet/tests/NPS.Tests/Ncp/NcpPreambleTests.cs"],
+      "rfc_0002": ["impl/dotnet/src/NPS.NIP/X509/NipX509Builder.cs", "impl/dotnet/tests/NPS.Tests/Nip/X509/NipX509Tests.cs", "impl/dotnet/tests/NPS.Tests/Nip/Acme/AcmeAgent01Tests.cs"],
+      "rfc_0003": ["impl/dotnet/src/NPS.NIP/AssuranceLevel.cs", "impl/dotnet/tests/NPS.Tests/Nip/NipPhase3EnforcerTests.cs"],
+      "rfc_0004": ["impl/dotnet/src/NPS.NIP/Reputation/ReputationLogClient.cs", "impl/dotnet/tests/NPS.Tests/Nip/ReputationLogClientTests.cs"]
+    },
+    "python": {
+      "rfc_0001": ["impl/python/nps_sdk/ncp/preamble.py", "impl/python/tests/test_ncp_preamble.py"],
+      "rfc_0002": ["impl/python/nps_sdk/nip/x509/builder.py", "impl/python/tests/test_nip_x509.py", "impl/python/tests/test_nip_acme_agent01.py"],
+      "rfc_0003": ["impl/python/nps_sdk/nip/assurance_level.py", "impl/python/tests/test_nip_phase3.py"],
+      "rfc_0004": ["impl/python/nps_sdk/nip/reputation.py", "impl/python/tests/test_nip_reputation.py"]
+    },
+    "typescript": {
+      "rfc_0001": ["impl/typescript/src/ncp/preamble.ts", "impl/typescript/tests/ncp/preamble.test.ts"],
+      "rfc_0002": ["impl/typescript/src/nip/x509/builder.ts", "impl/typescript/tests/nip-x509.test.ts", "impl/typescript/tests/nip-acme-agent01.test.ts"],
+      "rfc_0003": ["impl/typescript/src/nip/assurance-level.ts", "impl/typescript/tests/nip-phase3.test.ts"],
+      "rfc_0004": ["impl/typescript/src/nip/reputation-client.ts", "impl/typescript/tests/nip-reputation.test.ts"]
+    },
+    "go": {
+      "rfc_0001": ["impl/go/ncp/preamble.go", "impl/go/ncp/preamble_test.go"],
+      "rfc_0002": ["impl/go/nip/x509/builder.go", "impl/go/nip/nip_x509_test.go", "impl/go/nip/nip_acme_agent01_test.go"],
+      "rfc_0003": ["impl/go/nip/assurance_level.go", "impl/go/nip/phase3_test.go"],
+      "rfc_0004": ["impl/go/nip/reputation_client.go", "impl/go/nip/reputation_client_test.go"]
+    },
+    "java": {
+      "rfc_0001": ["impl/java/src/main/java/com/labacacia/nps/ncp/NcpPreamble.java", "impl/java/src/test/java/com/labacacia/nps/ncp/NcpPreambleTest.java"],
+      "rfc_0002": ["impl/java/src/main/java/com/labacacia/nps/nip/x509/NipX509Builder.java", "impl/java/src/test/java/com/labacacia/nps/nip/NipX509Tests.java", "impl/java/src/test/java/com/labacacia/nps/nip/AcmeAgent01Tests.java"],
+      "rfc_0003": ["impl/java/src/main/java/com/labacacia/nps/nip/AssuranceLevel.java", "impl/java/src/test/java/com/labacacia/nps/nip/NipPhase3EnforcerTest.java"],
+      "rfc_0004": ["impl/java/src/main/java/com/labacacia/nps/nip/reputation/ReputationLogClient.java", "impl/java/src/test/java/com/labacacia/nps/nip/reputation/ReputationLogTest.java"]
+    },
+    "rust": {
+      "rfc_0001": ["impl/rust/nps-ncp/src/preamble.rs", "impl/rust/nps-ncp/tests/preamble_tests.rs"],
+      "rfc_0002": ["impl/rust/nps-nip/src/x509/builder.rs", "impl/rust/nps-nip/tests/nip_x509_tests.rs", "impl/rust/nps-nip/tests/nip_acme_agent01_tests.rs"],
+      "rfc_0003": ["impl/rust/nps-nip/src/assurance_level.rs", "impl/rust/nps-nip/tests/nip_phase3_tests.rs"],
+      "rfc_0004": ["impl/rust/nps-nip/src/reputation.rs", "impl/rust/nps-nip/tests/reputation_tests.rs"]
+    }
+  },
+  "change_request_sdk_truth": {
+    "NPS-CR-0003": {
+      "status": "implemented_across_six_sdk_ca_surfaces"
+    },
+    "NPS-CR-0005": {
+      "status": "implemented_across_six_sdk_ca_surfaces"
+    },
+    "NPS-CR-0006": {
+      "wire_and_cursor": "implemented_across_six_sdks",
+      "high_level_client_gap": ["python", "rust"],
+      "gap_classification": "non_normative_convenience_api"
+    }
+  },
+  "question_disposition": {
+    "NPS-RFC-0001": ["resolved_current_contract", "resolved_current_contract", "future_rfc"],
+    "NPS-RFC-0002": ["resolved_current_contract", "resolved_current_contract", "future_rfc"],
+    "NPS-RFC-0003": ["deployment_documentation", "future_rfc", "resolved_current_contract"],
+    "NPS-RFC-0004": ["resolved_current_contract", "resolved_current_contract", "resolved_current_contract", "deployment_legal_policy"],
+    "NPS-RFC-0005": ["resolved_current_contract", "optional_operator_extension", "future_cr"],
+    "NPS-RFC-0006": ["future_registration_work", "future_rfc", "resolved_current_contract"]
+  },
+  "not_activated": [
+    "NPS-RFC-0001 Phase 3 default-on and Phase 4 flag removal",
+    "NPS-RFC-0002 Phase 3 v2 default-on and Phase 4 v1 removal",
+    "NPS-RFC-0003 Phase 3 critical-extension/default-enforcement flag day",
+    "Six independent NPS-RFC-0004 log operators",
+    "NPS-RFC-0005 durable ban storage or quorum admission mode",
+    "NPS-RFC-0006 QUIC v2"
+  ]
+}

@@ -2,8 +2,8 @@
 # 机器可读帧注册表，CI 强制校验用
 # 归属：LabAcacia / INNO LOTUS PTY LTD · Apache 2.0
 
-version: "0.14"
-date: "2026-07-12"
+version: "0.15"
+date: "2026-08-31"
 
 # 统一端口：17433（全协议族共用，通过帧类型码路由）
 # 各协议可选独立端口：NWP 17434、NIP 17435、NDP 17436、NOP 17437
@@ -72,7 +72,7 @@ frames:
     protocol: NCP
     protocol_version: "0.8"
     status: stable
-    description: Keepalive / heartbeat frame. Null payload (single byte 0x07). Either peer MAY send at any time after handshake; receiver MUST accept and SHOULD reply with another NopFrame. When HelloFrame ping_interval_ms > 0, both peers SHOULD send at that interval. Dead-peer detection threshold is 3 × ping_interval_ms (NCP §7.6).
+    description: Keepalive / heartbeat frame. Null payload (single byte 0x07). NCP 0.12 defines deterministic interval selection, receive/idle clocks, and single timeout-close behavior; payload-bearing NopFrame is invalid (NCP §7.6–§7.7).
     fields_ref: "NPS-1-NCP.md#48-nopframe-0x07"
 
   # ── NWP (0x10–0x1F) ────────────────────────────────────────────
@@ -97,7 +97,7 @@ frames:
     protocol: NWP
     protocol_version: "0.13"
     status: stable
-    description: "Change subscription management for Memory and Anchor Nodes. The stable CR-0006 wire shape uses subscription_id, filter, heartbeat_interval_ms, max_events, and opaque cursor; servers push DiffFrame (0x02) events until cancellation or closure. HTTP mode uses Server-Sent Events. NPS-CR-0002 (§12) adds the optional type field for opting into reserved subscribe namespaces — set type=\"topology.stream\" to receive the topology change feed defined in NPS-2-NWP.md §12.2 (cluster member_joined / member_left / member_updated / anchor_state / resync_required events with topology.* request fields); absent means default per-anchor subscribe semantics. Unrecognized type values MUST be rejected with NWP-RESERVED-TYPE-UNSUPPORTED. NWP v0.13 requires topology.stream subscriptions to carry both topology:read and topology:subscribe in IdentFrame.capabilities per §12.4."
+    description: "Change subscription management for Memory and Anchor Nodes. The stable CR-0006 wire shape uses subscription_id, filter, heartbeat_interval_ms, max_events, and opaque cursor; servers push DiffFrame (0x02) events until cancellation or closure. HTTP mode uses Server-Sent Events. NPS-CR-0002 (§12) adds the optional type field for reserved subscribe namespaces. NWP 0.22 adds optional operation=open/renew/close and lease_seconds when the NWM advertises subscription_policy; lease expiry is explicit and non-resurrectable. Unrecognized reserved types remain NWP-RESERVED-TYPE-UNSUPPORTED."
     fields_ref: "NPS-2-NWP.md#13-subscribeframe-0x12--formal-specification"
 
   # ── NIP (0x20–0x2F) ���──────────��────────────────────────────���───
@@ -156,7 +156,7 @@ frames:
     protocol: NOP
     protocol_version: "0.4"
     status: draft
-    description: Task definition and dispatch. Defines a DAG of subtasks with per-node timeout/retry_policy/condition/input_mapping. Supports preflight resource check, OpenTelemetry context (trace_id/span_id/baggage), callback_url for long-running tasks, and priority.
+    description: Task definition and dispatch. Defines a DAG of subtasks with per-node timeout/retry_policy/condition/input_mapping, preflight, trace context, callback, priority, and result TTL. NOP 0.10 binds replay state to caller_nid + task_id + immutable-content digest and defines bounded tombstone/eviction behavior.
     fields_ref: "NPS-5-NOP.md#31-taskframe-0x40"
 
   - id: "0x41"
@@ -172,7 +172,7 @@ frames:
     protocol: NOP
     protocol_version: "0.4"
     status: draft
-    description: Multi-Agent synchronization barrier. Supports K-of-N semantics (min_required), aggregation strategies (merge/first/all/fastest_k), and per-barrier timeout.
+    description: Multi-Agent synchronization barrier. Supports K-of-N semantics, per-barrier timeout, and merge/first/all/fastest_k/weighted_first_k/merge_all. NOP 0.10 freezes score validation, tie-breaking, partial-input, and merge order.
     fields_ref: "NPS-5-NOP.md#33-syncframe-0x42"
 
   - id: "0x43"

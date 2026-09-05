@@ -2,9 +2,18 @@ English | [中文版](./NPS-Roadmap.cn.md)
 
 # NPS Roadmap
 
-**Version**: 0.9
-**Date**: 2026-08-16
+**Version**: 0.10
+**Date**: 2026-09-05
 **Owner**: LabAcacia / INNO LOTUS PTY LTD  
+
+> **How to read historical sections**: completed phase and release sections
+> retain the status that was true at that milestone; they are not current gap
+> lists. Superseded statements are reconciled in the
+> [alpha.19 roadmap-history record](../docs/alpha19-p19-4-roadmap-history-reconciliation.md).
+> Current CR/RFC and SDK truth is maintained in the
+> [alpha.19 status record](../docs/alpha19-p19-4-status-reconciliation.md), and
+> current daemon behavior is maintained in the
+> [daemon architecture](../docs/daemons/architecture.md).
 
 ---
 
@@ -91,6 +100,10 @@ Each phase breaks into three segments:
 
 ### RFCs and CRs shipped in Phase 1
 
+> Lifecycle labels in this subsection are the Phase 1 / alpha.5 snapshot.
+> Later promotions are recorded in the release sections below; current status
+> is authoritative in the [alpha.19 status record](../docs/alpha19-p19-4-status-reconciliation.md).
+
 - [x] **NPS-RFC-0001** — NCP connection preamble `b"NPS/1.0\n"` (Accepted, all 6 SDKs)
 - [x] **NPS-RFC-0002 Phase A/B** — X.509 NID + ACME `agent-01` prototype (Draft, all 6 SDKs; IANA PEN pending)
 - [x] **NPS-RFC-0003** — Agent identity assurance levels `anonymous`/`attested`/`verified` (Accepted, all 6 SDKs)
@@ -108,6 +121,11 @@ Each phase breaks into three segments:
 | `nps-runner`   | Phase 1 skeleton (L3 runtime deferred) |
 | `nps-ingress`  | Phase 1 skeleton (Internet ingress deferred) |
 | `nps-cloud-ca` | Stubbed (2027 Q1+) |
+
+> This is explicitly the alpha.5 daemon snapshot. `nps-ingress` and
+> `nps-runner` subsequently shipped runtime behavior; their current implemented
+> boundary and evidence are linked from the
+> [daemon architecture](../docs/daemons/architecture.md).
 
 ### Completion bar
 
@@ -159,6 +177,11 @@ Each phase breaks into three segments:
 | Non-.NET port of NPS-RFC-0004 reputation helpers (`ReputationLogClient`) | .NET reference done; port all six SDKs |
 | Non-.NET port of NPS-RFC-0003 assurance-level enforcement helpers | Wired in .NET; other SDKs have enum only, no enforcement helpers |
 | **NPS-RFC-0002** promotion Draft → Proposed/Accepted | Closed by NPS-CR-0004 (2026-05-08): IANA PEN **65715** assigned; OID arc `1.3.6.1.4.1.65715` replaces provisional `1.3.6.1.4.1.99999`; RFC-0002 promoted Draft → Proposed (wire-in lands in alpha.6) |
+
+> This table preserves the alpha.5 deferral snapshot. The topology client, DNS
+> TXT resolution and assurance helpers closed in alpha.6/alpha.7; the RFC-0004
+> six-SDK client closed across alpha.13–alpha.15. Current source/test evidence is
+> indexed by the [roadmap-history record](../docs/alpha19-p19-4-roadmap-history-reconciliation.md).
 
 ## alpha.6 Release — 2026-05-12 ✅
 
@@ -367,7 +390,7 @@ Each phase breaks into three segments:
 | **Implementation fix** | — | **NOP frame wire keys** aligned to NPS-5 in Go / Rust / TS / Java: `DelegateFrame` `task_id`→`parent_task_id`, `target_nid`\|`agent_nid`→`target_agent_nid`; `SyncFrame` `subtask_ids`→`wait_for`; `AlignStream` `sync_id`→`stream_id`, `source_nid`→`sender_nid`. Pure conformance fix; TS/Java keep a legacy-key decode fallback |
 | **Shared** | error-codes v1.8 · frame-registry v0.14 | CR-0009's five codes (`NWP-ANCHOR-NOT-LEADER`, `NWP-ANCHOR-EPOCH-FENCED`, `NWP-BRIDGE-DIRECTION-UNSUPPORTED`, `NDP-CLUSTER-SPLIT`, `NIP-CERT-CAPABILITIES-EXCEEDED`) plus the profile-wave additions |
 
-**Daemons** — ✅ `nps-registry` implements CR-0009 highest-epoch resolution + `NDP-CLUSTER-SPLIT`. Still open for later: `nps-ingress` full `TC-N2-*` / `TC-N2-HA-*` L2 vector coverage; `nps-runner` `SpawnSpec` OCI-image resolution + lease-renewal edge cases.
+**Daemons** — ✅ `nps-registry` implements CR-0009 highest-epoch resolution + `NDP-CLUSTER-SPLIT`. At the alpha.17 close, still open for later: `nps-ingress` full `TC-N2-*` / `TC-N2-HA-*` L2 vector coverage; `nps-runner` `SpawnSpec` OCI-image resolution + lease-renewal edge cases. **Superseded in alpha.19**: ingress now publishes claim-scoped TLS evidence rather than a full L2 claim, and runner OCI resolution/renewal is implemented with explicit remaining L3 boundaries; see the [roadmap-history record](../docs/alpha19-p19-4-roadmap-history-reconciliation.md).
 
 **Out of scope (→ beta.1)**: the NIP Phase-3 **flag day** itself (making enforcement MUST by default); multi-region NPS Cloud CA (Phase 3); QUIC production hardening beyond conformance vectors.
 
@@ -409,15 +432,19 @@ Each phase breaks into three segments:
 
 ---
 
-## alpha.19 — 🚧 next (target 2026-10) — **Protocol Hardening (carry-over)**
+## alpha.19 — 🚧 next (target 2026-10) — **Debt Closure & Pre-alpha.20 Baseline Freeze**
 
-> **Theme**: *Protocol Hardening* — finish the three per-protocol hardening tracks that alpha.18 planned but did not ship, and restore the standing lockstep rule before `v1.0.0-beta.1`.
+> **Theme**: *close the existing contract before the next design wave* — finish the alpha.18 hardening carry-over, close older protocol/SDK/daemon/conformance/documentation/distribution debt, and freeze a coherent baseline before alpha.20 introduces substantial new design.
 >
 > **Standing rule (since alpha.11)**: every alpha advances all five protocols in **spec *and* all six SDKs** in lockstep — no ".NET-reference-first" gaps. Each item below lands in spec + go/java/python/rust/typescript/.NET + conformance vectors + CN translation + the four doc surfaces. alpha.18 broke this rule; alpha.19 exists to restore it.
 
-**Target versions**: NCP **0.12** / NDP **0.13** / NOP **0.10**; `frame-registry.yaml` **0.15**. NWP and NIP hold at 0.21 / 0.14 unless a hardening delta requires otherwise.
+**Governance and inventory**: [NPS-Dev#91](https://github.com/labacacia/NPS-Dev/issues/91) · [ChangeControl EPIC-004](https://github.com/innolotus/ChangeControl/issues/4) · [P19-0 debt inventory](../docs/alpha19-debt-inventory.md). The inventory assigns every candidate a stable ID, source evidence, owner, disposition, downstream scope, and objective closure gate.
 
-**Baseline (2026-08-16)**: alpha.18 is published to every registry; the tracker has no open issues; the CN specs are at parity with EN; the release-engineering debt listed under alpha.18 P18-0 is cleared.
+**Debt boundary**: work is in scope when it is an unfulfilled pre-alpha.19 promise, an unimplemented current normative `MUST`, an Implemented/capability claim without executable proof, a six-SDK current-contract gap, a daemon contract gap, or unexplained source/distribution/documentation drift. A debt item closes only through implementation and validation, removal of an obsolete current claim, or evidence that it was always explicitly future scope. Relabeling unresolved current behavior as “future” is not closure.
+
+**Target versions**: NCP **0.12** / NWP **0.22** / NIP **0.15** / NDP **0.13** / NOP **0.10**; `frame-registry.yaml` **0.15**. NWP/NIP advance because P19-1 freezes normative subscription/metadata and renewal/revocation deltas rather than documentation-only corrections.
+
+**Baseline (2026-08-31)**: alpha.18 is published to every registry; CN specs are at parity with EN for the released protocol set; the alpha.18 P18-0 release-engineering debt is cleared. P19-0 found additional pre-alpha.20 debt outside the old three-protocol table, including daemon status/runtime gaps, catalog-versus-executable Node conformance, stale CR/RFC coverage matrices, and current documentation truth drift.
 
 **Per-protocol hardening** (carried from alpha.18 unchanged in substance):
 
@@ -429,15 +456,20 @@ Each phase breaks into three segments:
 
 **Also carried from the alpha.18 plan**: NWP resumable-subscription enforcement and portable stability/SLA/billing metadata; NIP short-lived certificate renewal interoperability, fail-closed OCSP/CRL behavior under timeout/stale/unknown responses, and the advisory tool that reports what beta.1 Phase-3 enforcement would reject. These were planned as NWP/NIP hardening alongside the version bumps that *did* ship for other reasons, so they are not covered by 0.21 / 0.14 as released.
 
+**Additional debt families frozen by P19-0**: six-SDK executable behavior (not DTO/catalog presence); `nps-ingress`, `nps-runner`, and `npsd` runtime/status/certification reconciliation; Node L1/L2 executable profiles; NIP CR-0005 and RFC implementation-matrix truth; daemon/root/wiki current-state documentation; and source-of-truth-to-standalone materialization and package gates. The authoritative item-level scope is the P19-0 inventory, not an untracked TODO search.
+
 **Execution gates**:
-1. **P19-1 — Spec/design freeze**: write one normative hardening delta per protocol, bump NCP / NDP / NOP and `frame-registry.yaml`, and land EN/CN plus shared positive/negative/fault vectors together.
-2. **P19-2 — Runtime parity**: implement every P19-1 behavior in all six SDKs. A field-only DTO port does not satisfy this gate; timers, persistence, cancellation, expiry, replay, and failure paths must execute.
-3. **P19-3 — Fault and package gates**: run six-language suites, NativeAOT, race/concurrency tests where available, fault vectors, package dry-runs, and security/dependency scans at the documented minimum toolchains.
-4. **P19-4 — Distribution**: materialize standalones with deletion and distribution excludes, vendor their conformance fixtures, reach zero unexplained Dev→Release/SDK drift, then perform the normal pre-release review. Tagging and publishing remain separately approved actions.
+1. **P19-0 — Debt inventory and scope freeze**: freeze stable debt IDs, evidence, owners, dispositions, downstream scope, and closure gates; prove exclusions do not contradict the current contract.
+2. **P19-1 — Spec and fixture freeze**: write the normative hardening deltas, bump NCP / NDP / NOP and `frame-registry.yaml`, and land EN/CN plus shared positive/negative/fault vectors together.
+3. **P19-2 — Six-SDK runtime parity**: implement every accepted behavior in all six SDKs. A field-only DTO or catalog port does not satisfy this gate; timers, persistence, cancellation, expiry, replay, admission, recovery, and failure paths must execute.
+4. **P19-3 — Daemon closure**: reconcile `nps-ingress`, `nps-runner`, and `npsd` current claims with executable runtime, persistence, admission, fault, and Node-profile evidence.
+5. **P19-4 — Conformance and documentation truth**: execute advertised Node L1/L2 families; reconcile CR/RFC matrices, historical/current status, EN/CN documents, daemon health/README/architecture, and the release wiki.
+6. **P19-5 — Package and distribution candidate**: run six-language suites, NativeAOT, applicable race/concurrency/restart/partition gates, package dry-runs, and security/dependency scans; materialize standalones with deletion/excludes and owned fixtures; reach zero unexplained Dev→Release/SDK/daemon drift.
+7. **P19-6 — Pre-release review and approved publication**: reconcile the inventory and acceptance evidence, run the normal pre-release review, and request separate explicit approval before any tag/package/image/release mutation.
 
 **Release-runbook invariants**: crates is **8** crates including `nps-conformance`; the NuGet family is **11** packages; standalone sync deletes stale source while preserving documented distribution-only files; every standalone receives the conformance fixtures it executes; Maven packaging has a Python `zipfile` fallback; registry preflight proves publish capability (`cargo owner --list`, npm granular read/write token with publish 2FA bypass), not merely anonymous read access.
 
-**Out of scope (→ beta.1)**: the NIP Phase-3 **flag day** itself; multi-region NPS Cloud CA (Phase 3); the 1.0 spec freeze.
+**Out of scope**: the NIP Phase-3 **flag day** itself; multi-region NPS Cloud CA/HSM/cross-CA expansion; the 1.0 spec freeze and standards work; C++/PHP promotion; Studio/NWP-Manager completion; retired compat-ingress v0.2 feature TODOs; and all new alpha.20-only protocol/product design. Publication remains separately approved.
 
 ---
 
@@ -499,7 +531,7 @@ Phase 0                Phase 1                  Phase 2             Phase 3
 | R05 | Competitor reaches similar positioning first | Medium | Medium | NPS differentiates on Token Economy; accelerate OSS release |
 | R06 | Phase 3 PoC partner resources fall through | Medium | Medium | Backup: internal demo datasets in lieu of real partners |
 | R07 | W3C/IETF cycle too long | High | Low | Pursue de-facto-standard path (GitHub adoption) before formal RFC |
-| R08 | IANA PEN assignment delayed | Medium | Low | RFC-0002 ships with provisional OID; IANA PEN is non-blocking for alpha releases |
+| R08 | **Closed 2026-05-08** — IANA PEN assignment delay | — | — | PEN **65715** is assigned and current OIDs use `1.3.6.1.4.1.65715`; provisional `1.3.6.1.4.1.99999` survives only in labeled history |
 
 ---
 

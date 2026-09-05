@@ -3,6 +3,8 @@
 > **Neural Protocol Suite** — 为 AI Agent 和神经模型量身设计的完整互联网协议栈。
 >
 > 最新 suite release 1.0.0-alpha.18（2026-08-15 发布）· Apache 2.0 · [English](index.md)
+>
+> 规范树包含经审查、尚未发布的 alpha.19 候选；下方所有安装命令仍固定到已发布的 alpha.18 package。
 
 ---
 

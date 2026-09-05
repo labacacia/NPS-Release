@@ -1,0 +1,129 @@
+{
+  "schema_version": 1,
+  "suite": "alpha.19 source candidate",
+  "candidate_version": "1.0.0-alpha.19",
+  "source_commit": "c7373e0a1afcd56793445d5635ba443368f35464",
+  "executed_at": "2026-09-05",
+  "release_engineering_verdict": "ready_to_sync",
+  "all_reversible_package_gates_passed": true,
+  "package_families": {
+    "nuget": {
+      "version": "1.0.0-alpha.19",
+      "packages": 11,
+      "symbol_packages": 11,
+      "files": 22,
+      "bytes": 1430123,
+      "family_checker": "passed",
+      "nuspec_version_checks": 11,
+      "readme_checks": 11,
+      "result": "passed"
+    },
+    "npm": {
+      "coordinate": "@labacacia/nps-sdk",
+      "version": "1.0.0-alpha.19",
+      "packed_files": 625,
+      "tarball_bytes": 460270,
+      "unpacked_bytes": 2048488,
+      "required_entrypoints": 8,
+      "install_import_smoke": "passed",
+      "result": "passed"
+    },
+    "pypi": {
+      "coordinate": "nps-lib",
+      "version": "1.0.0a19",
+      "artifacts": 2,
+      "artifact_bytes": 646674,
+      "formats": ["wheel", "sdist"],
+      "metadata_version": "2.5",
+      "twine_7_check": "passed",
+      "install_import_version_smoke": "passed",
+      "result": "passed"
+    },
+    "maven": {
+      "coordinate": "com.labacacia.nps:nps-java",
+      "version": "1.0.0-alpha.19",
+      "staging_files": 50,
+      "staging_bytes": 3055518,
+      "primary_artifacts": 5,
+      "signatures": 5,
+      "checksums": 40,
+      "central_bundle_entries": 50,
+      "central_bundle_bytes": 2898614,
+      "required_pom_sections": 6,
+      "result": "passed"
+    },
+    "go": {
+      "coordinate": "github.com/labacacia/NPS-sdk-go",
+      "distribution": "tag_only",
+      "minimum_toolchain": "go1.23.0",
+      "module_go_version": "1.23.0",
+      "tests": "passed",
+      "result": "passed"
+    },
+    "rust": {
+      "candidate_version": "1.0.0-alpha.19",
+      "family": [
+        "nps-core",
+        "nps-ncp",
+        "nps-nip",
+        "nps-ndp",
+        "nps-nop",
+        "nps-nwp",
+        "nps-conformance",
+        "nps-sdk"
+      ],
+      "candidate_metadata_versions_aligned": 8,
+      "candidate_workspace_check": "passed",
+      "candidate_leaf_package": "nps-core-1.0.0-alpha.19.crate",
+      "current_line_content_packages": 8,
+      "current_line_content_package_bytes": 437976,
+      "ordered_publish_constraint": "Downstream alpha.19 crates cannot pass cargo package until their exact alpha.19 internal dependencies exist in the registry.",
+      "final_candidate_rerun_required": true,
+      "result": "passed_with_ordered_publish_constraint"
+    }
+  },
+  "tooling_observations": [
+    "Twine 6.2.0 rejected Metadata-Version 2.5 as unknown; pinned Twine 7.0.0 validated both Python artifacts.",
+    "The zip executable was unavailable; the documented Python standard-library fallback produced and validated the Maven Central bundle.",
+    "The source-of-truth checker used pre-migration local directory aliases and silently skipped SDK tree comparison; path aliases now resolve the migrated workspace names."
+  ],
+  "source_of_truth": {
+    "hard_assertions": "passed",
+    "version_consistency": "passed",
+    "version_sync": "18 repositories checked; all required repositories aligned to published alpha.18",
+    "wiki_content_warnings": 0,
+    "spec_tree_drift_files": 64,
+    "sdk_tree_drift_files": 175,
+    "local_origin_divergence_repositories": 4,
+    "divergence": [
+      "NPS-sdk-go feature branch is one commit ahead of origin/main",
+      "NPS-sdk-rust migration branch is one commit behind origin/main",
+      "NPS-sdk-ts migration branch is one commit ahead and one behind origin/main",
+      "NPS-sdk-java migration branch is one commit behind origin/main"
+    ]
+  },
+  "wiki_followup": {
+    "repository": "NPS-Release-Wiki",
+    "commit": "3cffdca",
+    "pages_normalized": 9,
+    "content_health_result": "passed"
+  },
+  "readiness_boundary": {
+    "ready_for": [
+      "deliberate Dev-to-Release and Dev-to-standalone materialization",
+      "coordinated candidate version changes in canonical source before downstream sync",
+      "repeating package gates after materialization"
+    ],
+    "not_ready_for": [
+      "tagging while 64 specification and 175 SDK tree deltas remain",
+      "registry publication before final alpha.19 Rust ordered-family verification",
+      "release publication before repository coherence and distribution drift are clean"
+    ]
+  },
+  "excluded_from_this_gate": [
+    "repository materialization or deletion semantics",
+    "persistent version changes",
+    "registry authority checks",
+    "merge, tag, package upload, image push, and release publication"
+  ]
+}

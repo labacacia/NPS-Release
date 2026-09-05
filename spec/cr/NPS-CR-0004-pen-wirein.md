@@ -138,20 +138,20 @@ To prevent scope creep, the following are explicitly NOT part of this CR:
 - **Any change to `1.3.101.112` (Ed25519 / RFC 8410)**. That OID is owned by IETF and unaffected.
 - **Existing test fixtures under `impl/dotnet/tests/` that hardcode `99999` for unrelated reasons** (e.g. integer clamp tests). Constant replacement is scoped to OID literals only — see Task 2 for the exact grep contract.
 
-## 8. Acceptance criteria
+## 8. Implementation record
 
-This CR is considered accepted and ready to merge when:
+Reconciled against current source on 2026-09-05:
 
-- [ ] This document (`spec/cr/NPS-CR-0004-pen-wirein.md`) is committed under `dev`.
-- [ ] All 6 SDKs replace `1.3.6.1.4.1.99999` with `1.3.6.1.4.1.65715` and reserve `.2.2` (`IdNpsNodeRoles`) — Task 2.
-- [ ] .NET SDK comment-hygiene sweep complete — Task 3.
-- [ ] `spec/NPS-3-NIP.md` and `.cn.md` updated; version 0.7 → 0.8 — Task 4.
-- [ ] `spec/rfcs/NPS-RFC-0002-x509-acme-nid-certs.{md,cn.md}` promoted Draft → Proposed — Task 5.
-- [ ] Roadmap R08 row closed — Task 6.
-- [ ] Four frozen example ports updated — Task 7.
-- [ ] CHANGELOG, README, and CLAUDE.md mentions of the provisional PEN replaced — Task 8.
-- [ ] `dotnet test` and any CI checks pass against the wired-in arc.
-- [ ] At least one independent reviewer (besides the author) signs off.
+- [x] This document is committed and indexed as `Implemented`.
+- [x] All six SDKs use `1.3.6.1.4.1.65715` and reserve `.2.2`
+  (`IdNpsNodeRoles`).
+- [x] SDK and frozen CA-example source comments identify PEN 65715 as assigned.
+- [x] Bilingual NIP source and RFC-0002 use the assigned arc.
+- [x] Roadmap history records the wire-in; current source no longer waits for
+  PEN assignment.
+- [x] Tests and consistency checks execute against the assigned arc.
+- Independent alpha.19 review is tracked by EPIC-004 P19-6 rather than left as
+  an unowned proposal-era checkbox.
 
 ## 9. CHANGELOG entry (proposed text, EN)
 

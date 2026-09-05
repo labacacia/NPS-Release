@@ -117,9 +117,9 @@ follow-up PR once at least one reference SDK ships the change.
 
 | Number | Title | Status | Accepted | Supersedes |
 |--------|-------|--------|----------|------------|
-| [0001](./NPS-RFC-0001-ncp-connection-preamble.md) | Add NCP connection preamble for native-mode traffic identification | Accepted | _—_ | _—_ |
-| [0002](./NPS-RFC-0002-x509-acme-nid-certs.md) | Adopt X.509 + ACME for NID certificates | Accepted | 2026-05-17 | _—_ |
-| [0003](./NPS-RFC-0003-agent-identity-assurance-levels.md) | Three-tier Agent identity assurance levels for anti-scraping / trust gating | Accepted | _—_ | _—_ |
+| [0001](./NPS-RFC-0001-ncp-connection-preamble.md) | Add NCP connection preamble for native-mode traffic identification | Active | 2026-04-25 | _—_ |
+| [0002](./NPS-RFC-0002-x509-acme-nid-certs.md) | Adopt X.509 + ACME for NID certificates | Active | 2026-05-17 | _—_ |
+| [0003](./NPS-RFC-0003-agent-identity-assurance-levels.md) | Three-tier Agent identity assurance levels for anti-scraping / trust gating | Active | 2026-04-25 | _—_ |
 | [0004](./NPS-RFC-0004-nid-reputation-log.md) | Append-only NID reputation log (Certificate Transparency for Agents) | Active | 2026-05-28 | _—_ |
 | [0005](./NPS-RFC-0005-reputation-policy-enforcement.md) | Reputation policy enforcement — `ban_on` / `reject_on` / `throttle_on` rules, NWM `reputation_policy` field | Active | 2026-05-28 | _—_ |
 | [0006](./NPS-RFC-0006-ncp-native-transport.md) | NCP native mode transport binding — TCP framing, QUIC stream mapping, rekeying, `max_concurrent_streams` | Accepted | 2026-07-05 | _—_ |

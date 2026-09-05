@@ -4,9 +4,10 @@
 
 NPS is a multi-layer protocol suite. Where you start depends on what you're building.
 
-The latest suite release is `1.0.0-alpha.18`, published 2026-08-15. The
-documentation and SDK notes are aligned with the alpha.18 release boundary;
-package-manager availability is tracked per ecosystem.
+The latest suite release is `1.0.0-alpha.18`, published 2026-08-15. Install
+commands and SDK notes remain aligned with that release. The specification tree
+contains the reviewed, unreleased alpha.19 candidate; package-manager
+availability is tracked per ecosystem.
 
 ---
 

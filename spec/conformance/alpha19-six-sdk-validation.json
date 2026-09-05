@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "suite": "alpha.19 source candidate",
+  "source_commit": "8f79cf809d3f3a63a7ba31a8fbf6a28db2d85564",
+  "executed_at": "2026-09-05",
+  "all_language_gates_passed": true,
+  "total_tests": 5694,
+  "github_actions": {
+    "run_id": 33948479937,
+    "url": "https://github.com/labacacia/NPS-Dev/actions/runs/33948479937",
+    "source_commit": "cfac0e61948ac2efa17c73c779afa9427e8414c1",
+    "jobs": 8,
+    "result": "passed",
+    "notes": "Six language jobs, NIP CA build, NativeAOT smoke, and NIP CA Docker build passed."
+  },
+  "languages": [
+    {
+      "name": ".NET",
+      "command": "dotnet restore impl/dotnet/NPS.sln && dotnet build impl/dotnet/NPS.sln -c Release --no-restore -p:TreatWarningsAsErrors=true && dotnet test impl/dotnet/NPS.sln -c Release --no-build --verbosity normal -p:TreatWarningsAsErrors=true",
+      "tests": 1001,
+      "failures": 0,
+      "result": "passed",
+      "notes": "Release build completed with zero warnings and zero errors."
+    },
+    {
+      "name": "Python",
+      "command": "python3 -m pytest",
+      "tests": 1375,
+      "failures": 0,
+      "result": "passed",
+      "notes": "Python 3.12.3; total coverage 92.03 percent against a 90 percent gate. The local image exposes python3 rather than the CI-provisioned python alias."
+    },
+    {
+      "name": "TypeScript",
+      "command": "npm ci && npm run build && npm test",
+      "tests": 1174,
+      "failures": 0,
+      "result": "passed",
+      "notes": "TypeScript build and all 61 Vitest files passed."
+    },
+    {
+      "name": "Go",
+      "command": "go test -count=1 ./...",
+      "tests": 688,
+      "failures": 0,
+      "result": "passed",
+      "notes": "All package, integration, portable-profile, and alpha.19 tests passed."
+    },
+    {
+      "name": "Java",
+      "command": "./gradlew test --no-daemon",
+      "tests": 697,
+      "failures": 0,
+      "result": "passed",
+      "notes": "Gradle 8.11 test reports contain zero failures, errors, and skips."
+    },
+    {
+      "name": "Rust",
+      "command": "cargo test --workspace",
+      "tests": 759,
+      "failures": 0,
+      "result": "passed",
+      "notes": "All workspace unit, integration, conformance, and documentation tests passed."
+    }
+  ],
+  "observations": [
+    {
+      "id": "P19-R03-NPM-AUDIT",
+      "severity": "high",
+      "status": "assigned-to-security-gate",
+      "detail": "npm ci reported one high-severity dependency vulnerability; P19-5 dependency/security scanning owns diagnosis and disposition."
+    },
+    {
+      "id": "P19-R03-GHA-NODE20",
+      "severity": "warning",
+      "status": "assigned-to-security-gate",
+      "detail": "GitHub warned that selected actions still declare the deprecated Node.js 20 runtime and are being forced onto Node.js 24; P19-5 dependency/security scanning owns action-version disposition."
+    }
+  ],
+  "excluded_from_this_gate": [
+    "NativeAOT and race/concurrency/restart/partition gates",
+    "dependency and security scans",
+    "package dry-runs and release-family validation",
+    "materialization, version bump, tag, package, image, and release publication"
+  ]
+}

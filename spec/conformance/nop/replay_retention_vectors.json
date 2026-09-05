@@ -1,0 +1,88 @@
+{
+  "name": "nop-alpha19-replay-retention",
+  "version": "0.10.0",
+  "spec_ref": "spec/NPS-5-NOP.md §3.5.6",
+  "description": "Deterministic replay-ledger, result-retention, terminal-race, and aggregation cases.",
+  "vectors": [
+    {
+      "id": "nop.alpha19.replay.001",
+      "requirement": "NOP-P19-01,NOP-P19-02",
+      "description": "An identical duplicate returns the recorded running state without a second dispatch.",
+      "kind": "positive",
+      "input": {"caller_nid": "urn:nps:agent:example:a", "task_id": "task-1", "digest": "sha256:aaa", "recorded": {"digest": "sha256:aaa", "state": "running", "dispatch_count": 1}},
+      "expected": {"state": "running", "dispatch_count": 1, "replayed": true}
+    },
+    {
+      "id": "nop.alpha19.replay.002",
+      "requirement": "NOP-P19-03",
+      "description": "The same caller/task key with a different digest is a conflict.",
+      "kind": "negative",
+      "input": {"caller_nid": "urn:nps:agent:example:a", "task_id": "task-1", "digest": "sha256:bbb", "recorded_digest": "sha256:aaa"},
+      "expected": {"accepted": false, "error": "NOP-REPLAY-CONFLICT", "record_mutated": false}
+    },
+    {
+      "id": "nop.alpha19.replay.003",
+      "requirement": "NOP-P19-01",
+      "description": "The same task ID from another caller uses a distinct replay key.",
+      "kind": "positive",
+      "input": {"records": [{"caller_nid": "urn:nps:agent:example:a", "task_id": "task-1"}], "incoming": {"caller_nid": "urn:nps:agent:example:b", "task_id": "task-1"}},
+      "expected": {"new_key": true, "accepted": true}
+    },
+    {
+      "id": "nop.alpha19.replay.004",
+      "requirement": "NOP-P19-04",
+      "description": "The result is expired at the exact monotonic deadline.",
+      "kind": "negative",
+      "input": {"terminal_commit_ms": 1000, "result_ttl_seconds": 2, "query_at_ms": 3000},
+      "expected": {"result": null, "error": "NOP-TASK-RESULT-EXPIRED"}
+    },
+    {
+      "id": "nop.alpha19.replay.005",
+      "requirement": "NOP-P19-05",
+      "description": "A matching duplicate inside the post-result tombstone cannot dispatch again.",
+      "kind": "negative",
+      "input": {"result_expired_at_ms": 3000, "replay_tombstone_seconds": 300, "duplicate_at_ms": 302000},
+      "expected": {"dispatch": false, "error": "NOP-TASK-RESULT-EXPIRED", "tombstone_retained": true}
+    },
+    {
+      "id": "nop.alpha19.replay.006",
+      "requirement": "NOP-P19-06",
+      "description": "Capacity pressure never evicts running records.",
+      "kind": "negative",
+      "input": {"capacity": 2, "records": [{"key": "a", "state": "running"}, {"key": "b", "state": "running"}], "incoming_key": "c"},
+      "expected": {"accepted": false, "evicted": [], "error": "NOP-REPLAY-LIMIT"}
+    },
+    {
+      "id": "nop.alpha19.replay.007",
+      "requirement": "NOP-P19-07",
+      "description": "A late completion cannot replace a committed cancellation.",
+      "kind": "positive",
+      "input": {"committed": {"state": "cancelled", "at_ms": 500}, "late": {"state": "completed", "at_ms": 510}},
+      "expected": {"state": "cancelled", "late_event": "audit_only", "ttl_extended": false}
+    },
+    {
+      "id": "nop.alpha19.replay.008",
+      "requirement": "NOP-P19-08",
+      "description": "Weighted-first-k sorts score descending and node ID ascending for ties.",
+      "kind": "positive",
+      "input": {"min_required": 2, "results": [{"node_id": "c", "score": 0.8}, {"node_id": "b", "score": 0.9}, {"node_id": "a", "score": 0.9}]},
+      "expected": {"selected_node_ids": ["a", "b"]}
+    },
+    {
+      "id": "nop.alpha19.replay.009",
+      "requirement": "NOP-P19-08",
+      "description": "A missing weighted score is rejected.",
+      "kind": "negative",
+      "input": {"min_required": 1, "results": [{"node_id": "a"}]},
+      "expected": {"error": "NOP-AGGREGATION-INVALID"}
+    },
+    {
+      "id": "nop.alpha19.replay.010",
+      "requirement": "NOP-P19-09,NOP-P19-10",
+      "description": "Merge-all concatenates arrays in topology order, overwrites scalars, and ignores failed/skipped values.",
+      "kind": "positive",
+      "input": {"topology_order": ["a", "b", "c", "d"], "results": [{"node_id": "a", "state": "completed", "value": {"items": [1], "owner": "a"}}, {"node_id": "b", "state": "failed", "value": {"items": [9]}}, {"node_id": "c", "state": "skipped"}, {"node_id": "d", "state": "completed", "value": {"items": [2], "owner": "d"}}]},
+      "expected": {"aggregated": {"items": [1, 2], "owner": "d"}, "inputs_mutated": false}
+    }
+  ]
+}

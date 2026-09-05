@@ -7,7 +7,7 @@
 **作者**: Ori Lynn <iamzerolin@gmail.com>（LabAcacia）
 **Shepherd**: Ori Lynn（pre-1.0 快速通道，见 `spec/cr/README.md`）
 **创建日期**: 2026-05-19
-**最后更新**: 2026-05-28
+**最后更新**: 2026-09-05
 **通过日期**: 2026-05-19（pre-1.0 快速通道）
 **激活日期**: 2026-05-28（v1.0.0-alpha.9 — DefaultReputationPolicyEvaluator、AnchorNodeMiddleware 及 X-NWP-Ident 保证级别提取均已发布）
 **取代**: _无_
@@ -256,18 +256,25 @@ AaaS Profile L2-09 更新为：
 | **alpha.8** | RFC-0005 规范（本文档）；六个 SDK 中的 `ReputationPolicyEvaluator` + `AnchorNodeOptions.ReputationPolicy`；NWM `reputation_policy` 发布；三个新错误码 |
 | **alpha.9** | `IdentFrame.metadata.reputation_policy` Agent 侧声明；更新 AaaS Profile L2-09 文本；NPS Probe 的 NWM 策略存在性合规检查 |
 
-## 7. 开放问题
+## 7. 已决问题
 
-1. **`on_log_unavailable` 默认值**：本 RFC 为可用性考虑默认为 `allow`。AaaS Profile L2 是否应对某些事件类型（如 cert-revoked）要求 SHOULD `deny`，并使用本地缓存的吊销列表？本地吊销缓存无需硬性 `deny` 即可解决此问题，但增加了实现复杂性。
+1. **`on_log_unavailable` 保持 `allow`。** 这保留 Accepted 时的可用性默认值。
+   部署可以选择 `deny`；证书吊销仍是独立的 NIP fail-closed 路径，不会因
+   reputation log 不可达而弱化。
 
-2. **封禁持久化**：本 RFC 规定封禁状态保存在进程内存中，节点重启后清除。`org-private` 和 `public-federated` 注册表 Profile（NDP §7.3）是否应要求封禁状态跨重启持久化？SQLite 持久化封禁存储将与 `graph_seq` 持久化要求保持一致。
+2. **可移植 ban state 保持进程内。** Durable ban store 是 operator 可选实现
+   （evaluator 可替换），不是 `org-private` / `public-federated` wire profile
+   要求；若互操作需要统一持久化语义，应由未来 CR 标准化。
 
-3. **多日志共识**：当 `log_sources` 有多个条目且它们不一致时（日志 A 显示干净，日志 B 显示重大违规），本 RFC 采用最严格结果。规范是否应允许 `quorum` 模式，要求 `ceil(N/2)` 个日志达成一致后规则才触发？
+3. **多日志继续采用最严格结果。** 当前契约不包含 quorum mode；新增 quorum
+   会改变 admission 语义，必须走未来 CR，而不是保留 alpha.19 未决默认值。
 
 ## 8. 变更日志
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
+| Active 对账 | 2026-09-05 | 将 Accepted 时的可用性、进程内 ban 与 fail-most-restrictive 默认值记录为已决当前行为。|
+| Active | 2026-05-28 | 六 SDK evaluator/options 与参考 Anchor enforcement 激活。|
 | 草案 | 2026-05-19 | 初始草案 |
 
 ---

@@ -1,0 +1,120 @@
+{
+  "schema_version": 1,
+  "suite": "alpha.19 source candidate",
+  "source_commit": "25beebfcb538c39f8cd8af6a1309ac5976949cf8",
+  "executed_at": "2026-09-05",
+  "all_security_gates_passed": true,
+  "dependency_audits": {
+    "dotnet": {
+      "tool": "dotnet list package --vulnerable --include-transitive",
+      "projects": 6,
+      "vulnerabilities": 0,
+      "result": "passed"
+    },
+    "typescript": {
+      "tool": "npm audit --audit-level=low",
+      "projects": 2,
+      "vulnerabilities": 0,
+      "result": "passed"
+    },
+    "python": {
+      "tool": "pip-audit 2.10.1 over freshly resolved pinned graphs",
+      "resolved_packages": {
+        "impl/python": 20,
+        "tools/nip-ca-server/example/python": 22
+      },
+      "vulnerabilities": 0,
+      "result": "passed"
+    },
+    "java": {
+      "tool": "OSV querybatch over Gradle runtimeClasspath",
+      "resolved_packages": {
+        "impl/java": 9,
+        "tools/nip-ca-server/example/java": 39
+      },
+      "vulnerabilities": 0,
+      "result": "passed"
+    },
+    "rust": {
+      "tool": "cargo-audit 0.22.2",
+      "lockfile_dependencies": {
+        "impl/rust": 247,
+        "tools/nip-ca-server/example/rust": 167
+      },
+      "vulnerabilities": 0,
+      "warnings": 0,
+      "result": "passed"
+    },
+    "go": {
+      "tool": "govulncheck 1.7.0 with Go 1.26.6",
+      "reachable_vulnerabilities": 0,
+      "imported_package_vulnerabilities": 0,
+      "required_module_advisories": {
+        "impl/go": 20,
+        "tools/nip-ca-server/example/go": 22
+      },
+      "result": "passed_with_disclosed_unreachable_module_advisories"
+    }
+  },
+  "initial_findings_closed": [
+    "TypeScript SDK nanoid high-severity advisory",
+    "four affected packages in the TypeScript NIP CA example",
+    "18 advisory records in the Python NIP CA example resolved graph",
+    "69 OSV records in the Java NIP CA example runtime graph",
+    "RustSec unsoundness warnings for anyhow and rand lockfile versions",
+    "reachable Go standard-library advisories under local Go 1.26.5"
+  ],
+  "workflow_hardening": {
+    "workflow_files": 7,
+    "remote_action_references": 43,
+    "unique_remote_actions": 12,
+    "references_pinned_to_full_commit": 43,
+    "actionlint": "passed",
+    "least_privilege": "explicit contents: read defaults and removal of unused package write permission",
+    "input_handling": "workflow inputs cross the shell boundary through environment variables and Bash arrays"
+  },
+  "secret_scan": {
+    "tool": "gitleaks 8.30.1",
+    "scope": "complete Git history",
+    "commits_scanned": 655,
+    "bytes_scanned": 28103931,
+    "findings": 0,
+    "false_positive_allowlists": 2,
+    "allowlist_boundary": "rule, path, and match regex must all agree"
+  },
+  "functional_regression_checks": {
+    "typescript_sdk": "1174/1174 tests passed on an unloaded rerun",
+    "typescript_nip_ca_example": "npm ci and TypeScript build passed",
+    "python_nip_ca_example": "clean target install, startup, key/root generation, and compileall passed",
+    "go_nip_ca_example": "all packages compiled and go test passed",
+    "java_sdk": "full test passed",
+    "java_nip_ca_example": "test and bootJar passed",
+    "rust_sdk": "full workspace test passed",
+    "rust_nip_ca_example": "cargo test passed"
+  },
+  "platform_residual_risks": [
+    "GitHub Dependabot alerts are disabled for the repository",
+    "GitHub code scanning is disabled for the repository",
+    "GitHub secret scanning is disabled for the repository",
+    "Go module graphs retain advisories in unimported and unreachable dependency paths because raising the published consumer Go floor is outside alpha.19 scope"
+  ],
+  "claim_boundary": {
+    "validated": [
+      "current resolved dependency graphs for all six SDK ecosystems and NIP CA examples",
+      "reachable Go symbols under the patched Go 1.26.6 toolchain",
+      "complete repository Git history with two narrow false-positive allowlists",
+      "workflow syntax, immutable remote action references, least privilege, and shell-safe manual inputs",
+      "scheduled and pull-request security-gate definition"
+    ],
+    "not_certified": [
+      "future dependency resolutions or newly published advisories",
+      "GitHub-hosted platform scanning features while repository settings remain disabled",
+      "runtime penetration testing, fuzzing, malware analysis, or production infrastructure",
+      "unimported Go dependency paths reported only at module level"
+    ]
+  },
+  "excluded_from_this_gate": [
+    "package dry-runs and release-family validation",
+    "materialization, version bump, merge, tag, package, image, and release publication"
+  ]
+}

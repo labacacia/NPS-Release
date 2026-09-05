@@ -3,13 +3,13 @@ English | [中文版](./NPS-RFC-0001-ncp-connection-preamble.cn.md)
 ---
 **RFC Number**: NPS-RFC-0001
 **Title**: Add NCP connection preamble for native-mode traffic identification
-**Status**: Accepted (Phase 1 — spec + .NET reference implementation landed)
+**Status**: Active (Phase 2 helpers implemented across all six SDKs)
 **Author(s)**: Ori Lynn <iamzerolin@gmail.com> (LabAcacia)
 **Shepherd**: Ori Lynn (pre-1.0 fast-track per `spec/cr/README.md`)
 **Created**: 2026-04-21
-**Last-Updated**: 2026-04-25
+**Last-Updated**: 2026-09-05
 **Accepted**: 2026-04-25 (pre-1.0 fast-track; see `spec/cr/README.md`)
-**Activated**: _(set when first reference SDK ships, target v1.0-alpha.3)_
+**Activated**: 2026-04-25 (.NET reference helper; six-SDK helper parity completed 2026-04-30)
 **Supersedes**: _none_
 **Superseded-By**: _none_
 **Affected Specs**: NPS-1 NCP, spec/error-codes.md, spec/status-codes.md
@@ -336,12 +336,16 @@ preamble.
 
 | SDK | Owner | Status | Notes |
 |-----|-------|--------|-------|
-| .NET | Ori Lynn | pending | Primary reference; lands first |
-| Python | _TBD_ | pending | |
-| TypeScript | _TBD_ | pending | Browser: native mode not applicable; Node.js only |
-| Java | _TBD_ | pending | |
-| Rust | _TBD_ | pending | |
-| Go | _TBD_ | pending | |
+| .NET | NPS SDK maintainers | Implemented — Phase 2 helper + tests | `NPS.Core.Ncp.NcpPreamble`; npsd is the reference server transport |
+| Python | NPS SDK maintainers | Implemented — Phase 2 helper + tests | `nps_sdk.ncp.preamble` |
+| TypeScript | NPS SDK maintainers | Implemented — Phase 2 helper + tests | Node.js only; browser native mode is not applicable |
+| Java | NPS SDK maintainers | Implemented — Phase 2 helper + tests | `com.labacacia.nps.ncp.NcpPreamble` |
+| Rust | NPS SDK maintainers | Implemented — Phase 2 helper + tests | `nps_ncp::preamble` |
+| Go | NPS SDK maintainers | Implemented — Phase 2 helper + tests | `ncp/preamble.go` |
+
+Phase 3's default-on flag flip and Phase 4 flag removal are not activated by
+this matrix. They remain explicit compatibility transitions rather than
+missing SDK ownership.
 
 ### 8.3 Test Plan
 
@@ -392,33 +396,29 @@ None yet. An experimental branch will be attached before moving to
 | Metric | Baseline | Proposed | Delta | Method |
 |--------|----------|----------|-------|--------|
 | Per-connection wire overhead | 0 bytes | 8 bytes | +8 B | trivial |
-| Handshake RTT (localhost loopback) | TBD | TBD | target: no regression | .NET `BenchmarkDotNet` on native-mode loopback |
+| Handshake RTT (localhost loopback) | Not measured | Not measured | target: no regression | Future transport benchmark; not an RFC activation gate |
 | Server-side cost to reject non-NPS scan | full frame-parse attempt | 8-byte `memcmp` | target: ≥10× cheaper | scan-simulation harness |
 
 ---
 
-## 10. Open Questions
+## 10. Resolved Questions
 
-- [ ] **OQ-1**: Should the preamble include a capability bitmap byte to
-  let servers pick connection-level features (e.g., "client supports
-  E2E encryption") before `HelloFrame`? Shepherd decision needed.
-  _Default position: no — `HelloFrame` already carries full capability
-  declaration; preamble stays minimal._ Target: resolved before
-  `Accepted`.
-- [ ] **OQ-2**: `PREAMBLE-WAIT` timeout of 10 s — should this be
-  configurable? Owner: Ori Lynn. Target: default stays 10 s, SDK MAY
-  expose a knob; resolved by adding a note to this RFC before
-  `Accepted`.
-- [ ] **OQ-3**: Should a native-mode **server** also send a preamble
-  (mutual identification)? Currently only client → server. Defer to a
-  follow-up RFC if requested.
+- [x] **OQ-1 — no capability bitmap.** Resolved by the accepted eight-byte
+  wire contract: `HelloFrame` remains the single capability-negotiation
+  surface and the preamble remains a traffic discriminator only.
+- [x] **OQ-2 — fixed normative default.** `PREAMBLE-WAIT` remains 10 seconds
+  in all six SDK constants. A deployment may impose a shorter outer handshake
+  deadline, but this RFC does not add a cross-SDK configuration field.
+- [x] **OQ-3 — client-to-server only.** A server-emitted preamble is not part
+  of the current contract. Mutual preamble identification requires a separate
+  future RFC and is not alpha.19 debt.
 
 ---
 
 ## 11. Future Work
 
-- **Follow-up RFC**: mandate TLS ALPN token `nps/1` for native mode
-  over TLS-enabled transports. Complements the in-band preamble (§5.4).
+- **Delivered by NPS-RFC-0006**: TLS native mode uses ALPN `nps/1.0` and
+  complements the in-band preamble (§5.4).
 - **Follow-up RFC**: formalize minor-version negotiation semantics
   (reserved byte in preamble currently fixed to `0`).
 - **Follow-up RFC (if requested)**: server-emitted preamble for mutual
@@ -443,3 +443,4 @@ None yet. An experimental branch will be attached before moving to
 |------|--------|--------|
 | 2026-04-21 | Ori Lynn | Initial draft |
 | 2026-04-25 | Ori Lynn | Accepted via pre-1.0 fast-track. Spec changes landed: §2.6.1 in NPS-1-NCP, error code `NCP-PREAMBLE-INVALID`, status code `NPS-PROTO-PREAMBLE-INVALID`, `0x4E` reservation in `frame-registry.yaml`. Phase 1 .NET reference helpers (`NPS.Core.Ncp.NcpPreamble`) landed alongside; Phase 2 (other 5 SDKs) and Phase 3 (default-on flip) deferred per RFC §8.1. |
+| 2026-09-05 | NPS maintainers | Reconciled status to Active, recorded six-SDK Phase 2 helper/test coverage, resolved OQ-1..03, and linked the RFC-0006 ALPN decision. Phase 3/4 compatibility transitions remain inactive. |

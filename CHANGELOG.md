@@ -8,6 +8,44 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NET / Python / TypeScript / Java / Rust / Go), CA Servers, and compat bridges — is synchronized to the same pre-release version tag.
 
+## [Unreleased]
+
+### Fixed
+
+- Bounded superseded roadmap claims as dated snapshots and linked their closing
+  releases/current evidence. The alpha.6 DNS TXT, alpha.7 reputation-client,
+  alpha.5/alpha.17 daemon-skeleton/remaining-work and provisional-PEN records
+  remain historical without presenting themselves as current gaps.
+- Reconciled CR/RFC lifecycle, six-SDK coverage matrices and proposal-era
+  question notes against current source. RFC-0001/0002/0003 are Active,
+  RFC-0006 is consistently Accepted, CR-0011 is consistently Implemented, and
+  an executable ledger prevents `_TBD_`/`pending` coverage from returning.
+- Restored current-contract AaaS L2-01..L2-07 to the Node L2 suite instead of
+  deferring them as future work. Suite v0.7 now has 38 cases; all six SDK
+  catalogs and validators require L2-01..05 and allow L2-06/07 `na` only with
+  a reasoned exception message.
+- Aligned all six SDK conformance manifest emitters with Node L2 v0.6 and its
+  31-case catalog. Validators now reject stale profile versions, incorrect
+  summaries, partial-family `na`, and invalid single-/multi-Anchor HA
+  applicability combinations.
+- Made every advertised repository implementation evidence artifact runnable
+  and scope-complete: npsd now enumerates all 20 L1 cases, ingress records its
+  complete four-case TLS family, runner enumerates all ten L3 cases, and a
+  machine-readable registry prevents a profile claim from losing its manifest.
+- Corrected the Node L1 suite count to its 20 actual case headings, aligned the
+  Node L2 runtime catalog and manifest version with all 31 v0.6 cases, and
+  added a machine-readable evidence inventory that distinguishes executable,
+  partial, catalog-only, and reference-IUT-not-applicable coverage without
+  claiming certification.
+- Replaced `nps-runner` process-local leases with durable SQLite coordination:
+  atomic cross-process claims, process-instance fencing, expired-lease reclaim,
+  restart-persistent terminal dedup, lease-loss worker cancellation, and
+  terminal-before-ack ordering now have executable evidence. A case-level
+  manifest explicitly withholds full L3 certification until the TaskFrame
+  DAG/Saga deployment cases run.
+- Fixed `nps-runner` production dependency injection and both monorepo and
+  standalone Docker builds; CI now runs the daemon-owned runner test suite.
+
 ## [1.0.0-alpha.18] — 2026-08-15
 
 ### Added

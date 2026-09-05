@@ -1,0 +1,88 @@
+{
+  "name": "nip-alpha19-renewal-revocation",
+  "version": "0.15.0",
+  "spec_ref": "spec/NPS-3-NIP.md §6.2, §7.7",
+  "description": "Deterministic renewal-window, idempotency, revocation-freshness, OCSP, cache, and Phase-3 advisory decisions.",
+  "vectors": [
+    {
+      "id": "nip.alpha19.renewal.001",
+      "requirement": "NIP-P19-01",
+      "description": "A standard certificate is renewable at the inclusive seven-day boundary.",
+      "kind": "positive",
+      "input": {"profile": "standard", "now": "2026-08-31T00:00:00Z", "not_after": "2026-09-07T00:00:00Z"},
+      "expected": {"renewal_open": true, "error": null}
+    },
+    {
+      "id": "nip.alpha19.renewal.002",
+      "requirement": "NIP-P19-01",
+      "description": "A six-hour edge certificate opens renewal with ninety minutes remaining.",
+      "kind": "positive",
+      "input": {"profile": "short-lived-edge", "original_validity_seconds": 21600, "remaining_seconds": 5400},
+      "expected": {"renewal_open": true, "window_seconds": 5400}
+    },
+    {
+      "id": "nip.alpha19.renewal.003",
+      "requirement": "NIP-P19-02",
+      "description": "Renewal cannot expand capabilities or scope.",
+      "kind": "negative",
+      "input": {"current": {"capabilities": ["nwp:query"], "scope": ["nwp://example/a/*"]}, "requested": {"capabilities": ["nwp:query", "nwp:invoke"], "scope": ["nwp://example/*"]}},
+      "expected": {"issued": false, "error": "NIP-CA-SCOPE-EXPANSION-DENIED"}
+    },
+    {
+      "id": "nip.alpha19.renewal.004",
+      "requirement": "NIP-P19-03,NIP-P19-04",
+      "description": "An identical idempotent retry returns the same atomically committed serial.",
+      "kind": "positive",
+      "input": {"idempotency_key": "renew-1", "canonical_digest": "sha256:aaa", "recorded": {"canonical_digest": "sha256:aaa", "serial": "0x0021", "committed": true}},
+      "expected": {"serial": "0x0021", "new_issue_count": 0}
+    },
+    {
+      "id": "nip.alpha19.renewal.005",
+      "requirement": "NIP-P19-05",
+      "description": "Replacement issuance does not extend a ticket bound to the old certificate.",
+      "kind": "positive",
+      "input": {"old_cert_not_after": "2026-08-31T12:00:00Z", "old_ticket_not_after": "2026-08-31T12:00:00Z", "replacement_not_after": "2026-09-01T12:00:00Z"},
+      "expected": {"old_ticket_not_after": "2026-08-31T12:00:00Z"}
+    },
+    {
+      "id": "nip.alpha19.revocation.001",
+      "requirement": "NIP-P19-06,NIP-P19-07",
+      "description": "A stale local CRL is skipped when a later current OCSP result is good.",
+      "kind": "positive",
+      "input": {"now": "2026-08-31T12:00:00Z", "sources": [{"source": "local_crl", "this_update": "2026-08-31T10:00:00Z", "next_update": "2026-08-31T12:00:00Z", "outcome": "good"}, {"source": "ocsp", "this_update": "2026-08-31T11:59:00Z", "next_update": "2026-08-31T12:59:00Z", "outcome": "good"}]},
+      "expected": {"valid": true, "consulted_sources": ["local_crl", "ocsp"], "diagnostics": ["local_crl_stale"]}
+    },
+    {
+      "id": "nip.alpha19.revocation.002",
+      "requirement": "NIP-P19-07",
+      "description": "Only stale configured state fails required mode with the stale-state error.",
+      "kind": "negative",
+      "input": {"revocation_mode": "required", "now": "2026-08-31T12:00:00Z", "sources": [{"source": "local_crl", "next_update": "2026-08-31T12:00:00Z", "outcome": "good"}]},
+      "expected": {"valid": false, "error": "NIP-REVOCATION-STATE-STALE"}
+    },
+    {
+      "id": "nip.alpha19.revocation.003",
+      "requirement": "NIP-P19-08",
+      "description": "OCSP unknown fails closed even when the availability escape is enabled.",
+      "kind": "negative",
+      "input": {"revocation_mode": "if_configured", "ocsp_fail_open": true, "sources": [{"source": "ocsp", "outcome": "unknown"}]},
+      "expected": {"valid": false, "error": "NIP-OCSP-UNKNOWN"}
+    },
+    {
+      "id": "nip.alpha19.revocation.004",
+      "requirement": "NIP-P19-09",
+      "description": "An older signed response cannot roll back a newer cached result.",
+      "kind": "positive",
+      "input": {"cached": {"this_update": "2026-08-31T11:00:00Z", "outcome": "revoked"}, "incoming": {"this_update": "2026-08-31T10:00:00Z", "outcome": "good", "signature_valid": true}},
+      "expected": {"cache_replaced": false, "effective_outcome": "revoked"}
+    },
+    {
+      "id": "nip.alpha19.advisory.001",
+      "requirement": "NIP-P19-10",
+      "description": "Phase-3 advisory findings are sorted and do not enforce or mutate state.",
+      "kind": "positive",
+      "input": {"phase3_enforcement": false, "ident": {"assurance_level": "verified", "node_roles": ["anchor"], "capabilities": ["topology:read"], "ocsp_staple": null}, "certificate_extensions": {}},
+      "expected": {"accepted_current_request": true, "findings": [{"field": "assurance_level", "error": "NIP-ASSURANCE-MISMATCH"}, {"field": "capabilities", "error": "NIP-CERT-CAPABILITIES-EXCEEDED"}, {"field": "node_roles", "error": "NIP-CERT-NODE-ROLES-MISMATCH"}, {"field": "ocsp_staple", "error": "NIP-OCSP-STAPLE-EXPIRED"}], "state_mutated": false}
+    }
+  ]
+}

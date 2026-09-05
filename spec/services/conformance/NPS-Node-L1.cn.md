@@ -19,7 +19,7 @@
 2. 启动一个 **对端（peer）**—— 任意已通过 L1 的实现，或 .NET 参考 SDK。
 3. 将 IUT 与 peer 配对，逐条跑完 §3 所有测试用例。
 4. 用例通过当且仅当 **全部** 验收条件成立。
-5. L1 认证 MUST 全 21 个用例通过；不接受部分声明。
+5. L1 认证 MUST 全 20 个用例通过；不接受部分声明。
 6. 将 [`NPS-NODE-L1-CERTIFIED.md`](./NPS-NODE-L1-CERTIFIED.md) 复制到 IUT 仓库根目录，
    填完每个字段，用 IUT 的 root 私钥对声明块签名。
 
@@ -247,13 +247,13 @@ Peer 再 pull `A`。
   "cases": [
     { "id": "TC-N1-NCP-01", "result": "pass" },
     { "id": "TC-N1-NCP-02", "result": "pass" }
-    /* ... 19 more ... */
+    /* ... 18 more ... */
   ],
-  "summary": { "pass": 21, "fail": 0, "skip": 0, "na": 0 }
+  "summary": { "pass": 20, "fail": 0, "skip": 0, "na": 0 }
 }
 ```
 
-**全部 21 个用例为 `pass` 或 `na` 时** 授予认证（N1-NIP-04、N1-NDP-04、N1-NWP-05 在 IUT 拒绝可选能力时可为 `na`）。
+**全部 20 个用例为 `pass` 或 `na` 时** 授予认证（N1-NIP-04、N1-NDP-04、N1-NWP-05 在 IUT 拒绝可选能力时可为 `na`）。
 
 ---
 
@@ -273,7 +273,7 @@ Peer 再 pull `A`。
 
 | 版本 | 日期 | 变更 |
 |------|------|------|
-| 0.1 | 2026-04-24 | 初稿：21 个测试用例覆盖 NCP / NIP / NDP / NWP / 可观测性、paired-peer 方法论、结果 manifest schema |
+| 0.1 | 2026-04-24 | 初稿：20 个测试用例覆盖 NCP / NIP / NDP / NWP / 可观测性、paired-peer 方法论、结果 manifest schema |
 
 ---
 
