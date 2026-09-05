@@ -182,6 +182,17 @@ public sealed record ReputationDecision(
 | `NWP-REPUTATION-REJECTED` | 403 | `NPS-AUTH-FORBIDDEN` | 声誉策略拒绝（`reject_on` 规则匹配）；响应体包含 `matched_incident` 和 `matched_severity` |
 | `NWP-REPUTATION-BANNED` | 403 | `NPS-AUTH-FORBIDDEN` | 声誉策略封禁（`ban_on` 规则匹配或封禁缓存条目生效）；响应 SHOULD 包含 `X-NWP-Ban-Expires` Unix 时间戳 |
 
+错误响应体（JSON）：
+
+```json
+{
+  "status": "NWP-REPUTATION-REJECTED",
+  "message": "Request rejected: tos-violation (major) within 30 days",
+  "matched_incident": "tos-violation",
+  "matched_severity": "major"
+}
+```
+
 现有的 RFC-0004 错误码 `NWP-AUTH-REPUTATION-BLOCKED` 已被上述三个码取代；实现 MUST
 发出新码，旧码可作为弃用别名保留一个 alpha 周期。
 

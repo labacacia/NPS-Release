@@ -29,7 +29,7 @@ NPS 采用两级错误体系：
 | `NCP-BINARY-VECTOR-DTYPE-UNSUPPORTED` | `NPS-CLIENT-BAD-FRAME` | BinaryVector marker 使用了不支持的 dtype |
 | `NCP-BINARY-VECTOR-TRUNCATED` | `NPS-CLIENT-BAD-FRAME` | BinaryVector 向量段被截断 |
 | `NCP-STREAM-SEQ-GAP` | `NPS-STREAM-SEQ-GAP` | StreamFrame 序号不连续 |
-| `NCP-STREAM-NOT-FOUND` | `NPS-STREAM-NOT-FOUND` | stream_id 引用的流��存在 |
+| `NCP-STREAM-NOT-FOUND` | `NPS-STREAM-NOT-FOUND` | stream_id 引用的流不存在 |
 | `NCP-STREAM-LIMIT-EXCEEDED` | `NPS-STREAM-LIMIT` | 超出单连接最大并发流数 |
 | `NCP-ENCODING-UNSUPPORTED` | `NPS-SERVER-ENCODING-UNSUPPORTED` | 请求的编码 Tier 不被支持 |
 | `NCP-ANCHOR-STALE` | `NPS-CLIENT-CONFLICT` | anchor_ref 存在但 Schema 已更新；响应通过 CapsFrame.inline_anchor 携带最新 AnchorFrame |
@@ -39,12 +39,14 @@ NPS 采用两级错误体系：
 | `NCP-ENC-NOT-NEGOTIATED` | `NPS-CLIENT-BAD-FRAME` | 收到 ENC=1 帧，但会话未协商 E2E 加密算法（HelloFrame 中未声明）|
 | `NCP-ENC-AUTH-FAILED` | `NPS-CLIENT-BAD-FRAME` | E2E 加密 Auth Tag 验证失败，帧可能被篡改 |
 | `NCP-PREAMBLE-INVALID` | `NPS-PROTO-PREAMBLE-INVALID` | 原生模式连接首 8 字节非常量前导 `b"NPS/1.0\n"`；服务端静默关闭连接，不返回 ErrorFrame（NPS-RFC-0001） |
+| `NCP-NID-MISMATCH` | `NPS-AUTH-UNAUTHENTICATED` | 原生模式 mTLS 客户端证书 NID 与会话 `IdentFrame` NID 不一致，或恢复会话的证书 NID 与票据绑定 NID 不一致（NPS-RFC-0006 §6.3–§6.4） |
+| `NCP-KEEPALIVE-TIMEOUT` | `NPS-SERVER-TIMEOUT` | 在 3 × `ping_interval_ms` 内未收到任何帧（含 NopFrame）；连接将被关闭（NCP v0.8 §7.6） |
 
 ---
 
 ## NWP 错误码
 
-| 错误码 | NPS 状���码 | 描述 |
+| 错误码 | NPS 状态码 | 描述 |
 |--------|-----------|------|
 | `NWP-AUTH-NID-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | Agent scope 不覆盖目标节点路径 |
 | `NWP-AUTH-NID-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | NID 证书已过期 |
@@ -53,6 +55,9 @@ NPS 采用两级错误体系：
 | `NWP-AUTH-NID-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | Agent 缺少节点要求的能力（如 nwp:query）|
 | `NWP-AUTH-ASSURANCE-TOO-LOW` | `NPS-AUTH-FORBIDDEN` | Agent 保证等级低于节点 `min_assurance_level`（NPS-2 §4.1）或 ActionSpec 的 per-action 覆盖（§4.6）；响应 SHOULD 在 `hint` 字段附 CA 注册 URL（NPS-RFC-0003）|
 | `NWP-AUTH-REPUTATION-BLOCKED` | `NPS-AUTH-FORBIDDEN` | 接收 Node 的声誉策略命中了对发起方 `subject_nid` 的 `reject_on` 规则；响应 SHOULD 携带匹配的 `incident` + `severity` + 日志条目 `seq` 便于追溯（NPS-RFC-0004）|
+| `NWP-REPUTATION-THROTTLED` | `NPS-CLIENT-RATE-LIMITED` | 声誉策略的 `throttle_on` 规则命中；响应包含 `Retry-After: 60`（NPS-RFC-0005） |
+| `NWP-REPUTATION-REJECTED` | `NPS-AUTH-FORBIDDEN` | 声誉策略的 `reject_on` 规则命中；响应体包含 `matched_incident` 与 `matched_severity`（NPS-RFC-0005） |
+| `NWP-REPUTATION-BANNED` | `NPS-AUTH-FORBIDDEN` | 声誉策略的 `ban_on` 规则或有效 ban cache 条目命中；响应 SHOULD 包含 `X-NWP-Ban-Expires`（NPS-RFC-0005） |
 | `NWP-QUERY-FILTER-INVALID` | `NPS-CLIENT-BAD-PARAM` | Filter 语法不合法或嵌套超过 8 层 |
 | `NWP-QUERY-FIELD-UNKNOWN` | `NPS-CLIENT-BAD-PARAM` | fields 中引用了不存在的字段 |
 | `NWP-QUERY-CURSOR-INVALID` | `NPS-CLIENT-BAD-PARAM` | cursor 值无法解码或已过期 |
@@ -81,6 +86,7 @@ NPS 采用两级错误体系：
 | `NWP-SUBSCRIBE-INTERRUPTED` | `NPS-SERVER-UNAVAILABLE` | 订阅流因底层数据源中断而终止 |
 | `NWP-SUBSCRIBE-SEQ-TOO-OLD` | `NPS-CLIENT-CONFLICT` | resume_from_seq 超出节点缓冲范围（推荐缓冲 10 分钟或 10,000 条）；Agent 须全量重查后重新订阅 |
 | `NWP-BUDGET-EXCEEDED` | `NPS-LIMIT-BUDGET` | 响应将超过 X-NWP-Budget 限制 |
+| `NWP-CGN-LIMIT-EXCEEDED` | `NPS-CLIENT-REQUEST-TOO-LARGE` | 响应会超过有效 CGN 预算 `min(cgn_limit, X-NWP-Budget)`，且无法继续裁剪；响应 SHOULD 包含 `effective_budget` 与 `estimated_cgn`（token-budget.md §7.4） |
 | `NWP-DEPTH-EXCEEDED` | `NPS-CLIENT-BAD-PARAM` | X-NWP-Depth 超过节点允许的 max_depth |
 | `NWP-GRAPH-CYCLE` | `NPS-CLIENT-UNPROCESSABLE` | 节点图谱中存在循环引用 |
 | `NWP-NODE-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | 底层数据源暂不可用 |
@@ -118,17 +124,25 @@ NPS 采用两级错误体系：
 | 错误码 | NPS 状态码 | 描述 |
 |--------|-----------|------|
 | `NIP-CERT-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | 证书已过期（expires_at < now）|
+| `NIP-CERT-NODE-ROLES-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | `IdentFrame.node_roles` 与 `id-nps-node-roles` X.509 扩展不一致；Phase 3 强制（NIP v0.10） |
 | `NIP-CERT-CAPABILITIES-EXCEEDED` | `NPS-AUTH-FORBIDDEN` | `IdentFrame.capabilities` 声称了 CA 见证扩展 `id-nps-capabilities` 中不存在的能力；Phase-3 强制（NIP v0.12）|
+| `NIP-OCSP-STAPLE-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | `IdentFrame.ocsp_staple` 的 `nextUpdate` 已过期；Agent 必须刷新后重发（NIP v0.9 §5.1.4） |
 | `NIP-CERT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | 证书已被吊销（在 CRL 或 OCSP 中）|
 | `NIP-CERT-SIGNATURE-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | 证书签名验证失败 |
-| `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | 颁发者��在 trusted_issuers 列表中 |
-| `NIP-CERT-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | 证书缺少节���要求的能力 |
+| `NIP-CERT-UNTRUSTED-ISSUER` | `NPS-AUTH-UNAUTHENTICATED` | 颁发者不在 trusted_issuers 列表中 |
+| `NIP-CERT-CAPABILITY-MISSING` | `NPS-AUTH-FORBIDDEN` | 证书缺少节点要求的能力 |
 | `NIP-CERT-SCOPE-VIOLATION` | `NPS-AUTH-FORBIDDEN` | 证书 scope 不覆盖目标路径或操作 |
 | `NIP-CA-NID-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | NID 不存在于 CA 数据库 |
 | `NIP-CA-NID-ALREADY-EXISTS` | `NPS-CLIENT-CONFLICT` | NID 已存在（重复注册）|
-| `NIP-CA-SERIAL-DUPLICATE` | `NPS-CLIENT-CONFLICT` | 证书序列号已��在 |
+| `NIP-CA-SERIAL-DUPLICATE` | `NPS-CLIENT-CONFLICT` | 证书序列号已存在 |
 | `NIP-CA-RENEWAL-TOO-EARLY` | `NPS-CLIENT-BAD-PARAM` | 距到期超过 7 天，尚未到续期窗口 |
 | `NIP-CA-SCOPE-EXPANSION-DENIED` | `NPS-AUTH-FORBIDDEN` | 请求的 scope 超出父级 scope（委托链违规）|
+| `NIP-CA-GROUP-REVOKED` | `NPS-AUTH-FORBIDDEN` | 不能在已吊销的 group NID 下签发 session（NPS-3 §5.1.3，NPS-CR-0003） |
+| `NIP-CA-PARENT-NOT-FOUND` | `NPS-CLIENT-NOT-FOUND` | 签发 session 时指定的 parent/group NID 不存在（NPS-CR-0003） |
+| `NIP-CA-PARENT-NOT-GROUP` | `NPS-CLIENT-BAD-PARAM` | 签发 session 时指定的 parent NID 不是 orchestrator group（NPS-CR-0003） |
+| `NIP-CA-SESSION-VALIDITY-INVALID` | `NPS-CLIENT-BAD-PARAM` | 请求的 session 有效期超出允许范围或超过 parent group 的剩余有效期（NPS-CR-0003） |
+| `NIP-CA-JWS-INVALID` | `NPS-AUTH-UNAUTHENTICATED` | group-JWS session 自签发请求的签名、protected header 或 payload 无效（NPS-CR-0003） |
+| `NIP-CA-JWS-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | group-JWS session 自签发请求已超过允许的时间窗口（NPS-CR-0003） |
 | `NIP-OCSP-UNAVAILABLE` | `NPS-SERVER-UNAVAILABLE` | OCSP 服务暂时不可用 |
 | `NIP-TRUST-FRAME-INVALID` | `NPS-CLIENT-BAD-FRAME` | TrustFrame 签名或格式不合法 —— 见 NPS-3 §5.2 |
 | `NIP-TRUST-FRAME-EXPIRED` | `NPS-AUTH-UNAUTHENTICATED` | TrustFrame `expires_at` 已过期 —— 见 NPS-3 §5.2 |
@@ -149,6 +163,7 @@ NPS 采用两级错误体系：
 | `NIP-CERT-EKU-MISSING` | `NPS-CLIENT-BAD-FRAME` | leaf 证书缺少必需的 NPS EKU（`agent-identity` 或 `node-identity`）或未标 critical —— 见 NPS-RFC-0002 §4.1 / §4.3 |
 | `NIP-CERT-SUBJECT-NID-MISMATCH` | `NPS-CLIENT-BAD-FRAME` | X.509 leaf 证书 subject CN / SAN URI 与 `IdentFrame.nid` 字段不一致 —— 见 NPS-RFC-0002 §4.3 |
 | `NIP-ACME-CHALLENGE-FAILED` | `NPS-CLIENT-BAD-FRAME` | ACME `agent-01` challenge 校验失败（token 不匹配、签名验证失败或 replay）—— 见 NPS-RFC-0002 §4.4 |
+| `NIP-CERT-PARENT-REVOKED` | `NPS-AUTH-UNAUTHENTICATED` | session NID 的 parent/group NID 已吊销或过期（链校验，NPS-3 §7 step 3a；NPS-CR-0003） |
 
 ---
 

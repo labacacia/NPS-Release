@@ -283,7 +283,7 @@ When a `public-federated` registry receives an AnnounceFrame from a peer registr
 **`ndp-forwarded-by` Header Format**
 
 Comma-separated list of NPS NIDs, one entry per hop:
-```
+```http
 ndp-forwarded-by: urn:nps:agent:registry-a.example.com:r1, urn:nps:agent:registry-b.example.com:r2
 ```
 

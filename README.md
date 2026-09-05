@@ -139,15 +139,15 @@ nps/
 │   ├── rust/                # Rust SDK v1.0.0-alpha.18 candidate
 │   └── go/                  # Go SDK v1.0.0-alpha.18 candidate
 ├── tools/
-│   ├── daemons/                # Six resident services. 4 OSS published as labacacia/NPS-Daemons bundle (npsd / nps-runner / nps-ingress / nps-registry); 2 cloud daemons published as private labacacia/NPS-Cloud-CA + labacacia/NPS-Ledger
-│   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core; published standalone at labacacia/NIP-CA-Server (subdir example/ holds 5 frozen reference ports)
+│   ├── daemons/                # Six resident services. 4 OSS published as labacacia/nps-daemons bundle (npsd / nps-runner / nps-ingress / nps-registry); 2 cloud daemons published as private labacacia/NPS-Cloud-CA + labacacia/NPS-Ledger
+│   ├── nip-ca-server/          # NIP CA Server — C# / ASP.NET Core; published standalone at labacacia/nip-ca-server (subdir example/ holds 5 frozen reference ports)
 │   ├── release/                # Release sync scripts (dev → standalone publish repos)
 │   └── mirror-to-gitee/        # Gitee mirror sync script (GitHub → Gitee with labacacia URL rewrite)
 ├── compat/
 │   ├── mcp-ingress/          # MCP Ingress v1.0.0-alpha.16 (LabAcacia.McpIngress)
 │   ├── a2a-ingress/          # A2A Ingress v1.0.0-alpha.16 (LabAcacia.A2aIngress)
 │   └── grpc-ingress/         # gRPC Ingress v1.0.0-alpha.16 (LabAcacia.GrpcIngress)
-└── demos/                  # Also published standalone at github.com/labacacia/NPS-Examples
+└── demos/                  # Also published standalone at github.com/labacacia/NPS-examples
     ├── nps-demo/            # End-to-end business demo — NIP identity → AnchorFrame → NOP → DiffFrame
     ├── nwp-graph-walk/      # NWP Complex Node §11 — depth-scoped fanout + X-NWP-Trace cycle detection
     ├── ingress-playground/   # One NWP Action Node fronted simultaneously by MCP + A2A + gRPC
@@ -156,7 +156,7 @@ nps/
 
 > **Standalone showcase.** The three Tier-1 demos (`nwp-graph-walk`,
 > `ingress-playground`, `cross-sdk-interop`) are also published as a
-> curated repo at [`labacacia/NPS-Examples`](https://github.com/labacacia/NPS-Examples)
+> curated repo at [`labacacia/NPS-examples`](https://github.com/labacacia/NPS-examples)
 > ([Gitee mirror](https://gitee.com/labacacia/NPS-examples)). The
 > source of truth stays here; the standalone repo exists for
 > discoverability and has per-demo READMEs with principle / purpose /
@@ -179,7 +179,7 @@ The latest published package line is `1.0.0-alpha.18`.
 | `NPS.NDP` | 1.0.0-alpha.18 | Released | NDP frame types (Announce/Resolve/Graph), in-memory registry (TTL eviction), announce signature validator |
 | `NPS.NOP` | 1.0.0-alpha.18 | Released | DAG orchestration engine (condition eval, input mapping, K-of-N sync, retry/backoff) + §8.2 delegation chain depth limit + §8.4 callback SSRF guard and exponential backoff retry |
 | `NPS.Conformance` | 1.0.0-alpha.18 | Released | Node L1/L2 conformance case catalog, run manifest model, and CI validation helpers |
-| `tools/nip-ca-server` | 1.0.0-alpha.18 | Released | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/NIP-CA-Server`](https://github.com/labacacia/NIP-CA-Server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
+| `tools/nip-ca-server` | 1.0.0-alpha.18 | Released | NIP CA Server — C# / ASP.NET Core 10, PostgreSQL, Docker. Published standalone at [`labacacia/nip-ca-server`](https://github.com/labacacia/nip-ca-server) (the only release-tracked impl); 5 reference ports (Python / TypeScript / Java / Rust / Go) frozen at `1.0.0-alpha.11` under `tools/nip-ca-server/example/`. |
 | Compat ingresses | 1.0.0-alpha.16 | Last published release (2026-07-23) | MCP Ingress (JSON-RPC 2.0, MCP 2024-11-05), A2A Ingress (Google A2A v0.2), gRPC Ingress (HTTP/2, 4 unary RPCs); an alpha.17 deprecation build was prepared but never published, and the packages left the synchronized train from alpha.18 in favor of `NPS.NWP.Bridge` |
 | Daemons | 1.0.0-alpha.18 | Released | Six resident services: `npsd` (L1 minimum), `nps-runner`, `nps-ingress`, `nps-registry`, `nps-cloud-ca`, `nps-ledger` (RFC-0004 in-memory log); see [`docs/daemons/architecture.md`](docs/daemons/architecture.md) |
 | Samples | — | ✅ Available | `samples/NPS.Samples.NopDag` — 3-node NOP DAG end-to-end over real HTTP; `demos/nps-demo` — 4-scene business demo (NIP → AnchorFrame → NOP → DiffFrame) |
