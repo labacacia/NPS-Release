@@ -22,6 +22,8 @@
 #   version_regex - optional override regex (group 1 must capture the version string)
 # ─────────────────────────────────────────────────────────────────────────────
 
+# Final oracle confirmation follows required-train head
+# orilynn-studio/nps-orchestrator@20c9a2d; see EPIC-004 T28 readiness audit.
 suite_version: "1.0.0-alpha.19"
 released_at: "2026-09-05"
 
