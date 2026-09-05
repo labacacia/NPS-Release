@@ -156,18 +156,21 @@
 | 非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手 | .NET 已接入；其他 SDK 只有枚举，无执行逻辑 |
 | **NPS-RFC-0002** 晋级 Draft → Proposed/Accepted | 已由 NPS-CR-0004（2026-05-08）关闭：IANA PEN **65715** 已分配；OID arc `1.3.6.1.4.1.65715` 替换临时 `1.3.6.1.4.1.99999`；RFC-0002 晋级 Draft → Proposed（wire-in 落地于 alpha.6）|
 
-## alpha.6 任务队列
+## alpha.6 发布 — 2026-05-12 ✅
 
-v1.0.0-alpha.11 待开展任务：
+alpha.6 已交付 NPS-CR-0002 Anchor topology push、IANA PEN **65715** wire-in、
+六 SDK `NDP.ResolveFrame` DNS TXT 解析，以及 NPS-RFC-0003 assurance 强制。
 
-### 进行中的 RFC / CR
+> 以下内容是 alpha.6 发布前的规划快照，保留作历史记录，不是当前 backlog。
+
+**进行中的 RFC / CR（历史快照）**
 
 | 事项 | 备注 |
 |------|------|
 | **NPS-CR-0002 Phase 2** — 服务端 Anchor 中间件推送拓扑更新 | .NET 参考实现完成；alpha.6 关闭 `node_kind` 兼容窗口，要求 `topology.filter.node_roles` |
 | **NPS-RFC-0002** 晋级 Draft → Proposed/Accepted | 阻塞于 IANA PEN 分配 |
 
-### SDK 功能缺口
+**SDK 功能缺口（历史快照）**
 
 | 事项 | 备注 |
 |------|------|
@@ -175,7 +178,7 @@ v1.0.0-alpha.11 待开展任务：
 | 非 .NET SDK 移植 NPS-RFC-0004 声誉助手（`ReputationLogClient`）| .NET 仅有 Phase 1 数据类型，无客户端；全六 SDK 需完整客户端 |
 | ~~非 .NET SDK 移植 NPS-RFC-0003 保证级别执行助手~~ | ✅ 已完成 —— 全六 SDK 均有完整 `AssuranceLevel` 枚举 + 执行逻辑 |
 
-### 协议 / 规范事项
+**协议 / 规范事项（历史快照）**
 
 | 事项 | 备注 |
 |------|------|
@@ -183,7 +186,7 @@ v1.0.0-alpha.11 待开展任务：
 | `nps-ingress` L2 Internet 入站网关（`:8080`→`:443` TLS 终止，NCP over TLS）| alpha.5 仅骨架；L2 合规推迟 |
 | `nps-runner` L3 FaaS 任务运行时 | 仅骨架；完整实现在 Phase 3 范围 |
 
-### 工具链
+**工具链（历史快照）**
 
 | 事项 | 备注 |
 |------|------|
@@ -192,11 +195,15 @@ v1.0.0-alpha.11 待开展任务：
 
 ---
 
-## alpha.7 任务队列
+## alpha.7 发布 — 2026-05-17 ✅
 
-v1.0.0-alpha.7 待开展任务：
+alpha.7 已交付五种非 .NET `AnchorNodeClient`、NPS-CR-0005 RA 参考实现、
+CGN profile 换算、OpenTelemetry 埋点，并将 NPS-RFC-0002 晋级 Accepted。
 
-### SDK 功能缺口（alpha.6 遗留 —— 发布硬性门槛）
+> 以下内容是 alpha.7 tag 前的规划快照，保留作历史记录；其中 RFC-0004
+> `ReputationLogClient` 后续已在 alpha.13–15 关闭。
+
+**SDK 功能缺口（alpha.6 遗留 —— 历史发布门槛）**
 
 每次 SDK 发布必须保证六种语言在同一功能水位上。以下条目从 alpha.6 延续，
 必须在 alpha.7 打标签前全部完成。
@@ -206,7 +213,7 @@ v1.0.0-alpha.7 待开展任务：
 | NPS-CR-0002 `AnchorNodeClient` | ✅ 完成（2026-05-17） | 全五 SDK 非 .NET 端口：`get_snapshot` + `subscribe`（各语言对应 stream/async-generator/channel）+ 拓扑数据类型（MemberInfo、TopologySnapshot、TopologyFilter、TopologyEvent × 5）|
 | NPS-RFC-0004 `ReputationLogClient` | 全六 SDK（含 .NET）| .NET 仅有 Phase 1 数据类型；需完整客户端（Phase 2 Merkle / STH / 包含证明）覆盖所有 SDK |
 
-### 新规范 / 实现
+**新规范 / 实现（历史快照）**
 
 | 事项 | 状态 | 备注 |
 |------|------|------|
@@ -214,11 +221,42 @@ v1.0.0-alpha.7 待开展任务：
 | **#51 CGN Profile 换算规范** | ✅ 完成（2026-05-17） | `cgn-profiles.yaml` 新增 Google Gemini、Meta Llama、Mistral 系列；`token-budget.md` §2.3 同步更新 |
 | **NWP + NOP OpenTelemetry 埋点** | ✅ 完成（2026-05-17） | NPS-sdk-dotnet 新增 `ActivitySource` + `System.Diagnostics.Metrics`；关闭 NPS-sdk-dotnet#5 |
 
-### 进行中的 CR / RFC
+**进行中的 CR / RFC（历史快照）**
 
 | 事项 | 状态 | 备注 |
 |------|------|------|
 | **NPS-RFC-0002** 晋级 Proposed → Accepted | ✅ 完成（2026-05-17） | OQ-3 已决议（延后至后续 RFC）；无剩余未解 OQ |
+
+---
+
+## alpha.8 发布 — 2026-05-22 ✅
+
+交付 NWM `cgn_limit` 强制（`NWP-CGN-LIMIT-EXCEEDED`）、RFC-0005 ReputationPolicyEvaluator 与多语言移植、
+SubscribeFrame、NPS-CR-0005 RA model，并将 RFC-0002 / RFC-0005 晋级 Accepted。
+
+---
+
+## alpha.9 发布 — 2026-05-25 ✅
+
+交付 NOP Saga compensation、NDP AnnounceFrame 字段/security profiles，以及
+十包 NPS-SDK-dotnet alpha.9 发布。
+
+---
+
+## alpha.10 发布 — 2026-05-28 ✅
+
+交付 IdentFrame assurance 提取、`NWP-AUTH-ASSURANCE-TOO-LOW` hint、
+RFC-0005 reputation metadata、NPS Probe v0.1，并推进 CR/RFC 状态。
+
+---
+
+## alpha.11 发布 — 2026-05-28 ✅
+
+五协议同步交付：NCP `NCP-STREAM-LIMIT-EXCEEDED` / `NCP-REKEY-REQUIRED`；
+NWP CR-0006 SubscribeFrame；NIP `NIP-OCSP-STAPLE-EXPIRED` 与 PEN 65715 OID；
+NDP GraphFrame（`NDP-GRAPH-INVALID` / `NDP-GRAPH-TOO-LARGE`）及
+`NDP-FEDERATION-LOOP`；NOP `NOP-STREAM-NAK`、cross-cluster、HMAC 与
+`NOP-CALLBACK-HMAC-MISSING`。RFC-0006 当时仍为 Draft。
 
 ---
 
