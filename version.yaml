@@ -53,7 +53,7 @@ repos:
     expected: required
     manifest_file: package.json
 
-  - name: labacacia/NPS-sdk-java
+  - name: labacacia/NPS-SDK-Java
     kind: gradle-properties
     expected: required
     manifest_file: build.gradle.kts
@@ -64,7 +64,7 @@ repos:
     expected: required
     manifest_file: Cargo.toml
 
-  - name: labacacia/NPS-sdk-go
+  - name: labacacia/NPS-SDK-Go
     kind: changelog
     expected: required
     manifest_file: CHANGELOG.md
