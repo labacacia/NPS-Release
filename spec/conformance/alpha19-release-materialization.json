@@ -15,7 +15,7 @@
   },
   "synchronization": {
     "deletion_semantics": true,
-    "synchronized_spec_files": 110,
+    "synchronized_spec_files": 111,
     "initial_changed_spec_paths": 64,
     "release_content_paths": 24,
     "materialized_bilingual_content_pairs": 5,
