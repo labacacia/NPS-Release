@@ -11,7 +11,8 @@
     "repository": "NPS-Release",
     "content_commit": "13e125868f672698edec8fbf8232c1e24267c6eb",
     "directory": "spec",
-    "suite_version_preserved": "1.0.0-alpha.18"
+    "suite_version_preserved_before_final_bump": "1.0.0-alpha.18",
+    "suite_version_finalized": "1.0.0-alpha.19"
   },
   "synchronization": {
     "deletion_semantics": true,
@@ -54,7 +55,7 @@
     "verdict": "release_specifications_materialized"
   },
   "boundaries": [
-    "NPS-Release version.yaml remains 1.0.0-alpha.18 until the final coordinated bump",
+    "NPS-Release version.yaml is finalized at 1.0.0-alpha.19 only after source and distribution branches are aligned",
     "standalone SDK and daemon materialization remains separate work",
     "no merge, tag, package upload, image push, registry mutation, or release publication occurred"
   ]

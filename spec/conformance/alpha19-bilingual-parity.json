@@ -2,7 +2,7 @@
   "schema_version": 2,
   "candidate": {
     "repository": "NPS-Dev",
-    "state": "unreleased alpha.19 source candidate",
+    "state": "alpha.19 source candidate finalized on the release branch",
     "expected_bilingual_pairs": 123,
     "protocol_versions": {
       "NPS-0": "0.4",
@@ -16,9 +16,9 @@
   },
   "release_target": {
     "repository": "NPS-Release",
-    "state": "alpha.19 specifications materialized; suite version remains at the published alpha.18 baseline",
+    "state": "alpha.19 specifications and suite version finalized on the release branch",
     "expected_bilingual_pairs": 46,
-    "suite_version": "1.0.0-alpha.18",
+    "suite_version": "1.0.0-alpha.19",
     "protocol_versions": {
       "NPS-0": "0.4",
       "NCP": "0.12",
@@ -36,5 +36,5 @@
     "matching Version headers when present",
     "no Unicode replacement characters"
   ],
-  "boundary": "The gate requires reviewed alpha.19 specification materialization in NPS-Release while version.yaml remains at the published alpha.18 baseline until the final coordinated bump."
+  "boundary": "The gate requires reviewed alpha.19 specification materialization and the final coordinated suite-version bump on existing release branches; no merge, tag, upload, image push, or release publication is implied."
 }

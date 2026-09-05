@@ -71,8 +71,12 @@
     "spec_tree_drift": 0,
     "verdict": "standalone_sdk_source_materialized"
   },
+  "finalization": {
+    "coordinated_version": "1.0.0-alpha.19",
+    "status": "materialized_on_release_branches"
+  },
   "boundaries": [
-    "all standalone SDK package versions remain 1.0.0-alpha.18 until the final coordinated bump",
+    "all standalone SDK package versions are finalized at 1.0.0-alpha.19 on their existing release branches",
     "the Go materialization remains stacked on the reviewed runtime-version branch",
     "standalone daemon materialization remains separate work",
     "no merge, tag, package upload, registry mutation, or release publication occurred"

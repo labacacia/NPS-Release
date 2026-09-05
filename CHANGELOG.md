@@ -8,7 +8,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 Until NPS reaches v1.0 stable, every repository in the suite — spec, SDKs (.NET / Python / TypeScript / Java / Rust / Go), CA Servers, and compat bridges — is synchronized to the same pre-release version tag.
 
-## [Unreleased]
+## [1.0.0-alpha.19] — 2026-09-05
 
 ### Fixed
 

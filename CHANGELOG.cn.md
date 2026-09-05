@@ -8,7 +8,7 @@
 
 在 NPS 达到 v1.0 稳定版之前，套件内所有仓库 —— 规范、各 SDK（.NET / Python / TypeScript / Java / Rust / Go）、CA Server、兼容 Bridge —— 同步使用同一个预发布版本号。
 
-## [未发布]
+## [1.0.0-alpha.19] —— 2026-09-05
 
 ### 修复
 
