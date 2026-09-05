@@ -90,6 +90,8 @@ QUIC 上的帧无需 NCP 层长度前缀（QUIC 本身提供流级别帧边界�
 ### 3.5 QUIC 上的 HelloFrame
 
 QUIC 上的 HelloFrame MUST 将 `transport` 字段设置为 `"quic"`。
+不支持 QUIC 的服务端若意外检测到 QUIC 上已协商 ALPN `nps/1.0`，
+MUST 返回带 `NCP-VERSION-INCOMPATIBLE` 的 ErrorFrame。
 
 ---
 

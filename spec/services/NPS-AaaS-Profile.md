@@ -284,7 +284,25 @@ Compared to returning full row data with dozens of irrelevant columns, vector mo
 returns only top-K similar results + embedding vectors + key fields, reducing token_est
 from hundreds to double digits.
 
-### 3.4 Integration with NWP QueryFrame
+### 3.4 Consistency Strategy
+
+The Vector Proxy Layer creates a consistency window between the vector index
+and source data during writes and updates. Implementations MUST select and
+declare one of these consistency modes:
+
+| Mode | Mechanism | Use case | Consistency delay |
+|------|-----------|----------|-------------------|
+| **Eventual consistency (default)** | WAL/CDC listener updates the vector index asynchronously | Read-heavy workloads that tolerate brief stale reads | Usually < 1 s |
+| **Strong consistency** | Dual-write transaction covering the database write and vector-index update | Finance and real-time decisions | Synchronous |
+
+**AnchorFrame TTL and schema changes.** When the database schema changes
+(columns added or removed), the implementation MUST:
+
+1. proactively invalidate affected AnchorFrames instead of waiting for TTL;
+2. rescan the schema, generate a new AnchorFrame, and rebuild the vector index incrementally; and
+3. fall back to passthrough queries while the vector index is rebuilding.
+
+### 3.5 Integration with NWP QueryFrame
 
 The Vector Proxy Layer is fully transparent to consumers. Standard NWP QueryFrame:
 

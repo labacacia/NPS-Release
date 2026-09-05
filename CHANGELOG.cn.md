@@ -152,6 +152,95 @@
 
 ---
 
+## [1.0.0-alpha.13] —— 2026-06-13
+
+> **取代已撤回的 `1.0.0-alpha.12`。** alpha.12 NuGet 包在 release review
+> 完成前带着易受攻击的 `MessagePack 3.0.300`（NU1903）与 native handshake
+> 缺陷提前发布，现已弃用；alpha.13 保留同一功能集并补齐安全/握手修复。
+
+### SDK —— 六种官方语言功能对等
+
+- 将 Anchor Node server、CGN meter、Bridge types 与 reputation-policy evaluator
+  从 .NET 移植到 Python / TypeScript / Go / Java / Rust；补齐
+  `NWP-CGN-LIMIT-EXCEEDED` 与三个 `NWP-REPUTATION-*` 错误码。
+
+### 规范
+
+- **NCP v0.8 / NPS-RFC-0006**：Draft → Proposed；ALPN `nps/1.0`、TLS、mTLS 与 `NCP-NID-MISMATCH`。
+- **NWP v0.14**：Bridge Node §16 与 `bridge_target` 向量。
+- **NIP v0.10**：1–24h 可续期 edge mTLS 证书 profile。
+- **NDP v0.9**：`health` / `last_seen` 与 `NDP-RESOLVE-STALE`。
+- **NOP v0.7 / NPS-CR-0007**：`NOP-CLAIM-CONFLICT`、`NOP-RUNTIME-IDLE-TIMEOUT`、`NOP-RUNTIME-MAX-RUNTIME`、`NOP-SPAWN-SPEC-INVALID` 与 `TC-N3-*`。
+
+### Daemon（L2/L3）
+
+- `nps-runner` 接入 NPS-CR-0007；`nps-ingress` 接入 NPS-RFC-0006 TLS 1.3/mTLS 与 `NCP-NID-MISMATCH`。
+
+---
+
+## [1.0.0-alpha.11] —— 2026-05-28
+
+### 规范
+
+- **NCP v0.7**：`NCP-STREAM-LIMIT-EXCEEDED` 与 `NCP-REKEY-REQUIRED`。
+- **NWP v0.13 / CR-0006**：SubscribeFrame、`trust_anchors` 与 `bridge_target`。
+- **NIP v0.9**：PEN 65715.2.2/65715.2.3 与 `NIP-OCSP-STAPLE-EXPIRED`。
+- **NDP v0.8**：`NDP-GRAPH-INVALID`、`NDP-GRAPH-TOO-LARGE` 与 `NDP-FEDERATION-LOOP`。
+- **NOP v0.6**：`NOP-STREAM-NAK`、`weighted_first_k`、`merge_all` 与 `NOP-CALLBACK-HMAC-MISSING`。
+- **CR-0006** 已 Accepted；**RFC-0006** 为 Draft。
+
+### SDK
+
+- 六个 SDK 同步交付上述 NOP、NIP、NDP、NWP 类型与 wire 语义。
+
+### .NET SDK
+
+- 同步 TrustAnchors、SubscribeFrame、OCSP staple、OID、AlignStream、GraphFrame 与 aggregate strategy。
+
+### Daemon
+
+- `nps-ledger` federation push、nps-probe v0.2、nps-orchestrator alpha.11 与 NPS-NWP-Manager v0.1。
+
+---
+
+## [1.0.0-alpha.10] —— 2026-05-28
+
+### 规范
+
+- **NPS-CR-0005** 定义三级 RA 与 `db/003_ra_model.sql`。
+
+### SDK
+
+- 六 SDK 同步 NOP saga、NDP security profile、`IdentReputationPolicyHint` 与 `IdentMetadata`。
+
+### .NET SDK
+
+- `NPS.NIP` 实现 RA enrollment、store 与管理端点。
+
+---
+
+## [1.0.0-alpha.9] —— 2026-05-28
+
+### SDK
+
+- 六 SDK 补齐 RFC-0004 `ReputationLogClient`、RFC 9162 proof、Anchor client 测试与 RFC-0003 assurance。
+
+---
+
+## [1.0.0-alpha.8] —— 2026-05-28
+
+### 规范
+
+- NPS-RFC-0005 与 NPS-RFC-0002 从 Draft 晋级 Accepted。
+
+### .NET SDK
+
+- `ReputationPolicyEvaluator`、`NWP-REPUTATION-THROTTLED`、`NWP-REPUTATION-REJECTED`、
+  `NWP-REPUTATION-BANNED`、`X-NWP-Reputation-Status`、`X-NWP-Ban-Expires`、
+  `cgn_limit` 与 SubscribeFrame（0x12）进入 .NET SDK。
+
+---
+
 ## [1.0.0-alpha.7] —— 2026-05-18
 
 ### .NET SDK
@@ -205,6 +294,21 @@
 ### .NET SDK
 
 - **`NPS.NWP.Anchor` —— NPS-CR-0002 Phase 2 alpha.6 边界**：`topology.stream` push/notify 继续由 `AnchorNodeMiddleware` + `IAnchorTopologyService` 提供，alpha.5 的 `topology.filter.node_kind` 兼容窗口已关闭。客户端必须发送 `topology.filter.node_roles`；旧别名返回 HTTP 400 / `NWP-TOPOLOGY-FILTER-UNSUPPORTED`。
+
+- **`NPS.NIP` —— group/session NID 签发**：新增 group register、session issue、
+  audit listing 与级联 revoke；链校验返回 `NIP-CERT-PARENT-REVOKED`。
+  Group-JWS 校验明确返回 `NIP-CA-GROUP-REVOKED`、`NIP-CA-PARENT-NOT-FOUND`、
+  `NIP-CA-PARENT-NOT-GROUP`、`NIP-CA-SESSION-VALIDITY-INVALID`、
+  `NIP-CA-JWS-INVALID` 与 `NIP-CA-JWS-EXPIRED`。
+
+### NIP CA Server
+
+- `/v1/orchestrators/groups/...` 注册、吊销、session 签发与审计端点上线。
+
+### 测试
+
+- `NPS.Tests.Nip.OrchestratorGroupSessionTests` 增加 16 项 xUnit case，覆盖
+  NPS-CR-0003 验收及有效期、scope、JWS、审计边界。
 
 ### 实现
 
